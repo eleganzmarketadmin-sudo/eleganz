@@ -1,11 +1,16 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 
-// TODO : brancher le guard JWT + vérifier que l'appelant appartient bien à `shopId`
-// (voir le même TODO dans shops.controller.ts).
+// Ce contrôleur est la vue "gestion" du catalogue (staff de la boutique
+// uniquement). TODO (phase Marketplace) : ajouter un contrôleur public
+// séparé, sans guard, qui ne retourne que les produits `isPublished: true` —
+// ne jamais relâcher le guard ici pour servir les deux besoins à la fois.
 @Controller("shops/:shopId/products")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 

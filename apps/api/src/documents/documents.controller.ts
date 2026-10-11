@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { DocumentsService } from "./documents.service";
 import { DocumentType } from "@eleganz/database";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 
 @Controller("shops/:shopId/documents")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 

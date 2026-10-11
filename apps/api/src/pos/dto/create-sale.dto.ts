@@ -44,8 +44,12 @@ export class SalePaymentDto {
 }
 
 export class CreateSaleDto {
+  // Optionnel côté client : le contrôleur l'écrase toujours avec l'utilisateur
+  // authentifié (voir pos.controller.ts) — gardé ici seulement pour permettre
+  // au contrôleur de vérifier une incohérence explicite si le front en envoie un.
+  @IsOptional()
   @IsString()
-  cashierId!: string;
+  cashierId?: string;
 
   @IsOptional()
   @IsString()

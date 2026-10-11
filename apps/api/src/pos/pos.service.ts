@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateSaleDto } from "./dto/create-sale.dto";
-import { StockMovementType } from "@eleganz/database";
+import { PaymentMethod, StockMovementType } from "@eleganz/database";
 
 @Injectable()
 export class PosService {
@@ -14,7 +14,7 @@ export class PosService {
    * concurrente sur le même article ne peut pas vendre un stock déjà écoulé
    * en caisse, et inversement.
    */
-  async createSale(shopId: string, dto: CreateSaleDto) {
+  async createSale(shopId: string, dto: CreateSaleDto & { cashierId: string }) {
     return this.prisma.$transaction(async (tx) => {
       let total = 0;
 
@@ -55,6 +55,13 @@ export class PosService {
         );
       }
 
+      const creditAmount = dto.payments
+        .filter((p) => p.method === PaymentMethod.STORE_CREDIT)
+        .reduce((sum, p) => sum + p.amount, 0);
+      if (creditAmount > 0 && !dto.customerId) {
+        throw new BadRequestException("Un client est requis pour une vente à crédit.");
+      }
+
       const sale = await tx.posSale.create({
         data: {
           shopId,
@@ -80,6 +87,16 @@ export class PosService {
         },
         include: { lines: true, payments: true },
       });
+
+      // Vente à crédit : la part STORE_CREDIT augmente la créance du client
+      // (complément stratégique §9), toujours dans la même transaction pour
+      // qu'une vente et sa créance ne puissent jamais être incohérentes.
+      if (creditAmount > 0 && dto.customerId) {
+        await tx.shopCustomer.update({
+          where: { id: dto.customerId },
+          data: { creditBalance: { increment: creditAmount } },
+        });
+      }
 
       return sale;
     });
