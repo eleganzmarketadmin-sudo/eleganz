@@ -55,6 +55,8 @@ Dernière mise à jour : 11 octobre 2026.
 
 - **Mode hors-ligne de la caisse — phase 1 implémentée** (`docs/ARCHITECTURE_HORS_LIGNE.md`, décision #8) : le propriétaire a validé la politique de stock négatif en synchronisation différée (accepter la vente, stock négatif, écart signalé — jamais de rejet après coup d'une vente déjà réellement encaissée). Côté API : `clientOperationId` idempotent sur `PosSale`, `PosSaleLine.stockDiscrepancy`, `POST /shops/:shopId/pos/sales/sync`, `GET /shops/:shopId/pos/stock-discrepancies`. Côté écran : file IndexedDB (`offline-queue.ts`), synchronisation automatique au retour réseau et par intervalle (`offline-sync.tsx`), bascule automatique de la caisse vers la file hors-ligne quand le serveur est inatteignable, indicateur « ventes en attente » dans l'en-tête Gestion, liste des écarts de stock dans le tableau de bord.
 
+- **Images produits par URL** (`PATCH /shops/:shopId/products/:productId`, écran catalogue) : une boutique peut maintenant attacher des photos hébergées ailleurs à un article — pas d'upload (aucun compte de stockage objet encore), mais la vitrine et la fiche produit Marketplace affichent déjà la vraie photo quand elle existe.
+
 ## Pas encore commencé
 
 - **Phase 2 du mode hors-ligne** : app shell installable (PWA/service worker) pour que l'écran caisse s'ouvre même sans aucun réseau depuis le démarrage de l'appareil — la phase 1 protège déjà l'argent et le stock une fois la page chargée.

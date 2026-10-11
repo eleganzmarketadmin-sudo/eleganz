@@ -24,7 +24,87 @@ interface Product {
   name: string;
   category?: string | null;
   isPublished: boolean;
+  images: string[];
   variants: Variant[];
+}
+
+function ImagesProduit({
+  produit,
+  onChange,
+}: {
+  produit: Product;
+  onChange: () => void;
+}) {
+  const { currentShop } = useShop();
+  const [url, setUrl] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function sauvegarder(images: string[]) {
+    if (!currentShop) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { images });
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Image refusée (doit être une URL valide).");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function ajouterImage() {
+    if (!url) return;
+    await sauvegarder([...produit.images, url]);
+    setUrl("");
+  }
+
+  async function retirerImage(index: number) {
+    await sauvegarder(produit.images.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div style={{ padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+      {produit.images.map((img, i) => (
+        <div key={i} style={{ position: "relative" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={img}
+            alt={produit.name}
+            style={{ width: "64px", height: "80px", objectFit: "cover", border: "1px solid var(--color-border)" }}
+          />
+          <button
+            onClick={() => retirerImage(i)}
+            aria-label="Retirer l'image"
+            style={{
+              position: "absolute",
+              top: "-8px",
+              right: "-8px",
+              background: "var(--color-flamme)",
+              color: "#fff",
+              border: "none",
+              width: "20px",
+              height: "20px",
+              cursor: "pointer",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <input
+        placeholder="URL d'une photo (hébergée ailleurs pour l'instant)"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        style={{ minWidth: "260px", padding: "8px", border: "1px solid var(--color-border)" }}
+      />
+      <button className={styles.bouton} style={{ minHeight: "40px" }} onClick={ajouterImage} disabled={enCours || !url}>
+        Ajouter
+      </button>
+      {erreur && <span style={{ color: "var(--color-flamme)", fontSize: "0.8125rem" }}>{erreur}</span>}
+    </div>
+  );
 }
 
 function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
@@ -220,6 +300,7 @@ function CatalogueContent() {
                 )}
               </span>
             </div>
+            <ImagesProduit produit={produit} onChange={recharger} />
             {produit.variants.length > 0 && (
               <table className={styles.tableauVariantes}>
                 <thead>

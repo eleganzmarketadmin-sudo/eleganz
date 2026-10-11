@@ -17,6 +17,7 @@ interface Produit {
   id: string;
   name: string;
   category?: string | null;
+  images: string[];
   shop: { id: string; name: string; slug: string };
   variants: Variant[];
 }
@@ -89,7 +90,17 @@ export default function MarketplacePage() {
             );
             return (
               <Link className={styles.carte} href={`/marketplace/produit/${produit.id}`} key={produit.id}>
-                <div className={styles.imageProduit}>{produit.name}</div>
+                {produit.images[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={produit.images[0]}
+                    alt={produit.name}
+                    className={styles.imageProduit}
+                    style={{ objectFit: "cover", width: "100%" }}
+                  />
+                ) : (
+                  <div className={styles.imageProduit}>{produit.name}</div>
+                )}
                 <div className={styles.nomProduit}>{produit.name}</div>
                 <div className={styles.boutique}>{produit.shop.name}</div>
                 {moinsCher && (

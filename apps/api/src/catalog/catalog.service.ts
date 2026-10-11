@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
+import { UpdateProductDto } from "./dto/update-product.dto";
 import { StockMovementType } from "@eleganz/database";
 
 @Injectable()
@@ -17,6 +18,27 @@ export class CatalogService {
         category: dto.category,
         images: dto.images ?? [],
       },
+    });
+  }
+
+  /**
+   * Met à jour les champs descriptifs d'un article, dont ses images — URLs
+   * hébergées ailleurs tant qu'aucun compte de stockage objet n'existe
+   * (PROJECT_STATUS.md). `where: { id: productId, shopId }` garantit qu'on
+   * ne peut jamais modifier l'article d'une autre boutique même en devinant
+   * un id.
+   */
+  async updateProduct(shopId: string, productId: string, dto: UpdateProductDto) {
+    const produit = await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
+    return this.prisma.product.update({
+      where: { id: produit.id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.category !== undefined ? { category: dto.category } : {}),
+        ...(dto.images !== undefined ? { images: dto.images } : {}),
+      },
+      include: { variants: true },
     });
   }
 

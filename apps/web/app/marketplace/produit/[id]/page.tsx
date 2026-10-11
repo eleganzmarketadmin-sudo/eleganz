@@ -20,6 +20,7 @@ interface Produit {
   id: string;
   name: string;
   description?: string | null;
+  images: string[];
   shop: { id: string; name: string; slug: string };
   variants: Variant[];
 }
@@ -68,7 +69,12 @@ export default function ProduitPage() {
 
   return (
     <div className={styles.cadre}>
-      <div className={styles.image}>{produit.name}</div>
+      {produit.images[0] ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={produit.images[0]} alt={produit.name} className={styles.image} style={{ objectFit: "cover", width: "100%" }} />
+      ) : (
+        <div className={styles.image}>{produit.name}</div>
+      )}
       <div>
         <h1 className={styles.titre}>{produit.name}</h1>
         <p className={styles.boutique}>Vendu par {produit.shop.name}</p>

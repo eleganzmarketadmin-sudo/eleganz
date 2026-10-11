@@ -6,7 +6,7 @@ Fait : recherche d'homologation (#9), squelette npm, modules `auth`/`shops`/`cat
 
 1. **Rendu PDF des commandes Marketplace** : le rendu PDF ne couvre pour l'instant que les documents liés à une vente de caisse (`posSaleId`) — pas encore aux sous-commandes Marketplace (`shopOrderId`), qui ont une structure différente (plusieurs lignes de variante sans `label`/`PosSaleLine`).
 2. **Ouverture d'un litige côté boutique** : `DisputesService.open` accepte déjà un initiateur générique, mais aucun endpoint/écran ne permet à une boutique d'ouvrir elle-même un litige (seul l'acheteur le peut aujourd'hui) — prompt §47 prévoit les deux sens.
-3. **Dépannage images produits** : `Product.images` existe dans le schéma mais aucun upload n'est branché — le catalogue et la vitrine affichent un nom de produit à la place d'une photo.
+3. **Upload réel d'images produits** : aujourd'hui il faut déjà avoir l'image hébergée ailleurs et en coller l'URL — un vrai upload (compte de stockage objet) remplacera ça une fois ce compte créé, sans changer la forme de la donnée (`Product.images: string[]`).
 4. **Phase 2 du mode hors-ligne** : app shell installable (PWA/service worker + manifest), pour que l'écran caisse s'ouvre même sans réseau depuis le démarrage de l'appareil (voir `docs/ARCHITECTURE_HORS_LIGNE.md`). La phase 1 (file d'opérations + synchronisation) est faite.
 5. **Branchement des paiements réels, de l'IA et de l'hébergement** — voir `PROJECT_STATUS.md`, section « Ce qui bloque » : attend les comptes/clés du propriétaire du projet.
 

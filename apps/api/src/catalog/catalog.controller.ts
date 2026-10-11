@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
+import { UpdateProductDto } from "./dto/update-product.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -25,6 +26,16 @@ export class CatalogController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   create(@Param("shopId") shopId: string, @Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(shopId, dto);
+  }
+
+  @Patch(":productId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  update(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.catalogService.updateProduct(shopId, productId, dto);
   }
 
   @Post(":productId/variants")
