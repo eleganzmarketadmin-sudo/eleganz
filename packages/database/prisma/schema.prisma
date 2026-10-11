@@ -1,0 +1,519 @@
+// ELEGANZ — schéma de données unifié (ELEGANZ Gestion + ELEGANZ Marketplace)
+// Choix d'architecture : PostgreSQL, accédé via Prisma depuis l'API NestJS.
+// Voir /docs/DATABASE.md pour la justification de chaque bloc.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------------------------
+// IDENTITÉ & ACCÈS
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  BUYER
+  SHOP_OWNER
+  SHOP_STAFF // gérant, caissier, magasinier, comptable — précisé par StaffRole
+  DRIVER
+  ADMIN_SUPER
+  ADMIN_SALES
+  ADMIN_FINANCE
+  ADMIN_OPS
+  ADMIN_LOGISTICS
+  ADMIN_MARKETING
+  ADMIN_SUPPORT
+  ADMIN_AUDITOR
+}
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  CASHIER
+  STOCK_KEEPER
+  SALES_LEAD
+  ACCOUNTANT
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String?  @unique
+  phone         String?  @unique
+  passwordHash  String?
+  role          UserRole
+  fullName      String
+  locale        String   @default("fr")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shopMemberships ShopStaff[]
+  ownedShops      Shop[]        @relation("ShopOwner")
+  orders          Order[]
+  posSales        PosSale[]     @relation("CashierSales")
+  driverProfile   Driver?
+  addresses       Address[]
+  auditLogs       AuditLog[]
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  commune     String?
+  quartier    String?
+  avenue      String?
+  repere      String? // point de repère, utile à Kinshasa
+  latitude    Float?
+  longitude   Float?
+  isDefault   Boolean  @default(false)
+}
+
+// ---------------------------------------------------------------------------
+// BOUTIQUES — cœur du modèle "3 modes" (privée / marketplace / hybride)
+// ---------------------------------------------------------------------------
+
+enum ShopMode {
+  PRIVATE    // ELEGANZ Gestion uniquement, rien de publié
+  MARKETPLACE // vente en ligne uniquement
+  HYBRID     // gestion physique + vente en ligne, stock unifié
+}
+
+enum ShopStatus {
+  PENDING_VALIDATION
+  FREE_PERIOD
+  ACTIVE
+  PAYMENT_DUE
+  SUSPENDED
+  CLOSED
+}
+
+model Shop {
+  id               String     @id @default(uuid())
+  ownerId          String
+  owner            User       @relation("ShopOwner", fields: [ownerId], references: [id])
+  name             String
+  slug             String     @unique
+  mode             ShopMode   @default(PRIVATE)
+  status           ShopStatus @default(PENDING_VALIDATION)
+
+  // Marketplace : visibilité publique
+  isPubliclyListed Boolean    @default(false)
+
+  // Monétisation — champs admin-configurables, aucune valeur figée dans le code
+  freeTrialStartedAt   DateTime?
+  freeTrialDurationDays Int      @default(90) // décision #3 : 3 mois par défaut, modifiable en admin
+  openingFeeWaived     Boolean  @default(true) // vrai tant que la phase gratuite est active
+  openingFeePaidAt     DateTime?
+
+  marketplaceBouquetId String?
+  marketplaceBouquet    SubscriptionPlan? @relation("MarketplaceBouquet", fields: [marketplaceBouquetId], references: [id])
+  gestionBouquetId      String?
+  gestionBouquet         SubscriptionPlan? @relation("GestionBouquet", fields: [gestionBouquetId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff          ShopStaff[]
+  products       Product[]
+  stockMovements StockMovement[]
+  posSales       PosSale[]
+  orders         ShopOrder[]
+  invoices       CommercialDocument[]
+  suppliers      Supplier[]
+  expenses       Expense[]
+  customers      ShopCustomer[]
+  subscriptions  ShopSubscription[]
+  creditWallet   AiCreditWallet?
+  auditLogs      AuditLog[]
+}
+
+model ShopStaff {
+  id       String    @id @default(uuid())
+  shopId   String
+  shop     Shop      @relation(fields: [shopId], references: [id])
+  userId   String
+  user     User      @relation(fields: [userId], references: [id])
+  role     StaffRole
+  active   Boolean   @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([shopId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// CATALOGUE & STOCK — commun aux ventes physiques et en ligne
+// ---------------------------------------------------------------------------
+
+model Product {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  name        String
+  description String?
+  category    String?
+  images      String[] // URLs stockage objet
+  isPublished Boolean  @default(false) // bascule "Publier sur ELEGANZ"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants Variant[]
+}
+
+model Variant {
+  id          String  @id @default(uuid())
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  sku         String  @unique
+  size        String?
+  color       String?
+  costPrice   Decimal? @db.Decimal(12, 2) // prix d'achat — jamais exposé aux autres vendeurs
+  sellPrice   Decimal  @db.Decimal(12, 2)
+  currency    String   @default("USD") // USD ou CDF
+  stockQty    Int      @default(0)
+  lowStockAt  Int      @default(3)
+
+  stockMovements StockMovement[]
+  saleLines      PosSaleLine[]
+  orderLines     OrderLine[]
+}
+
+enum StockMovementType {
+  PURCHASE_IN
+  POS_SALE_OUT
+  ONLINE_SALE_OUT
+  ONLINE_SALE_RESERVED // réservation le temps du paiement, pour éviter la double vente
+  RETURN_IN
+  ADJUSTMENT
+  DEFECTIVE_OUT
+}
+
+// Table transactionnelle : toute variation de stock (caisse ou Marketplace) passe par ici.
+// C'est le point d'unicité qui empêche la double vente décrite dans le cahier des charges.
+model StockMovement {
+  id        String            @id @default(uuid())
+  shopId    String
+  shop      Shop              @relation(fields: [shopId], references: [id])
+  variantId String
+  variant   Variant           @relation(fields: [variantId], references: [id])
+  type      StockMovementType
+  quantity  Int // signé : négatif pour une sortie
+  reference String? // id de la vente / commande / achat liés
+  createdAt DateTime          @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// ELEGANZ GESTION — caisse, vente physique, documents commerciaux
+// ---------------------------------------------------------------------------
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  CARD
+  BANK_TRANSFER
+  STORE_CREDIT
+  CASH_ON_DELIVERY
+}
+
+model PosSale {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  cashierId   String
+  cashier     User     @relation("CashierSales", fields: [cashierId], references: [id])
+  customerId  String?
+  customer    ShopCustomer? @relation(fields: [customerId], references: [id])
+  totalAmount Decimal  @db.Decimal(12, 2)
+  currency    String   @default("USD")
+  status      String   @default("COMPLETED") // COMPLETED | CANCELLED | RETURNED
+  createdAt   DateTime @default(now())
+
+  lines     PosSaleLine[]
+  payments  PosPayment[]
+  documents CommercialDocument[]
+}
+
+model PosSaleLine {
+  id        String   @id @default(uuid())
+  saleId    String
+  sale      PosSale  @relation(fields: [saleId], references: [id])
+  variantId String?  // vide si vente rapide d'un article non catalogué
+  variant   Variant? @relation(fields: [variantId], references: [id])
+  label     String   // désignation libre pour une vente non cataloguée
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(12, 2)
+}
+
+model PosPayment {
+  id        String        @id @default(uuid())
+  saleId    String
+  sale      PosSale       @relation(fields: [saleId], references: [id])
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(12, 2)
+  confirmed Boolean       @default(true) // false = déclaré manuellement, non confirmé par un prestataire
+}
+
+enum DocumentType {
+  TICKET
+  RECEIPT
+  INVOICE_INTERNAL      // document commercial ordinaire, NON homologué
+  INVOICE_FISCAL        // facture normalisée via MCF/e-DEF, une fois homologuée
+  PROFORMA
+  QUOTE
+  CREDIT_NOTE
+  DELIVERY_NOTE
+}
+
+model CommercialDocument {
+  id        String       @id @default(uuid())
+  shopId    String
+  shop      Shop         @relation(fields: [shopId], references: [id])
+  posSaleId String?
+  posSale   PosSale?     @relation(fields: [posSaleId], references: [id])
+  shopOrderId String?
+  shopOrder ShopOrder?   @relation(fields: [shopOrderId], references: [id])
+  type      DocumentType
+  number    String       @unique
+  isFiscallyHomologated Boolean @default(false) // ne jamais passer à true sans homologation DGI vérifiée
+  pdfUrl    String?
+  createdAt DateTime     @default(now())
+}
+
+model Supplier {
+  id      String @id @default(uuid())
+  shopId  String
+  shop    Shop   @relation(fields: [shopId], references: [id])
+  name    String
+  phone   String?
+  balanceOwed Decimal @default(0) @db.Decimal(12, 2) // dettes fournisseur
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  amount     Decimal  @db.Decimal(12, 2)
+  receivedAt DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  category  String   // loyer, transport, salaires, électricité, télécom, livraison, autre
+  amount    Decimal  @db.Decimal(12, 2)
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model ShopCustomer {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  fullName    String
+  phone       String?
+  creditBalance Decimal @default(0) @db.Decimal(12, 2) // créances dues par ce client
+
+  sales PosSale[]
+}
+
+// ---------------------------------------------------------------------------
+// ELEGANZ MARKETPLACE — commandes en ligne multivendeurs
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAYMENT_CONFIRMED
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED_DECLARED   // déclaré livré par le livreur
+  RECEIVED_CONFIRMED   // confirmé reçu par le client — événement distinct
+  CLOSED
+  CANCELLED
+  RETURN_REQUESTED
+  REFUNDED
+  DISPUTED
+}
+
+// Commande globale du client (peut couvrir plusieurs boutiques)
+model Order {
+  id        String      @id @default(uuid())
+  buyerId   String
+  buyer     User        @relation(fields: [buyerId], references: [id])
+  totalAmount Decimal   @db.Decimal(12, 2)
+  currency  String      @default("USD")
+  createdAt DateTime    @default(now())
+
+  shopOrders ShopOrder[]
+  payments   OrderPayment[]
+}
+
+// Sous-commande par boutique — chaque vendeur ne voit que la sienne
+model ShopOrder {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id])
+  shopId    String
+  shop      Shop        @relation(fields: [shopId], references: [id])
+  status    OrderStatus @default(CREATED)
+  subtotal  Decimal     @db.Decimal(12, 2)
+  commissionAmount Decimal @default(0) @db.Decimal(12, 2)
+  driverId  String?
+  driver    Driver?     @relation(fields: [driverId], references: [id])
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  lines     OrderLine[]
+  documents CommercialDocument[]
+  dispute   Dispute?
+}
+
+model OrderLine {
+  id        String  @id @default(uuid())
+  shopOrderId String
+  shopOrder ShopOrder @relation(fields: [shopOrderId], references: [id])
+  variantId String
+  variant   Variant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPrice Decimal @db.Decimal(12, 2)
+}
+
+model OrderPayment {
+  id        String        @id @default(uuid())
+  orderId   String
+  order     Order         @relation(fields: [orderId], references: [id])
+  method    PaymentMethod
+  provider  String?       // "moneroo", "orange_direct", "cash_on_delivery", ...
+  amount    Decimal       @db.Decimal(12, 2)
+  confirmed Boolean       @default(false)
+  providerRef String?
+  createdAt DateTime      @default(now())
+}
+
+model Dispute {
+  id          String    @id @default(uuid())
+  shopOrderId String    @unique
+  shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id])
+  reason      String
+  status      String    @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED
+  resolution  String?
+  createdAt   DateTime  @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// LIVRAISON
+// ---------------------------------------------------------------------------
+
+model Driver {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  zone      String?
+  verified  Boolean  @default(false)
+
+  deliveries ShopOrder[]
+}
+
+model DeliveryZone {
+  id       String  @id @default(uuid())
+  commune  String
+  fee      Decimal @db.Decimal(12, 2)
+  active   Boolean @default(true)
+}
+
+// ---------------------------------------------------------------------------
+// MONÉTISATION — bouquets, abonnements, crédits IA (100 % administrables)
+// ---------------------------------------------------------------------------
+
+enum PlanCategory {
+  MARKETPLACE
+  GESTION
+}
+
+model SubscriptionPlan {
+  id             String       @id @default(uuid())
+  category       PlanCategory
+  name           String
+  monthlyPrice   Decimal      @db.Decimal(12, 2)
+  maxActiveProducts Int?
+  featuresJson   Json         // liste des fonctionnalités incluses, éditable en admin
+  active         Boolean      @default(true)
+
+  marketplaceShops Shop[] @relation("MarketplaceBouquet")
+  gestionShops     Shop[] @relation("GestionBouquet")
+  subscriptions    ShopSubscription[]
+}
+
+model ShopSubscription {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  planId    String
+  plan      SubscriptionPlan @relation(fields: [planId], references: [id])
+  startedAt DateTime @default(now())
+  renewsAt  DateTime?
+  status    String   @default("ACTIVE") // ACTIVE | PAST_DUE | CANCELLED
+}
+
+model Invoice {
+  id        String   @id @default(uuid())
+  shopId    String
+  amount    Decimal  @db.Decimal(12, 2)
+  dueAt     DateTime
+  paidAt    DateTime?
+  status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
+  kind      String   // "opening_fee" | "subscription" | "ai_credits" | ...
+  createdAt DateTime @default(now())
+}
+
+model AiCreditWallet {
+  id        String  @id @default(uuid())
+  shopId    String  @unique
+  shop      Shop    @relation(fields: [shopId], references: [id])
+  balance   Int     @default(0)
+
+  transactions AiCreditTransaction[]
+}
+
+model AiCreditTransaction {
+  id        String   @id @default(uuid())
+  walletId  String
+  wallet    AiCreditWallet @relation(fields: [walletId], references: [id])
+  delta     Int // négatif = consommation, positif = achat/remboursement
+  service   String // "image_optimization" | "ad_generation" | "video_generation" | ...
+  createdAt DateTime @default(now())
+}
+
+model AiService {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  creditCost  Int
+  active      Boolean @default(true)
+  provider    String? // fournisseur technique
+}
+
+// ---------------------------------------------------------------------------
+// AUDIT — traçabilité obligatoire des actions sensibles (prompt §41)
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  shopId    String?
+  shop      Shop?    @relation(fields: [shopId], references: [id])
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+}
