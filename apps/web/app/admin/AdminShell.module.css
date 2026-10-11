@@ -1,0 +1,54 @@
+.cadre {
+  min-height: 100vh;
+  background: var(--color-toile);
+}
+
+.entete {
+  background: var(--color-ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espace-3) var(--espace-4);
+  border-bottom: 3px solid var(--color-or);
+}
+
+.marque {
+  font-weight: 600;
+}
+
+.marque span {
+  color: var(--color-or);
+}
+
+.deconnexion {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-3);
+  cursor: pointer;
+  min-height: 40px;
+}
+
+.nav {
+  display: flex;
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.navLien {
+  padding: var(--espace-3) var(--espace-4);
+  font-weight: 500;
+  color: var(--color-ink);
+  border-right: 1px solid var(--color-border);
+}
+
+.navLienActif {
+  background: var(--color-or);
+}
+
+.contenu {
+  padding: var(--espace-5);
+  max-width: 960px;
+  margin: 0 auto;
+}
