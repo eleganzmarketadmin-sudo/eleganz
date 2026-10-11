@@ -1,0 +1,65 @@
+.cadre {
+  max-width: 420px;
+  margin: var(--espace-7) auto;
+  padding: var(--espace-5);
+}
+
+.onglets {
+  display: flex;
+  margin-bottom: var(--espace-5);
+  border: 2px solid var(--color-ink);
+}
+
+.onglet {
+  flex: 1;
+  padding: var(--espace-3);
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.ongletActif {
+  background: var(--color-magenta);
+  color: #fff;
+}
+
+.champ {
+  display: block;
+  margin-bottom: var(--espace-4);
+}
+
+.champ label {
+  display: block;
+  margin-bottom: var(--espace-1);
+  font-weight: 500;
+}
+
+.champ input {
+  width: 100%;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+}
+
+.bouton {
+  width: 100%;
+  min-height: var(--touche-min);
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

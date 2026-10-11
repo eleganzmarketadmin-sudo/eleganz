@@ -1,0 +1,92 @@
+.cadre {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espace-6);
+  padding: var(--espace-5);
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (min-width: 760px) {
+  .cadre {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.image {
+  background: var(--color-toile);
+  border: 1px solid var(--color-border);
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+.titre {
+  font-family: var(--font-display), serif;
+  font-size: 2rem;
+  margin-bottom: var(--espace-2);
+}
+
+.boutique {
+  color: #666;
+  margin-bottom: var(--espace-4);
+}
+
+.prix {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: var(--espace-5);
+}
+
+.variantes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+}
+
+.varianteBouton {
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  cursor: pointer;
+  min-height: var(--touche-min);
+}
+
+.varianteBoutonActif {
+  background: var(--color-magenta);
+  color: #fff;
+  border-color: var(--color-magenta);
+}
+
+.varianteBouton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.bouton {
+  width: 100%;
+  min-height: var(--touche-min);
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-top: var(--espace-3);
+}

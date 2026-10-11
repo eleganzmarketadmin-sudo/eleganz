@@ -1,0 +1,35 @@
+.entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espace-3) var(--espace-5);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.marque {
+  font-family: var(--font-display), serif;
+  font-size: 1.25rem;
+}
+
+.liens {
+  display: flex;
+  gap: var(--espace-4);
+  align-items: center;
+}
+
+.liens a {
+  color: #fff;
+}
+
+.panier {
+  position: relative;
+}
+
+.compteur {
+  background: var(--color-magenta);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  margin-left: var(--espace-1);
+}

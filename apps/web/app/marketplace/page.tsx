@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "../lib/api";
 import { formatMoney } from "../lib/money";
 import styles from "./page.module.css";
@@ -87,7 +88,7 @@ export default function MarketplacePage() {
               null,
             );
             return (
-              <div className={styles.carte} key={produit.id}>
+              <Link className={styles.carte} href={`/marketplace/produit/${produit.id}`} key={produit.id}>
                 <div className={styles.imageProduit}>{produit.name}</div>
                 <div className={styles.nomProduit}>{produit.name}</div>
                 <div className={styles.boutique}>{produit.shop.name}</div>
@@ -96,7 +97,7 @@ export default function MarketplacePage() {
                     {formatMoney(Number(moinsCher.sellPrice), moinsCher.currency)}
                   </div>
                 )}
-              </div>
+              </Link>
             );
           })}
         </div>

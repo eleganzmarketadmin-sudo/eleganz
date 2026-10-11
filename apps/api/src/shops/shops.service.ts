@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
@@ -67,15 +67,32 @@ export class ShopsService {
    * s'appuie ensuite sur ShopStaff.role pour savoir qui a fait quoi.
    */
   async inviteStaff(shopId: string, dto: InviteStaffDto) {
+    const estEmail = dto.identifier.includes("@");
+    const utilisateur = await this.prisma.user.findFirst({
+      where: estEmail ? { email: dto.identifier } : { phone: dto.identifier },
+    });
+    if (!utilisateur) {
+      throw new NotFoundException(
+        "Aucun compte ELEGANZ ne correspond à cet email ou ce numéro. Le collaborateur doit d'abord créer son propre compte.",
+      );
+    }
+
     const existing = await this.prisma.shopStaff.findUnique({
-      where: { shopId_userId: { shopId, userId: dto.userId } },
+      where: { shopId_userId: { shopId, userId: utilisateur.id } },
     });
     if (existing) {
-      throw new ConflictException("Cet utilisateur fait déjà partie de l'équipe de cette boutique.");
+      if (existing.active) {
+        throw new ConflictException("Cette personne fait déjà partie de l'équipe de cette boutique.");
+      }
+      // Déjà membre mais désactivé : on réactive plutôt que de dupliquer la ligne.
+      return this.prisma.shopStaff.update({
+        where: { id: existing.id },
+        data: { active: true, role: dto.role },
+      });
     }
 
     return this.prisma.shopStaff.create({
-      data: { shopId, userId: dto.userId, role: dto.role },
+      data: { shopId, userId: utilisateur.id, role: dto.role },
     });
   }
 

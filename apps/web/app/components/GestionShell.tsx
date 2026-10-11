@@ -10,6 +10,7 @@ const LIENS = [
   { href: "/caisse", label: "Caisse" },
   { href: "/tableau-de-bord", label: "Tableau de bord" },
   { href: "/catalogue", label: "Catalogue" },
+  { href: "/equipe", label: "Équipe" },
 ];
 
 export function GestionShell({ children }: { children: React.ReactNode }) {

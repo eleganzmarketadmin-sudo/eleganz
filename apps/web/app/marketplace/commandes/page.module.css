@@ -1,0 +1,36 @@
+.cadre {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.commande {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.sousCommande {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-3) var(--espace-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.messageVide {
+  padding: var(--espace-6);
+  text-align: center;
+  color: #555;
+}
