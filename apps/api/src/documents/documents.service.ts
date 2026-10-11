@@ -68,6 +68,36 @@ export class DocumentsService {
     });
   }
 
+  /**
+   * Génère un document commercial lié à une sous-commande Marketplace reçue
+   * par la boutique (`ShopOrder`, pas `PosSale`). Même garde-fou qu'en
+   * caisse : jamais INVOICE_FISCAL par ce chemin.
+   */
+  async generateForShopOrder(shopId: string, shopOrderId: string, type: DocumentType) {
+    if (!NON_HOMOLOGATED_TYPES.includes(type)) {
+      throw new BadRequestException(
+        `${type} ne peut pas être généré automatiquement tant que l'homologation DGI n'est pas confirmée (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md).`,
+      );
+    }
+
+    const shopOrder = await this.prisma.shopOrder.findFirst({ where: { id: shopOrderId, shopId } });
+    if (!shopOrder) {
+      throw new NotFoundException("Commande introuvable pour cette boutique.");
+    }
+
+    const number = await this.nextNumber(shopId, type);
+
+    return this.prisma.commercialDocument.create({
+      data: {
+        shopId,
+        shopOrderId,
+        type,
+        number,
+        isFiscallyHomologated: false,
+      },
+    });
+  }
+
   async listForShop(shopId: string) {
     return this.prisma.commercialDocument.findMany({
       where: { shopId },
@@ -88,35 +118,63 @@ export class DocumentsService {
       include: {
         shop: { select: { name: true } },
         posSale: { include: { lines: true, payments: true } },
+        shopOrder: {
+          include: {
+            lines: { include: { variant: { include: { product: true } } } },
+            order: { select: { currency: true } },
+          },
+        },
       },
     });
     if (!document) {
       throw new NotFoundException("Document introuvable pour cette boutique.");
     }
-    if (!document.posSale) {
-      throw new BadRequestException(
-        "Ce document n'est pas lié à une vente de caisse — rendu PDF pas encore pris en charge pour les commandes Marketplace.",
-      );
+
+    if (document.posSale) {
+      return renderDocumentPdf({
+        shopName: document.shop.name,
+        documentTypeLabel: LABELS_TYPE[document.type],
+        number: document.number,
+        createdAt: document.createdAt,
+        currency: document.posSale.currency,
+        lines: document.posSale.lines.map((l) => ({
+          label: l.label,
+          quantity: l.quantity,
+          unitPrice: Number(l.unitPrice),
+        })),
+        payments: document.posSale.payments.map((p) => ({
+          method: LABELS_PAIEMENT[p.method] ?? p.method,
+          amount: Number(p.amount),
+        })),
+        totalAmount: Number(document.posSale.totalAmount),
+        isFiscallyHomologated: document.isFiscallyHomologated,
+      });
     }
 
-    return renderDocumentPdf({
-      shopName: document.shop.name,
-      documentTypeLabel: LABELS_TYPE[document.type],
-      number: document.number,
-      createdAt: document.createdAt,
-      currency: document.posSale.currency,
-      lines: document.posSale.lines.map((l) => ({
-        label: l.label,
-        quantity: l.quantity,
-        unitPrice: Number(l.unitPrice),
-      })),
-      payments: document.posSale.payments.map((p) => ({
-        method: LABELS_PAIEMENT[p.method] ?? p.method,
-        amount: Number(p.amount),
-      })),
-      totalAmount: Number(document.posSale.totalAmount),
-      isFiscallyHomologated: document.isFiscallyHomologated,
-    });
+    if (document.shopOrder) {
+      // Aucune intégration de paiement Marketplace n'est branchée encore
+      // (décision #2) : on n'invente jamais un paiement confirmé — on
+      // affiche une note expliquant que le règlement se fait à la livraison.
+      return renderDocumentPdf({
+        shopName: document.shop.name,
+        documentTypeLabel: LABELS_TYPE[document.type],
+        number: document.number,
+        createdAt: document.createdAt,
+        currency: document.shopOrder.order.currency,
+        lines: document.shopOrder.lines.map((l) => ({
+          label: [l.variant.product.name, l.variant.size, l.variant.color].filter(Boolean).join(" — "),
+          quantity: l.quantity,
+          unitPrice: Number(l.unitPrice),
+        })),
+        noteReglement: "Paiement à la livraison (espèces ou mobile money) — commande Marketplace.",
+        totalAmount: Number(document.shopOrder.subtotal),
+        isFiscallyHomologated: document.isFiscallyHomologated,
+      });
+    }
+
+    throw new BadRequestException(
+      "Ce document n'est lié ni à une vente de caisse ni à une commande Marketplace.",
+    );
   }
 
   /**

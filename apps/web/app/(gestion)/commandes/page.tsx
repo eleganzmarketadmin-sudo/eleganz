@@ -6,6 +6,7 @@ import { StatusTag } from "../../components/StatusTag";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { ouvrirDocumentPdf } from "../../lib/pdf";
 import styles from "./page.module.css";
 
 interface OrderLine {
@@ -13,6 +14,7 @@ interface OrderLine {
   variantId: string;
   quantity: number;
   unitPrice: string;
+  variant: { size: string | null; color: string | null; product: { name: string } };
 }
 
 interface ShopOrder {
@@ -119,6 +121,19 @@ function CommandesContent() {
     }
   }
 
+  async function imprimerBonLivraison(shopOrderId: string) {
+    setErreur(null);
+    try {
+      const document = await api.post<{ id: string }>(
+        `/shops/${currentShop!.id}/documents/shop-order/${shopOrderId}`,
+        { type: "DELIVERY_NOTE" },
+      );
+      await ouvrirDocumentPdf(`/shops/${currentShop!.id}/documents/${document.id}/pdf`);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Impossible de générer le document.");
+    }
+  }
+
   return (
     <div>
       <h1 className={styles.titre}>Commandes Marketplace</h1>
@@ -141,7 +156,10 @@ function CommandesContent() {
             <div className={styles.corps}>
               {so.lines.map((l) => (
                 <div className={styles.ligne} key={l.id}>
-                  <span>Article × {l.quantity}</span>
+                  <span>
+                    {[l.variant.product.name, l.variant.size, l.variant.color].filter(Boolean).join(" — ")} ×{" "}
+                    {l.quantity}
+                  </span>
                   <span className="chiffre">{formatMoney(l.quantity * Number(l.unitPrice))}</span>
                 </div>
               ))}
@@ -150,20 +168,21 @@ function CommandesContent() {
                 <span className="chiffre">{formatMoney(Number(so.subtotal))}</span>
               </div>
             </div>
-            {(TRANSITIONS_STAFF[so.status]?.length ?? 0) > 0 && (
-              <div className={styles.actions}>
-                {TRANSITIONS_STAFF[so.status].map((t) => (
-                  <button
-                    key={t.cible}
-                    className={`${styles.boutonAction} ${t.annulation ? styles.boutonAnnuler : ""}`}
-                    disabled={enCours === so.id}
-                    onClick={() => changerStatut(so.id, t.cible)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className={styles.actions}>
+              {(TRANSITIONS_STAFF[so.status] ?? []).map((t) => (
+                <button
+                  key={t.cible}
+                  className={`${styles.boutonAction} ${t.annulation ? styles.boutonAnnuler : ""}`}
+                  disabled={enCours === so.id}
+                  onClick={() => changerStatut(so.id, t.cible)}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <button className={styles.boutonAction} onClick={() => imprimerBonLivraison(so.id)}>
+                Imprimer le bon de livraison
+              </button>
+            </div>
           </div>
         ))
       )}

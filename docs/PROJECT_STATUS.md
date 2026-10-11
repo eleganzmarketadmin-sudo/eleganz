@@ -58,9 +58,10 @@ Dernière mise à jour : 11 octobre 2026.
 - **Images produits par URL** (`PATCH /shops/:shopId/products/:productId`, écran catalogue) : une boutique peut maintenant attacher des photos hébergées ailleurs à un article — pas d'upload (aucun compte de stockage objet encore), mais la vitrine et la fiche produit Marketplace affichent déjà la vraie photo quand elle existe.
 - **Mode hors-ligne — phase 2 implémentée (app shell installable)** : manifest (`public/manifest.json`, nom/icônes/couleurs ELEGANZ, `start_url: /caisse`, `display: standalone`), icônes réelles (192/512, générées en Python puisque la conversion SVG→PNG par ImageMagick n'était pas disponible), service worker (`public/sw.js`) qui met en cache les pages déjà visitées et les fichiers statiques *à l'usage* (pas de préchargement au build — `next build` ne peut pas tourner dans ce bac à sable, voir `MAINTENANCE.md`), page de secours hors-ligne (`public/hors-ligne.html`, HTML statique indépendant du rendu Next.js), enregistrement du service worker (`components/ServiceWorkerRegistration.tsx`) et lien du manifest + couleur de thème dans `app/layout.tsx`. Le service worker ne touche jamais aux appels vers l'API — la file hors-ligne de la caisse (phase 1) s'en occupe déjà. `tsc --noEmit` validé après ces changements.
 
+- **Rendu PDF des commandes Marketplace** (`POST /shops/:shopId/documents/shop-order/:shopOrderId`, bouton « Imprimer le bon de livraison » dans `/commandes`) : le rendu PDF couvre maintenant aussi les sous-commandes Marketplace (`shopOrderId`), pas seulement les ventes de caisse. Comme aucun paiement en ligne n'est encore branché (décision #2), le document affiche une note « paiement à la livraison » plutôt que d'inventer un paiement confirmé. Au passage, l'écran `/commandes` affiche maintenant le vrai nom de l'article (et taille/couleur) au lieu d'un simple « Article ».
+
 ## Pas encore commencé
 
-- **Rendu PDF des commandes Marketplace** : ne couvre encore que les documents liés à une vente de caisse (`posSaleId`), pas aux sous-commandes Marketplace (`shopOrderId`).
 - Aucun compte (hébergement, domaine, Moneroo, stockage objet, fournisseur IA) n'a été créé — voir la section blocages ci-dessus.
 - Aucun déploiement, même en préproduction.
 

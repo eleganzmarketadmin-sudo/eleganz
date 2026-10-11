@@ -19,6 +19,13 @@ export interface DonneesDocumentPdf {
   currency: string;
   lines: LigneDocumentPdf[];
   payments?: PaiementDocumentPdf[];
+  /**
+   * Note affichée à la place du détail des paiements quand aucun paiement
+   * réel n'est encore enregistré (commandes Marketplace : le règlement se
+   * fait à la livraison, aucune intégration de paiement n'est branchée
+   * encore — décision #2). Ne jamais inventer un paiement confirmé.
+   */
+  noteReglement?: string;
   totalAmount: number;
   isFiscallyHomologated: boolean;
 }
@@ -98,6 +105,9 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     for (const paiement of donnees.payments) {
       doc.text(`${paiement.method} : ${formaterMontant(paiement.amount, donnees.currency)}`);
     }
+  } else if (donnees.noteReglement) {
+    doc.moveDown(0.4);
+    doc.font("Helvetica").fontSize(8).text(donnees.noteReglement, { align: "center" });
   }
 
   doc.moveDown(0.8);

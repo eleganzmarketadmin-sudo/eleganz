@@ -24,6 +24,15 @@ export class DocumentsController {
     return this.documentsService.generateForPosSale(shopId, posSaleId, type);
   }
 
+  @Post("shop-order/:shopOrderId")
+  generateForShopOrder(
+    @Param("shopId") shopId: string,
+    @Param("shopOrderId") shopOrderId: string,
+    @Body("type") type: DocumentType,
+  ) {
+    return this.documentsService.generateForShopOrder(shopId, shopOrderId, type);
+  }
+
   @Get(":documentId/pdf")
   async pdf(
     @Param("shopId") shopId: string,

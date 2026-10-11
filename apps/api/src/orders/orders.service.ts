@@ -107,7 +107,10 @@ export class OrdersService {
   listForShop(shopId: string) {
     return this.prisma.shopOrder.findMany({
       where: { shopId },
-      include: { lines: true, order: { select: { id: true, buyerId: true, createdAt: true } } },
+      include: {
+        lines: { include: { variant: { include: { product: { select: { name: true } } } } } },
+        order: { select: { id: true, buyerId: true, createdAt: true } },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
