@@ -25,6 +25,16 @@ export class DisputesController {
     return this.disputesService.listForShop(shopId);
   }
 
+  @Post("shops/:shopId/orders/:shopOrderId/dispute")
+  @UseGuards(ShopMembershipGuard)
+  openAsShop(
+    @Param("shopId") shopId: string,
+    @Param("shopOrderId") shopOrderId: string,
+    @Body("reason") reason: string,
+  ) {
+    return this.disputesService.openAsShop(shopOrderId, shopId, reason);
+  }
+
   @Get("admin/disputes")
   listOpen(@CurrentUser() user: AuthenticatedUser) {
     if (!user.role.startsWith("ADMIN_")) {

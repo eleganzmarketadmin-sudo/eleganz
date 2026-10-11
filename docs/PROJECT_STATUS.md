@@ -60,6 +60,8 @@ Dernière mise à jour : 11 octobre 2026.
 
 - **Rendu PDF des commandes Marketplace** (`POST /shops/:shopId/documents/shop-order/:shopOrderId`, bouton « Imprimer le bon de livraison » dans `/commandes`) : le rendu PDF couvre maintenant aussi les sous-commandes Marketplace (`shopOrderId`), pas seulement les ventes de caisse. Comme aucun paiement en ligne n'est encore branché (décision #2), le document affiche une note « paiement à la livraison » plutôt que d'inventer un paiement confirmé. Au passage, l'écran `/commandes` affiche maintenant le vrai nom de l'article (et taille/couleur) au lieu d'un simple « Article ».
 
+- **Ouverture d'un litige côté boutique** (`POST /shops/:shopId/orders/:shopOrderId/dispute`, bouton « Signaler un litige » dans `/commandes`) : jusqu'ici seul l'acheteur pouvait ouvrir un litige — une boutique peut maintenant en ouvrir un elle-même (ex. acheteur introuvable à la livraison), avec un motif écrit, envoyé à l'administration pour décision (le Centre de pilotage reste seul juge, comme pour les litiges ouverts par l'acheteur).
+
 ## Pas encore commencé
 
 - Aucun compte (hébergement, domaine, Moneroo, stockage objet, fournisseur IA) n'a été créé — voir la section blocages ci-dessus.

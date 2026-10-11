@@ -60,6 +60,17 @@
   color: #fff;
 }
 
+.motifLitige {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  padding: var(--espace-2);
+  border: 2px solid var(--color-border);
+  margin-bottom: var(--espace-3);
+  resize: vertical;
+}
+
 .messageVide {
   padding: var(--espace-5);
   text-align: center;

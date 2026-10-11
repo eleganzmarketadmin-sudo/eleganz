@@ -30,6 +30,22 @@ export class DisputesService {
     return this.open(shopOrderId, reason);
   }
 
+  /**
+   * Ouverture côté boutique (prompt §47, second sens) : par exemple quand
+   * l'acheteur refuse de confirmer la réception ou conteste à tort. La
+   * véritable autorisation « cette commande concerne bien cette boutique »
+   * est déjà assurée par ShopMembershipGuard + l'appartenance de la route
+   * `shops/:shopId/...` ; on revérifie ici pour ne jamais dépendre que du
+   * contrôleur.
+   */
+  async openAsShop(shopOrderId: string, shopId: string, reason: string) {
+    const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({ where: { id: shopOrderId } });
+    if (shopOrder.shopId !== shopId) {
+      throw new ForbiddenException("Cette commande n'appartient pas à cette boutique.");
+    }
+    return this.open(shopOrderId, reason);
+  }
+
   listOpen() {
     return this.prisma.dispute.findMany({
       where: { status: { in: ["OPEN", "UNDER_REVIEW"] } },

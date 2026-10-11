@@ -87,6 +87,8 @@ function CommandesContent() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
+  const [litigeOuvertPour, setLitigeOuvertPour] = useState<string | null>(null);
+  const [motifLitige, setMotifLitige] = useState("");
 
   function recharger() {
     if (!currentShop) return;
@@ -116,6 +118,22 @@ function CommandesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Changement de statut impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function signalerLitige(shopOrderId: string) {
+    if (!motifLitige.trim()) return;
+    setEnCours(shopOrderId);
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/dispute`, { reason: motifLitige.trim() });
+      setLitigeOuvertPour(null);
+      setMotifLitige("");
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Impossible d'ouvrir le litige.");
     } finally {
       setEnCours(null);
     }
@@ -182,7 +200,47 @@ function CommandesContent() {
               <button className={styles.boutonAction} onClick={() => imprimerBonLivraison(so.id)}>
                 Imprimer le bon de livraison
               </button>
+              {!["DISPUTED", "CANCELLED", "REFUNDED", "CLOSED"].includes(so.status) && (
+                <button
+                  className={`${styles.boutonAction} ${styles.boutonAnnuler}`}
+                  onClick={() => {
+                    setLitigeOuvertPour(so.id);
+                    setMotifLitige("");
+                  }}
+                >
+                  Signaler un litige
+                </button>
+              )}
             </div>
+            {litigeOuvertPour === so.id && (
+              <div className={styles.corps}>
+                <textarea
+                  className={styles.motifLitige}
+                  placeholder="Expliquez le problème (ex. acheteur introuvable à la livraison, colis refusé sans motif...)"
+                  value={motifLitige}
+                  onChange={(e) => setMotifLitige(e.target.value)}
+                  rows={3}
+                />
+                <div className={styles.actions} style={{ padding: 0, border: "none" }}>
+                  <button
+                    className={styles.boutonAction}
+                    disabled={enCours === so.id || !motifLitige.trim()}
+                    onClick={() => signalerLitige(so.id)}
+                  >
+                    Envoyer à l&apos;administration
+                  </button>
+                  <button
+                    className={styles.boutonAction}
+                    onClick={() => {
+                      setLitigeOuvertPour(null);
+                      setMotifLitige("");
+                    }}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))
       )}
