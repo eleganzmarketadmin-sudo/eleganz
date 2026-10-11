@@ -1,0 +1,164 @@
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateSaleDto } from "./dto/create-sale.dto";
+import { StockMovementType } from "@eleganz/database";
+
+@Injectable()
+export class PosService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Vente de caisse transactionnelle : décompte du stock et enregistrement de
+   * la vente se font dans la même transaction DB, pour empêcher la double
+   * vente décrite dans le complément stratégique (§5) — une commande en ligne
+   * concurrente sur le même article ne peut pas vendre un stock déjà écoulé
+   * en caisse, et inversement.
+   */
+  async createSale(shopId: string, dto: CreateSaleDto) {
+    return this.prisma.$transaction(async (tx) => {
+      let total = 0;
+
+      for (const line of dto.lines) {
+        total += line.quantity * line.unitPrice;
+
+        if (line.variantId) {
+          const variant = await tx.variant.findUniqueOrThrow({ where: { id: line.variantId } });
+          if (variant.stockQty < line.quantity) {
+            throw new BadRequestException(
+              `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s), ${line.quantity} demandé(s).`,
+            );
+          }
+
+          await tx.variant.update({
+            where: { id: line.variantId },
+            data: { stockQty: { decrement: line.quantity } },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              shopId,
+              variantId: line.variantId,
+              type: StockMovementType.POS_SALE_OUT,
+              quantity: -line.quantity,
+            },
+          });
+        }
+        // Une ligne sans variantId est une vente rapide d'article non catalogué :
+        // elle entre dans le chiffre d'affaires mais ne touche aucun stock
+        // (complément stratégique §3 — ne jamais modifier arbitrairement d'autres articles).
+      }
+
+      const paidAmount = dto.payments.reduce((sum, p) => sum + p.amount, 0);
+      if (Math.abs(paidAmount - total) > 0.01) {
+        throw new BadRequestException(
+          `Le total encaissé (${paidAmount}) ne correspond pas au total de la vente (${total}).`,
+        );
+      }
+
+      const sale = await tx.posSale.create({
+        data: {
+          shopId,
+          cashierId: dto.cashierId,
+          customerId: dto.customerId,
+          totalAmount: total,
+          currency: dto.currency ?? "USD",
+          lines: {
+            create: dto.lines.map((l) => ({
+              variantId: l.variantId,
+              label: l.label,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+            })),
+          },
+          payments: {
+            create: dto.payments.map((p) => ({
+              method: p.method,
+              amount: p.amount,
+              confirmed: p.confirmed ?? true,
+            })),
+          },
+        },
+        include: { lines: true, payments: true },
+      });
+
+      return sale;
+    });
+  }
+
+  async cancelSale(saleId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const sale = await tx.posSale.findUniqueOrThrow({
+        where: { id: saleId },
+        include: { lines: true },
+      });
+
+      for (const line of sale.lines) {
+        if (line.variantId) {
+          await tx.variant.update({
+            where: { id: line.variantId },
+            data: { stockQty: { increment: line.quantity } },
+          });
+          await tx.stockMovement.create({
+            data: {
+              shopId: sale.shopId,
+              variantId: line.variantId,
+              type: StockMovementType.RETURN_IN,
+              quantity: line.quantity,
+              reference: sale.id,
+            },
+          });
+        }
+      }
+
+      return tx.posSale.update({ where: { id: saleId }, data: { status: "CANCELLED" } });
+    });
+  }
+
+  /**
+   * Tableau de bord chiffre d'affaires journalier (complément stratégique §4).
+   * Distingue explicitement CA, encaissements confirmés et bénéfice — qui
+   * n'est calculable que si costPrice est renseigné sur les lignes vendues.
+   */
+  async dailyDashboard(shopId: string, date: Date = new Date()) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+
+    const sales = await this.prisma.posSale.findMany({
+      where: { shopId, createdAt: { gte: startOfDay, lt: endOfDay }, status: { not: "CANCELLED" } },
+      include: { lines: { include: { variant: true } }, payments: true },
+    });
+
+    const revenue = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const confirmedCollections = sales.reduce(
+      (sum, s) => sum + s.payments.filter((p) => p.confirmed).reduce((a, p) => a + Number(p.amount), 0),
+      0,
+    );
+
+    let costKnownForAllLines = true;
+    let grossMargin = 0;
+    for (const sale of sales) {
+      for (const line of sale.lines) {
+        const cost = line.variant?.costPrice;
+        if (cost == null) {
+          costKnownForAllLines = false;
+          continue;
+        }
+        grossMargin += (Number(line.unitPrice) - Number(cost)) * line.quantity;
+      }
+    }
+
+    return {
+      date: startOfDay.toISOString().slice(0, 10),
+      salesCount: sales.length,
+      revenue, // chiffre d'affaires — ne pas confondre avec le bénéfice
+      confirmedCollections, // encaissements réellement confirmés
+      grossMargin: costKnownForAllLines ? grossMargin : null,
+      marginReliable: costKnownForAllLines,
+      note: costKnownForAllLines
+        ? undefined
+        : "Marge non calculable de façon fiable : prix d'achat manquant sur au moins un article vendu.",
+    };
+  }
+}
