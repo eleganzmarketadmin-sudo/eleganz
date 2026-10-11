@@ -229,6 +229,10 @@ model PosSale {
   totalAmount Decimal  @db.Decimal(12, 2)
   currency    String   @default("USD")
   status      String   @default("COMPLETED") // COMPLETED | CANCELLED | RETURNED
+  // Clé d'idempotence pour la synchronisation hors-ligne (docs/ARCHITECTURE_HORS_LIGNE.md) :
+  // générée côté client avant tout appel réseau, unique, pour qu'une
+  // tentative renvoyée deux fois ne crée jamais deux ventes.
+  clientOperationId String? @unique
   createdAt   DateTime @default(now())
 
   lines     PosSaleLine[]
@@ -245,6 +249,12 @@ model PosSaleLine {
   label     String   // désignation libre pour une vente non cataloguée
   quantity  Int
   unitPrice Decimal  @db.Decimal(12, 2)
+  // true quand cette ligne a été acceptée en synchronisation différée alors
+  // que le stock disponible était insuffisant (décision validée par le
+  // propriétaire : on garde la vente — l'argent a réellement été encaissé —
+  // et on laisse le stock descendre sous zéro plutôt que d'effacer une
+  // transaction physique déjà survenue). La boutique régularise elle-même.
+  stockDiscrepancy Boolean @default(false)
 }
 
 model PosPayment {

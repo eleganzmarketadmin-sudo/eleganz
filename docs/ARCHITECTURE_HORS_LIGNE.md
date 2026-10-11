@@ -1,9 +1,16 @@
-# Mode hors-ligne de la caisse — spécification
+# Mode hors-ligne de la caisse — spécification et état d'implémentation
 
 Décision #8 : le mode hors-ligne fait partie du V1, mais doit être spécifié
 avant d'être codé — c'est un point d'architecture (ordre des opérations,
 résolution de conflits), pas un détail d'écran. Ce document fixe la
-conception ; l'implémentation suit une fois ce plan validé.
+conception.
+
+**État** : la phase 1 (file d'opérations + synchronisation idempotente) est
+implémentée — voir `apps/api/src/pos/pos.service.ts`
+(`syncOfflineSale`/`listStockDiscrepancies`), `apps/web/app/lib/offline-queue.ts`,
+`apps/web/app/lib/offline-sync.tsx`, et l'intégration dans l'écran caisse et
+le tableau de bord. La phase 2 (app shell installable/PWA) n'est pas
+commencée.
 
 ## Le problème réel
 
@@ -94,7 +101,7 @@ Flux côté caisse :
   négatif décrite ci-dessous, puis enregistre `clientOperationId` sur la
   vente créée.
 
-### Politique de stock négatif en synchronisation différée — décision à valider par le propriétaire
+### Politique de stock négatif en synchronisation différée — validée par le propriétaire
 
 En vente au comptoir en direct, un stock insuffisant bloque la vente
 (`BadRequestException` actuelle de `PosService.createSale`) — logique : la
@@ -104,8 +111,7 @@ coupure. Refuser la vente a posteriori ne défait pas la transaction réelle,
 et créerait un chiffre d'affaires fantôme (de l'argent encaissé pour une
 vente qui « n'existe pas » dans le système).
 
-Politique proposée (à confirmer explicitement par le propriétaire avant
-implémentation, puisqu'elle a un impact comptable) : en synchronisation, le
+Politique validée par le propriétaire (11 octobre 2026) : en synchronisation, le
 stock peut descendre sous zéro plutôt que de rejeter la vente, et la ligne
 concernée est marquée `stockDiscrepancy: true`. Le tableau de bord du jour
 et un nouvel indicateur « Écarts de stock à vérifier » signalent ces lignes

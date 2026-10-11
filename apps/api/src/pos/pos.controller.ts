@@ -1,6 +1,6 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { PosService } from "./pos.service";
-import { CreateSaleDto } from "./dto/create-sale.dto";
+import { CreateSaleDto, SyncSaleDto } from "./dto/create-sale.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -27,9 +27,26 @@ export class PosController {
     return this.posService.createSale(shopId, { ...dto, cashierId: user.id });
   }
 
+  @Post("sales/sync")
+  syncSale(
+    @Param("shopId") shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SyncSaleDto,
+  ) {
+    // Même garde qu'en vente directe : le caissier est toujours l'utilisateur
+    // authentifié, jamais une valeur reçue de l'appareil.
+    return this.posService.syncOfflineSale(shopId, { ...dto, cashierId: user.id });
+  }
+
   @Post("sales/:saleId/cancel")
   cancelSale(@Param("saleId") saleId: string) {
     return this.posService.cancelSale(saleId);
+  }
+
+  @Get("stock-discrepancies")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER, StaffRole.ACCOUNTANT)
+  listStockDiscrepancies(@Param("shopId") shopId: string) {
+    return this.posService.listStockDiscrepancies(shopId);
   }
 
   @Get("dashboard/daily")

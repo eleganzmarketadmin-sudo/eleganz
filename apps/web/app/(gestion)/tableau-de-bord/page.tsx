@@ -17,6 +17,14 @@ interface Dashboard {
   note?: string;
 }
 
+interface EcartStock {
+  id: string;
+  label: string;
+  quantity: number;
+  sale: { id: string; createdAt: string };
+  variant?: { sku: string } | null;
+}
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -27,6 +35,7 @@ function DashboardContent() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [ecartsStock, setEcartsStock] = useState<EcartStock[]>([]);
 
   useEffect(() => {
     if (!currentShop) return;
@@ -56,6 +65,14 @@ function DashboardContent() {
       annule = true;
     };
   }, [currentShop, date]);
+
+  useEffect(() => {
+    if (!currentShop) return;
+    api
+      .get<EcartStock[]>(`/shops/${currentShop.id}/pos/stock-discrepancies`)
+      .then(setEcartsStock)
+      .catch(() => setEcartsStock([]));
+  }, [currentShop]);
 
   return (
     <div>
@@ -103,6 +120,26 @@ function DashboardContent() {
             le prix d&apos;achat est renseigné sur chaque article vendu.
           </p>
         </>
+      )}
+
+      {ecartsStock.length > 0 && (
+        <div style={{ marginTop: "32px" }}>
+          <h2 style={{ fontSize: "1rem", marginBottom: "12px" }}>
+            Écarts de stock à vérifier ({ecartsStock.length})
+          </h2>
+          <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "12px" }}>
+            Ventes acceptées pendant une coupure réseau alors que le stock affiché était déjà
+            insuffisant — à régulariser par un comptage physique.
+          </p>
+          <div className={styles.note}>
+            {ecartsStock.map((e) => (
+              <div key={e.id} style={{ marginBottom: "4px" }}>
+                {e.label} ({e.variant?.sku ?? "sans référence"}) × {e.quantity} —{" "}
+                {new Date(e.sale.createdAt).toLocaleString("fr-FR")}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

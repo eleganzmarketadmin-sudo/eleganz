@@ -13,20 +13,36 @@ export class PosService {
    * vente décrite dans le complément stratégique (§5) — une commande en ligne
    * concurrente sur le même article ne peut pas vendre un stock déjà écoulé
    * en caisse, et inversement.
+   *
+   * `allowNegativeStock` sert exclusivement à la synchronisation hors-ligne
+   * (voir `syncOfflineSale` ci-dessous et docs/ARCHITECTURE_HORS_LIGNE.md) :
+   * une vente en direct reste bloquée par un stock insuffisant (la caissière
+   * peut regarder l'étagère), mais une vente synchronisée après coup
+   * correspond à de l'argent déjà réellement encaissé pendant une coupure —
+   * on ne l'efface jamais, on signale l'écart (`stockDiscrepancy`) pour que
+   * la boutique régularise elle-même. Décision validée par le propriétaire.
    */
-  async createSale(shopId: string, dto: CreateSaleDto & { cashierId: string }) {
+  async createSale(
+    shopId: string,
+    dto: CreateSaleDto & { cashierId: string; clientOperationId?: string },
+    options: { allowNegativeStock?: boolean } = {},
+  ) {
     return this.prisma.$transaction(async (tx) => {
       let total = 0;
+      const discrepancyByLineIndex = new Set<number>();
 
-      for (const line of dto.lines) {
+      for (const [index, line] of dto.lines.entries()) {
         total += line.quantity * line.unitPrice;
 
         if (line.variantId) {
           const variant = await tx.variant.findUniqueOrThrow({ where: { id: line.variantId } });
           if (variant.stockQty < line.quantity) {
-            throw new BadRequestException(
-              `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s), ${line.quantity} demandé(s).`,
-            );
+            if (!options.allowNegativeStock) {
+              throw new BadRequestException(
+                `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s), ${line.quantity} demandé(s).`,
+              );
+            }
+            discrepancyByLineIndex.add(index);
           }
 
           await tx.variant.update({
@@ -69,12 +85,14 @@ export class PosService {
           customerId: dto.customerId,
           totalAmount: total,
           currency: dto.currency ?? "USD",
+          clientOperationId: dto.clientOperationId,
           lines: {
-            create: dto.lines.map((l) => ({
+            create: dto.lines.map((l, index) => ({
               variantId: l.variantId,
               label: l.label,
               quantity: l.quantity,
               unitPrice: l.unitPrice,
+              stockDiscrepancy: discrepancyByLineIndex.has(index),
             })),
           },
           payments: {
@@ -99,6 +117,42 @@ export class PosService {
       }
 
       return sale;
+    });
+  }
+
+  /**
+   * Point d'entrée de synchronisation hors-ligne
+   * (docs/ARCHITECTURE_HORS_LIGNE.md, phase 1). Idempotent sur
+   * `clientOperationId`, généré côté client avant tout appel réseau : si la
+   * même opération est envoyée deux fois (coupure pendant la réponse,
+   * nouvelle tentative de l'appareil), on renvoie la vente déjà enregistrée
+   * au lieu d'en créer une seconde et de décompter le stock deux fois.
+   */
+  async syncOfflineSale(
+    shopId: string,
+    dto: CreateSaleDto & { cashierId: string; clientOperationId: string },
+  ) {
+    const existante = await this.prisma.posSale.findUnique({
+      where: { clientOperationId: dto.clientOperationId },
+      include: { lines: true, payments: true },
+    });
+    if (existante) {
+      return existante;
+    }
+    return this.createSale(shopId, dto, { allowNegativeStock: true });
+  }
+
+  /**
+   * Lignes de vente dont le stock est descendu sous zéro pendant une
+   * synchronisation différée — à régulariser manuellement par la boutique
+   * (comptage, remboursement, réapprovisionnement). Jamais corrigé seul par
+   * le système : c'est une décision commerciale, pas technique.
+   */
+  async listStockDiscrepancies(shopId: string) {
+    return this.prisma.posSaleLine.findMany({
+      where: { stockDiscrepancy: true, sale: { shopId } },
+      include: { sale: { select: { id: true, createdAt: true, cashierId: true } }, variant: true },
+      orderBy: { sale: { createdAt: "desc" } },
     });
   }
 

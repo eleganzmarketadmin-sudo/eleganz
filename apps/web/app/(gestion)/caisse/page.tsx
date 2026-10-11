@@ -6,6 +6,8 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { ajouterOperation } from "../../lib/offline-queue";
+import { useOfflineSync } from "../../lib/offline-sync";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -40,6 +42,7 @@ const MOYENS = [
 
 function CaisseContent() {
   const { currentShop } = useShop();
+  const { rafraichirCompteur, synchroniser } = useOfflineSync();
   const [produits, setProduits] = useState<Product[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreurChargement, setErreurChargement] = useState<string | null>(null);
@@ -128,17 +131,20 @@ function CaisseContent() {
     setEnCours(true);
     setErreurVente(null);
     setDernierTicket(null);
+
+    const payload = {
+      lines: lignes.map((l) => ({
+        variantId: l.variantId,
+        label: l.label,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+      })),
+      payments: [{ method: moyen, amount: total }],
+      currency: devise,
+    };
+
     try {
-      const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, {
-        lines: lignes.map((l) => ({
-          variantId: l.variantId,
-          label: l.label,
-          quantity: l.quantity,
-          unitPrice: l.unitPrice,
-        })),
-        payments: [{ method: moyen, amount: total }],
-        currency: devise,
-      });
+      const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, payload);
       setConfirmation(`Vente enregistrée — ${formatMoney(total, devise)} encaissé.`);
       setLignes([]);
       try {
@@ -151,8 +157,39 @@ function CaisseContent() {
         // La vente est enregistrée même si la génération du ticket échoue —
         // ne jamais bloquer l'encaissement pour un problème d'impression.
       }
+      return;
     } catch (err) {
-      setErreurVente(err instanceof ApiError ? err.message : "La vente n'a pas pu être enregistrée.");
+      // statusCode === 0 : le serveur est inatteignable (coupure réseau),
+      // pas un refus — on bascule sur la file hors-ligne plutôt que de
+      // faire perdre la vente au commerçant (docs/ARCHITECTURE_HORS_LIGNE.md).
+      if (err instanceof ApiError && err.statusCode === 0) {
+        try {
+          const clientOperationId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          await ajouterOperation({
+            clientOperationId,
+            shopId: currentShop.id,
+            type: "POS_SALE",
+            payload,
+            createdAtClient: new Date().toISOString(),
+            tentatives: 0,
+          });
+          await rafraichirCompteur();
+          setConfirmation(
+            `Vente enregistrée hors-ligne — ${formatMoney(total, devise)}. Elle se synchronisera automatiquement dès le retour du réseau.`,
+          );
+          setLignes([]);
+          synchroniser();
+        } catch {
+          setErreurVente(
+            "Pas de réseau et la vente n'a pas pu être mise en attente localement — notez-la manuellement.",
+          );
+        }
+      } else {
+        setErreurVente(err instanceof ApiError ? err.message : "La vente n'a pas pu être enregistrée.");
+      }
     } finally {
       setEnCours(false);
     }

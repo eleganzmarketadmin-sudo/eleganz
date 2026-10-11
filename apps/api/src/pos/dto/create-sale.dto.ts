@@ -71,3 +71,10 @@ export class CreateSaleDto {
   @IsEnum(["USD", "CDF"])
   currency?: "USD" | "CDF";
 }
+
+export class SyncSaleDto extends CreateSaleDto {
+  // Généré côté client avant tout appel réseau (docs/ARCHITECTURE_HORS_LIGNE.md)
+  // — clé d'idempotence de la synchronisation hors-ligne.
+  @IsString()
+  clientOperationId!: string;
+}
