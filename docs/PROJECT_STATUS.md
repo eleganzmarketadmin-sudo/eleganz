@@ -19,6 +19,8 @@ Dernière mise à jour : 11 octobre 2026.
 - **Espace vendeur marketplace (`/commandes` côté Gestion)** : liste des sous-commandes reçues par la boutique, avec les boutons d'action correspondant exactement aux transitions de statut autorisées côté serveur (`ALLOWED_TRANSITIONS`), jamais un raccourci qui saute une étape.
 - **Publication vers la Marketplace depuis le catalogue** : bouton « Publier sur la Marketplace » par article (il n'y a volontairement pas encore de bouton pour dépublier — l'API ne le permet pas non plus aujourd'hui).
 - **Rendu PDF des documents commerciaux** (`pdfkit`, ajouté en dépendance réelle, pas une maquette) : ticket/reçu/facture interne au format imprimante de caisse (~80mm), généré à la demande plutôt que stocké — aucun compte de stockage objet n'existe encore, et l'impression à la demande fonctionne même sans connexion internet au comptoir. Toujours lu depuis `isFiscallyHomologated` en base, jamais déduit dans le rendu. La caisse propose « Imprimer le ticket » juste après l'encaissement.
+- **Dépublication d'un article** (`POST /shops/:shopId/unpublish`) et bouton correspondant dans le catalogue — jusqu'ici on ne pouvait que publier, jamais retirer.
+- **Litiges côté boutique** (`GET /shops/:shopId/disputes`, écran `/litiges`) : une boutique voit maintenant les litiges ouverts contre elle, en lecture — la décision reste du ressort de l'administration (Centre de pilotage), l'écran le dit explicitement.
 
 - Cadrage complet : matrice des fonctionnalités, comparaison d'architectures, coûts estimés, 10 décisions validées par le propriétaire (`DECISIONS.md`).
 - Squelette du monorepo (`apps/api`, `apps/web`, `packages/database`), workspace pnpm fonctionnel (`pnpm install` validé, 395 paquets).

@@ -1,6 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { DisputesService } from "./disputes.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 
@@ -16,6 +17,12 @@ export class DisputesController {
     @Body("reason") reason: string,
   ) {
     return this.disputesService.openAsBuyer(shopOrderId, user.id, reason);
+  }
+
+  @Get("shops/:shopId/disputes")
+  @UseGuards(ShopMembershipGuard)
+  listForShop(@Param("shopId") shopId: string) {
+    return this.disputesService.listForShop(shopId);
   }
 
   @Get("admin/disputes")

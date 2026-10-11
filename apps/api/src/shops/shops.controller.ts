@@ -32,6 +32,13 @@ export class ShopsController {
     return this.shopsService.publishSelection(shopId, productIds);
   }
 
+  @Post(":shopId/unpublish")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  unpublish(@Param("shopId") shopId: string, @Body("productIds") productIds: string[]) {
+    return this.shopsService.unpublishSelection(shopId, productIds);
+  }
+
   @Get(":shopId/staff")
   @UseGuards(ShopMembershipGuard)
   listStaff(@Param("shopId") shopId: string) {

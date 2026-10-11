@@ -131,4 +131,18 @@ export class ShopsService {
 
     return this.prisma.product.findMany({ where: { id: { in: productIds } } });
   }
+
+  /**
+   * Retire une sélection d'articles de la Marketplace. Ne touche jamais au
+   * mode de la boutique (une boutique HYBRID le reste même sans aucun
+   * article publié) — seule une action explicite du propriétaire change le
+   * mode.
+   */
+  async unpublishSelection(shopId: string, productIds: string[]) {
+    await this.prisma.product.updateMany({
+      where: { id: { in: productIds }, shopId },
+      data: { isPublished: false },
+    });
+    return this.prisma.product.findMany({ where: { id: { in: productIds } } });
+  }
 }

@@ -128,6 +128,17 @@ function CatalogueContent() {
     }
   }
 
+  async function depublier(produitId: string) {
+    if (!currentShop) return;
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/unpublish`, { productIds: [produitId] });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Retrait impossible.");
+    }
+  }
+
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
@@ -188,7 +199,16 @@ function CatalogueContent() {
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 {produit.category ?? "Sans catégorie"}
                 {produit.isPublished ? (
-                  <StatusTag label="Publié sur la Marketplace" humeur="paye" />
+                  <>
+                    <StatusTag label="Publié sur la Marketplace" humeur="paye" />
+                    <button
+                      className={styles.bouton}
+                      style={{ padding: "6px 12px", minHeight: "32px", background: "var(--color-flamme)" }}
+                      onClick={() => depublier(produit.id)}
+                    >
+                      Retirer de la Marketplace
+                    </button>
+                  </>
                 ) : (
                   <button
                     className={styles.bouton}

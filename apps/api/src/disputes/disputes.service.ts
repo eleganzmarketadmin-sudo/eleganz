@@ -39,6 +39,20 @@ export class DisputesService {
   }
 
   /**
+   * Litiges concernant une boutique précise — ce que ShopMembershipGuard
+   * autorise déjà à voir, mais filtré pour ne jamais exposer les litiges
+   * d'une autre boutique (séparation des données exigée partout ailleurs
+   * dans l'API).
+   */
+  listForShop(shopId: string) {
+    return this.prisma.dispute.findMany({
+      where: { shopOrder: { shopId } },
+      include: { shopOrder: { include: { lines: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
    * Décision administrative (prompt §47 : « l'administration doit pouvoir
    * examiner le dossier, enregistrer une décision et assurer le suivi »).
    * TODO : brancher sur un guard ADMIN_* dédié une fois le Centre de

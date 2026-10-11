@@ -1,0 +1,31 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.litige {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+  padding: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--espace-2);
+}
+
+.motif {
+  margin-bottom: var(--espace-2);
+}
+
+.resolution {
+  background: var(--color-toile);
+  padding: var(--espace-3);
+  font-size: 0.875rem;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: #555;
+}
