@@ -39,6 +39,28 @@ pourrait être ajouté en complément mais n'est pas nécessaire.
 pnpm --filter @eleganz/web build
 ```
 
+## Stockage objet des images produits (Cloudflare R2)
+
+Compte créé par le propriétaire du projet (décision du 11 octobre 2026).
+Variables à renseigner dans `apps/api/.env` en local, ou dans les variables
+d'environnement du service d'hébergement en production — voir
+`apps/api/.env.example` pour la liste complète et son explication
+(`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
+`R2_PUBLIC_BASE_URL`). Jamais codées en dur dans le code.
+
+`R2_PUBLIC_BASE_URL` suppose que le bucket a son accès public activé (R2 →
+le bucket → Settings → Public Access → Allow Access via le domaine `r2.dev`
+fourni par Cloudflare, ou un domaine personnalisé une fois branché) — sans
+ça, les photos uploadées ne s'afficheront pas sur la vitrine Marketplace
+(erreur 401/403 côté navigateur).
+
+Le flux d'upload (`StorageService`, `apps/api/src/storage/`) ne fait jamais
+transiter le fichier par notre propre serveur : le navigateur de la boutique
+obtient une URL R2 signée à durée limitée (`POST
+/shops/:shopId/products/:productId/images/upload-url`) puis envoie l'image
+directement à R2, et seule l'URL publique définitive est ensuite enregistrée
+sur `Product.images` via `PATCH /shops/:shopId/products/:productId`.
+
 ## Commandes utiles
 
 ```bash

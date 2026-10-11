@@ -4,10 +4,26 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { StockMovementType } from "@eleganz/database";
+import { StorageService } from "../storage/storage.service";
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
+
+  /**
+   * Étape 1 de l'upload réel d'image (remplace le simple collage d'URL) :
+   * vérifie que l'article appartient bien à cette boutique, puis renvoie une
+   * URL signée R2 où le navigateur enverra directement le fichier, ainsi que
+   * l'URL publique définitive à ajouter ensuite à `Product.images` via
+   * `updateProduct`.
+   */
+  async creerUrlUploadImage(shopId: string, productId: string, contentType: string) {
+    await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
+    return this.storage.creerUrlUploadImage(shopId, productId, contentType);
+  }
 
   createProduct(shopId: string, dto: CreateProductDto) {
     return this.prisma.product.create({

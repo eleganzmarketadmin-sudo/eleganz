@@ -60,6 +60,31 @@ function ImagesProduit({
     setUrl("");
   }
 
+  async function televerserPhoto(fichier: File) {
+    if (!currentShop) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/shops/${currentShop.id}/products/${produit.id}/images/upload-url`,
+        { contentType: fichier.type },
+      );
+      const envoi = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fichier.type },
+        body: fichier,
+      });
+      if (!envoi.ok) {
+        throw new Error("Le fichier n'a pas pu être envoyé au stockage.");
+      }
+      await sauvegarder([...produit.images, publicUrl]);
+    } catch (err) {
+      setErreur(err instanceof ApiError || err instanceof Error ? err.message : "Envoi de la photo impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
   async function retirerImage(index: number) {
     await sauvegarder(produit.images.filter((_, i) => i !== index));
   }
@@ -93,15 +118,34 @@ function ImagesProduit({
           </button>
         </div>
       ))}
-      <input
-        placeholder="URL d'une photo (hébergée ailleurs pour l'instant)"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        style={{ minWidth: "260px", padding: "8px", border: "1px solid var(--color-border)" }}
-      />
-      <button className={styles.bouton} style={{ minHeight: "40px" }} onClick={ajouterImage} disabled={enCours || !url}>
-        Ajouter
-      </button>
+      <label className={styles.bouton} style={{ minHeight: "40px", display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
+        Téléverser une photo
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={(e) => {
+            const fichier = e.target.files?.[0];
+            e.target.value = "";
+            if (fichier) televerserPhoto(fichier);
+          }}
+          disabled={enCours}
+          style={{ display: "none" }}
+        />
+      </label>
+      <details style={{ fontSize: "0.8125rem" }}>
+        <summary style={{ cursor: "pointer", color: "var(--color-cobalt)" }}>ou coller une URL existante</summary>
+        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+          <input
+            placeholder="URL d'une photo déjà hébergée ailleurs"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            style={{ minWidth: "260px", padding: "8px", border: "1px solid var(--color-border)" }}
+          />
+          <button className={styles.bouton} style={{ minHeight: "40px" }} onClick={ajouterImage} disabled={enCours || !url}>
+            Ajouter
+          </button>
+        </div>
+      </details>
       {erreur && <span style={{ color: "var(--color-flamme)", fontSize: "0.8125rem" }}>{erreur}</span>}
     </div>
   );

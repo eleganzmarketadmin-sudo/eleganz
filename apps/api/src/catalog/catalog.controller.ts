@@ -3,6 +3,7 @@ import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -36,6 +37,16 @@ export class CatalogController {
     @Body() dto: UpdateProductDto,
   ) {
     return this.catalogService.updateProduct(shopId, productId, dto);
+  }
+
+  @Post(":productId/images/upload-url")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  creerUrlUploadImage(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Body() dto: RequestImageUploadDto,
+  ) {
+    return this.catalogService.creerUrlUploadImage(shopId, productId, dto.contentType);
   }
 
   @Post(":productId/variants")
