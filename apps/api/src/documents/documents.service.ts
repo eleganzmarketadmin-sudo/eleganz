@@ -1,6 +1,27 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { DocumentType } from "@eleganz/database";
+import { renderDocumentPdf } from "./pdf-renderer";
+
+const LABELS_PAIEMENT: Record<string, string> = {
+  CASH: "Espèces",
+  MOBILE_MONEY: "Mobile money",
+  CARD: "Carte",
+  BANK_TRANSFER: "Virement",
+  STORE_CREDIT: "Crédit client",
+  CASH_ON_DELIVERY: "Paiement à la livraison",
+};
+
+const LABELS_TYPE: Record<DocumentType, string> = {
+  TICKET: "Ticket de caisse",
+  RECEIPT: "Reçu",
+  INVOICE_INTERNAL: "Facture interne",
+  INVOICE_FISCAL: "Facture fiscale homologuée",
+  PROFORMA: "Facture proforma",
+  QUOTE: "Devis",
+  CREDIT_NOTE: "Note de crédit",
+  DELIVERY_NOTE: "Bon de livraison",
+};
 
 // Types émis sans restriction tant que l'homologation DGI n'est pas confirmée
 // (décision #9, docs/COMPLIANCE_FACTURE_NORMALISEE.md). INVOICE_FISCAL est
@@ -51,6 +72,50 @@ export class DocumentsService {
     return this.prisma.commercialDocument.findMany({
       where: { shopId },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Rend un document commercial en PDF, imprimable directement (format
+   * adapté imprimante de caisse, prompt §6). Produit à la demande plutôt que
+   * stocké dans un stockage objet — aucun compte d'hébergement/stockage
+   * n'existe encore (voir PROJECT_STATUS.md, section blocages), et imprimer
+   * à la demande fonctionne même sans connexion internet au comptoir.
+   */
+  async renderPdf(shopId: string, documentId: string) {
+    const document = await this.prisma.commercialDocument.findFirst({
+      where: { id: documentId, shopId },
+      include: {
+        shop: { select: { name: true } },
+        posSale: { include: { lines: true, payments: true } },
+      },
+    });
+    if (!document) {
+      throw new NotFoundException("Document introuvable pour cette boutique.");
+    }
+    if (!document.posSale) {
+      throw new BadRequestException(
+        "Ce document n'est pas lié à une vente de caisse — rendu PDF pas encore pris en charge pour les commandes Marketplace.",
+      );
+    }
+
+    return renderDocumentPdf({
+      shopName: document.shop.name,
+      documentTypeLabel: LABELS_TYPE[document.type],
+      number: document.number,
+      createdAt: document.createdAt,
+      currency: document.posSale.currency,
+      lines: document.posSale.lines.map((l) => ({
+        label: l.label,
+        quantity: l.quantity,
+        unitPrice: Number(l.unitPrice),
+      })),
+      payments: document.posSale.payments.map((p) => ({
+        method: LABELS_PAIEMENT[p.method] ?? p.method,
+        amount: Number(p.amount),
+      })),
+      totalAmount: Number(document.posSale.totalAmount),
+      isFiscallyHomologated: document.isFiscallyHomologated,
     });
   }
 

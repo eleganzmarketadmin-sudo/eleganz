@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { ouvrirDocumentPdf } from "../../lib/pdf";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -48,6 +49,10 @@ function CaisseContent() {
   const [enCours, setEnCours] = useState(false);
   const [erreurVente, setErreurVente] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [dernierTicket, setDernierTicket] = useState<{ shopId: string; documentId: string } | null>(
+    null,
+  );
+  const [impressionEnCours, setImpressionEnCours] = useState(false);
 
   useEffect(() => {
     if (!currentShop) return;
@@ -122,8 +127,9 @@ function CaisseContent() {
     if (!currentShop || lignes.length === 0) return;
     setEnCours(true);
     setErreurVente(null);
+    setDernierTicket(null);
     try {
-      await api.post(`/shops/${currentShop.id}/pos/sales`, {
+      const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, {
         lines: lignes.map((l) => ({
           variantId: l.variantId,
           label: l.label,
@@ -135,10 +141,34 @@ function CaisseContent() {
       });
       setConfirmation(`Vente enregistrée — ${formatMoney(total, devise)} encaissé.`);
       setLignes([]);
+      try {
+        const document = await api.post<{ id: string }>(
+          `/shops/${currentShop.id}/documents/pos-sale/${vente.id}`,
+          { type: "TICKET" },
+        );
+        setDernierTicket({ shopId: currentShop.id, documentId: document.id });
+      } catch {
+        // La vente est enregistrée même si la génération du ticket échoue —
+        // ne jamais bloquer l'encaissement pour un problème d'impression.
+      }
     } catch (err) {
       setErreurVente(err instanceof ApiError ? err.message : "La vente n'a pas pu être enregistrée.");
     } finally {
       setEnCours(false);
+    }
+  }
+
+  async function imprimerDernierTicket() {
+    if (!dernierTicket) return;
+    setImpressionEnCours(true);
+    try {
+      await ouvrirDocumentPdf(
+        `/shops/${dernierTicket.shopId}/documents/${dernierTicket.documentId}/pdf`,
+      );
+    } catch {
+      setErreurVente("Le ticket n'a pas pu être ouvert pour impression.");
+    } finally {
+      setImpressionEnCours(false);
     }
   }
 
@@ -231,7 +261,31 @@ function CaisseContent() {
           </div>
 
           {erreurVente && <div className={styles.erreur}>{erreurVente}</div>}
-          {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
+          {confirmation && (
+            <div className={styles.confirmation}>
+              {confirmation}
+              {dernierTicket && (
+                <>
+                  {" — "}
+                  <button
+                    onClick={imprimerDernierTicket}
+                    disabled={impressionEnCours}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#fff",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      padding: 0,
+                      font: "inherit",
+                    }}
+                  >
+                    Imprimer le ticket
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { DocumentsService } from "./documents.service";
 import { DocumentType } from "@eleganz/database";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -21,5 +22,17 @@ export class DocumentsController {
     @Body("type") type: DocumentType,
   ) {
     return this.documentsService.generateForPosSale(shopId, posSaleId, type);
+  }
+
+  @Get(":documentId/pdf")
+  async pdf(
+    @Param("shopId") shopId: string,
+    @Param("documentId") documentId: string,
+    @Res() res: Response,
+  ) {
+    const doc = await this.documentsService.renderPdf(shopId, documentId);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="document-${documentId}.pdf"`);
+    doc.pipe(res);
   }
 }
