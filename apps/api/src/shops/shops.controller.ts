@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { ShopsService } from "./shops.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
+import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "./shop-membership.guard";
+import { ShopRoles } from "./roles.decorator";
+import { StaffRole } from "@eleganz/database";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 
@@ -24,7 +27,28 @@ export class ShopsController {
 
   @Post(":shopId/publish")
   @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   publish(@Param("shopId") shopId: string, @Body("productIds") productIds: string[]) {
     return this.shopsService.publishSelection(shopId, productIds);
+  }
+
+  @Get(":shopId/staff")
+  @UseGuards(ShopMembershipGuard)
+  listStaff(@Param("shopId") shopId: string) {
+    return this.shopsService.listStaff(shopId);
+  }
+
+  @Post(":shopId/staff")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  inviteStaff(@Param("shopId") shopId: string, @Body() dto: InviteStaffDto) {
+    return this.shopsService.inviteStaff(shopId, dto);
+  }
+
+  @Delete(":shopId/staff/:staffId")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  removeStaff(@Param("shopId") shopId: string, @Param("staffId") staffId: string) {
+    return this.shopsService.deactivateStaff(shopId, staffId);
   }
 }

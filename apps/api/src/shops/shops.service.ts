@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
+import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
@@ -46,6 +47,40 @@ export class ShopsService {
 
   async findMine(ownerId: string) {
     return this.prisma.shop.findMany({ where: { ownerId } });
+  }
+
+  /**
+   * Invite un collaborateur déjà inscrit sur ELEGANZ dans l'équipe de la
+   * boutique (prompt §10 : propriétaire, gérant, caissier, magasinier,
+   * responsable commercial, comptable). Chaque journal de caisse / audit
+   * s'appuie ensuite sur ShopStaff.role pour savoir qui a fait quoi.
+   */
+  async inviteStaff(shopId: string, dto: InviteStaffDto) {
+    const existing = await this.prisma.shopStaff.findUnique({
+      where: { shopId_userId: { shopId, userId: dto.userId } },
+    });
+    if (existing) {
+      throw new ConflictException("Cet utilisateur fait déjà partie de l'équipe de cette boutique.");
+    }
+
+    return this.prisma.shopStaff.create({
+      data: { shopId, userId: dto.userId, role: dto.role },
+    });
+  }
+
+  listStaff(shopId: string) {
+    return this.prisma.shopStaff.findMany({
+      where: { shopId },
+      include: { user: { select: { id: true, fullName: true, email: true, phone: true } } },
+    });
+  }
+
+  async deactivateStaff(shopId: string, staffId: string) {
+    const staff = await this.prisma.shopStaff.findUniqueOrThrow({ where: { id: staffId } });
+    if (staff.role === StaffRole.OWNER) {
+      throw new ConflictException("Le propriétaire de la boutique ne peut pas être retiré.");
+    }
+    return this.prisma.shopStaff.update({ where: { id: staffId }, data: { active: false } });
   }
 
   /**

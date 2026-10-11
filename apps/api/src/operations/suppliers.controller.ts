@@ -3,9 +3,17 @@ import { SuppliersService } from "./suppliers.service";
 import { CreateSupplierDto, RecordPurchaseDto } from "./dto/supplier.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
+import { ShopRoles } from "../shops/roles.decorator";
+import { StaffRole } from "@eleganz/database";
+
+// Fournisseurs, prix d'achat et dettes : données de gestion sensibles,
+// réservées aux rôles qui en ont besoin (prompt §10 — un caissier ne doit
+// pas pouvoir consulter toutes les données confidentielles de la boutique).
+const SUPPLIER_MANAGEMENT_ROLES = [StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT];
 
 @Controller("shops/:shopId/suppliers")
 @UseGuards(JwtAuthGuard, ShopMembershipGuard)
+@ShopRoles(...SUPPLIER_MANAGEMENT_ROLES)
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 

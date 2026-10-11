@@ -4,6 +4,8 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
+import { ShopRoles } from "../shops/roles.decorator";
+import { StaffRole } from "@eleganz/database";
 
 // Ce contrôleur est la vue "gestion" du catalogue (staff de la boutique
 // uniquement). TODO (phase Marketplace) : ajouter un contrôleur public
@@ -20,11 +22,13 @@ export class CatalogController {
   }
 
   @Post()
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   create(@Param("shopId") shopId: string, @Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(shopId, dto);
   }
 
   @Post(":productId/variants")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   addVariant(
     @Param("shopId") shopId: string,
     @Param("productId") productId: string,
