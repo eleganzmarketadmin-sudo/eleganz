@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
@@ -32,8 +33,8 @@ export function ProtectedGestionPage({ children }: { children: React.ReactNode }
         <p>Chargement de vos boutiques…</p>
       ) : shops.length === 0 ? (
         <p>
-          Aucune boutique n&apos;est encore associée à ce compte. Créez-en une depuis
-          l&apos;espace propriétaire pour commencer à vendre.
+          Aucune boutique n&apos;est encore associée à ce compte.{" "}
+          <Link href="/boutique/nouvelle">Créer ma boutique</Link> pour commencer à vendre.
         </p>
       ) : !currentShop ? (
         <p>Choisissez une boutique en haut de l&apos;écran.</p>

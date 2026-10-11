@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
@@ -66,6 +67,9 @@ export default function ConnexionPage() {
           <button className={styles.bouton} type="submit" disabled={enCours}>
             {enCours ? "Connexion…" : "Se connecter"}
           </button>
+          <p style={{ marginTop: "16px", fontSize: "0.875rem" }}>
+            Pas encore de compte ? <Link href="/inscription">Ouvrir ma boutique</Link>
+          </p>
         </form>
       </div>
     </div>

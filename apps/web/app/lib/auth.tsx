@@ -8,10 +8,17 @@ export interface AuthUser {
   role: string;
 }
 
+export interface InscriptionInfos {
+  fullName: string;
+  identifiant: string; // email ou téléphone
+  motDePasse: string;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (identifiant: string, motDePasse: string) => Promise<void>;
+  register: (infos: InscriptionInfos) => Promise<void>;
   logout: () => void;
 }
 
@@ -58,12 +65,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(decodeJwtPayload(accessToken));
   }, []);
 
+  const register = useCallback(async ({ fullName, identifiant, motDePasse }: InscriptionInfos) => {
+    const estEmail = identifiant.includes("@");
+    // Ce formulaire n'est proposé que côté ELEGANZ Gestion : le compte créé
+    // est donc toujours SHOP_OWNER (prompt — un acheteur s'inscrit depuis la
+    // Marketplace, flux distinct, pas encore construit).
+    const { accessToken } = await api.post<{ accessToken: string }>(
+      "/auth/register",
+      {
+        fullName,
+        password: motDePasse,
+        role: "SHOP_OWNER",
+        ...(estEmail ? { email: identifiant } : { phone: identifiant }),
+      },
+      false,
+    );
+    setToken(accessToken);
+    setUser(decodeJwtPayload(accessToken));
+  }, []);
+
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout }),
+    [user, loading, login, register, logout],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

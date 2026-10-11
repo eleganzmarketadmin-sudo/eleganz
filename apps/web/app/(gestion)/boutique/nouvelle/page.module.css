@@ -1,0 +1,90 @@
+.cadre {
+  max-width: 480px;
+  margin: var(--espace-7) auto;
+  padding: var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: #555;
+  margin-bottom: var(--espace-5);
+}
+
+.champ {
+  display: block;
+  margin-bottom: var(--espace-4);
+}
+
+.champ label {
+  display: block;
+  margin-bottom: var(--espace-1);
+  font-weight: 500;
+}
+
+.champ input {
+  width: 100%;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+}
+
+.modes {
+  display: flex;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+}
+
+.modeBouton {
+  flex: 1;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  min-height: 72px;
+}
+
+.modeBoutonActif {
+  background: var(--color-cobalt);
+  color: #fff;
+  border-color: var(--color-cobalt);
+}
+
+.modeBouton strong {
+  display: block;
+  margin-bottom: var(--espace-1);
+}
+
+.modeBouton span {
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+.bouton {
+  width: 100%;
+  min-height: var(--touche-min);
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover {
+  background: var(--color-cobalt-dark);
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
