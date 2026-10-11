@@ -45,8 +45,19 @@ export class ShopsService {
     return shop;
   }
 
-  async findMine(ownerId: string) {
-    return this.prisma.shop.findMany({ where: { ownerId } });
+  /**
+   * Boutiques accessibles à l'utilisateur : celles qu'il possède, mais aussi
+   * celles où il est simplement membre de l'équipe (caissier, gérant, ...) —
+   * un caissier n'est jamais propriétaire mais doit voir la boutique où il
+   * travaille pour ouvrir la caisse.
+   */
+  async findMine(userId: string) {
+    return this.prisma.shop.findMany({
+      where: {
+        OR: [{ ownerId: userId }, { staff: { some: { userId, active: true } } }],
+      },
+      orderBy: { createdAt: "desc" },
+    });
   }
 
   /**

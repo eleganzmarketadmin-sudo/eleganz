@@ -4,6 +4,17 @@ Dernière mise à jour : 11 octobre 2026.
 
 ## Fait
 
+- **Identité visuelle ELEGANZ conçue** (`docs/DESIGN_SYSTEM.md`) : palette (Encre, Toile, Cobalt, Flamme, Magenta Sape, Or), typographie (Fraunces pour les titres Marketplace, IBM Plex Sans pour l'interface, IBM Plex Mono pour l'argent), mise en page registre/ticket de caisse côté Gestion et bloc de couleur éditorial côté Marketplace — relue et corrigée pour éviter les travers génériques (crème+terracotta, cartes SaaS, chrome de majuscules).
+- **Premiers écrans Next.js réels** (`apps/web`), branchés sur l'API, pas des maquettes statiques :
+  - Page d'accueil de la maison ELEGANZ (choix Gestion / Marketplace).
+  - Connexion (email ou téléphone + mot de passe, jeton JWT conservé côté client).
+  - Caisse : recherche d'article, ticket avec quantités modifiables, choix du moyen de paiement, enregistrement réel de la vente (`POST /shops/:id/pos/sales`).
+  - Tableau de bord du jour : chiffre d'affaires, encaissements confirmés, marge brute (avec avertissement si incomplète), par date choisie.
+  - Catalogue : création d'article, ajout de variante (référence, taille, couleur, prix d'achat/vente, stock initial).
+  - Vitrine Marketplace publique : recherche texte, grille de produits publiés avec prix le plus bas disponible.
+  - `tsc --noEmit` validé sur tout `apps/web` sans erreur.
+- **Correction** : `ShopsService.findMine` ne renvoyait que les boutiques possédées par l'utilisateur — un caissier ou gérant (staff, pas propriétaire) ne voyait donc jamais la boutique où il travaille. Corrigé pour inclure aussi les boutiques où l'utilisateur est membre actif de l'équipe.
+
 - Cadrage complet : matrice des fonctionnalités, comparaison d'architectures, coûts estimés, 10 décisions validées par le propriétaire (`DECISIONS.md`).
 - Squelette du monorepo (`apps/api`, `apps/web`, `packages/database`), workspace pnpm fonctionnel (`pnpm install` validé, 395 paquets).
 - Schéma de données unifié Gestion + Marketplace (`packages/database/prisma/schema.prisma`), couvrant : identité/rôles, boutiques à 3 modes, catalogue/stock transactionnel, caisse/documents commerciaux, commandes multivendeurs, livraison, abonnements/facturation/crédits IA, audit.
@@ -35,11 +46,11 @@ Dernière mise à jour : 11 octobre 2026.
 
 ## Pas encore commencé
 
-- Guard JWT réel sur les routes `shops` (actuellement `ownerId` passé en paramètre d'URL, marqué `TODO` explicite dans `shops.controller.ts`).
-- Module caisse/POS, documents commerciaux, mode hors-ligne.
-- Aucun compte (hébergement, domaine, Moneroo, stockage objet) n'a été créé.
-- Dépôt pas encore poussé sur GitHub — en attente que le propriétaire crée le dépôt sous `eleganzmarket.admin@gmail.com` et connecte GitHub à la session.
-- Identité visuelle ELEGANZ pas encore conçue.
+- Mode hors-ligne de la caisse (spécification détaillée requise avant le code, décision #8).
+- Écrans Marketplace restants : fiche produit, panier, tunnel de commande, suivi de commande, espace vendeur.
+- Écrans d'inscription et de création de boutique (l'API existe, pas encore d'écran).
+- Rendu PDF des documents commerciaux.
+- Aucun compte (hébergement, domaine, Moneroo, stockage objet, fournisseur IA) n'a été créé — voir la section blocages ci-dessus.
 - Aucun déploiement, même en préproduction.
 
 ## Prochaine étape concrète

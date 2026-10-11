@@ -1,0 +1,25 @@
+.tag {
+  display: inline-block;
+  padding: var(--espace-1) var(--espace-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.paye {
+  background: var(--color-vert-paiement);
+}
+
+.attente {
+  background: var(--color-or);
+  color: var(--color-ink);
+}
+
+.alerte {
+  background: var(--color-flamme);
+}
+
+.neutre {
+  background: var(--color-ink);
+}

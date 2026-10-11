@@ -1,0 +1,97 @@
+/* Jetons de design ELEGANZ — voir docs/DESIGN_SYSTEM.md à la racine du dépôt. */
+
+:root {
+  --color-ink: #15171c;
+  --color-toile: #f3f3ee;
+  --color-cobalt: #17408a;
+  --color-cobalt-dark: #0f2c61;
+  --color-flamme: #c83e1f;
+  --color-magenta: #a62368;
+  --color-or: #d9a61a;
+  --color-vert-paiement: #2f6b3f;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: var(--color-toile);
+  --color-border: #d8d8d0;
+  --color-border-forte: var(--color-ink);
+
+  --rayon: 0px; /* pas d'angles arrondis dans le système ELEGANZ */
+
+  --espace-1: 4px;
+  --espace-2: 8px;
+  --espace-3: 12px;
+  --espace-4: 16px;
+  --espace-5: 24px;
+  --espace-6: 32px;
+  --espace-7: 48px;
+
+  --touche-min: 48px; /* cible tactile minimale, comptoir/téléphone */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--color-toile);
+  color: var(--color-ink);
+  font-family: var(--font-body), "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.titre-vitrine {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--color-cobalt);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.chiffre {
+  font-family: var(--font-mono), "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visibilité du focus clavier — jamais supprimée */
+:focus-visible {
+  outline: 3px solid var(--color-cobalt);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

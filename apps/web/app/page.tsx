@@ -1,10 +1,29 @@
-// Point d'entrée temporaire — sera remplacé par l'écran d'accueil réel
-// (espace Gestion d'abord, décision #4) une fois l'identité visuelle conçue.
+import Link from "next/link";
+import styles from "./page.module.css";
+
+// Porte d'entrée de la maison ELEGANZ : deux pièces, deux publics. Le
+// commerçant qui tient la caisse n'a rien à faire du côté vitrine, et
+// l'acheteur qui vient chiner n'a pas besoin de voir un tableau de bord.
 export default function HomePage() {
   return (
-    <main style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>ELEGANZ</h1>
-      <p>Squelette en construction — Gestion d&apos;abord, Marketplace ensuite.</p>
-    </main>
+    <div className={styles.cadre}>
+      <div className={`${styles.bloc} ${styles.gestion}`}>
+        <h1>ELEGANZ Gestion</h1>
+        <p>
+          La caisse, le stock et les comptes de votre boutique à Kinshasa — du
+          comptoir jusqu&apos;au tableau de bord du soir.
+        </p>
+        <Link className={styles.lien} href="/connexion">
+          Ouvrir ma caisse
+        </Link>
+      </div>
+      <div className={`${styles.bloc} ${styles.marketplace}`}>
+        <h1 className="titre-vitrine">Porter la couleur</h1>
+        <p>La mode et le luxe congolais, choisis chez des boutiques d&apos;ici.</p>
+        <Link className={styles.lien} href="/marketplace">
+          Parcourir la vitrine
+        </Link>
+      </div>
+    </div>
   );
 }

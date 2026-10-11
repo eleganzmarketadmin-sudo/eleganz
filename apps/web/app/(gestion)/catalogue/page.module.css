@@ -1,0 +1,101 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.nouveauProduit {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-6);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: flex-end;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.champ input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  min-width: 160px;
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.produit {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+}
+
+.produitEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.tableauVariantes {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableauVariantes th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-4);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.tableauVariantes td {
+  padding: var(--espace-2) var(--espace-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.colChiffre {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ajoutVariante {
+  padding: var(--espace-3) var(--espace-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  align-items: flex-end;
+}
+
+.ajoutVariante input {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+  width: 100px;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

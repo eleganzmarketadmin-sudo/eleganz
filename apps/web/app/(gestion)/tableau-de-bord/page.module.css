@@ -1,0 +1,57 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.selecteurDate {
+  margin-bottom: var(--espace-5);
+}
+
+.selecteurDate input {
+  padding: var(--espace-2);
+  border: 2px solid var(--color-ink);
+  margin-left: var(--espace-2);
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0;
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-5);
+}
+
+.carte {
+  padding: var(--espace-5);
+  border-right: 2px solid var(--color-ink);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.carte:last-child {
+  border-right: none;
+}
+
+.carteEncre {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.carteLabel {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: var(--espace-2);
+  opacity: 0.8;
+}
+
+.carteValeur {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.note {
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-or);
+  color: var(--color-ink);
+  margin-bottom: var(--espace-4);
+}

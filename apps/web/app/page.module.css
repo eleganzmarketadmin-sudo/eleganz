@@ -1,0 +1,60 @@
+.cadre {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 760px) {
+  .cadre {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.bloc {
+  padding: var(--espace-7) var(--espace-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #fff;
+  min-height: 50vh;
+}
+
+.gestion {
+  background: var(--color-cobalt);
+}
+
+.marketplace {
+  background: var(--color-magenta);
+}
+
+.bloc h1 {
+  font-size: 1.75rem;
+  margin-bottom: var(--espace-3);
+}
+
+.marketplace h1 {
+  font-family: var(--font-display), serif;
+  font-size: 2.5rem;
+}
+
+.bloc p {
+  max-width: 34ch;
+  margin-bottom: var(--espace-5);
+  opacity: 0.92;
+}
+
+.lien {
+  display: inline-block;
+  background: var(--color-ink);
+  color: #fff;
+  padding: var(--espace-3) var(--espace-5);
+  font-weight: 600;
+  width: fit-content;
+  min-height: var(--touche-min);
+  line-height: calc(var(--touche-min) - var(--espace-3) * 2);
+}
+
+.lien:hover {
+  text-decoration: none;
+  background: #000;
+}

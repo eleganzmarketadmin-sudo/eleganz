@@ -1,0 +1,218 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
+import { useShop } from "../../lib/shop-context";
+import { api, ApiError } from "../../lib/api";
+import { formatMoney } from "../../lib/money";
+import styles from "./page.module.css";
+
+interface Variant {
+  id: string;
+  sku: string;
+  size?: string | null;
+  color?: string | null;
+  costPrice?: string | null;
+  sellPrice: string;
+  currency: string;
+  stockQty: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  category?: string | null;
+  isPublished: boolean;
+  variants: Variant[];
+}
+
+function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
+  const { currentShop } = useShop();
+  const [sku, setSku] = useState("");
+  const [taille, setTaille] = useState("");
+  const [couleur, setCouleur] = useState("");
+  const [prixAchat, setPrixAchat] = useState("");
+  const [prixVente, setPrixVente] = useState("");
+  const [stock, setStock] = useState("0");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function ajouter() {
+    if (!currentShop || !sku || !prixVente) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/products/${produitId}/variants`, {
+        sku,
+        size: taille || undefined,
+        color: couleur || undefined,
+        costPrice: prixAchat ? Number(prixAchat) : undefined,
+        sellPrice: Number(prixVente),
+        initialStockQty: stock ? Number(stock) : 0,
+      });
+      setSku("");
+      setTaille("");
+      setCouleur("");
+      setPrixAchat("");
+      setPrixVente("");
+      setStock("0");
+      onAjoutee();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Ajout impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div className={styles.ajoutVariante}>
+      <input placeholder="Référence (SKU)" value={sku} onChange={(e) => setSku(e.target.value)} />
+      <input placeholder="Taille" value={taille} onChange={(e) => setTaille(e.target.value)} />
+      <input placeholder="Couleur" value={couleur} onChange={(e) => setCouleur(e.target.value)} />
+      <input
+        placeholder="Prix d'achat"
+        type="number"
+        value={prixAchat}
+        onChange={(e) => setPrixAchat(e.target.value)}
+      />
+      <input
+        placeholder="Prix de vente"
+        type="number"
+        value={prixVente}
+        onChange={(e) => setPrixVente(e.target.value)}
+      />
+      <input
+        placeholder="Stock initial"
+        type="number"
+        value={stock}
+        onChange={(e) => setStock(e.target.value)}
+      />
+      <button className={styles.bouton} onClick={ajouter} disabled={enCours || !sku || !prixVente}>
+        Ajouter la variante
+      </button>
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+    </div>
+  );
+}
+
+function CatalogueContent() {
+  const { currentShop } = useShop();
+  const [produits, setProduits] = useState<Product[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [nomNouveau, setNomNouveau] = useState("");
+  const [categorieNouveau, setCategorieNouveau] = useState("");
+  const [creationEnCours, setCreationEnCours] = useState(false);
+
+  function recharger() {
+    if (!currentShop) return;
+    setChargement(true);
+    api
+      .get<Product[]>(`/shops/${currentShop.id}/products`)
+      .then(setProduits)
+      .catch((err) => setErreur(err instanceof Error ? err.message : "Erreur."))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, [currentShop]);
+
+  async function creerProduit() {
+    if (!currentShop || !nomNouveau) return;
+    setCreationEnCours(true);
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/products`, {
+        name: nomNouveau,
+        category: categorieNouveau || undefined,
+      });
+      setNomNouveau("");
+      setCategorieNouveau("");
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+    } finally {
+      setCreationEnCours(false);
+    }
+  }
+
+  return (
+    <div>
+      <h1 className={styles.titre}>Catalogue</h1>
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+
+      <div className={styles.nouveauProduit}>
+        <div className={styles.champ}>
+          <label htmlFor="nom">Nouvel article</label>
+          <input
+            id="nom"
+            placeholder="Ex. Robe wax bleue"
+            value={nomNouveau}
+            onChange={(e) => setNomNouveau(e.target.value)}
+          />
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="categorie">Catégorie</label>
+          <input
+            id="categorie"
+            placeholder="Ex. Robes"
+            value={categorieNouveau}
+            onChange={(e) => setCategorieNouveau(e.target.value)}
+          />
+        </div>
+        <button className={styles.bouton} onClick={creerProduit} disabled={creationEnCours || !nomNouveau}>
+          Créer l&apos;article
+        </button>
+      </div>
+
+      {chargement ? (
+        <p>Chargement du catalogue…</p>
+      ) : produits.length === 0 ? (
+        <p>Aucun article pour l&apos;instant. Créez-en un ci-dessus.</p>
+      ) : (
+        produits.map((produit) => (
+          <div className={styles.produit} key={produit.id}>
+            <div className={styles.produitEntete}>
+              <strong>{produit.name}</strong>
+              <span>{produit.category ?? "Sans catégorie"}</span>
+            </div>
+            {produit.variants.length > 0 && (
+              <table className={styles.tableauVariantes}>
+                <thead>
+                  <tr>
+                    <th>Référence</th>
+                    <th>Taille / couleur</th>
+                    <th className={styles.colChiffre}>Prix d&apos;achat</th>
+                    <th className={styles.colChiffre}>Prix de vente</th>
+                    <th className={styles.colChiffre}>Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produit.variants.map((v) => (
+                    <tr key={v.id}>
+                      <td>{v.sku}</td>
+                      <td>{[v.size, v.color].filter(Boolean).join(" · ") || "—"}</td>
+                      <td className={styles.colChiffre}>
+                        {v.costPrice != null ? formatMoney(Number(v.costPrice), v.currency) : "—"}
+                      </td>
+                      <td className={styles.colChiffre}>{formatMoney(Number(v.sellPrice), v.currency)}</td>
+                      <td className={styles.colChiffre}>{v.stockQty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <NouvelleVariante produitId={produit.id} onAjoutee={recharger} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+export default function CataloguePage() {
+  return (
+    <ProtectedGestionPage>
+      <CatalogueContent />
+    </ProtectedGestionPage>
+  );
+}
