@@ -15,6 +15,19 @@ Dernière mise à jour : 11 octobre 2026.
 - Recherche de la procédure d'homologation DGI/e-DEF menée (décision #9) — voir `COMPLIANCE_FACTURE_NORMALISEE.md`.
 - Documentation permanente amorcée (`README.md`, `PROJECT_OVERVIEW.md`, `ARCHITECTURE.md`, `DATABASE.md`, `DECISIONS.md`, `MAINTENANCE.md`).
 - **Dépôt poussé sur GitHub** : `github.com/eleganzmarketadmin-sudo/eleganz`, branche `main`, à jour.
+- Permissions fines par rôle de staff (`@ShopRoles`), invitation de collaborateurs dans une boutique.
+- **Marketplace** : catalogue public (recherche structurée par catégorie/taille/couleur/prix/texte — pas encore de compréhension en langage naturel ni de recherche par photo, phase 8), commandes multivendeurs (panier réparti en sous-commandes par boutique, stock réservé transactionnellement, machine à états des statuts de commande conforme au prompt §42, confirmation de réception distincte de la déclaration du livreur).
+- **Livraison** : zones, inscription livreur (non vérifié par défaut), affectation à une sous-commande, confirmations d'enlèvement/livraison réservées au livreur assigné.
+- **Litiges** : ouverture côté acheteur, liste et résolution côté administration.
+- **Facturation** : bouquets d'abonnement administrables (Gestion et Marketplace séparés), expiration de période gratuite → facture + statut PAYMENT_DUE, suspension après impayé (délai configurable, 7 jours par défaut), réactivation après paiement. Déclenchement manuel par un admin tant qu'aucun planificateur n'est câblé (voir ci-dessous).
+- **Centre de pilotage (version de base)** : tableau de bord exécutif agrégeant boutiques par statut, commandes par statut, valeur brute des commandes vs revenus réellement acquis par la plateforme (jamais confondus), factures impayées, litiges ouverts.
+
+## Ce qui bloque sur une décision ou une ressource externe (pas du code)
+
+- **Paiements réels (Moneroo, Orange/Airtel/Vodacom)** : aucune intégration de paiement n'est branchée. Il faut un compte marchand Moneroo (et, plus tard, les contrats opérateurs) avec de vraies clés API avant de pouvoir coder l'appel réel — je ne peux pas créer ce compte ni obtenir ces clés moi-même.
+- **Planificateur de tâches** (expiration d'essai, suspensions, relances) : fonctionne aujourd'hui par déclenchement manuel admin. Passer à un vrai cron nécessite de décider où le processus tournera (même serveur que l'API, ou un worker séparé) — lié au choix d'hébergement, pas encore fait.
+- **Services IA** (recherche par photo, studio publicitaire, assistant marketing) : nécessitent de choisir et de payer un fournisseur (OpenAI, Google Vision, Replicate, etc.) — aucun n'est engagé.
+- **Hébergement/déploiement** : aucun compte VPS, domaine ou stockage objet n'a été créé.
 
 ## Limite connue de cet environnement (pas un défaut du code)
 
