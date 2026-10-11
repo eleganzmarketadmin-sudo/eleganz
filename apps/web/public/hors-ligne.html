@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ELEGANZ — Hors ligne</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #f3f3ee;
+    color: #15171c;
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .ecran {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+    box-sizing: border-box;
+  }
+  .marque {
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    color: #17408a;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 12px;
+    color: #15171c;
+  }
+  p {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #4a4d55;
+    max-width: 360px;
+    margin: 0 0 28px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 6px;
+    border: none;
+    background: #17408a;
+    color: #f3f3ee;
+    cursor: pointer;
+  }
+  button:active {
+    background: #122f68;
+  }
+</style>
+</head>
+<body>
+  <div class="ecran">
+    <div class="marque">ELEGANZ GESTION</div>
+    <h1>Pas de réseau pour le moment</h1>
+    <p>
+      Cette page n'a pas encore été ouverte en ligne, donc elle ne peut pas s'afficher
+      sans réseau. Les ventes déjà en cours à la caisse restent protégées et seront
+      synchronisées dès le retour du réseau.
+    </p>
+    <button onclick="window.location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>

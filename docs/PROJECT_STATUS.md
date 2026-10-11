@@ -56,13 +56,11 @@ Dernière mise à jour : 11 octobre 2026.
 - **Mode hors-ligne de la caisse — phase 1 implémentée** (`docs/ARCHITECTURE_HORS_LIGNE.md`, décision #8) : le propriétaire a validé la politique de stock négatif en synchronisation différée (accepter la vente, stock négatif, écart signalé — jamais de rejet après coup d'une vente déjà réellement encaissée). Côté API : `clientOperationId` idempotent sur `PosSale`, `PosSaleLine.stockDiscrepancy`, `POST /shops/:shopId/pos/sales/sync`, `GET /shops/:shopId/pos/stock-discrepancies`. Côté écran : file IndexedDB (`offline-queue.ts`), synchronisation automatique au retour réseau et par intervalle (`offline-sync.tsx`), bascule automatique de la caisse vers la file hors-ligne quand le serveur est inatteignable, indicateur « ventes en attente » dans l'en-tête Gestion, liste des écarts de stock dans le tableau de bord.
 
 - **Images produits par URL** (`PATCH /shops/:shopId/products/:productId`, écran catalogue) : une boutique peut maintenant attacher des photos hébergées ailleurs à un article — pas d'upload (aucun compte de stockage objet encore), mais la vitrine et la fiche produit Marketplace affichent déjà la vraie photo quand elle existe.
+- **Mode hors-ligne — phase 2 implémentée (app shell installable)** : manifest (`public/manifest.json`, nom/icônes/couleurs ELEGANZ, `start_url: /caisse`, `display: standalone`), icônes réelles (192/512, générées en Python puisque la conversion SVG→PNG par ImageMagick n'était pas disponible), service worker (`public/sw.js`) qui met en cache les pages déjà visitées et les fichiers statiques *à l'usage* (pas de préchargement au build — `next build` ne peut pas tourner dans ce bac à sable, voir `MAINTENANCE.md`), page de secours hors-ligne (`public/hors-ligne.html`, HTML statique indépendant du rendu Next.js), enregistrement du service worker (`components/ServiceWorkerRegistration.tsx`) et lien du manifest + couleur de thème dans `app/layout.tsx`. Le service worker ne touche jamais aux appels vers l'API — la file hors-ligne de la caisse (phase 1) s'en occupe déjà. `tsc --noEmit` validé après ces changements.
 
 ## Pas encore commencé
 
-- **Phase 2 du mode hors-ligne** : app shell installable (PWA/service worker) pour que l'écran caisse s'ouvre même sans aucun réseau depuis le démarrage de l'appareil — la phase 1 protège déjà l'argent et le stock une fois la page chargée.
-- Écrans Marketplace restants : fiche produit, panier, tunnel de commande, suivi de commande, espace vendeur.
-- Écrans d'inscription et de création de boutique (l'API existe, pas encore d'écran).
-- Rendu PDF des documents commerciaux.
+- **Rendu PDF des commandes Marketplace** : ne couvre encore que les documents liés à une vente de caisse (`posSaleId`), pas aux sous-commandes Marketplace (`shopOrderId`).
 - Aucun compte (hébergement, domaine, Moneroo, stockage objet, fournisseur IA) n'a été créé — voir la section blocages ci-dessus.
 - Aucun déploiement, même en préproduction.
 
