@@ -9,6 +9,8 @@ Dernière mise à jour : 11 octobre 2026.
 - Schéma de données unifié Gestion + Marketplace (`packages/database/prisma/schema.prisma`), couvrant : identité/rôles, boutiques à 3 modes, catalogue/stock transactionnel, caisse/documents commerciaux, commandes multivendeurs, livraison, abonnements/facturation/crédits IA, audit.
 - Premier code applicatif réel dans `apps/api` : module `auth` (inscription, connexion, JWT, rôles acheteur/vendeur) et module `shops` (création de boutique en mode privé ou hybride, période gratuite par défaut 3 mois, publication volontaire d'une sélection vers la Marketplace).
 - Module `catalog` (produits, variantes, stock initial tracé) et module `pos` (vente de caisse transactionnelle avec décompte de stock, annulation avec retour en stock, tableau de bord CA journalier distinguant chiffre d'affaires / encaissements confirmés / marge).
+- **Authentification réelle branchée** : `JwtAuthGuard` (vérifie le token sur toutes les routes `shops/*`) + `ShopMembershipGuard` (empêche un vendeur d'accéder aux données d'une autre boutique). Les ids ne sont plus pris en confiance depuis l'URL ou le corps de la requête — toujours l'utilisateur authentifié.
+- Modules `suppliers` (achats fournisseurs, dettes), `expenses` (dépenses catégorisées), `customers` (ventes à crédit, créances séparées des encaissements — branché directement dans la transaction de vente POS pour le paiement STORE_CREDIT).
 - Squelette Next.js minimal (`apps/web`) — compile sans erreur (`tsc --noEmit` validé).
 - Recherche de la procédure d'homologation DGI/e-DEF menée (décision #9) — voir `COMPLIANCE_FACTURE_NORMALISEE.md`.
 - Documentation permanente amorcée (`README.md`, `PROJECT_OVERVIEW.md`, `ARCHITECTURE.md`, `DATABASE.md`, `DECISIONS.md`, `MAINTENANCE.md`).
