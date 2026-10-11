@@ -1,0 +1,14 @@
+{
+  "name": "eleganz",
+  "private": true,
+  "version": "0.0.1",
+  "description": "ELEGANZ — plateforme Gestion + Marketplace (RDC)",
+  "scripts": {
+    "dev:api": "pnpm --filter @eleganz/api dev",
+    "dev:web": "pnpm --filter @eleganz/web dev",
+    "db:generate": "pnpm --filter @eleganz/database generate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
