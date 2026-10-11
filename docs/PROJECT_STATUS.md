@@ -53,9 +53,11 @@ Dernière mise à jour : 11 octobre 2026.
 
 `pnpm db:generate` (génération du client Prisma) échoue dans ce bac à sable car `binaries.prisma.sh` n'est pas sur la liste des domaines autorisés en sortie. Fonctionnera normalement sur un poste de dev ou un CI avec accès réseau complet — détails dans `MAINTENANCE.md`. Tant que ce n'est pas généré ici, `apps/api` ne peut pas être compilé/testé dans cette session (il dépend des types générés par Prisma).
 
+- **Spécification du mode hors-ligne** (`docs/ARCHITECTURE_HORS_LIGNE.md`, décision #8) : file d'opérations locale idempotente (phase 1, protège l'argent et le stock) puis app shell installable/PWA (phase 2, améliore l'expérience). Contient une question de politique métier qui attend une décision du propriétaire avant tout code — voir la section correspondante du document.
+
 ## Pas encore commencé
 
-- Mode hors-ligne de la caisse (spécification détaillée requise avant le code, décision #8).
+- Code du mode hors-ligne (la spécification existe, le code attend une décision — voir ci-dessus).
 - Écrans Marketplace restants : fiche produit, panier, tunnel de commande, suivi de commande, espace vendeur.
 - Écrans d'inscription et de création de boutique (l'API existe, pas encore d'écran).
 - Rendu PDF des documents commerciaux.
