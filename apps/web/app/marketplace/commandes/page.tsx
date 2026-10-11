@@ -72,6 +72,7 @@ export default function CommandesPage() {
   const [commandes, setCommandes] = useState<Order[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,14 +80,28 @@ export default function CommandesPage() {
     }
   }, [authLoading, user, router]);
 
-  useEffect(() => {
+  function recharger() {
     if (!user) return;
     api
       .get<Order[]>("/marketplace/orders/mine")
       .then(setCommandes)
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
-  }, [user]);
+  }
+
+  useEffect(recharger, [user]);
+
+  async function confirmerReception(shopOrderId: string) {
+    setEnCours(shopOrderId);
+    try {
+      await api.post(`/marketplace/orders/${shopOrderId}/confirm-receipt`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Confirmation impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
 
   if (authLoading || !user) return null;
 
@@ -112,10 +127,28 @@ export default function CommandesPage() {
             {commande.shopOrders.map((so) => (
               <div className={styles.sousCommande} key={so.id}>
                 <span>{so.lines.length} article(s)</span>
-                <StatusTag
-                  label={LABELS_STATUT[so.status] ?? so.status}
-                  humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
-                />
+                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <StatusTag
+                    label={LABELS_STATUT[so.status] ?? so.status}
+                    humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
+                  />
+                  {so.status === "DELIVERED_DECLARED" && (
+                    <button
+                      disabled={enCours === so.id}
+                      onClick={() => confirmerReception(so.id)}
+                      style={{
+                        border: "2px solid var(--color-vert-paiement)",
+                        color: "var(--color-vert-paiement)",
+                        background: "none",
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Confirmer la réception
+                    </button>
+                  )}
+                </span>
               </div>
             ))}
           </div>

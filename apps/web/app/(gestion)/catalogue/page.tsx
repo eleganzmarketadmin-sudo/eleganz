@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
+import { StatusTag } from "../../components/StatusTag";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
@@ -116,6 +117,17 @@ function CatalogueContent() {
 
   useEffect(recharger, [currentShop]);
 
+  async function publier(produitId: string) {
+    if (!currentShop) return;
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/publish`, { productIds: [produitId] });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Publication impossible.");
+    }
+  }
+
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
@@ -173,7 +185,20 @@ function CatalogueContent() {
           <div className={styles.produit} key={produit.id}>
             <div className={styles.produitEntete}>
               <strong>{produit.name}</strong>
-              <span>{produit.category ?? "Sans catégorie"}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                {produit.category ?? "Sans catégorie"}
+                {produit.isPublished ? (
+                  <StatusTag label="Publié sur la Marketplace" humeur="paye" />
+                ) : (
+                  <button
+                    className={styles.bouton}
+                    style={{ padding: "6px 12px", minHeight: "32px" }}
+                    onClick={() => publier(produit.id)}
+                  >
+                    Publier sur la Marketplace
+                  </button>
+                )}
+              </span>
             </div>
             {produit.variants.length > 0 && (
               <table className={styles.tableauVariantes}>

@@ -1,0 +1,74 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.commande {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.corps {
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.ligne {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-1) 0;
+  font-size: 0.9375rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.boutonAction {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-cobalt);
+  background: var(--color-surface);
+  color: var(--color-cobalt);
+  cursor: pointer;
+  font-weight: 500;
+  min-height: 40px;
+}
+
+.boutonAction:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonAnnuler {
+  border-color: var(--color-flamme);
+  color: var(--color-flamme);
+}
+
+.boutonAnnuler:hover {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: #555;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
