@@ -22,7 +22,9 @@ export class ShopMembershipGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request & { user: AuthenticatedUser }>();
-    const shopId = request.params.shopId;
+    // @types/express@5 type les paramètres de route en `string | string[]`
+    // (pour les segments répétés) — ":shopId" est toujours un seul segment ici.
+    const shopId = request.params.shopId as string;
     if (!shopId) return true; // route sans :shopId, rien à vérifier ici
 
     // Les rôles admin globaux passent — leur accès est filtré ailleurs

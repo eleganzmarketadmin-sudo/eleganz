@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateSubscriptionPlanDto, UpdateSubscriptionPlanDto } from "./dto/subscription-plan.dto";
-import { PlanCategory } from "@eleganz/database";
+import { PlanCategory, Prisma } from "@eleganz/database";
 
 @Injectable()
 export class SubscriptionPlansService {
@@ -14,7 +14,7 @@ export class SubscriptionPlansService {
         name: dto.name,
         monthlyPrice: dto.monthlyPrice,
         maxActiveProducts: dto.maxActiveProducts,
-        featuresJson: dto.features ?? {},
+        featuresJson: (dto.features ?? {}) as Prisma.InputJsonValue,
       },
     });
   }
@@ -33,7 +33,7 @@ export class SubscriptionPlansService {
         monthlyPrice: dto.monthlyPrice,
         maxActiveProducts: dto.maxActiveProducts,
         active: dto.active,
-        featuresJson: dto.features,
+        featuresJson: dto.features as Prisma.InputJsonValue | undefined,
       },
     });
   }

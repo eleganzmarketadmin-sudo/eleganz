@@ -14,6 +14,10 @@ pnpm --filter @eleganz/api build
 
 Si l'environnement cible impose aussi des restrictions réseau, configurer `PRISMA_ENGINES_MIRROR` vers un miroir interne plutôt que `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING` (qui ne contourne pas un blocage réseau, seulement une vérification de somme de contrôle).
 
+Conséquence pratique : `apps/api` n'a jamais pu être compilé (`tsc`/`nest build`) dans ce bac à sable, puisqu'il dépend des types générés par Prisma. Le premier vrai build a eu lieu sur Railway (12 octobre 2026) et a révélé deux catégories d'erreurs invisibles jusque-là :
+- Deux vrais bugs de types (corrigés) : `SubscriptionPlansService` passait un `Record<string, unknown>` brut là où Prisma attend `Prisma.InputJsonValue` (`featuresJson`), et `ShopMembershipGuard` lisait `request.params.shopId` sans caster (`@types/express@5` type les paramètres de route en `string | string[]`).
+- Une vague d'erreurs `TS2742` (« inferred type cannot be named without a reference to .../prisma/client/runtime/library ») sur quasiment toutes les méthodes retournant directement une requête Prisma — cause : `"declaration": true` dans `apps/api/tsconfig.json` (hérité du starter NestJS), qui n'a aucune utilité ici puisque l'API n'est jamais consommée comme bibliothèque compilée. Mis à `false`, ce qui a éliminé la vague d'erreurs d'un coup sans toucher au code applicatif.
+
 ## Build Next.js (`next build`) dans cet environnement de développement (Claude)
 
 `next build` échoue ici aussi : `next/font/google` (utilisé par `app/fonts.ts`
