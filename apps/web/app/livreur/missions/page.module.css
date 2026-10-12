@@ -1,0 +1,119 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+  max-width: 64ch;
+}
+
+.mission {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-encre-fixe);
+  color: #fff;
+}
+
+.corps {
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.blocAdresse {
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espace-3);
+}
+
+.blocAdresseTitre {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.lienWhatsapp {
+  color: var(--color-vert-paiement);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.ligne {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-1) 0;
+  font-size: 0.9375rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.champProof {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.champProof input {
+  padding: var(--espace-2);
+  border: 2px solid var(--color-border);
+  min-height: 40px;
+  min-width: 180px;
+}
+
+.boutonAction {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-flamme);
+  background: var(--color-surface);
+  color: var(--color-flamme);
+  cursor: pointer;
+  font-weight: 500;
+  min-height: 40px;
+}
+
+.boutonAction:hover {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.boutonAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.avisNonVerifie {
+  background: var(--color-or);
+  color: var(--color-encre-fixe);
+  padding: var(--espace-3) var(--espace-4);
+  margin-bottom: var(--espace-4);
+}

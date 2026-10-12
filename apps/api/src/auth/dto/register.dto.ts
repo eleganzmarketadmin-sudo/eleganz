@@ -17,8 +17,12 @@ export class RegisterDto {
   @IsString()
   fullName!: string;
 
-  // Un nouvel inscrit crée un compte ACHETEUR ou VENDEUR ; les rôles admin et
-  // livreur sont attribués séparément, jamais choisis librement à l'inscription.
-  @IsEnum([UserRole.BUYER, UserRole.SHOP_OWNER])
-  role!: typeof UserRole.BUYER | typeof UserRole.SHOP_OWNER;
+  // Un nouvel inscrit crée un compte ACHETEUR, VENDEUR ou LIVREUR ; les rôles
+  // admin sont attribués séparément, jamais choisis librement à l'inscription.
+  // Pour un livreur, le compte est créé non vérifié (Driver.verified = false,
+  // voir DeliveryService.registerDriver) — l'auto-inscription ne donne donc
+  // accès à aucune mission réelle avant validation par l'administration
+  // (prompt §10 : « inscription et vérification »).
+  @IsEnum([UserRole.BUYER, UserRole.SHOP_OWNER, UserRole.DRIVER])
+  role!: typeof UserRole.BUYER | typeof UserRole.SHOP_OWNER | typeof UserRole.DRIVER;
 }

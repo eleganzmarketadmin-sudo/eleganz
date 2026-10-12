@@ -12,6 +12,7 @@ import styles from "./AdminShell.module.css";
 const LIENS = [
   { href: "/admin/pilotage", label: "Tableau de bord" },
   { href: "/admin/boutiques", label: "Boutiques" },
+  { href: "/admin/livreurs", label: "Livreurs" },
   { href: "/admin/suivi-commandes", label: "Suivi commandes" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/tarifs", label: "Tarifs" },

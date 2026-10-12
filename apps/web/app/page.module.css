@@ -30,7 +30,7 @@
 
 @media (min-width: 760px) {
   .cadre {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
 }
 
@@ -52,6 +52,11 @@
 .marketplace {
   background: var(--color-magenta);
   animation-delay: 90ms;
+}
+
+.livreur {
+  background: var(--color-flamme);
+  animation-delay: 150ms;
 }
 
 @keyframes entree-bloc {

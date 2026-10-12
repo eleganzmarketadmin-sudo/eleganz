@@ -1,0 +1,93 @@
+.cadre {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: var(--color-encre-fixe);
+}
+
+@media (min-width: 760px) {
+  .cadre {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.panneauMarque {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-7) var(--espace-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.panneauMarque h1 {
+  font-family: var(--font-display), serif;
+  font-size: 2.25rem;
+  margin-bottom: var(--espace-3);
+}
+
+.panneauMarque p {
+  max-width: 34ch;
+  opacity: 0.9;
+}
+
+.panneauForm {
+  background: var(--color-surface);
+  padding: var(--espace-7) var(--espace-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.form {
+  max-width: 360px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.champ {
+  display: block;
+  margin-bottom: var(--espace-4);
+}
+
+.champ label {
+  display: block;
+  margin-bottom: var(--espace-1);
+  font-weight: 500;
+}
+
+.champ input,
+.champ select {
+  width: 100%;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  min-height: var(--touche-min);
+}
+
+.bouton {
+  width: 100%;
+  min-height: var(--touche-min);
+  background: var(--color-flamme);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:hover {
+  opacity: 0.9;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

@@ -12,6 +12,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const TOKEN_KEY_DEFAUT = "eleganz_token";
 const TOKEN_KEY_ADMIN = "eleganz_admin_token";
+const TOKEN_KEY_LIVREUR = "eleganz_livreur_token";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -22,23 +23,28 @@ export class ApiError extends Error {
 }
 
 /**
- * Gestion/Marketplace/acheteur et Centre de pilotage partagent le même
- * domaine Next.js, donc le même `localStorage` — avec une seule clé de
- * jeton, se connecter côté boutique dans un onglet écrasait silencieusement
- * la session admin ouverte dans un autre (ou l'inverse), avec un symptôme
- * trompeur : l'écran admin restait affiché (état React déjà en mémoire)
- * alors que chaque appel API repartait avec le jeton de l'autre compte et
- * échouait en 403 « Réservé à l'administration ELEGANZ. » (bug du
- * 12 oct. 2026). Deux clés séparées, choisies selon que l'URL commence par
- * /admin, pour que les deux espaces cohabitent sans se marcher dessus.
+ * Gestion/Marketplace/acheteur, Centre de pilotage et Espace livreur
+ * partagent le même domaine Next.js, donc le même `localStorage` — avec une
+ * seule clé de jeton, se connecter dans un espace écrasait silencieusement
+ * la session d'un autre espace ouvert dans un autre onglet, avec un symptôme
+ * trompeur : l'écran restait affiché (état React déjà en mémoire) alors que
+ * chaque appel API repartait avec le jeton du mauvais compte et échouait en
+ * 403 (bug du 12 oct. 2026, d'abord corrigé entre Gestion et admin). Trois
+ * clés séparées, choisies selon le préfixe d'URL, pour que les trois espaces
+ * cohabitent sans se marcher dessus.
  */
-export function espaceAuth(): "admin" | "defaut" {
+export function espaceAuth(): "admin" | "livreur" | "defaut" {
   if (typeof window === "undefined") return "defaut";
-  return window.location.pathname.startsWith("/admin") ? "admin" : "defaut";
+  const chemin = window.location.pathname;
+  if (chemin.startsWith("/admin")) return "admin";
+  if (chemin.startsWith("/livreur")) return "livreur";
+  return "defaut";
 }
 
-function cleJeton(espace: "admin" | "defaut" = espaceAuth()): string {
-  return espace === "admin" ? TOKEN_KEY_ADMIN : TOKEN_KEY_DEFAUT;
+function cleJeton(espace: "admin" | "livreur" | "defaut" = espaceAuth()): string {
+  if (espace === "admin") return TOKEN_KEY_ADMIN;
+  if (espace === "livreur") return TOKEN_KEY_LIVREUR;
+  return TOKEN_KEY_DEFAUT;
 }
 
 export function getToken(): string | null {

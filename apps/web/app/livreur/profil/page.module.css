@@ -1,0 +1,41 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.fiche {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-5);
+  max-width: 480px;
+}
+
+.champ {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.champ:last-child {
+  border-bottom: none;
+}
+
+.champLabel {
+  color: var(--color-texte-muted);
+}
+
+.statutVerifie {
+  color: var(--color-vert-paiement);
+  font-weight: 600;
+}
+
+.statutNonVerifie {
+  color: var(--color-or);
+  font-weight: 600;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

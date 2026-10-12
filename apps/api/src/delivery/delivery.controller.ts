@@ -32,6 +32,39 @@ export class DeliveryController {
     return this.deliveryService.registerDriver(user.id, dto);
   }
 
+  @Get("me")
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.deliveryService.myProfile(user.id);
+  }
+
+  // Centre de gestion des partenaires livreurs (prompt §10 et §37) : lister
+  // les livreurs inscrits et faire basculer leur vérification. Sans cette
+  // vérification, assignDriver() refuse déjà toute affectation de mission
+  // (voir DeliveryService.assignDriver) — ces routes donnent à l'admin le
+  // moyen de la faire passer à true depuis l'écran, sans toucher au code.
+  @Get("drivers")
+  @UseGuards(JwtAuthGuard)
+  listDrivers(@CurrentUser() user: AuthenticatedUser) {
+    if (!user.role.startsWith("ADMIN_")) {
+      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
+    }
+    return this.deliveryService.adminListDrivers();
+  }
+
+  @Post("drivers/:driverId/verify")
+  @UseGuards(JwtAuthGuard)
+  verifyDriver(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("driverId") driverId: string,
+    @Body("verified") verified: boolean,
+  ) {
+    if (!user.role.startsWith("ADMIN_")) {
+      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
+    }
+    return this.deliveryService.adminSetVerified(driverId, verified);
+  }
+
   @Get("my-deliveries")
   @UseGuards(JwtAuthGuard)
   myDeliveries(@CurrentUser() user: AuthenticatedUser) {

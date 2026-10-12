@@ -35,12 +35,50 @@ export class DeliveryService {
     return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
   }
 
+  async myProfile(userId: string) {
+    return this.prisma.driver.findUnique({
+      where: { userId },
+      include: { user: { select: { fullName: true, email: true, phone: true } } },
+    });
+  }
+
+  adminListDrivers() {
+    return this.prisma.driver.findMany({
+      include: {
+        user: { select: { fullName: true, email: true, phone: true, createdAt: true, isSuspended: true } },
+        _count: { select: { deliveries: true } },
+      },
+      orderBy: { user: { createdAt: "desc" } },
+    });
+  }
+
+  adminSetVerified(driverId: string, verified: boolean) {
+    return this.prisma.driver.update({ where: { id: driverId }, data: { verified } });
+  }
+
   async myDeliveries(userId: string) {
     const driver = await this.prisma.driver.findUnique({ where: { userId } });
     if (!driver) return [];
     return this.prisma.shopOrder.findMany({
       where: { driverId: driver.id },
-      include: { lines: true, shop: { select: { name: true } } },
+      include: {
+        lines: true,
+        shop: { select: { name: true, invoiceAddress: true, invoicePhone: true } },
+        // Coordonnées de livraison nécessaires au livreur (prompt §43) ; pas
+        // plus d'informations personnelles de l'acheteur que nécessaire —
+        // ni son email, ni son identifiant de compte.
+        order: {
+          select: {
+            buyerWhatsapp: true,
+            buyerPhone: true,
+            deliveryCommune: true,
+            deliveryQuartier: true,
+            deliveryAvenue: true,
+            deliveryRepere: true,
+            deliveryNote: true,
+          },
+        },
+      },
       orderBy: { updatedAt: "desc" },
     });
   }

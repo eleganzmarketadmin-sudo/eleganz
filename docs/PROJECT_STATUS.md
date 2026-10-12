@@ -4,6 +4,15 @@ Dernière mise à jour : 12 octobre 2026.
 
 ## Fait
 
+- **(12 oct.) Nouveau module : Espace Livreur** (troisième grand espace de la plateforme, après Gestion et Marketplace — prompt §10). Le backend des missions existait déjà partiellement (affectation, confirmation d'enlèvement/livraison), mais aucun livreur ne pouvait ni s'inscrire ni se connecter : c'est maintenant complet.
+  - **Inscription et connexion** (`/livreur/inscription`, `/livreur/connexion`) : un livreur crée un compte (rôle `DRIVER`) puis son profil (zone/commune), toujours créé **non vérifié** — aucune mission réelle n'est affectable à un livreur non vérifié (`assignDriver` le bloque déjà côté serveur).
+  - **Tableau de bord livreur** (`/livreur/missions`) : liste des missions affectées, adresse d'enlèvement (boutique) et de livraison (client, avec lien WhatsApp), boutons « Confirmer l'enlèvement » et « Confirmer la livraison » (avec code de remise optionnel).
+  - **Profil livreur** (`/livreur/profil`) : zone, statut de vérification.
+  - **Centre de gestion des partenaires livreurs côté admin** (`/admin/livreurs`, prompt §37) : liste de tous les livreurs inscrits avec bouton « Vérifier » / « Retirer la vérification » — c'est ce qui rend un livreur opérationnel, sans toucher au code.
+  - **Espace d'authentification séparé** : comme Gestion et Centre de pilotage ont chacun leur propre clé de session (voir le bug corrigé plus bas), l'espace livreur a désormais la sienne (`eleganz_livreur_token`), pour qu'un livreur et un vendeur/acheteur ne se marchent jamais dessus dans des onglets différents.
+  - **Découvrabilité** : un bloc dédié sur la page d'accueil (« Devenir livreur ») et un lien dans le pied de page des quatre espaces.
+  - **Non couvert dans cette première passe, à prévoir plus tard** : rémunération/règlement des livreurs (aucun tarif n'existe encore, le prompt §56 interdit de graver un tarif commercial dans le code — à concevoir avec le propriétaire du projet) ; signalement d'incident de livraison distinct du litige acheteur (actuellement, seul le passage en litige par la boutique existe) ; offres professionnelles multi-livreurs pour une entreprise logistique (prompt §28).
+
 - **(12 oct.) Recherche par photo et studio publicitaire IA — préparés, inactifs** : points d'entrée visibles mais désactivés (« Bientôt disponible ») sur la vitrine Marketplace et le catalogue Gestion, plus deux interrupteurs dans Paramètres plateforme (`photoSearchEnabled`, `adStudioEnabled`) que l'admin pourra activer lui-même quand un fournisseur sera choisi et payé — décision explicitement reportée en fonction des recettes/de la croissance. Aucune des deux ne relève de l'API Anthropic : la recherche par photo demande un fournisseur d'embeddings d'image (Google Vision, Replicate…), le studio publicitaire un générateur d'image/vidéo (DALL·E, Stability…) — ce sont des chantiers séparés, avec leur propre compte/clé, le jour où on les attaque.
 
 - **(12 oct.) Identité visuelle, suivi des commandes/SLA, correction d'un bug de session** :
