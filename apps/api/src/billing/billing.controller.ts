@@ -24,6 +24,16 @@ export class BillingController {
     return this.billingService.listInvoices(shopId);
   }
 
+  // Vue transversale pour l'admin : toutes les factures, toutes boutiques
+  // confondues — nécessaire pour le suivi financier depuis le centre de
+  // pilotage sans ouvrir chaque boutique une par une.
+  @Get("admin/billing/invoices")
+  @UseGuards(JwtAuthGuard)
+  listAllInvoices(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.billingService.listAllInvoices();
+  }
+
   // Déclenchement manuel tant qu'aucun planificateur n'est en place (voir
   // NEXT_ACTIONS.md) — un admin lance ces deux vérifications périodiquement.
   @Post("admin/billing/run-trial-check")

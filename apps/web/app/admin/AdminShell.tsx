@@ -10,7 +10,9 @@ const LIENS = [
   { href: "/admin/pilotage", label: "Tableau de bord" },
   { href: "/admin/boutiques", label: "Boutiques" },
   { href: "/admin/tarifs", label: "Tarifs" },
+  { href: "/admin/factures", label: "Factures" },
   { href: "/admin/litiges", label: "Litiges" },
+  { href: "/admin/equipe", label: "Équipe admin" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

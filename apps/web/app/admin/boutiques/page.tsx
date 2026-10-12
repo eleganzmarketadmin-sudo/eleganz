@@ -19,6 +19,12 @@ interface Boutique {
   _count: { products: number; orders: number };
 }
 
+interface Plan {
+  id: string;
+  category: "MARKETPLACE" | "GESTION";
+  name: string;
+}
+
 const LIBELLES_STATUT: Record<string, string> = {
   PENDING_VALIDATION: "En attente de validation",
   FREE_PERIOD: "Période gratuite",
@@ -30,14 +36,17 @@ const LIBELLES_STATUT: Record<string, string> = {
 
 function BoutiquesContent() {
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
 
   function recharger() {
-    api
-      .get<Boutique[]>("/admin/shops")
-      .then(setBoutiques)
+    Promise.all([api.get<Boutique[]>("/admin/shops"), api.get<Plan[]>("/admin/billing/plans")])
+      .then(([shops, plansList]) => {
+        setBoutiques(shops);
+        setPlans(plansList);
+      })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
   }
@@ -52,6 +61,18 @@ function BoutiquesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setEnCours(null);
+    }
+  }
+
+  async function changerBouquet(shopId: string, kind: "gestion" | "marketplace", planId: string) {
+    setEnCours(shopId);
+    setErreur(null);
+    try {
+      await api.patch(`/admin/shops/${shopId}/plan`, { kind, planId: planId || null });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Changement de bouquet impossible.");
       setEnCours(null);
     }
   }
@@ -92,11 +113,37 @@ function BoutiquesContent() {
                 </div>
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Bouquet Gestion</span>
-                  <span>{b.gestionBouquet?.name ?? "Aucun"}</span>
+                  <select
+                    value={b.gestionBouquet?.id ?? ""}
+                    disabled={enCours === b.id}
+                    onChange={(e) => changerBouquet(b.id, "gestion", e.target.value)}
+                  >
+                    <option value="">Aucun</option>
+                    {plans
+                      .filter((p) => p.category === "GESTION")
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Bouquet Marketplace</span>
-                  <span>{b.marketplaceBouquet?.name ?? "Aucun"}</span>
+                  <select
+                    value={b.marketplaceBouquet?.id ?? ""}
+                    disabled={enCours === b.id}
+                    onChange={(e) => changerBouquet(b.id, "marketplace", e.target.value)}
+                  >
+                    <option value="">Aucun</option>
+                    {plans
+                      .filter((p) => p.category === "MARKETPLACE")
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Catalogue</span>

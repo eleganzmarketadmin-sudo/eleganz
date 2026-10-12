@@ -92,4 +92,16 @@ export class BillingService {
   listInvoices(shopId: string) {
     return this.prisma.invoice.findMany({ where: { shopId }, orderBy: { createdAt: "desc" } });
   }
+
+  /**
+   * Vue admin transversale : toutes les factures, toutes boutiques
+   * confondues, avec le nom de la boutique — nécessaire pour un suivi
+   * financier sans avoir à ouvrir chaque boutique une par une.
+   */
+  listAllInvoices() {
+    return this.prisma.invoice.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { shop: { select: { id: true, name: true } } },
+    });
+  }
 }

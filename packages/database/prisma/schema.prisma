@@ -127,6 +127,7 @@ model Shop {
   expenses       Expense[]
   customers      ShopCustomer[]
   subscriptions  ShopSubscription[]
+  platformInvoices Invoice[]
   creditWallet   AiCreditWallet?
   auditLogs      AuditLog[]
 }
@@ -478,6 +479,7 @@ model ShopSubscription {
 model Invoice {
   id        String   @id @default(uuid())
   shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
   amount    Decimal  @db.Decimal(12, 2)
   dueAt     DateTime
   paidAt    DateTime?
