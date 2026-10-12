@@ -4,6 +4,9 @@ Dernière mise à jour : 12 octobre 2026.
 
 ## Fait
 
+- **(12 oct.) Déployé en production sur Railway** : `eleganz-api` (API) et `eleganz` (web, Gestion + Marketplace) tournent réellement sur `https://eleganz-api-production.up.railway.app` et `https://eleganz-production.up.railway.app`, déploiement automatique à chaque push sur `main`. `apps/api` exécute `prisma db push --accept-data-loss --skip-generate` au démarrage, donc les évolutions de schéma s'appliquent sans étape manuelle. La limite d'environnement « `prisma generate` ne fonctionne pas dans ce bac à sable » (section plus bas) ne s'applique plus à la production, seulement à ce poste de développement.
+- **(12 oct.) Variantes en liste déroulante à choix multiple** : les champs taille/couleur du catalogue sont passés de la saisie libre à des listes déroulantes à choix multiple propres à chaque boutique (`VariantOption`), avec ajout d'une nouvelle valeur à la volée. Création en lot d'une variante par combinaison taille × couleur sélectionnée (`POST /shops/:id/products/:id/variants/bulk`), SKU généré et garanti unique, le tout dans une transaction atomique — élimine les doublons dus à des fautes de frappe ("Rouge" / "rouge " / "ROUGE").
+- **(12 oct.) Relevés d'activité certifiés** (Centre de pilotage + côté boutique) : génération d'un relevé croisé sur une période choisie (quotidien, hebdomadaire, mensuel, annuel, pluriannuel), avec un critère de regroupement optionnel pour les grandes fréquences (par produit, catégorie, moyen de paiement, ou — vue admin uniquement — par boutique). Chaque relevé porte un code de vérification (empreinte SHA-256 des totaux, non modifiable depuis l'écran) et peut être exporté en Excel ou en PDF tabulaire. Côté admin (`/admin/releves`), utilisable pour la plateforme entière ou pour une boutique précise au choix. Côté boutique (`/releves`), chaque vendeur tire ses propres relevés. Non testé visuellement par moi côté écran admin (pas d'identifiants administrateur) — à vérifier par le propriétaire.
 - **(12 oct.) Import/export Excel, factures boutique, avis, contact WhatsApp** :
   - Import en masse de produits par fichier Excel côté ELEGANZ Gestion (`/catalogue`) : gabarit à colonnes fixes à télécharger, export du catalogue existant, réimport qui met à jour une référence déjà connue de la boutique au lieu de la dupliquer (cycle export → modification → réimport).
   - Exports Excel côté boutique (catalogue, commandes Marketplace, ventes/factures) et côté centre de pilotage admin (boutiques, produits, commandes, factures plateforme — `/admin/pilotage`, section Exports).
@@ -77,8 +80,8 @@ Dernière mise à jour : 12 octobre 2026.
 
 ## Pas encore commencé
 
-- Aucun compte (hébergement, domaine, Moneroo, stockage objet, fournisseur IA) n'a été créé — voir la section blocages ci-dessus.
-- Aucun déploiement, même en préproduction.
+- Paiements réels (Moneroo, Orange/Airtel/Vodacom), services IA (recherche par photo, assistant marketing) — aucun compte/clé n'a été créé, voir la section blocages ci-dessus.
+- Nom de domaine propre (le projet tourne aujourd'hui sur les sous-domaines Railway par défaut).
 
 ## Prochaine étape concrète
 
