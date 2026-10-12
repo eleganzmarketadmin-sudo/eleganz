@@ -1,8 +1,20 @@
 # État du projet
 
-Dernière mise à jour : 11 octobre 2026.
+Dernière mise à jour : 12 octobre 2026.
 
 ## Fait
+
+- **(12 oct.) Import/export Excel, factures boutique, avis, contact WhatsApp** :
+  - Import en masse de produits par fichier Excel côté ELEGANZ Gestion (`/catalogue`) : gabarit à colonnes fixes à télécharger, export du catalogue existant, réimport qui met à jour une référence déjà connue de la boutique au lieu de la dupliquer (cycle export → modification → réimport).
+  - Exports Excel côté boutique (catalogue, commandes Marketplace, ventes/factures) et côté centre de pilotage admin (boutiques, produits, commandes, factures plateforme — `/admin/pilotage`, section Exports).
+  - Nouvel onglet **Mes factures** (`/factures` côté Gestion) : réunit tickets de caisse et factures Marketplace déjà émis en un seul endroit, avec réimpression et export — jusqu'ici une vente comptoir n'était plus visible nulle part après son ticket initial.
+  - **Bug corrigé** : « le ticket n'a pas pu être ouvert pour impression » — `window.open()` était appelé après un `await fetch`, ce que les bloqueurs de popups et certains navigateurs mobiles (Safari iOS, webviews) refusent silencieusement. Ouverture de fenêtre désormais synchrone au clic, avec repli en téléchargement direct si la popup est quand même bloquée, et affichage du vrai message d'erreur serveur plutôt que d'un message générique.
+  - Commande Marketplace : capture du numéro WhatsApp (prioritaire) / téléphone et de l'adresse de livraison (commune, quartier, avenue, repère, note) au moment de la commande ; affichés côté boutique dans `/commandes` avec lien de contact direct `wa.me`.
+  - Avis, commentaires et témoignages : nouveau modèle `Review` (note 1-5 + commentaire, badge « achat vérifié » quand rattaché à une commande réellement livrée), consultables sur la fiche produit et dans une section Témoignages sur la vitrine Marketplace ; une boutique n'a pas encore de page vitrine dédiée, donc les avis « boutique entière » sans article précis existent côté API mais ne sont pas encore affichés nulle part côté écran.
+  - `apps/api` lance désormais `prisma db push --accept-data-loss --skip-generate` avant de démarrer (voir `MAINTENANCE.md`) — les changements de schéma additifs s'appliquent automatiquement à chaque déploiement, sans étape manuelle.
+- **(12 oct.) Mode sombre/clair sur toute la plateforme** (Centre de pilotage, ELEGANZ Gestion, Marketplace) : bascule persistante (`localStorage`) choisie par la personne, avec repli automatique sur `prefers-color-scheme` tant qu'aucun choix explicite n'existe, et script anti-FOUC pour ne jamais flasher le mauvais thème au chargement — toujours dans la palette plate du design system (pas de coins arrondis, pas d'ombres).
+- **(12 oct.) Centre de pilotage — graphiques d'évolution** : 5 graphiques en SVG fait-main (nouvelles boutiques, nouveaux articles, commandes Marketplace, valeur brute des commandes, revenu plateforme encaissé) sur 30 jours glissants, avec survol/infobulle et animation de tracé au premier affichage ; chaque métrique a son propre graphique à une seule série (jamais d'axe double, les unités — comptage vs argent — diffèrent).
+- **(12 oct.) Gestion centre de contrôle admin, hors tableau de bord** : gestion des boutiques (suspendre/réactiver, changer de bouquet), des tarifs (bouquets Gestion/Marketplace), des factures plateforme, et de l'équipe admin (accorder/retirer un rôle `ADMIN_*`) — jusqu'ici seul le tableau de bord exécutif existait côté écran.
 
 - **Identité visuelle ELEGANZ conçue** (`docs/DESIGN_SYSTEM.md`) : palette (Encre, Toile, Cobalt, Flamme, Magenta Sape, Or), typographie (Fraunces pour les titres Marketplace, IBM Plex Sans pour l'interface, IBM Plex Mono pour l'argent), mise en page registre/ticket de caisse côté Gestion et bloc de couleur éditorial côté Marketplace — relue et corrigée pour éviter les travers génériques (crème+terracotta, cartes SaaS, chrome de majuscules).
 - **Premiers écrans Next.js réels** (`apps/web`), branchés sur l'API, pas des maquettes statiques :
