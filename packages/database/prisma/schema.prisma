@@ -38,6 +38,16 @@ model PlatformSettings {
   photoSearchEnabled Boolean @default(false)
   adStudioEnabled    Boolean @default(false)
 
+  // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
+  // frais d'ouverture à la souscription + abonnement mensuel, tous deux
+  // paramétrables depuis le Centre de pilotage, avec un nombre de mois de
+  // gratuité décompté à partir de la validation (vérification admin) de
+  // l'inscription du livreur. Valeurs de départ demandées : 10 $ à la
+  // souscription, 5 $/mois, 8 mois gratuits.
+  driverOpeningFee   Decimal  @default(10) @db.Decimal(12, 2)
+  driverMonthlyFee   Decimal  @default(5)  @db.Decimal(12, 2)
+  driverFreeMonths   Int      @default(8)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -594,7 +604,24 @@ model Driver {
   // "pièce d'identité illisible, à refaire") — jamais visible du livreur.
   adminNote        String?
 
+  // Facturation de l'espace livreur (prompt du 13 oct. 2026, point 1) —
+  // indépendante de `verified` (identité/dossier) : un livreur peut être
+  // vérifié mais suspendu pour impayé, ou inversement en attente de
+  // vérification alors que sa période gratuite tourne déjà. `freeTrialStartedAt`
+  // n'est renseigné qu'au moment où l'admin valide le dossier (verified=true
+  // pour la première fois), jamais à l'inscription elle-même.
+  billingStatus      DriverBillingStatus @default(FREE_PERIOD)
+  freeTrialStartedAt DateTime?
+
   deliveries ShopOrder[]
+  invoices   DriverInvoice[]
+}
+
+enum DriverBillingStatus {
+  FREE_PERIOD  // période de gratuité en cours, pas encore facturé
+  PAYMENT_DUE  // gratuité écoulée, facture(s) en attente de règlement
+  ACTIVE       // à jour de ses paiements
+  SUSPENDED    // impayé au-delà du délai de grâce — missions bloquées
 }
 
 model DeliveryZone {
@@ -647,6 +674,18 @@ model Invoice {
   paidAt    DateTime?
   status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
   kind      String   // "opening_fee" | "subscription" | "ai_credits" | ...
+  createdAt DateTime @default(now())
+}
+
+model DriverInvoice {
+  id        String   @id @default(uuid())
+  driverId  String
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  amount    Decimal  @db.Decimal(12, 2)
+  dueAt     DateTime
+  paidAt    DateTime?
+  status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
+  kind      String   // "opening_fee" | "subscription"
   createdAt DateTime @default(now())
 }
 

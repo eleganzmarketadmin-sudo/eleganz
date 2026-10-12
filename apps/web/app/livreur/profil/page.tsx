@@ -8,8 +8,17 @@ import styles from "./page.module.css";
 interface DriverProfile {
   zone: string | null;
   verified: boolean;
+  billingStatus: string;
+  freeTrialStartedAt: string | null;
   user: { fullName: string; email: string | null; phone: string | null };
 }
+
+const LABELS_FACTURATION: Record<string, string> = {
+  FREE_PERIOD: "Période gratuite en cours",
+  PAYMENT_DUE: "Paiement attendu",
+  ACTIVE: "Abonnement à jour",
+  SUSPENDED: "Suspendu pour impayé — contactez l'administration",
+};
 
 function ProfilContent() {
   const [profil, setProfil] = useState<DriverProfile | null>(null);
@@ -52,6 +61,14 @@ function ProfilContent() {
                 : "En attente de vérification par l'administration"}
             </span>
           </div>
+          {profil.verified && (
+            <div className={styles.champ}>
+              <span className={styles.champLabel}>Abonnement</span>
+              <span className={profil.billingStatus === "SUSPENDED" ? styles.statutNonVerifie : styles.statutVerifie}>
+                {LABELS_FACTURATION[profil.billingStatus] ?? profil.billingStatus}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

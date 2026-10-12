@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength } from "class-validator";
 
 /**
  * Coordonnées officielles de la plateforme ELEGANZ, modifiables depuis le
@@ -57,4 +57,21 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsBoolean()
   adStudioEnabled?: boolean;
+
+  // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
+  // 100 % paramétrable depuis le Centre de pilotage, sans redéploiement.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  driverOpeningFee?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  driverMonthlyFee?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  driverFreeMonths?: number;
 }

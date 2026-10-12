@@ -177,6 +177,130 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
   );
 }
 
+interface PlatformSettings {
+  driverOpeningFee: string;
+  driverMonthlyFee: string;
+  driverFreeMonths: number;
+}
+
+/**
+ * Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
+ * 100 % paramétrable ici, sans redéploiement : frais d'ouverture à la
+ * souscription, abonnement mensuel, et nombre de mois de gratuité décompté
+ * à partir de la validation (vérification) du dossier par l'admin. Les
+ * boutons de déclenchement manuel du cycle de facturation vivent ici aussi,
+ * tant qu'aucun planificateur n'est en place (voir DriverBillingService).
+ */
+function TarifsLivreursSection() {
+  const [ouvertureFee, setOuvertureFee] = useState("");
+  const [mensuelFee, setMensuelFee] = useState("");
+  const [moisGratuits, setMoisGratuits] = useState("");
+  const [chargement, setChargement] = useState(true);
+  const [enCours, setEnCours] = useState(false);
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<PlatformSettings>("/admin/platform-settings")
+      .then((s) => {
+        setOuvertureFee(s.driverOpeningFee);
+        setMensuelFee(s.driverMonthlyFee);
+        setMoisGratuits(String(s.driverFreeMonths));
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, []);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        driverOpeningFee: Number(ouvertureFee),
+        driverMonthlyFee: Number(mensuelFee),
+        driverFreeMonths: Number(moisGratuits),
+      });
+      setMessage("Tarifs livreurs enregistrés.");
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function declencher(action: string, chemin: string) {
+    setActionEnCours(action);
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultat = await api.post<{ action: string }[]>(chemin, {});
+      setMessage(`${action} : ${resultat.length} livreur(s) concerné(s).`);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setActionEnCours(null);
+    }
+  }
+
+  if (chargement) return <p>Chargement des tarifs livreurs…</p>;
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>Tarification de l&apos;espace livreur</span>
+      </div>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>Frais d&apos;ouverture (USD, à la souscription)</span>
+          <input value={ouvertureFee} onChange={(e) => setOuvertureFee(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Abonnement mensuel (USD)</span>
+          <input value={mensuelFee} onChange={(e) => setMensuelFee(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Mois de gratuité après validation du dossier</span>
+          <input value={moisGratuits} onChange={(e) => setMoisGratuits(e.target.value)} />
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          Enregistrer les tarifs
+        </button>
+      </div>
+      <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Vérification des gratuités échues", "/admin/driver-billing/run-trial-check")}
+        >
+          Vérifier les gratuités échues
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Facturation mensuelle", "/admin/driver-billing/run-monthly-billing")}
+        >
+          Lancer la facturation mensuelle
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Suspension des impayés", "/admin/driver-billing/run-suspension-check")}
+        >
+          Suspendre les livreurs en impayé
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TarifsContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -215,6 +339,9 @@ function TarifsContent() {
       ))}
 
       <FormulaireNouveauPlan onCree={recharger} />
+
+      <h2 className={styles.sectionTitre}>Tarifs livreurs</h2>
+      <TarifsLivreursSection />
     </div>
   );
 }

@@ -155,15 +155,24 @@ export class SupervisionService {
       .sort((a, b) => b.totalCommandes - a.totalCommandes);
   }
 
+  /**
+   * Statistiques dynamiques par livreur pour l'onglet Livreurs du Centre de
+   * pilotage (prompt du 13 oct. 2026, point 2) — recalculées à chaque appel
+   * à partir des livraisons actuellement affectées (`deliveries`), jamais
+   * figées : en cours maintenant, volume du mois civil en cours, en plus des
+   * stats de comportement déjà en place (taux de litige, délai moyen).
+   */
   async comportementLivreurs() {
     const livreurs = await this.prisma.driver.findMany({
       select: {
         id: true,
         verified: true,
+        billingStatus: true,
         user: { select: { fullName: true } },
         deliveries: {
           select: {
             status: true,
+            createdAt: true,
             dispute: { select: { id: true } },
             statusEvents: { select: { status: true, occurredAt: true } },
           },
@@ -176,6 +185,10 @@ export class SupervisionService {
       OrderStatus.RECEIVED_CONFIRMED,
       OrderStatus.CLOSED,
     ];
+    const STATUTS_EN_COURS: OrderStatus[] = [OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT];
+
+    const maintenant = new Date();
+    const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
 
     return livreurs
       .filter((l) => l.deliveries.length > 0)
@@ -183,12 +196,17 @@ export class SupervisionService {
         const total = l.deliveries.length;
         const livrees = l.deliveries.filter((d) => STATUTS_LIVRES.includes(d.status)).length;
         const litiges = l.deliveries.filter((d) => d.dispute).length;
+        const enCoursActuellement = l.deliveries.filter((d) => STATUTS_EN_COURS.includes(d.status)).length;
+        const livraisonsCeMois = l.deliveries.filter((d) => d.createdAt >= debutMois).length;
         return {
           livreurId: l.id,
           nom: l.user.fullName,
           verifie: l.verified,
+          billingStatus: l.billingStatus,
           totalLivraisons: total,
           livrees,
+          enCoursActuellement,
+          livraisonsCeMois,
           tauxLitigePct: Math.round((litiges / total) * 1000) / 10,
           delaiMoyenLivraisonHeures: this.delaiMoyenHeures(
             l.deliveries,
@@ -197,6 +215,6 @@ export class SupervisionService {
           ),
         };
       })
-      .sort((a, b) => b.totalLivraisons - a.totalLivraisons);
+      .sort((a, b) => b.enCoursActuellement - a.enCoursActuellement || b.totalLivraisons - a.totalLivraisons);
   }
 }

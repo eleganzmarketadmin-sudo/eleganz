@@ -10,6 +10,8 @@ interface Livreur {
   id: string;
   zone: string | null;
   verified: boolean;
+  billingStatus: string;
+  freeTrialStartedAt: string | null;
   phone: string | null;
   whatsapp: string | null;
   address: string | null;
@@ -32,6 +34,8 @@ interface ComportementLivreur {
   livreurId: string;
   totalLivraisons: number;
   livrees: number;
+  enCoursActuellement: number;
+  livraisonsCeMois: number;
   tauxLitigePct: number;
   delaiMoyenLivraisonHeures: number | null;
 }
@@ -41,6 +45,13 @@ const LABELS_VEHICULE: Record<string, string> = {
   VELO: "Vélo",
   MOTO: "Moto",
   VOITURE: "Voiture",
+};
+
+const LABELS_FACTURATION: Record<string, string> = {
+  FREE_PERIOD: "Période gratuite",
+  PAYMENT_DUE: "Paiement attendu",
+  ACTIVE: "Abonnement à jour",
+  SUSPENDED: "Suspendu (impayé)",
 };
 
 /**
@@ -122,6 +133,9 @@ function LivreursContent() {
                   <span className={`${styles.statut} ${!l.verified ? styles.statutSuspendu : ""}`}>
                     {l.verified ? "Vérifié" : "Non vérifié"}
                   </span>
+                  <span className={`${styles.statut} ${l.billingStatus === "SUSPENDED" ? styles.statutSuspendu : ""}`}>
+                    {LABELS_FACTURATION[l.billingStatus] ?? l.billingStatus}
+                  </span>
                 </div>
                 <span className={styles.date}>Inscrit le {formatDate(l.user.createdAt)}</span>
               </div>
@@ -169,6 +183,14 @@ function LivreursContent() {
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Livraisons</span>
                   <span>{l._count.deliveries} au total{s ? ` · ${s.livrees} livrées · ${s.tauxLitigePct}% de litige` : ""}</span>
+                </div>
+                <div className={styles.champInfo}>
+                  <span className={styles.champLabel}>En cours actuellement</span>
+                  <span>{s ? `${s.enCoursActuellement} mission(s) en route` : "Aucune donnée"}</span>
+                </div>
+                <div className={styles.champInfo}>
+                  <span className={styles.champLabel}>Ce mois-ci</span>
+                  <span>{s ? `${s.livraisonsCeMois} livraison(s) affectée(s)` : "Aucune donnée"}</span>
                 </div>
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Délai moyen de livraison</span>

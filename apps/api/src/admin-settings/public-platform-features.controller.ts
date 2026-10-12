@@ -16,4 +16,11 @@ export class PublicPlatformFeaturesController {
   features() {
     return this.adminSettingsService.publicFeatures();
   }
+
+  // Tarification livreur, publique pour affichage à l'inscription (prompt
+  // du 13 oct. 2026, point 1) — voir AdminSettingsService.publicDriverPricing.
+  @Get("driver-pricing")
+  driverPricing() {
+    return this.adminSettingsService.publicDriverPricing();
+  }
 }

@@ -36,6 +36,9 @@ export class AdminSettingsService {
         ...(dto.instagramUrl !== undefined && { instagramUrl: dto.instagramUrl || null }),
         ...(dto.photoSearchEnabled !== undefined && { photoSearchEnabled: dto.photoSearchEnabled }),
         ...(dto.adStudioEnabled !== undefined && { adStudioEnabled: dto.adStudioEnabled }),
+        ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
+        ...(dto.driverMonthlyFee !== undefined && { driverMonthlyFee: dto.driverMonthlyFee }),
+        ...(dto.driverFreeMonths !== undefined && { driverFreeMonths: dto.driverFreeMonths }),
       },
     });
   }
@@ -51,6 +54,21 @@ export class AdminSettingsService {
     return {
       photoSearchEnabled: settings.photoSearchEnabled,
       adStudioEnabled: settings.adStudioEnabled,
+    };
+  }
+
+  /**
+   * Lecture publique de la tarification livreur (prompt du 13 oct. 2026,
+   * point 1) — affichée sur l'écran d'inscription livreur pour la
+   * transparence, sans authentification. Jamais les coordonnées de contact
+   * ni rien d'autre ici, seulement ces trois valeurs.
+   */
+  async publicDriverPricing() {
+    const settings = await this.get();
+    return {
+      driverOpeningFee: settings.driverOpeningFee,
+      driverMonthlyFee: settings.driverMonthlyFee,
+      driverFreeMonths: settings.driverFreeMonths,
     };
   }
 }

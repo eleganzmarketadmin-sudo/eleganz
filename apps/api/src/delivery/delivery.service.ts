@@ -2,13 +2,15 @@ import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/com
 import { PrismaService } from "../prisma/prisma.service";
 import { OrdersService } from "../orders/orders.service";
 import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
-import { OrderStatus } from "@eleganz/database";
+import { OrderStatus, DriverBillingStatus } from "@eleganz/database";
+import { DriverBillingService } from "./driver-billing.service";
 
 @Injectable()
 export class DeliveryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
+    private readonly driverBillingService: DriverBillingService,
   ) {}
 
   createZone(dto: CreateDeliveryZoneDto) {
@@ -53,6 +55,13 @@ export class DeliveryService {
       if (!driver.verified) {
         throw new BadRequestException("Ce livreur n'est pas encore vérifié.");
       }
+      // Deux verrous indépendants (prompt du 13 oct. 2026, point 1) :
+      // l'identité/le dossier (`verified`, ci-dessus) et la facturation
+      // (`billingStatus`, ici) — un livreur suspendu pour impayé ne reçoit
+      // plus de nouvelles missions tant qu'il n'est pas réactivé.
+      if (driver.billingStatus === DriverBillingStatus.SUSPENDED) {
+        throw new BadRequestException("Ce livreur est suspendu pour impayé de son abonnement.");
+      }
     }
     return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
   }
@@ -65,7 +74,10 @@ export class DeliveryService {
    */
   listVerifiedDrivers() {
     return this.prisma.driver.findMany({
-      where: { verified: true },
+      // Un livreur suspendu pour impayé (billingStatus) n'apparaît plus
+      // dans le sélecteur d'affectation du vendeur, même vérifié — même
+      // verrou que dans assignDriver(), appliqué ici en amont pour l'UX.
+      where: { verified: true, billingStatus: { not: DriverBillingStatus.SUSPENDED } },
       select: {
         id: true,
         zone: true,
@@ -95,8 +107,14 @@ export class DeliveryService {
     });
   }
 
-  adminSetVerified(driverId: string, verified: boolean) {
-    return this.prisma.driver.update({ where: { id: driverId }, data: { verified } });
+  async adminSetVerified(driverId: string, verified: boolean) {
+    const driver = await this.prisma.driver.update({ where: { id: driverId }, data: { verified } });
+    // La gratuité démarre précisément à la validation du dossier par
+    // l'admin (prompt du 13 oct. 2026, point 1), jamais à l'inscription.
+    if (verified) {
+      await this.driverBillingService.startFreeTrialIfNeeded(driverId);
+    }
+    return driver;
   }
 
   /** Note interne pendant l'instruction du dossier — jamais visible du livreur. */

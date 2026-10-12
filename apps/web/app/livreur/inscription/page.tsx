@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { api, ApiError } from "../../lib/api";
 import styles from "./page.module.css";
+
+interface TarificationLivreur {
+  driverOpeningFee: string;
+  driverMonthlyFee: string;
+  driverFreeMonths: number;
+}
 
 const COMMUNES = [
   "Gombe",
@@ -46,6 +52,14 @@ export default function InscriptionLivreurPage() {
   const [idDocumentNumber, setIdDocumentNumber] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [tarification, setTarification] = useState<TarificationLivreur | null>(null);
+
+  useEffect(() => {
+    api
+      .get<TarificationLivreur>("/platform-settings/driver-pricing", false)
+      .then(setTarification)
+      .catch(() => setTarification(null));
+  }, []);
 
   const vehiculeChoisi = VEHICULES.find((v) => v.valeur === vehicleType);
   const documentsVehiculeRequis = vehiculeChoisi?.documentsRequis ?? false;
@@ -91,6 +105,13 @@ export default function InscriptionLivreurPage() {
           votre zone. Votre compte est examiné par l&apos;administration avant
           de recevoir vos premières missions.
         </p>
+        {tarification && (
+          <p style={{ marginTop: "16px", fontSize: "0.875rem" }}>
+            Souscription : {tarification.driverOpeningFee} $ à l&apos;ouverture puis{" "}
+            {tarification.driverMonthlyFee} $/mois — {tarification.driverFreeMonths} mois offerts dès la
+            validation de votre dossier par l&apos;administration.
+          </p>
+        )}
       </div>
       <div className={styles.panneauForm}>
         <form className={styles.form} onSubmit={soumettre}>

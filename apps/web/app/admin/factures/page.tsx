@@ -18,6 +18,18 @@ interface Facture {
   createdAt: string;
 }
 
+interface FactureLivreur {
+  id: string;
+  driverId: string;
+  driver: { id: string; user: { fullName: string } };
+  amount: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: string;
+  kind: string;
+  createdAt: string;
+}
+
 const LIBELLES_STATUT: Record<string, string> = {
   PENDING: "En attente",
   PAID: "Payée",
@@ -27,6 +39,7 @@ const LIBELLES_STATUT: Record<string, string> = {
 
 function FacturesContent() {
   const [factures, setFactures] = useState<Facture[]>([]);
+  const [facturesLivreurs, setFacturesLivreurs] = useState<FactureLivreur[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,9 +47,14 @@ function FacturesContent() {
   const [verificationEnCours, setVerificationEnCours] = useState<string | null>(null);
 
   function recharger() {
-    api
-      .get<Facture[]>("/admin/billing/invoices")
-      .then(setFactures)
+    Promise.all([
+      api.get<Facture[]>("/admin/billing/invoices"),
+      api.get<FactureLivreur[]>("/admin/driver-billing/invoices"),
+    ])
+      .then(([listeFactures, listeFacturesLivreurs]) => {
+        setFactures(listeFactures);
+        setFacturesLivreurs(listeFacturesLivreurs);
+      })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
   }
@@ -48,6 +66,19 @@ function FacturesContent() {
     setErreur(null);
     try {
       await api.post(`/admin/billing/invoices/${invoiceId}/mark-paid`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function marquerPayeeLivreur(invoiceId: string) {
+    setEnCours(invoiceId);
+    setErreur(null);
+    try {
+      await api.post(`/admin/driver-billing/invoices/${invoiceId}/mark-paid`);
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Action impossible.");
@@ -154,6 +185,49 @@ function FacturesContent() {
             </div>
           </div>
         ))
+      )}
+
+      <h2 className={styles.sectionTitre}>Factures livreurs — en attente de paiement</h2>
+      {facturesLivreurs.filter((f) => f.status === "PENDING").length === 0 ? (
+        <p className={styles.messageVide}>Aucune facture livreur en attente.</p>
+      ) : (
+        facturesLivreurs
+          .filter((f) => f.status === "PENDING")
+          .map((f) => (
+            <div className={styles.facture} key={f.id}>
+              <div className={styles.factureInfo}>
+                <span className={styles.boutiqueNom}>{f.driver.user.fullName}</span>
+                <span>{f.kind === "opening_fee" ? "Frais d'ouverture" : "Abonnement mensuel"}</span>
+                <span>{formatMoney(Number(f.amount))}</span>
+                <span>Échéance : {formatDate(f.dueAt)}</span>
+              </div>
+              <button
+                className={styles.boutonPayer}
+                disabled={enCours === f.id}
+                onClick={() => marquerPayeeLivreur(f.id)}
+              >
+                Marquer payée
+              </button>
+            </div>
+          ))
+      )}
+
+      <h2 className={styles.sectionTitre}>Factures livreurs — historique</h2>
+      {facturesLivreurs.filter((f) => f.status !== "PENDING").length === 0 ? (
+        <p className={styles.messageVide}>Aucune autre facture livreur.</p>
+      ) : (
+        facturesLivreurs
+          .filter((f) => f.status !== "PENDING")
+          .map((f) => (
+            <div className={styles.facture} key={f.id}>
+              <div className={styles.factureInfo}>
+                <span className={styles.boutiqueNom}>{f.driver.user.fullName}</span>
+                <span>{f.kind === "opening_fee" ? "Frais d'ouverture" : "Abonnement mensuel"}</span>
+                <span>{formatMoney(Number(f.amount))}</span>
+                <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
+              </div>
+            </div>
+          ))
       )}
     </div>
   );
