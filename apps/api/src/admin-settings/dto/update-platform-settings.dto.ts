@@ -1,0 +1,50 @@
+import { IsOptional, IsString, MaxLength } from "class-validator";
+
+/**
+ * Coordonnées officielles de la plateforme ELEGANZ, modifiables depuis le
+ * Centre de pilotage (prompt du 12 oct. 2026). Tous facultatifs — un champ
+ * envoyé comme chaîne vide efface l'information plutôt que de la laisser
+ * inchangée. Pas de validation stricte de format (URL/email) : un admin
+ * doit pouvoir coller un lien WhatsApp/Telegram tel quel sans friction.
+ */
+export class UpdatePlatformSettingsDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  supportEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  supportPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  whatsappLink?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  telegramLink?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  tiktokUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  instagramUrl?: string;
+}

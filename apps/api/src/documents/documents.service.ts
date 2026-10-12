@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { DocumentType } from "@eleganz/database";
 import { renderDocumentPdf } from "./pdf-renderer";
 import { construireClasseurExcel } from "../common/xlsx.util";
+import { AdminSettingsService } from "../admin-settings/admin-settings.service";
 
 const LABELS_PAIEMENT: Record<string, string> = {
   CASH: "Espèces",
@@ -40,7 +41,10 @@ const NON_HOMOLOGATED_TYPES: DocumentType[] = [
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly adminSettings: AdminSettingsService,
+  ) {}
 
   /**
    * Génère un document commercial lié à une vente de caisse. N'émet jamais
@@ -50,11 +54,7 @@ export class DocumentsService {
    * mais seule la version non homologuée est automatisée pour l'instant).
    */
   async generateForPosSale(shopId: string, posSaleId: string, type: DocumentType) {
-    if (!NON_HOMOLOGATED_TYPES.includes(type)) {
-      throw new BadRequestException(
-        `${type} ne peut pas être généré automatiquement tant que l'homologation DGI n'est pas confirmée (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md).`,
-      );
-    }
+    const estHomologuee = await this.verifierTypeAutorise(shopId, type);
 
     const number = await this.nextNumber(shopId, type);
 
@@ -64,7 +64,7 @@ export class DocumentsService {
         posSaleId,
         type,
         number,
-        isFiscallyHomologated: false,
+        isFiscallyHomologated: estHomologuee,
       },
     });
   }
@@ -75,11 +75,7 @@ export class DocumentsService {
    * caisse : jamais INVOICE_FISCAL par ce chemin.
    */
   async generateForShopOrder(shopId: string, shopOrderId: string, type: DocumentType) {
-    if (!NON_HOMOLOGATED_TYPES.includes(type)) {
-      throw new BadRequestException(
-        `${type} ne peut pas être généré automatiquement tant que l'homologation DGI n'est pas confirmée (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md).`,
-      );
-    }
+    const estHomologuee = await this.verifierTypeAutorise(shopId, type);
 
     const shopOrder = await this.prisma.shopOrder.findFirst({ where: { id: shopOrderId, shopId } });
     if (!shopOrder) {
@@ -94,9 +90,38 @@ export class DocumentsService {
         shopOrderId,
         type,
         number,
-        isFiscallyHomologated: false,
+        isFiscallyHomologated: estHomologuee,
       },
     });
+  }
+
+  /**
+   * Autorise INVOICE_FISCAL uniquement pour une boutique dont l'homologation
+   * DGI a été confirmée manuellement par un administrateur
+   * (`fiscalHomologationConfirmed`, voir admin/shops/:id/fiscal-homologation)
+   * — décision #9 : les deux formats sont proposés au choix, mais
+   * INVOICE_FISCAL reste bloqué par défaut tant que ce drapeau n'est pas
+   * activé. Les autres types restent toujours disponibles sans condition.
+   */
+  private async verifierTypeAutorise(shopId: string, type: DocumentType): Promise<boolean> {
+    if (NON_HOMOLOGATED_TYPES.includes(type)) {
+      return false;
+    }
+    if (type === DocumentType.INVOICE_FISCAL) {
+      const shop = await this.prisma.shop.findUniqueOrThrow({
+        where: { id: shopId },
+        select: { fiscalHomologationConfirmed: true },
+      });
+      if (!shop.fiscalHomologationConfirmed) {
+        throw new BadRequestException(
+          "La facture fiscale homologuée n'est pas encore disponible pour cette boutique : l'homologation DGI doit d'abord être confirmée par l'administration ELEGANZ (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md).",
+        );
+      }
+      return true;
+    }
+    throw new BadRequestException(
+      `${type} ne peut pas être généré automatiquement (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md).`,
+    );
   }
 
   /**
@@ -192,12 +217,18 @@ export class DocumentsService {
       throw new NotFoundException("Document introuvable pour cette boutique.");
     }
 
-    const logo = await this.recupererLogo(document.shop.invoiceLogoUrl);
+    const [logo, parametresPlateforme] = await Promise.all([
+      this.recupererLogo(document.shop.invoiceLogoUrl),
+      this.adminSettings.get(),
+    ]);
     const identiteBoutique = {
       shopAddress: document.shop.invoiceAddress,
       shopPhone: document.shop.invoicePhone,
       shopLogo: logo,
       shopFooterNote: document.shop.invoiceFooterNote,
+      platformWebsite: parametresPlateforme.website,
+      platformSupportEmail: parametresPlateforme.supportEmail,
+      platformSupportPhone: parametresPlateforme.supportPhone,
     };
 
     if (document.posSale) {

@@ -44,6 +44,14 @@ export interface DonneesDocumentPdf {
   shopPhone?: string | null;
   shopLogo?: Buffer | null;
   shopFooterNote?: string | null;
+  /**
+   * Coordonnées officielles ELEGANZ (Centre de pilotage, section "Paramètres
+   * plateforme") — affichées dans la signature fixe en bas de chaque
+   * document, en plus de l'identité de la boutique ci-dessus.
+   */
+  platformWebsite?: string | null;
+  platformSupportEmail?: string | null;
+  platformSupportPhone?: string | null;
 }
 
 const LARGEUR_TICKET = 226; // ~80mm, format imprimante de caisse courant (prompt §6)
@@ -183,9 +191,19 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     .font("Helvetica")
     .fontSize(6.5)
     .fillColor("#555")
-    .text("Mode et luxe choisis chez des boutiques congolaises — eleganz-production.up.railway.app/marketplace", {
-      align: "center",
-    });
+    .text(
+      donnees.platformWebsite || "Mode et luxe choisis chez des boutiques congolaises — eleganz-production.up.railway.app/marketplace",
+      { align: "center" },
+    );
+  // Coordonnées de contact officielles (centre de pilotage → "Paramètres
+  // plateforme") — affichées seulement si renseignées par l'admin, jamais de
+  // valeur inventée (prompt du 12 oct. 2026, demande n°2).
+  const contactsPlateforme = [donnees.platformSupportEmail, donnees.platformSupportPhone]
+    .filter((v): v is string => Boolean(v))
+    .join("  ·  ");
+  if (contactsPlateforme) {
+    doc.fontSize(6.5).fillColor("#555").text(contactsPlateforme, { align: "center" });
+  }
   doc.fillColor("#000");
 
   doc.end();

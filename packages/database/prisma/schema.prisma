@@ -12,6 +12,25 @@ generator client {
 }
 
 // ---------------------------------------------------------------------------
+// PARAMÈTRES PLATEFORME — coordonnées officielles ELEGANZ (prompt du
+// 12 oct. 2026), modifiables depuis le Centre de pilotage sans toucher au
+// code. Table singleton : une seule ligne, id fixe "platform".
+// ---------------------------------------------------------------------------
+
+model PlatformSettings {
+  id            String  @id @default("platform")
+  address       String?
+  website       String?
+  supportEmail  String?
+  supportPhone  String? // numéro de contact (peut aussi servir pour WhatsApp si identique)
+  whatsappLink  String?
+  telegramLink  String?
+  tiktokUrl     String?
+  instagramUrl  String?
+  updatedAt     DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
 // IDENTITÉ & ACCÈS
 // ---------------------------------------------------------------------------
 
@@ -117,6 +136,13 @@ model Shop {
   invoicePhone      String?
   invoiceLogoUrl    String?
   invoiceFooterNote String? // ex. "Merci pour votre achat !", conditions de retour, etc.
+
+  // Décision #9 (docs/COMPLIANCE_FACTURE_NORMALISEE.md) : les deux formats
+  // de facture (homologuée DGI et non homologuée) doivent être proposables
+  // au choix dès le départ, mais une boutique ne peut émettre une facture
+  // fiscale homologuée qu'une fois ce champ activé manuellement par un
+  // administrateur ELEGANZ, après vérification réelle de son homologation.
+  fiscalHomologationConfirmed Boolean @default(false)
 
   // Monétisation — champs admin-configurables, aucune valeur figée dans le code
   freeTrialStartedAt   DateTime?

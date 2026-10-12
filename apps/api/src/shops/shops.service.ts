@@ -191,6 +191,22 @@ export class ShopsService {
   }
 
   /**
+   * Confirme (ou retire) l'homologation DGI d'une boutique — c'est ce drapeau,
+   * vérifié manuellement par l'admin, qui autorise ensuite la boutique à
+   * émettre des INVOICE_FISCAL (décision #9,
+   * docs/COMPLIANCE_FACTURE_NORMALISEE.md). Ne génère et ne modifie jamais un
+   * document existant : change seulement ce qui devient possible pour les
+   * prochains documents.
+   */
+  async adminSetFiscalHomologation(shopId: string, confirmed: boolean) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: { fiscalHomologationConfirmed: confirmed },
+    });
+  }
+
+  /**
    * Action manuelle d'un administrateur sur UNE boutique précise (à la
    * différence de BillingService.suspendOverdueShops, qui traite en masse
    * les boutiques en retard de paiement). Ne touche jamais aux commandes,

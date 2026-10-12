@@ -51,4 +51,19 @@ export class AdminShopsController {
     requireAdmin(user);
     return this.shopsService.adminSetPlan(shopId, kind, planId);
   }
+
+  /**
+   * Confirme manuellement l'homologation DGI d'une boutique, une fois les
+   * démarches effectuées hors plateforme — c'est ce qui débloque la facture
+   * fiscale homologuée pour cette boutique (demande du 12 oct. 2026, n°3).
+   */
+  @Patch("admin/shops/:shopId/fiscal-homologation")
+  setFiscalHomologation(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Body("confirmed") confirmed: boolean,
+  ) {
+    requireAdmin(user);
+    return this.shopsService.adminSetFiscalHomologation(shopId, Boolean(confirmed));
+  }
 }

@@ -15,6 +15,7 @@ const LIENS = [
   { href: "/admin/factures", label: "Factures" },
   { href: "/admin/litiges", label: "Litiges" },
   { href: "/admin/equipe", label: "Équipe admin" },
+  { href: "/admin/parametres", label: "Paramètres plateforme" },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

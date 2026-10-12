@@ -12,6 +12,7 @@ interface Boutique {
   mode: string;
   status: string;
   isPubliclyListed: boolean;
+  fiscalHomologationConfirmed: boolean;
   createdAt: string;
   owner: { fullName: string; email: string | null; phone: string | null };
   marketplaceBouquet: { id: string; name: string } | null;
@@ -61,6 +62,19 @@ function BoutiquesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function basculerHomologation(shopId: string, confirmed: boolean) {
+    setEnCours(shopId);
+    setErreur(null);
+    try {
+      await api.patch(`/admin/shops/${shopId}/fiscal-homologation`, { confirmed });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Changement d'homologation impossible.");
     } finally {
       setEnCours(null);
     }
@@ -150,6 +164,20 @@ function BoutiquesContent() {
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>Catalogue</span>
                   <span>{b._count.products} articles · {b._count.orders} commandes reçues</span>
+                </div>
+                <div className={styles.champInfo}>
+                  <span className={styles.champLabel}>Facture fiscale homologuée</span>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={b.fiscalHomologationConfirmed}
+                      disabled={enCours === b.id}
+                      onChange={(e) => basculerHomologation(b.id, e.target.checked)}
+                    />
+                    {b.fiscalHomologationConfirmed
+                      ? "Confirmée — peut émettre des factures fiscales"
+                      : "Non confirmée — facture fiscale indisponible"}
+                  </label>
                 </div>
               </div>
               <div className={styles.actions}>

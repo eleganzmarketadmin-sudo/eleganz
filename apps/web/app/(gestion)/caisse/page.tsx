@@ -40,6 +40,19 @@ const MOYENS = [
   { valeur: "MOBILE_MONEY", label: "Mobile money" },
 ] as const;
 
+// Choix du format de document à l'encaissement (demande du 12 oct. 2026,
+// n°3 : les deux formats — non homologué et fiscal homologué — doivent être
+// proposés au choix). INVOICE_FISCAL n'apparaît que si l'homologation DGI de
+// la boutique a été confirmée par l'administration (voir
+// fiscalHomologationConfirmed, docs/COMPLIANCE_FACTURE_NORMALISEE.md) ; les
+// autres types restent toujours disponibles.
+const TYPES_DOCUMENT: { valeur: string; label: string; reserveHomologation?: boolean }[] = [
+  { valeur: "TICKET", label: "Ticket de caisse" },
+  { valeur: "RECEIPT", label: "Reçu" },
+  { valeur: "INVOICE_INTERNAL", label: "Facture interne" },
+  { valeur: "INVOICE_FISCAL", label: "Facture fiscale homologuée", reserveHomologation: true },
+];
+
 function CaisseContent() {
   const { currentShop } = useShop();
   const { rafraichirCompteur, synchroniser } = useOfflineSync();
@@ -49,6 +62,8 @@ function CaisseContent() {
   const [recherche, setRecherche] = useState("");
   const [lignes, setLignes] = useState<LigneTicket[]>([]);
   const [moyen, setMoyen] = useState<(typeof MOYENS)[number]["valeur"]>("CASH");
+  const [typeDocument, setTypeDocument] = useState<string>("TICKET");
+  const [homologationConfirmee, setHomologationConfirmee] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreurVente, setErreurVente] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -76,6 +91,34 @@ function CaisseContent() {
       annule = true;
     };
   }, [currentShop]);
+
+  useEffect(() => {
+    if (!currentShop) return;
+    let annule = false;
+    api
+      .get<{ fiscalHomologationConfirmed: boolean }>(`/shops/${currentShop.id}`)
+      .then((data) => {
+        if (!annule) setHomologationConfirmee(Boolean(data.fiscalHomologationConfirmed));
+      })
+      .catch(() => {
+        // Non bloquant pour la caisse : par défaut la facture fiscale reste
+        // simplement masquée du choix si cette information est indisponible.
+      });
+    return () => {
+      annule = true;
+    };
+  }, [currentShop]);
+
+  const typesDisponibles = useMemo(
+    () => TYPES_DOCUMENT.filter((t) => !t.reserveHomologation || homologationConfirmee),
+    [homologationConfirmee],
+  );
+
+  useEffect(() => {
+    if (!typesDisponibles.some((t) => t.valeur === typeDocument)) {
+      setTypeDocument("TICKET");
+    }
+  }, [typesDisponibles, typeDocument]);
 
   const variantesVisibles = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -150,7 +193,7 @@ function CaisseContent() {
       try {
         const document = await api.post<{ id: string }>(
           `/shops/${currentShop.id}/documents/pos-sale/${vente.id}`,
-          { type: "TICKET" },
+          { type: typeDocument },
         );
         setDernierTicket({ shopId: currentShop.id, documentId: document.id });
       } catch {
@@ -309,6 +352,24 @@ function CaisseContent() {
                     {m.label}
                   </button>
                 ))}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+                <label htmlFor="typeDocument" style={{ fontSize: "0.85rem" }}>
+                  Document à imprimer
+                </label>
+                <select
+                  id="typeDocument"
+                  value={typeDocument}
+                  onChange={(e) => setTypeDocument(e.target.value)}
+                  style={{ padding: "8px 10px", minHeight: 40 }}
+                >
+                  {typesDisponibles.map((t) => (
+                    <option key={t.valeur} value={t.valeur}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {erreurVente && <div className={styles.erreur}>{erreurVente}</div>}
