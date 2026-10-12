@@ -23,6 +23,13 @@ export class SubscriptionPlansController {
     return this.plansService.list(category);
   }
 
+  @Get("admin/billing/plans")
+  @UseGuards(JwtAuthGuard)
+  listAll(@CurrentUser() user: AuthenticatedUser, @Query("category") category?: PlanCategory) {
+    requireAdmin(user);
+    return this.plansService.listAll(category);
+  }
+
   @Post("admin/billing/plans")
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSubscriptionPlanDto) {

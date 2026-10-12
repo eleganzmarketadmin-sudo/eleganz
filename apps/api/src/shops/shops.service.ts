@@ -145,4 +145,49 @@ export class ShopsService {
     });
     return this.prisma.product.findMany({ where: { id: { in: productIds } } });
   }
+
+  /**
+   * Vue admin : toutes les boutiques, avec propriétaire et indicateurs
+   * essentiels — support du "centre de pilotage" (prompt §40 : gestion de
+   * la plateforme sans toucher au code pour les tâches courantes).
+   */
+  async adminListAll() {
+    const shops = await this.prisma.shop.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        owner: { select: { id: true, fullName: true, email: true, phone: true } },
+        marketplaceBouquet: { select: { id: true, name: true } },
+        gestionBouquet: { select: { id: true, name: true } },
+        _count: { select: { products: true, orders: true } },
+      },
+    });
+    return shops;
+  }
+
+  /**
+   * Action manuelle d'un administrateur sur UNE boutique précise (à la
+   * différence de BillingService.suspendOverdueShops, qui traite en masse
+   * les boutiques en retard de paiement). Ne touche jamais aux commandes,
+   * produits ou historiques — seulement au statut d'accès.
+   */
+  async adminSetStatus(shopId: string, status: ShopStatus) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({ where: { id: shopId }, data: { status } });
+  }
+
+  /**
+   * Rattache une boutique à un bouquet (plan tarifaire) pour la gestion ou
+   * la marketplace — permet à l'admin de changer le forfait d'un vendeur
+   * sans toucher au code.
+   */
+  async adminSetPlan(shopId: string, kind: "gestion" | "marketplace", planId: string | null) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data:
+        kind === "gestion"
+          ? { gestionBouquetId: planId }
+          : { marketplaceBouquetId: planId },
+    });
+  }
 }

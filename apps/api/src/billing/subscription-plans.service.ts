@@ -26,6 +26,18 @@ export class SubscriptionPlansService {
     });
   }
 
+  /**
+   * Vue admin : tous les bouquets, y compris désactivés — nécessaire pour
+   * pouvoir réactiver un bouquet retiré sans repasser par la base de
+   * données directement.
+   */
+  listAll(category?: PlanCategory) {
+    return this.prisma.subscriptionPlan.findMany({
+      where: category ? { category } : {},
+      orderBy: [{ category: "asc" }, { monthlyPrice: "asc" }],
+    });
+  }
+
   update(planId: string, dto: UpdateSubscriptionPlanDto) {
     return this.prisma.subscriptionPlan.update({
       where: { id: planId },

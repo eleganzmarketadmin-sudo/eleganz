@@ -1,0 +1,139 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.sectionTitre {
+  font-size: 1rem;
+  margin: var(--espace-5) 0 var(--espace-3);
+  padding-bottom: var(--espace-2);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.plan {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-3);
+}
+
+.planInactif {
+  opacity: 0.55;
+}
+
+.planEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.planNom {
+  font-weight: 600;
+}
+
+.planStatut {
+  font-size: 0.8125rem;
+  color: var(--color-or);
+}
+
+.planChamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+}
+
+.champ input {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+  min-width: 140px;
+}
+
+.champLarge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+  flex: 1 1 260px;
+}
+
+.champLarge input {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+}
+
+.planActions {
+  display: flex;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.boutonEnregistrer,
+.boutonBasculer,
+.boutonNouveau {
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonEnregistrer {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonBasculer {
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink);
+}
+
+.boutonEnregistrer:disabled,
+.boutonBasculer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonNouveau {
+  background: var(--color-or);
+  margin-top: var(--espace-4);
+}
+
+.nouveauPlan {
+  margin-top: var(--espace-4);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  align-items: center;
+}
+
+.nouveauPlan select,
+.nouveauPlan input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+}
+
+.messageVide {
+  padding: var(--espace-3);
+  color: #555;
+}

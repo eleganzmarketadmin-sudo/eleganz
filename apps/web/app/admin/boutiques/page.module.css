@@ -1,0 +1,104 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.boutique {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.nom {
+  font-weight: 600;
+  margin-right: var(--espace-3);
+}
+
+.statut {
+  font-size: 0.8125rem;
+  padding: 2px var(--espace-2);
+  background: var(--color-or);
+  color: var(--color-ink);
+}
+
+.statutSuspendu {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.date {
+  font-size: 0.8125rem;
+  color: #ccc;
+}
+
+.corps {
+  padding: var(--espace-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espace-3);
+}
+
+.champInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.champLabel {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.actions {
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.boutonSuspendre,
+.boutonReactiver {
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSuspendre {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.boutonReactiver {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSuspendre:disabled,
+.boutonReactiver:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: #555;
+}
