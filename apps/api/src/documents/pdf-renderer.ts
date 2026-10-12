@@ -1,4 +1,9 @@
-import PDFDocument from "pdfkit";
+// Import CommonJS correct même sans `esModuleInterop` (le type pdfkit est
+// déclaré en `export =`) — c'est l'absence de cet interop qui causait le
+// "pdfkit_1.default is not a constructor" en production : TypeScript
+// compilait `import PDFDocument from "pdfkit"` en `require("pdfkit").default`,
+// qui n'existe pas sur un module CommonJS classique comme pdfkit.
+import PDFDocument = require("pdfkit");
 
 export interface LigneDocumentPdf {
   label: string;

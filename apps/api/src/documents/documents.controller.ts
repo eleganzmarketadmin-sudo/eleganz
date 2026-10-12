@@ -47,30 +47,9 @@ export class DocumentsController {
     @Param("documentId") documentId: string,
     @Res() res: Response,
   ) {
-    // TODO(diagnostic temporaire) : ce bloc try/catch expose le vrai message
-    // d'erreur dans la réponse JSON le temps de diagnostiquer le 500 rencontré
-    // en production (aucun accès aux logs Railway depuis ce bac à sable) — à
-    // retirer une fois la cause confirmée et corrigée.
-    try {
-      const doc = await this.documentsService.renderPdf(shopId, documentId);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `inline; filename="document-${documentId}.pdf"`);
-      doc.pipe(res);
-      doc.on("error", (err: Error) => {
-        // eslint-disable-next-line no-console
-        console.error("[diagnostic pdf] erreur de flux PDFKit:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ diagnostic: true, message: err.message, stack: err.stack });
-        }
-      });
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[diagnostic pdf] erreur capturée:", err);
-      res.status(500).json({
-        diagnostic: true,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-    }
+    const doc = await this.documentsService.renderPdf(shopId, documentId);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="document-${documentId}.pdf"`);
+    doc.pipe(res);
   }
 }
