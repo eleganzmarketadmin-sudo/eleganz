@@ -213,13 +213,11 @@ enum VariantOptionKind {
   COLOR
 }
 
-/**
- * Valeurs prédéfinies de taille/couleur propres à chaque boutique (demande
- * du 12 oct. 2026) — remplace la saisie libre par une liste déroulante à
- * choix multiple côté catalogue, pour éviter les doublons dus à des fautes
- * de frappe ("Rouge" / "rouge " / "ROUGE"). Chaque boutique construit sa
- * propre liste au fil de l'eau ; aucune valeur n'est imposée globalement.
- */
+// Valeurs prédéfinies de taille/couleur propres à chaque boutique (demande
+// du 12 oct. 2026) — remplace la saisie libre par une liste déroulante à
+// choix multiple côté catalogue, pour éviter les doublons dus à des fautes
+// de frappe ("Rouge" / "rouge " / "ROUGE"). Chaque boutique construit sa
+// propre liste au fil de l'eau ; aucune valeur n'est imposée globalement.
 model VariantOption {
   id        String            @id @default(uuid())
   shopId    String
