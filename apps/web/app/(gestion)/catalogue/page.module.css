@@ -2,6 +2,73 @@
   margin-bottom: var(--espace-5);
 }
 
+.blocImport {
+  border: 2px solid var(--color-cobalt);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-4);
+  background: var(--color-surface);
+}
+
+.sousTitre {
+  font-size: 1rem;
+  margin-bottom: var(--espace-2);
+}
+
+.texteAide {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-3);
+  max-width: 640px;
+}
+
+.actionsImport {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.boutonSecondaire {
+  background: var(--color-surface);
+  color: var(--color-cobalt);
+  border: 2px solid var(--color-cobalt);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSecondaire:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.resultatImport {
+  margin-top: var(--espace-3);
+  padding: var(--espace-3);
+  background: var(--color-surface-muted);
+  font-size: 0.875rem;
+}
+
+.listeErreursImport {
+  margin: var(--espace-2) 0 0;
+  padding-left: var(--espace-4);
+  color: var(--color-flamme);
+}
+
+.recherche {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+  min-height: var(--touche-min);
+}
+
 .nouveauProduit {
   border: 2px solid var(--color-ink);
   padding: var(--espace-4);
@@ -49,27 +116,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--espace-3) var(--espace-4);
+  padding: var(--espace-2) var(--espace-4);
   background: var(--color-encre-fixe);
   color: #fff;
+  min-height: 40px;
 }
 
 .tableauVariantes {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.875rem;
 }
 
 .tableauVariantes th {
   text-align: left;
-  padding: var(--espace-2) var(--espace-4);
+  padding: var(--espace-1) var(--espace-4);
   border-bottom: 2px solid var(--color-ink);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
 .tableauVariantes td {
-  padding: var(--espace-2) var(--espace-4);
+  padding: var(--espace-1) var(--espace-4);
   border-bottom: 1px solid var(--color-border);
+  line-height: 1.3;
 }
 
 .colChiffre {

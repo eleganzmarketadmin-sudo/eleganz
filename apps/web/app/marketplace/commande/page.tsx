@@ -17,6 +17,18 @@ export default function CommandePage() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [commandeConfirmee, setCommandeConfirmee] = useState(false);
 
+  // Coordonnées de livraison — la boutique en a besoin pour joindre
+  // l'acheteur et organiser la livraison (aucun paiement en ligne ni
+  // adresse GPS n'existe encore à ce stade). WhatsApp en priorité : c'est
+  // le canal de contact le plus utilisé à Kinshasa.
+  const [whatsapp, setWhatsapp] = useState("");
+  const [telephone, setTelephone] = useState("");
+  const [commune, setCommune] = useState("");
+  const [quartier, setQuartier] = useState("");
+  const [avenue, setAvenue] = useState("");
+  const [repere, setRepere] = useState("");
+  const [note, setNote] = useState("");
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/marketplace/compte?retour=/marketplace/commande");
@@ -29,6 +41,13 @@ export default function CommandePage() {
     try {
       await api.post("/marketplace/orders", {
         items: lignes.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+        buyerWhatsapp: whatsapp.trim() || undefined,
+        buyerPhone: telephone.trim() || undefined,
+        deliveryCommune: commune.trim() || undefined,
+        deliveryQuartier: quartier.trim() || undefined,
+        deliveryAvenue: avenue.trim() || undefined,
+        deliveryRepere: repere.trim() || undefined,
+        deliveryNote: note.trim() || undefined,
       });
       vider();
       setCommandeConfirmee(true);
@@ -87,6 +106,59 @@ export default function CommandePage() {
         ligne arrive prochainement. Si votre commande vient de plusieurs boutiques, chacune la
         prépare séparément.
       </p>
+
+      <div className={styles.livraison}>
+        <h2 className={styles.sousTitre}>Pour vous contacter et livrer la commande</h2>
+        <p className={styles.note} style={{ marginBottom: "var(--espace-3)" }}>
+          La boutique s&apos;en sert pour vous joindre et organiser la livraison. Donnez au moins
+          un numéro.
+        </p>
+        <div className={styles.champs}>
+          <label className={styles.champ}>
+            <span>Numéro WhatsApp (de préférence)</span>
+            <input
+              type="tel"
+              placeholder="Ex. 081 234 5678"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+            />
+          </label>
+          <label className={styles.champ}>
+            <span>Autre numéro de téléphone</span>
+            <input
+              type="tel"
+              placeholder="Si différent du WhatsApp"
+              value={telephone}
+              onChange={(e) => setTelephone(e.target.value)}
+            />
+          </label>
+          <label className={styles.champ}>
+            <span>Commune</span>
+            <input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Ex. Gombe" />
+          </label>
+          <label className={styles.champ}>
+            <span>Quartier</span>
+            <input value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder="Ex. Socimat" />
+          </label>
+          <label className={styles.champ}>
+            <span>Avenue</span>
+            <input value={avenue} onChange={(e) => setAvenue(e.target.value)} placeholder="Ex. Avenue du Commerce" />
+          </label>
+          <label className={styles.champ}>
+            <span>Point de repère</span>
+            <input value={repere} onChange={(e) => setRepere(e.target.value)} placeholder="Ex. Près de la pharmacie" />
+          </label>
+        </div>
+        <label className={styles.champ} style={{ marginTop: "var(--espace-3)" }}>
+          <span>Note pour le livreur (optionnel)</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="Ex. Appeler avant de monter, disponible après 17h…"
+          />
+        </label>
+      </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 

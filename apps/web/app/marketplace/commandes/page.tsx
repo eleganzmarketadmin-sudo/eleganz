@@ -13,10 +13,12 @@ interface OrderLine {
   id: string;
   quantity: number;
   unitPrice: string;
+  variant?: { product: { id: string; name: string } };
 }
 
 interface ShopOrder {
   id: string;
+  shopId: string;
   status: string;
   subtotal: string;
   lines: OrderLine[];
@@ -73,6 +75,11 @@ export default function CommandesPage() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
+  const [avisPour, setAvisPour] = useState<ShopOrder | null>(null);
+  const [noteAvis, setNoteAvis] = useState(0);
+  const [commentaireAvis, setCommentaireAvis] = useState("");
+  const [avisEnvoyesPour, setAvisEnvoyesPour] = useState<Set<string>>(new Set());
+  const [envoiAvisEnCours, setEnvoiAvisEnCours] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -100,6 +107,36 @@ export default function CommandesPage() {
       setErreur(err instanceof ApiError ? err.message : "Confirmation impossible.");
     } finally {
       setEnCours(null);
+    }
+  }
+
+  function ouvrirAvis(so: ShopOrder) {
+    setAvisPour(so);
+    setNoteAvis(0);
+    setCommentaireAvis("");
+    setErreur(null);
+  }
+
+  async function envoyerAvis() {
+    if (!avisPour || !noteAvis) {
+      setErreur("Choisissez une note avant d'envoyer.");
+      return;
+    }
+    setEnvoiAvisEnCours(true);
+    setErreur(null);
+    try {
+      await api.post(`/marketplace/shops/${avisPour.shopId}/reviews`, {
+        shopOrderId: avisPour.id,
+        productId: avisPour.lines[0]?.variant?.product.id,
+        rating: noteAvis,
+        comment: commentaireAvis.trim() || undefined,
+      });
+      setAvisEnvoyesPour((prev) => new Set(prev).add(avisPour.id));
+      setAvisPour(null);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "L'avis n'a pas pu être envoyé.");
+    } finally {
+      setEnvoiAvisEnCours(false);
     }
   }
 
@@ -148,11 +185,86 @@ export default function CommandesPage() {
                       Confirmer la réception
                     </button>
                   )}
+                  {["RECEIVED_CONFIRMED", "CLOSED"].includes(so.status) &&
+                    (avisEnvoyesPour.has(so.id) ? (
+                      <span style={{ color: "var(--color-vert-paiement)", fontSize: "0.8125rem" }}>Avis envoyé ✓</span>
+                    ) : (
+                      <button
+                        onClick={() => ouvrirAvis(so)}
+                        style={{
+                          border: "2px solid var(--color-magenta)",
+                          color: "var(--color-magenta)",
+                          background: "none",
+                          padding: "6px 10px",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Laisser un avis
+                      </button>
+                    ))}
                 </span>
               </div>
             ))}
           </div>
         ))
+      )}
+
+      {avisPour && (
+        <div className={styles.modaleFond} onClick={() => setAvisPour(null)}>
+          <div className={styles.modale} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginBottom: "12px" }}>Votre avis</h2>
+            <div style={{ marginBottom: "12px" }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setNoteAvis(n)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "1.5rem",
+                    cursor: "pointer",
+                    color: n <= noteAvis ? "var(--color-or)" : "var(--color-border)",
+                    padding: "0 2px",
+                  }}
+                  aria-label={`${n} étoile(s)`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Votre expérience avec cette commande (optionnel)"
+              value={commentaireAvis}
+              onChange={(e) => setCommentaireAvis(e.target.value)}
+              rows={3}
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid var(--color-border)", marginBottom: "12px" }}
+            />
+            {erreur && <div className={styles.erreur}>{erreur}</div>}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={envoyerAvis}
+                disabled={envoiAvisEnCours}
+                style={{
+                  background: "var(--color-magenta)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                {envoiAvisEnCours ? "Envoi…" : "Publier l'avis"}
+              </button>
+              <button
+                onClick={() => setAvisPour(null)}
+                style={{ background: "none", border: "none", color: "var(--color-texte-muted)", cursor: "pointer" }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

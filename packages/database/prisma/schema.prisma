@@ -57,6 +57,7 @@ model User {
   driverProfile   Driver?
   addresses       Address[]
   auditLogs       AuditLog[]
+  reviews         Review[]
 }
 
 model Address {
@@ -130,6 +131,7 @@ model Shop {
   platformInvoices Invoice[]
   creditWallet   AiCreditWallet?
   auditLogs      AuditLog[]
+  reviews        Review[]
 }
 
 model ShopStaff {
@@ -162,6 +164,7 @@ model Product {
   updatedAt   DateTime @updatedAt
 
   variants Variant[]
+  reviews  Review[]
 }
 
 model Variant {
@@ -365,6 +368,19 @@ model Order {
   currency  String      @default("USD")
   createdAt DateTime    @default(now())
 
+  // Coordonnées de livraison saisies au moment de la commande (prompt du
+  // 12 oct. 2026) — la boutique en a besoin pour joindre le client et
+  // organiser la livraison, au-delà du compte acheteur lui-même.
+  // whatsappPhone en priorité (canal de contact préféré en RDC) ; phone en
+  // repli si le client n'a pas WhatsApp.
+  buyerWhatsapp    String?
+  buyerPhone       String?
+  deliveryCommune  String?
+  deliveryQuartier String?
+  deliveryAvenue   String?
+  deliveryRepere   String?
+  deliveryNote     String?
+
   shopOrders ShopOrder[]
   payments   OrderPayment[]
 }
@@ -387,6 +403,7 @@ model ShopOrder {
   lines     OrderLine[]
   documents CommercialDocument[]
   dispute   Dispute?
+  reviews   Review[]
 }
 
 model OrderLine {
@@ -419,6 +436,36 @@ model Dispute {
   status      String    @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED
   resolution  String?
   createdAt   DateTime  @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// AVIS, COMMENTAIRES & TÉMOIGNAGES — crédibilité de la plateforme (prompt du
+// 12 oct. 2026). Un avis cible toujours une boutique, et optionnellement un
+// article précis. `shopOrderId`, quand renseigné, rattache l'avis à une
+// commande réelle de l'auteur — `verifiedPurchase` est calculé une seule
+// fois à la création à partir du statut de cette commande (voir le champ
+// plus bas), jamais déduit de la seule déclaration du client.
+model Review {
+  id          String    @id @default(uuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id])
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  shopOrderId String?
+  shopOrder   ShopOrder? @relation(fields: [shopOrderId], references: [id])
+  rating      Int // 1 à 5
+  comment     String?
+  // Calculé une seule fois à la création, à partir du statut de la commande
+  // liée (RECEIVED_CONFIRMED ou CLOSED) — pas recalculé ensuite : un retour
+  // tardif sur une commande déjà close ne doit pas faire disparaître
+  // rétroactivement un avis déjà publié et lu.
+  verifiedPurchase Boolean @default(false)
+  isPublished Boolean   @default(true) // modération a posteriori (admin), jamais pré-modéré
+  createdAt   DateTime  @default(now())
+
+  @@unique([authorId, shopOrderId])
 }
 
 // ---------------------------------------------------------------------------

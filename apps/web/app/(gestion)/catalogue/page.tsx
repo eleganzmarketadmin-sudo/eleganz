@@ -1,12 +1,144 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { StatusTag } from "../../components/StatusTag";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { telechargerFichier, envoyerFichier } from "../../lib/telecharger-fichier";
 import styles from "./page.module.css";
+
+interface LigneResultatImport {
+  ligne: number;
+  statut: "créé" | "mis à jour" | "erreur";
+  message?: string;
+  sku?: string;
+}
+
+interface ResultatImport {
+  resultats: LigneResultatImport[];
+  creees: number;
+  misesAJour: number;
+  erreurs: number;
+}
+
+/**
+ * Import/export Excel en masse (prompt du 12 oct. 2026) — volontairement
+ * placé tout en haut de la page, avant la recherche d'articles, puisque
+ * c'est la première chose qu'une boutique qui a déjà un catalogue ailleurs
+ * voudra faire en arrivant sur cet écran.
+ */
+function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
+  const { currentShop } = useShop();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [enCours, setEnCours] = useState<"gabarit" | "export" | "import" | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [resultat, setResultat] = useState<ResultatImport | null>(null);
+
+  async function telechargerGabarit() {
+    setErreur(null);
+    setEnCours("gabarit");
+    try {
+      await telechargerFichier(
+        `/shops/${currentShop!.id}/products/import-template`,
+        "gabarit-articles-eleganz.xlsx",
+      );
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Téléchargement impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function exporterCatalogue() {
+    setErreur(null);
+    setEnCours("export");
+    try {
+      await telechargerFichier(`/shops/${currentShop!.id}/products/export`, "articles-eleganz.xlsx");
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Export impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function importerFichier(fichier: File) {
+    setErreur(null);
+    setResultat(null);
+    setEnCours("import");
+    try {
+      const resultat = await envoyerFichier<ResultatImport>(
+        `/shops/${currentShop!.id}/products/import`,
+        fichier,
+      );
+      setResultat(resultat);
+      if (resultat.creees > 0 || resultat.misesAJour > 0) onImporte();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Import impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  return (
+    <div className={styles.blocImport}>
+      <h2 className={styles.sousTitre}>Importer ou exporter en masse (Excel)</h2>
+      <p className={styles.texteAide}>
+        Ajoutez des dizaines d&apos;articles d&apos;un coup à partir d&apos;un fichier Excel, dans
+        l&apos;ordre de colonnes de la plateforme — téléchargez le gabarit, remplissez-le, puis
+        importez-le. Une référence déjà connue de votre boutique est mise à jour (prix, stock) au
+        lieu d&apos;être dupliquée.
+      </p>
+      <div className={styles.actionsImport}>
+        <button className={styles.boutonSecondaire} onClick={telechargerGabarit} disabled={enCours !== null}>
+          {enCours === "gabarit" ? "…" : "Télécharger le gabarit"}
+        </button>
+        <button className={styles.boutonSecondaire} onClick={exporterCatalogue} disabled={enCours !== null}>
+          {enCours === "export" ? "…" : "Exporter mon catalogue (.xlsx)"}
+        </button>
+        <label
+          className={styles.bouton}
+          style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", minHeight: "40px" }}
+        >
+          {enCours === "import" ? "Import en cours…" : "Importer un fichier Excel"}
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            style={{ display: "none" }}
+            disabled={enCours !== null}
+            onChange={(e) => {
+              const fichier = e.target.files?.[0];
+              e.target.value = "";
+              if (fichier) importerFichier(fichier);
+            }}
+          />
+        </label>
+      </div>
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+      {resultat && (
+        <div className={styles.resultatImport}>
+          <p>
+            <strong>{resultat.creees}</strong> créé(s), <strong>{resultat.misesAJour}</strong> mis à
+            jour, <strong>{resultat.erreurs}</strong> erreur(s) sur {resultat.resultats.length} ligne(s).
+          </p>
+          {resultat.erreurs > 0 && (
+            <ul className={styles.listeErreursImport}>
+              {resultat.resultats
+                .filter((r) => r.statut === "erreur")
+                .map((r, i) => (
+                  <li key={i}>
+                    Ligne {r.ligne}{r.sku ? ` (${r.sku})` : ""} : {r.message}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Variant {
   id: string;
@@ -228,6 +360,7 @@ function CatalogueContent() {
   const [nomNouveau, setNomNouveau] = useState("");
   const [categorieNouveau, setCategorieNouveau] = useState("");
   const [creationEnCours, setCreationEnCours] = useState(false);
+  const [recherche, setRecherche] = useState("");
 
   function recharger() {
     if (!currentShop) return;
@@ -282,10 +415,29 @@ function CatalogueContent() {
     }
   }
 
+  const produitsVisibles = useMemo(() => {
+    const q = recherche.trim().toLowerCase();
+    if (!q) return produits;
+    return produits.filter((p) => {
+      const texte = `${p.name} ${p.category ?? ""} ${p.variants.map((v) => v.sku).join(" ")}`.toLowerCase();
+      return texte.includes(q);
+    });
+  }, [produits, recherche]);
+
   return (
     <div>
       <h1 className={styles.titre}>Catalogue</h1>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
+
+      <ImportExportExcel onImporte={recharger} />
+
+      <input
+        className={styles.recherche}
+        type="text"
+        placeholder="Chercher un article par nom, catégorie ou référence…"
+        value={recherche}
+        onChange={(e) => setRecherche(e.target.value)}
+      />
 
       <div className={styles.nouveauProduit}>
         <div className={styles.champ}>
@@ -313,10 +465,14 @@ function CatalogueContent() {
 
       {chargement ? (
         <p>Chargement du catalogue…</p>
-      ) : produits.length === 0 ? (
-        <p>Aucun article pour l&apos;instant. Créez-en un ci-dessus.</p>
+      ) : produitsVisibles.length === 0 ? (
+        <p>
+          {produits.length === 0
+            ? "Aucun article pour l'instant. Importez un fichier Excel ou créez-en un ci-dessus."
+            : "Aucun article ne correspond à la recherche."}
+        </p>
       ) : (
-        produits.map((produit) => (
+        produitsVisibles.map((produit) => (
           <div className={styles.produit} key={produit.id}>
             <div className={styles.produitEntete}>
               <strong>{produit.name}</strong>

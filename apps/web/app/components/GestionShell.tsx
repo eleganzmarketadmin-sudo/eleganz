@@ -13,6 +13,7 @@ const LIENS = [
   { href: "/tableau-de-bord", label: "Tableau de bord" },
   { href: "/catalogue", label: "Catalogue" },
   { href: "/commandes", label: "Commandes" },
+  { href: "/factures", label: "Mes factures" },
   { href: "/litiges", label: "Litiges" },
   { href: "/equipe", label: "Équipe" },
 ];

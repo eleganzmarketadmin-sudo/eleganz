@@ -1,0 +1,141 @@
+.section {
+  grid-column: 1 / -1;
+  border-top: 2px solid var(--color-ink);
+  padding-top: var(--espace-5);
+  margin-top: var(--espace-2);
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.titre {
+  font-size: 1.125rem;
+}
+
+.moyenne {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-1);
+}
+
+.vide {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-3);
+}
+
+.etoiles {
+  display: inline-flex;
+}
+
+.etoileBouton {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: default;
+  padding: 0 1px;
+}
+
+.etoileBouton:not(:disabled) {
+  cursor: pointer;
+}
+
+.avis {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--espace-3) 0;
+}
+
+.avisEntete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-1);
+  font-size: 0.875rem;
+}
+
+.badge {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.commentaire {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.boutonOuvrir {
+  margin-top: var(--espace-3);
+  background: var(--color-surface);
+  color: var(--color-magenta);
+  border: 2px solid var(--color-magenta);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonOuvrir:hover {
+  background: var(--color-magenta);
+  color: #fff;
+}
+
+.formulaire {
+  margin-top: var(--espace-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-width: 480px;
+}
+
+.formulaire textarea {
+  padding: var(--espace-3);
+  border: 1px solid var(--color-border);
+  font: inherit;
+  resize: vertical;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.actionsFormulaire {
+  display: flex;
+  gap: var(--espace-2);
+}
+
+.boutonEnvoyer {
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonEnvoyer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonAnnuler {
+  background: none;
+  border: none;
+  color: var(--color-texte-muted);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-3);
+  font-size: 0.875rem;
+}

@@ -15,6 +15,14 @@ export class DocumentsController {
     return this.documentsService.listForShop(shopId);
   }
 
+  @Get("export")
+  async export(@Param("shopId") shopId: string, @Res() res: Response) {
+    const buffer = await this.documentsService.exporterExcel(shopId);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="mes-ventes-eleganz.xlsx"');
+    res.send(buffer);
+  }
+
   @Post("pos-sale/:posSaleId")
   generateForPosSale(
     @Param("shopId") shopId: string,

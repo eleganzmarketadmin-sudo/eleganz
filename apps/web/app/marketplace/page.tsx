@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { formatMoney } from "../lib/money";
+import { Temoignages } from "./Temoignages";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -110,6 +111,8 @@ export default function MarketplacePage() {
           })}
         </div>
       )}
+
+      <Temoignages />
     </div>
   );
 }

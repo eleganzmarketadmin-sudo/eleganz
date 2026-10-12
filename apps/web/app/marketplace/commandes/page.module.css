@@ -34,3 +34,30 @@
   text-align: center;
   color: var(--color-texte-muted);
 }
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-3);
+  margin-bottom: var(--espace-3);
+  font-size: 0.875rem;
+}
+
+.modaleFond {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+  z-index: 50;
+}
+
+.modale {
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-5);
+  max-width: 420px;
+  width: 100%;
+}

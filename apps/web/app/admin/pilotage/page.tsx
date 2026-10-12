@@ -6,6 +6,7 @@ import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { EvolutionChart } from "../EvolutionChart";
 import { CompteurAnime } from "../CompteurAnime";
+import { telechargerFichier } from "../../lib/telecharger-fichier";
 import styles from "./page.module.css";
 
 interface Dashboard {
@@ -43,6 +44,19 @@ function PilotageContent() {
   const [evolution, setEvolution] = useState<Evolution | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [chargement, setChargement] = useState(true);
+  const [exportEnCours, setExportEnCours] = useState<string | null>(null);
+
+  async function exporter(cle: "boutiques" | "produits" | "commandes" | "factures", nomFichier: string) {
+    setExportEnCours(cle);
+    setErreur(null);
+    try {
+      await telechargerFichier(`/admin/exports/${cle}`, nomFichier);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Export impossible.");
+    } finally {
+      setExportEnCours(null);
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -101,6 +115,28 @@ function PilotageContent() {
             <span className={styles.carteLabel}>Articles épuisés</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.productsOutOfStock} /></span>
           </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitre}>Exports Excel</h2>
+        <p className={styles.noteRevenu}>
+          Téléchargez un instantané de la plateforme entière — boutiques, produits, commandes,
+          factures — pour l&apos;analyser ou l&apos;archiver hors de l&apos;interface.
+        </p>
+        <div className={styles.exports}>
+          <button className={styles.boutonExport} onClick={() => exporter("boutiques", "boutiques-eleganz.xlsx")} disabled={exportEnCours !== null}>
+            {exportEnCours === "boutiques" ? "…" : "Boutiques (.xlsx)"}
+          </button>
+          <button className={styles.boutonExport} onClick={() => exporter("produits", "produits-eleganz.xlsx")} disabled={exportEnCours !== null}>
+            {exportEnCours === "produits" ? "…" : "Produits (.xlsx)"}
+          </button>
+          <button className={styles.boutonExport} onClick={() => exporter("commandes", "commandes-eleganz.xlsx")} disabled={exportEnCours !== null}>
+            {exportEnCours === "commandes" ? "…" : "Commandes (.xlsx)"}
+          </button>
+          <button className={styles.boutonExport} onClick={() => exporter("factures", "factures-plateforme-eleganz.xlsx")} disabled={exportEnCours !== null}>
+            {exportEnCours === "factures" ? "…" : "Factures plateforme (.xlsx)"}
+          </button>
         </div>
       </div>
 

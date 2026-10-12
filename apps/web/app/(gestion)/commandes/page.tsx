@@ -7,6 +7,7 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { telechargerFichier } from "../../lib/telecharger-fichier";
 import styles from "./page.module.css";
 
 interface OrderLine {
@@ -23,7 +24,24 @@ interface ShopOrder {
   subtotal: string;
   createdAt: string;
   lines: OrderLine[];
-  order: { id: string; createdAt: string };
+  order: {
+    id: string;
+    createdAt: string;
+    buyer?: { fullName: string; phone: string | null };
+    buyerWhatsapp?: string | null;
+    buyerPhone?: string | null;
+    deliveryCommune?: string | null;
+    deliveryQuartier?: string | null;
+    deliveryAvenue?: string | null;
+    deliveryRepere?: string | null;
+    deliveryNote?: string | null;
+  };
+}
+
+/** Garde uniquement les chiffres (et le préfixe +) pour construire un lien wa.me. */
+function versLienWhatsapp(numero: string): string {
+  const chiffres = numero.replace(/[^\d]/g, "");
+  return `https://wa.me/${chiffres}`;
 }
 
 // Reflet côté écran de ALLOWED_TRANSITIONS (orders.service.ts) — seulement
@@ -89,6 +107,20 @@ function CommandesContent() {
   const [enCours, setEnCours] = useState<string | null>(null);
   const [litigeOuvertPour, setLitigeOuvertPour] = useState<string | null>(null);
   const [motifLitige, setMotifLitige] = useState("");
+  const [exportEnCours, setExportEnCours] = useState(false);
+
+  async function exporter() {
+    if (!currentShop) return;
+    setExportEnCours(true);
+    setErreur(null);
+    try {
+      await telechargerFichier(`/shops/${currentShop.id}/orders/export`, "mes-commandes-eleganz.xlsx");
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Export impossible.");
+    } finally {
+      setExportEnCours(false);
+    }
+  }
 
   function recharger() {
     if (!currentShop) return;
@@ -154,7 +186,12 @@ function CommandesContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Commandes Marketplace</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <h1 className={styles.titre}>Commandes Marketplace</h1>
+        <button className={styles.boutonAction} onClick={exporter} disabled={exportEnCours}>
+          {exportEnCours ? "…" : "Exporter en Excel"}
+        </button>
+      </div>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
       {chargement ? (
@@ -171,6 +208,40 @@ function CommandesContent() {
                 humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
               />
             </div>
+            {(so.order.buyerWhatsapp ||
+              so.order.buyerPhone ||
+              so.order.deliveryCommune ||
+              so.order.deliveryQuartier ||
+              so.order.deliveryAvenue ||
+              so.order.deliveryRepere ||
+              so.order.deliveryNote) && (
+              <div className={styles.contact}>
+                <div className={styles.contactLigne}>
+                  <strong>{so.order.buyer?.fullName ?? "Acheteur"}</strong>
+                  {so.order.buyerWhatsapp && (
+                    <a
+                      className={styles.lienWhatsapp}
+                      href={versLienWhatsapp(so.order.buyerWhatsapp)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      WhatsApp : {so.order.buyerWhatsapp}
+                    </a>
+                  )}
+                  {so.order.buyerPhone && <span>Tél. {so.order.buyerPhone}</span>}
+                </div>
+                {(so.order.deliveryCommune || so.order.deliveryQuartier || so.order.deliveryAvenue || so.order.deliveryRepere) && (
+                  <div className={styles.contactAdresse}>
+                    Livraison :{" "}
+                    {[so.order.deliveryAvenue, so.order.deliveryQuartier, so.order.deliveryCommune]
+                      .filter(Boolean)
+                      .join(", ")}
+                    {so.order.deliveryRepere ? ` — repère : ${so.order.deliveryRepere}` : ""}
+                  </div>
+                )}
+                {so.order.deliveryNote && <div className={styles.contactAdresse}>Note : {so.order.deliveryNote}</div>}
+              </div>
+            )}
             <div className={styles.corps}>
               {so.lines.map((l) => (
                 <div className={styles.ligne} key={l.id}>

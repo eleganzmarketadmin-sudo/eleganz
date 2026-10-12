@@ -63,9 +63,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--espace-3) var(--espace-4);
+  padding: var(--espace-2) var(--espace-4);
   border-bottom: 1px solid var(--color-border);
   gap: var(--espace-3);
+  font-size: 0.875rem;
+  min-height: 40px;
 }
 
 .ligneTicketNom {
@@ -73,11 +75,12 @@
 }
 
 .ligneTicketQte {
-  width: 72px;
-  padding: var(--espace-2);
+  width: 60px;
+  padding: var(--espace-1);
   border: 1px solid var(--color-border);
   text-align: center;
   font-family: var(--font-mono), monospace;
+  min-height: 32px;
 }
 
 .ligneTicketMontant {

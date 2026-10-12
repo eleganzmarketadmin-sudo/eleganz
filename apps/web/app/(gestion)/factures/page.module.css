@@ -1,0 +1,143 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.texteAide {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+  margin-bottom: var(--espace-4);
+  max-width: 640px;
+}
+
+.barreOutils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: center;
+  margin-bottom: var(--espace-3);
+}
+
+.recherche {
+  flex: 1 1 260px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 40px;
+}
+
+.filtres {
+  display: flex;
+  gap: var(--espace-1);
+}
+
+.filtreBouton {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  cursor: pointer;
+  min-height: 40px;
+  font-weight: 500;
+}
+
+.filtreBoutonActif {
+  background: var(--color-encre-fixe);
+  border-color: var(--color-encre-fixe);
+  color: #fff;
+}
+
+.boutonSecondaire {
+  background: var(--color-surface);
+  color: var(--color-cobalt);
+  border: 2px solid var(--color-cobalt);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSecondaire:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.totaux {
+  display: flex;
+  gap: var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-surface-muted);
+  margin-bottom: var(--espace-4);
+  font-size: 0.9375rem;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid var(--color-ink);
+  font-size: 0.875rem;
+}
+
+.tableau thead th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-texte-muted);
+}
+
+.tableau tbody td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tableau tbody tr:hover {
+  background: var(--color-surface-muted);
+}
+
+.colMono {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+}
+
+.colChiffre {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.boutonReimprimer {
+  padding: var(--espace-1) var(--espace-3);
+  border: 2px solid var(--color-cobalt);
+  background: var(--color-surface);
+  color: var(--color-cobalt);
+  cursor: pointer;
+  font-weight: 500;
+  min-height: 32px;
+}
+
+.boutonReimprimer:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonReimprimer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-6);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

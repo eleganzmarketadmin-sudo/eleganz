@@ -81,6 +81,13 @@ export class OrdersService {
         data: {
           buyerId,
           totalAmount,
+          buyerWhatsapp: dto.buyerWhatsapp,
+          buyerPhone: dto.buyerPhone,
+          deliveryCommune: dto.deliveryCommune,
+          deliveryQuartier: dto.deliveryQuartier,
+          deliveryAvenue: dto.deliveryAvenue,
+          deliveryRepere: dto.deliveryRepere,
+          deliveryNote: dto.deliveryNote,
           shopOrders: {
             create: [...byShop.entries()].map(([shopId, items]) => ({
               shopId,
@@ -99,7 +106,13 @@ export class OrdersService {
   listForBuyer(buyerId: string) {
     return this.prisma.order.findMany({
       where: { buyerId },
-      include: { shopOrders: { include: { lines: true } } },
+      include: {
+        shopOrders: {
+          include: {
+            lines: { include: { variant: { include: { product: { select: { id: true, name: true } } } } } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -109,7 +122,21 @@ export class OrdersService {
       where: { shopId },
       include: {
         lines: { include: { variant: { include: { product: { select: { name: true } } } } } },
-        order: { select: { id: true, buyerId: true, createdAt: true } },
+        order: {
+          select: {
+            id: true,
+            buyerId: true,
+            createdAt: true,
+            buyer: { select: { fullName: true, phone: true } },
+            buyerWhatsapp: true,
+            buyerPhone: true,
+            deliveryCommune: true,
+            deliveryQuartier: true,
+            deliveryAvenue: true,
+            deliveryRepere: true,
+            deliveryNote: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

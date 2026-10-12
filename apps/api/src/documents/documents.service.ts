@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PrismaService } from "../prisma/prisma.service";
 import { DocumentType } from "@eleganz/database";
 import { renderDocumentPdf } from "./pdf-renderer";
+import { construireClasseurExcel } from "../common/xlsx.util";
 
 const LABELS_PAIEMENT: Record<string, string> = {
   CASH: "Espèces",
@@ -98,11 +99,64 @@ export class DocumentsService {
     });
   }
 
+  /**
+   * Vue "Mes factures / ventes" (prompt du 12 oct. 2026) — une boutique doit
+   * pouvoir retrouver tout document déjà émis, qu'il vienne de la caisse
+   * (PosSale) ou d'une commande Marketplace (ShopOrder), pour le réimprimer
+   * ou simplement suivre son activité. On inclut directement le montant et la
+   * devise de la vente liée pour éviter un aller-retour supplémentaire côté
+   * écran.
+   */
   async listForShop(shopId: string) {
-    return this.prisma.commercialDocument.findMany({
+    const documents = await this.prisma.commercialDocument.findMany({
       where: { shopId },
+      include: {
+        posSale: {
+          select: {
+            totalAmount: true,
+            currency: true,
+            customer: { select: { fullName: true } },
+          },
+        },
+        shopOrder: {
+          select: {
+            subtotal: true,
+            order: { select: { currency: true, buyer: { select: { fullName: true } } } },
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
+
+    return documents.map((d) => ({
+      id: d.id,
+      type: d.type,
+      number: d.number,
+      isFiscallyHomologated: d.isFiscallyHomologated,
+      createdAt: d.createdAt,
+      source: d.posSaleId ? ("CAISSE" as const) : d.shopOrderId ? ("MARKETPLACE" as const) : ("AUTRE" as const),
+      amount: d.posSale ? Number(d.posSale.totalAmount) : d.shopOrder ? Number(d.shopOrder.subtotal) : null,
+      currency: d.posSale?.currency ?? d.shopOrder?.order.currency ?? null,
+      client: d.posSale?.customer?.fullName ?? d.shopOrder?.order.buyer.fullName ?? "Client comptoir",
+    }));
+  }
+
+  async exporterExcel(shopId: string): Promise<Buffer> {
+    const documents = await this.listForShop(shopId);
+    const lignes = documents.map((d) => [
+      d.number,
+      LABELS_TYPE[d.type],
+      d.source === "CAISSE" ? "Caisse" : d.source === "MARKETPLACE" ? "Marketplace" : "Autre",
+      d.client ?? "",
+      d.amount ?? "",
+      d.currency ?? "",
+      new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(d.createdAt),
+    ]);
+    return construireClasseurExcel(
+      "Ventes et factures",
+      ["N° de document", "Type", "Origine", "Client", "Montant", "Devise", "Date"],
+      lignes,
+    );
   }
 
   /**

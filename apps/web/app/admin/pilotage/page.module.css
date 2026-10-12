@@ -83,3 +83,29 @@
   color: var(--color-encre-fixe);
   margin-bottom: var(--espace-4);
 }
+
+.exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.boutonExport {
+  background: var(--color-surface);
+  color: var(--color-cobalt);
+  border: 2px solid var(--color-cobalt);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonExport:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonExport:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

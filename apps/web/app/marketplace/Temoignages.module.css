@@ -1,0 +1,59 @@
+.section {
+  padding: var(--espace-6) var(--espace-5);
+  border-top: 2px solid var(--color-ink);
+}
+
+.titre {
+  font-family: var(--font-display), serif;
+  font-size: 1.5rem;
+  margin-bottom: var(--espace-4);
+}
+
+.vide {
+  color: var(--color-texte-muted);
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--espace-4);
+}
+
+.carte {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  background: var(--color-surface);
+}
+
+.etoiles {
+  color: var(--color-or);
+  font-size: 1.0625rem;
+  letter-spacing: 1px;
+}
+
+.etoilesVides {
+  color: var(--color-border);
+}
+
+.commentaire {
+  margin: var(--espace-2) 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.auteur {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}

@@ -20,6 +20,31 @@
   padding: var(--espace-3) var(--espace-4);
 }
 
+.contact {
+  padding: var(--espace-3) var(--espace-4);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+
+.contactLigne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-1);
+}
+
+.lienWhatsapp {
+  color: var(--color-vert-paiement);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.contactAdresse {
+  color: var(--color-texte-muted);
+}
+
 .ligne {
   display: flex;
   justify-content: space-between;

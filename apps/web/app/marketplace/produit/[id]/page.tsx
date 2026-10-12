@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "../../../lib/api";
 import { formatMoney } from "../../../lib/money";
 import { useCart } from "../../../lib/cart-context";
+import { AvisProduit } from "./AvisProduit";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -103,6 +104,8 @@ export default function ProduitPage() {
 
         {confirmation && <div className={styles.confirmation}>Ajouté au panier.</div>}
       </div>
+
+      <AvisProduit shopId={produit.shop.id} productId={produit.id} />
     </div>
   );
 }

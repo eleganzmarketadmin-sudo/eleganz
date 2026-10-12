@@ -18,6 +18,28 @@ Conséquence pratique : `apps/api` n'a jamais pu être compilé (`tsc`/`nest bui
 - Deux vrais bugs de types (corrigés) : `SubscriptionPlansService` passait un `Record<string, unknown>` brut là où Prisma attend `Prisma.InputJsonValue` (`featuresJson`), et `ShopMembershipGuard` lisait `request.params.shopId` sans caster (`@types/express@5` type les paramètres de route en `string | string[]`).
 - Une vague d'erreurs `TS2742` (« inferred type cannot be named without a reference to .../prisma/client/runtime/library ») sur quasiment toutes les méthodes retournant directement une requête Prisma — cause : `"declaration": true` dans `apps/api/tsconfig.json` (hérité du starter NestJS), qui n'a aucune utilité ici puisque l'API n'est jamais consommée comme bibliothèque compilée. Mis à `false`, ce qui a éliminé la vague d'erreurs d'un coup sans toucher au code applicatif.
 
+## Application automatique du schéma en production (`prisma db push`)
+
+`@prisma/client` régénère bien le client à chaque `pnpm install` (son propre
+hook `postinstall` lance `prisma generate`), mais ça ne crée jamais les
+colonnes/tables côté base — ça ne fait que régénérer du code TypeScript. Tant
+qu'aucune étape ne lance `prisma db push` (ou `migrate deploy`), un champ
+ajouté au schéma (ex. `Order.buyerWhatsapp`, le modèle `Review`) reste invisible
+en base même après déploiement, et l'API plante dès qu'elle essaie de lire/
+écrire ce champ.
+
+Depuis le 12 octobre 2026, `apps/api`'s `start` script (`package.json`) lance
+`prisma db push --accept-data-loss --skip-generate` avant `node dist/main.js` —
+donc chaque redémarrage Railway du service API applique automatiquement tout
+changement additif du schéma (nouvelle colonne nullable, nouveau modèle,
+nouvelle relation) à la base de production, sans étape manuelle. **Important** :
+`--accept-data-loss` ne doit jamais couvrir un changement réellement destructeur
+(suppression de colonne, passage d'une colonne à `NOT NULL` sur une table déjà
+peuplée, renommage) — ce genre de changement doit être fait à la main, avec une
+vraie review, pas via ce mécanisme automatique. Tous les changements de schéma
+faits par ce mécanisme jusqu'ici sont strictement additifs (nouvelles colonnes
+nullables, nouveaux modèles).
+
 ## Build Next.js (`next build`) dans cet environnement de développement (Claude)
 
 `next build` échoue ici aussi : `next/font/google` (utilisé par `app/fonts.ts`

@@ -58,6 +58,46 @@
   margin-bottom: var(--espace-4);
 }
 
+.livraison {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-4);
+}
+
+.sousTitre {
+  font-size: 1rem;
+  margin-bottom: var(--espace-2);
+}
+
+.champs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--espace-3);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.champ input,
+.champ textarea {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.champ textarea {
+  min-height: unset;
+  resize: vertical;
+}
+
 .confirmation {
   text-align: center;
   padding: var(--espace-7) var(--espace-4);
