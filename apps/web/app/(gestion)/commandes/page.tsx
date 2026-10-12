@@ -18,12 +18,29 @@ interface OrderLine {
   variant: { size: string | null; color: string | null; product: { name: string } };
 }
 
+interface Livreur {
+  id: string;
+  zone: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  vehicleType: string | null;
+  user: { fullName: string };
+}
+
+const LABELS_VEHICULE: Record<string, string> = {
+  PIED: "à pied",
+  VELO: "vélo",
+  MOTO: "moto",
+  VOITURE: "voiture",
+};
+
 interface ShopOrder {
   id: string;
   status: string;
   subtotal: string;
   createdAt: string;
   lines: OrderLine[];
+  driver: { id: string; user: { fullName: string } } | null;
   order: {
     id: string;
     createdAt: string;
@@ -102,12 +119,14 @@ const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"
 function CommandesContent() {
   const { currentShop } = useShop();
   const [commandes, setCommandes] = useState<ShopOrder[]>([]);
+  const [livreurs, setLivreurs] = useState<Livreur[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState<string | null>(null);
   const [litigeOuvertPour, setLitigeOuvertPour] = useState<string | null>(null);
   const [motifLitige, setMotifLitige] = useState("");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const [selectionLivreur, setSelectionLivreur] = useState<Record<string, string>>({});
 
   async function exporter() {
     if (!currentShop) return;
@@ -141,6 +160,45 @@ function CommandesContent() {
   }
 
   useEffect(recharger, [currentShop]);
+
+  useEffect(() => {
+    api
+      .get<Livreur[]>("/delivery/available")
+      .then(setLivreurs)
+      .catch(() => {
+        // Non bloquant : la liste des livreurs n'existe que pour le
+        // sélecteur d'affectation, son indisponibilité ne doit pas empêcher
+        // de consulter ou traiter les commandes.
+      });
+  }, []);
+
+  async function affecterLivreur(shopOrderId: string) {
+    const driverId = selectionLivreur[shopOrderId];
+    if (!driverId) return;
+    setEnCours(shopOrderId);
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { driverId });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Affectation impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function retirerLivreur(shopOrderId: string) {
+    setEnCours(shopOrderId);
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { driverId: null });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Retrait impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
 
   async function changerStatut(shopOrderId: string, cible: string) {
     setEnCours(shopOrderId);
@@ -240,6 +298,54 @@ function CommandesContent() {
                   </div>
                 )}
                 {so.order.deliveryNote && <div className={styles.contactAdresse}>Note : {so.order.deliveryNote}</div>}
+              </div>
+            )}
+            {!["CLOSED", "CANCELLED", "REFUNDED"].includes(so.status) && (
+              <div className={styles.contact}>
+                <div className={styles.contactLigne}>
+                  <strong>Livreur</strong>
+                  <span>
+                    {so.driver
+                      ? so.driver.user.fullName
+                      : "Pas encore affecté"}
+                  </span>
+                </div>
+                <div className={styles.contactLigne}>
+                  <select
+                    value={selectionLivreur[so.id] ?? ""}
+                    disabled={enCours === so.id}
+                    onChange={(e) =>
+                      setSelectionLivreur((v) => ({ ...v, [so.id]: e.target.value }))
+                    }
+                  >
+                    <option value="">
+                      {livreurs.length === 0 ? "Aucun livreur vérifié disponible" : "Choisir un livreur…"}
+                    </option>
+                    {livreurs.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.user.fullName}
+                        {l.zone ? ` — ${l.zone}` : ""}
+                        {l.vehicleType ? ` (${LABELS_VEHICULE[l.vehicleType] ?? l.vehicleType})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className={styles.boutonAction}
+                    disabled={enCours === so.id || !selectionLivreur[so.id]}
+                    onClick={() => affecterLivreur(so.id)}
+                  >
+                    {so.driver ? "Changer de livreur" : "Affecter"}
+                  </button>
+                  {so.driver && (
+                    <button
+                      className={`${styles.boutonAction} ${styles.boutonAnnuler}`}
+                      disabled={enCours === so.id}
+                      onClick={() => retirerLivreur(so.id)}
+                    >
+                      Retirer l&apos;affectation
+                    </button>
+                  )}
+                </div>
               </div>
             )}
             <div className={styles.corps}>

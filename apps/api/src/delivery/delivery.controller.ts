@@ -38,6 +38,23 @@ export class DeliveryController {
     return this.deliveryService.myProfile(user.id);
   }
 
+  // Liste des livreurs vérifiés, pour le sélecteur d'affectation côté
+  // vendeur (prompt du 13 oct. 2026, point 1) — pas de portée par boutique,
+  // le vivier de livreurs est commun à toute la plateforme ; réservé au
+  // personnel de boutique et à l'admin, pas aux acheteurs ni aux livreurs.
+  @Get("available")
+  @UseGuards(JwtAuthGuard)
+  available(@CurrentUser() user: AuthenticatedUser) {
+    if (
+      user.role !== "SHOP_OWNER" &&
+      user.role !== "SHOP_STAFF" &&
+      !user.role.startsWith("ADMIN_")
+    ) {
+      throw new ForbiddenException("Réservé au personnel de boutique.");
+    }
+    return this.deliveryService.listVerifiedDrivers();
+  }
+
   // Centre de gestion des partenaires livreurs (prompt §10 et §37) : lister
   // les livreurs inscrits et faire basculer leur vérification. Sans cette
   // vérification, assignDriver() refuse déjà toute affectation de mission
@@ -65,6 +82,19 @@ export class DeliveryController {
     return this.deliveryService.adminSetVerified(driverId, verified);
   }
 
+  @Post("drivers/:driverId/note")
+  @UseGuards(JwtAuthGuard)
+  setDriverNote(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("driverId") driverId: string,
+    @Body("adminNote") adminNote: string,
+  ) {
+    if (!user.role.startsWith("ADMIN_")) {
+      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
+    }
+    return this.deliveryService.adminSetNote(driverId, adminNote);
+  }
+
   @Get("my-deliveries")
   @UseGuards(JwtAuthGuard)
   myDeliveries(@CurrentUser() user: AuthenticatedUser) {
@@ -89,7 +119,9 @@ export class DeliveryController {
 }
 
 // Affectation d'un livreur à une sous-commande : côté vendeur, donc rattachée
-// aux routes shops/:shopId/orders plutôt qu'à /delivery.
+// aux routes shops/:shopId/orders plutôt qu'à /delivery. Même route pour
+// affecter, réaffecter (le vendeur change de livreur en cas de besoin) et
+// retirer l'affectation (driverId: null) — prompt du 13 oct. 2026, point 1.
 @Controller("shops/:shopId/orders/:shopOrderId/driver")
 @UseGuards(JwtAuthGuard, ShopMembershipGuard)
 @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
@@ -97,7 +129,7 @@ export class AssignDriverController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
   @Post()
-  assign(@Param("shopOrderId") shopOrderId: string, @Body("driverId") driverId: string) {
-    return this.deliveryService.assignDriver(shopOrderId, driverId);
+  assign(@Param("shopOrderId") shopOrderId: string, @Body("driverId") driverId: string | null) {
+    return this.deliveryService.assignDriver(shopOrderId, driverId || null);
   }
 }

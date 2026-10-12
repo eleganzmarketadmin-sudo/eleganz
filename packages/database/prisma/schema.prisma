@@ -563,12 +563,36 @@ model Review {
 // LIVRAISON
 // ---------------------------------------------------------------------------
 
+enum DriverVehicleType {
+  PIED
+  VELO
+  MOTO
+  VOITURE
+}
+
 model Driver {
   id        String   @id @default(uuid())
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   zone      String?
   verified  Boolean  @default(false)
+
+  // Informations à fournir à l'inscription pour que l'administration puisse
+  // instruire le dossier avant de valider la souscription (prompt du
+  // 13 oct. 2026, point 2) — toutes facultatives au niveau du schéma (pour
+  // ne pas invalider les livreurs déjà inscrits avant ce champ) ; la DTO
+  // d'inscription (RegisterDriverDto) les exige selon le type de véhicule
+  // déclaré : plaque + permis obligatoires en moto/voiture, pas à pied/vélo.
+  phone            String?
+  whatsapp         String?
+  address          String?
+  vehicleType      DriverVehicleType?
+  vehiclePlate     String?
+  licenseNumber    String?
+  idDocumentNumber String?
+  // Note interne de l'administration pendant l'instruction du dossier (ex.
+  // "pièce d'identité illisible, à refaire") — jamais visible du livreur.
+  adminNote        String?
 
   deliveries ShopOrder[]
 }

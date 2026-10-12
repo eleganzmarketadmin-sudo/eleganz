@@ -22,17 +22,60 @@ export class DeliveryService {
   async registerDriver(userId: string, dto: RegisterDriverDto) {
     const existing = await this.prisma.driver.findUnique({ where: { userId } });
     if (existing) return existing;
-    // verified reste false : la vérification d'identité est une action
-    // administrative distincte, pas automatique à l'inscription (prompt §10).
-    return this.prisma.driver.create({ data: { userId, zone: dto.zone, verified: false } });
+    // verified reste false : la vérification du dossier (identité, véhicule)
+    // est une action administrative distincte, jamais automatique à
+    // l'inscription (prompt §10 et prompt du 13 oct. 2026, point 2).
+    return this.prisma.driver.create({
+      data: {
+        userId,
+        zone: dto.zone,
+        phone: dto.phone,
+        whatsapp: dto.whatsapp,
+        address: dto.address,
+        vehicleType: dto.vehicleType,
+        vehiclePlate: dto.vehiclePlate,
+        licenseNumber: dto.licenseNumber,
+        idDocumentNumber: dto.idDocumentNumber,
+        verified: false,
+      },
+    });
   }
 
-  async assignDriver(shopOrderId: string, driverId: string) {
-    const driver = await this.prisma.driver.findUniqueOrThrow({ where: { id: driverId } });
-    if (!driver.verified) {
-      throw new BadRequestException("Ce livreur n'est pas encore vérifié.");
+  /**
+   * Affecte, réaffecte ou retire un livreur d'une sous-commande (prompt du
+   * 13 oct. 2026, point 1 — le vendeur garde la main et peut changer de
+   * livreur en cas de besoin). `driverId: null` retire l'affectation sans
+   * exiger de vérification ; affecter un livreur exige qu'il soit vérifié.
+   */
+  async assignDriver(shopOrderId: string, driverId: string | null) {
+    if (driverId) {
+      const driver = await this.prisma.driver.findUniqueOrThrow({ where: { id: driverId } });
+      if (!driver.verified) {
+        throw new BadRequestException("Ce livreur n'est pas encore vérifié.");
+      }
     }
     return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
+  }
+
+  /**
+   * Livreurs vérifiés disponibles à l'affectation, pour le sélecteur côté
+   * vendeur (prompt du 13 oct. 2026, point 1) — aucune donnée sensible
+   * (pièce d'identité, permis) n'est exposée ici, seulement de quoi choisir
+   * et contacter.
+   */
+  listVerifiedDrivers() {
+    return this.prisma.driver.findMany({
+      where: { verified: true },
+      select: {
+        id: true,
+        zone: true,
+        phone: true,
+        whatsapp: true,
+        vehicleType: true,
+        user: { select: { fullName: true } },
+      },
+      orderBy: { user: { fullName: "asc" } },
+    });
   }
 
   async myProfile(userId: string) {
@@ -54,6 +97,11 @@ export class DeliveryService {
 
   adminSetVerified(driverId: string, verified: boolean) {
     return this.prisma.driver.update({ where: { id: driverId }, data: { verified } });
+  }
+
+  /** Note interne pendant l'instruction du dossier — jamais visible du livreur. */
+  adminSetNote(driverId: string, adminNote: string) {
+    return this.prisma.driver.update({ where: { id: driverId }, data: { adminNote } });
   }
 
   async myDeliveries(userId: string) {

@@ -22,6 +22,7 @@ interface ShopOrder {
   status: string;
   subtotal: string;
   lines: OrderLine[];
+  driver: { user: { fullName: string } } | null;
 }
 
 interface Order {
@@ -163,7 +164,14 @@ export default function CommandesPage() {
             </div>
             {commande.shopOrders.map((so) => (
               <div className={styles.sousCommande} key={so.id}>
-                <span>{so.lines.length} article(s)</span>
+                <span>
+                  {so.lines.length} article(s)
+                  {so.driver && (
+                    <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
+                      Confié à {so.driver.user.fullName} pour livraison
+                    </span>
+                  )}
+                </span>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <StatusTag
                     label={LABELS_STATUT[so.status] ?? so.status}

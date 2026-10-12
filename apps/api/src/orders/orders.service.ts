@@ -117,6 +117,10 @@ export class OrdersService {
         shopOrders: {
           include: {
             lines: { include: { variant: { include: { product: { select: { id: true, name: true } } } } } },
+            // L'acheteur voit seulement à qui sa commande est confiée pour
+            // la livraison (prompt du 13 oct. 2026, point 3) — aucune autre
+            // information sur le livreur (téléphone, véhicule...).
+            driver: { select: { user: { select: { fullName: true } } } },
           },
         },
       },
@@ -129,6 +133,9 @@ export class OrdersService {
       where: { shopId },
       include: {
         lines: { include: { variant: { include: { product: { select: { name: true } } } } } },
+        // Le vendeur garde la main sur l'affectation et doit voir qui est
+        // affecté pour pouvoir en changer (prompt du 13 oct. 2026, point 1).
+        driver: { select: { id: true, user: { select: { fullName: true } } } },
         order: {
           select: {
             id: true,
