@@ -216,7 +216,7 @@ export class ProductImportService {
 
           const variante = await tx.variant.create({
             data: {
-              productId,
+              productId: produitId,
               sku,
               size: taille || null,
               color: couleur || null,
