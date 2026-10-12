@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "description": "ELEGANZ — plateforme Gestion + Marketplace (RDC)",
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev:api": "pnpm --filter @eleganz/api dev",
     "dev:web": "pnpm --filter @eleganz/web dev",
