@@ -34,7 +34,23 @@ export class AdminSettingsService {
         ...(dto.telegramLink !== undefined && { telegramLink: dto.telegramLink || null }),
         ...(dto.tiktokUrl !== undefined && { tiktokUrl: dto.tiktokUrl || null }),
         ...(dto.instagramUrl !== undefined && { instagramUrl: dto.instagramUrl || null }),
+        ...(dto.photoSearchEnabled !== undefined && { photoSearchEnabled: dto.photoSearchEnabled }),
+        ...(dto.adStudioEnabled !== undefined && { adStudioEnabled: dto.adStudioEnabled }),
       },
     });
+  }
+
+  /**
+   * Lecture publique, sans authentification — juste les deux interrupteurs
+   * de fonctionnalités IA, jamais les coordonnées de contact (réservées à
+   * l'admin). Permet à Gestion et à la Marketplace d'afficher "Bientôt
+   * disponible" ou le vrai bouton selon ce que l'admin a activé.
+   */
+  async publicFeatures() {
+    const settings = await this.get();
+    return {
+      photoSearchEnabled: settings.photoSearchEnabled,
+      adStudioEnabled: settings.adStudioEnabled,
+    };
   }
 }

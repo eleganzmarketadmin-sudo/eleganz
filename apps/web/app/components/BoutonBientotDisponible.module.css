@@ -1,0 +1,21 @@
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  background: var(--color-surface-muted);
+  color: var(--color-texte-muted);
+  border: 1px dashed var(--color-border);
+  padding: var(--espace-2) var(--espace-3);
+  font-weight: 500;
+  cursor: not-allowed;
+  min-height: 40px;
+}
+
+.badge {
+  background: var(--color-border);
+  color: var(--color-texte-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  white-space: nowrap;
+}

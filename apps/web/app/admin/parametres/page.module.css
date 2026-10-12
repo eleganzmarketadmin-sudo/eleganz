@@ -59,3 +59,42 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.titreSection {
+  margin-top: var(--espace-7);
+  margin-bottom: var(--espace-2);
+  font-size: 1.0625rem;
+}
+
+.listeBascules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-width: 900px;
+}
+
+.bascule {
+  display: flex;
+  gap: var(--espace-3);
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  padding: var(--espace-3);
+  cursor: pointer;
+}
+
+.bascule input {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.basculeLabel {
+  font-weight: 600;
+}
+
+.basculeDescription {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-top: 2px;
+}

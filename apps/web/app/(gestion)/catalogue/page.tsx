@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { StatusTag } from "../../components/StatusTag";
+import { BoutonBientotDisponible } from "../../components/BoutonBientotDisponible";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
@@ -561,7 +562,10 @@ function CatalogueContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Catalogue</h1>
+      <div className={styles.enteteTitre}>
+        <h1 className={styles.titre}>Catalogue</h1>
+        <BoutonBientotDisponible icone="🪄" label="Studio publicitaire IA" />
+      </div>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
       <ImportExportExcel onImporte={recharger} />

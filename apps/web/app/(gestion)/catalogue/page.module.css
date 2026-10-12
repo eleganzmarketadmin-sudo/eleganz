@@ -1,5 +1,14 @@
-.titre {
+.enteteTitre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
   margin-bottom: var(--espace-5);
+}
+
+.titre {
+  margin: 0;
 }
 
 .blocImport {

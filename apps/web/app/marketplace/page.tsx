@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "../lib/api";
 import { formatMoney } from "../lib/money";
 import { Temoignages } from "./Temoignages";
+import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -70,6 +71,7 @@ export default function MarketplacePage() {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
+        <BoutonBientotDisponible icone="📷" label="Rechercher par photo" />
       </form>
 
       {chargement ? (

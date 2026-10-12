@@ -14,9 +14,28 @@ interface PlatformSettings {
   telegramLink?: string | null;
   tiktokUrl?: string | null;
   instagramUrl?: string | null;
+  photoSearchEnabled?: boolean;
+  adStudioEnabled?: boolean;
 }
 
-const CHAMPS: { cle: keyof PlatformSettings; label: string; placeholder: string }[] = [
+const FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; label: string; description: string }[] = [
+  {
+    cle: "photoSearchEnabled",
+    label: "Recherche par photo (Marketplace)",
+    description:
+      "Un acheteur prend un vêtement en photo et retrouve des articles similaires. Nécessite un fournisseur d'embeddings d'image (Google Vision, Replicate…) — pas encore branché.",
+  },
+  {
+    cle: "adStudioEnabled",
+    label: "Studio publicitaire IA (Gestion)",
+    description:
+      "Génère des visuels/vidéos publicitaires pour un produit. Nécessite un générateur d'image/vidéo (DALL·E, Stability, Replicate…) — pas encore branché.",
+  },
+];
+
+type ChampTexte = Exclude<keyof PlatformSettings, "photoSearchEnabled" | "adStudioEnabled">;
+
+const CHAMPS: { cle: ChampTexte; label: string; placeholder: string }[] = [
   { cle: "address", label: "Adresse", placeholder: "Ex. 12 Avenue du Commerce, Gombe, Kinshasa" },
   { cle: "website", label: "Site web", placeholder: "https://eleganz-production.up.railway.app" },
   { cle: "supportEmail", label: "Email clientèle", placeholder: "support@eleganz.cd" },
@@ -89,6 +108,40 @@ function ParametresContent() {
           {enregistrement ? "Enregistrement…" : "Enregistrer"}
         </button>
       </form>
+
+      <h2 className={styles.titreSection}>Fonctionnalités IA prévues</h2>
+      <p className={styles.sousTitre}>
+        Ces fonctionnalités existent déjà comme points d&apos;entrée dans les écrans (visibles mais
+        désactivés, « Bientôt disponible »). Les activer ici ne les rend pas fonctionnelles tant
+        qu&apos;un fournisseur n&apos;est pas choisi et payé — c&apos;est une préparation pour le jour où
+        vous déciderez d&apos;investir dedans, en fonction des recettes et de la croissance.
+      </p>
+      <div className={styles.listeBascules}>
+        {FONCTIONNALITES_IA.map((f) => (
+          <label className={styles.bascule} key={f.cle}>
+            <input
+              type="checkbox"
+              checked={Boolean(valeurs[f.cle])}
+              onChange={async (e) => {
+                const coche = e.target.checked;
+                setValeurs((v) => ({ ...v, [f.cle]: coche }));
+                try {
+                  const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+                    [f.cle]: coche,
+                  });
+                  setValeurs(resultat);
+                } catch (err) {
+                  setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+                }
+              }}
+            />
+            <div>
+              <div className={styles.basculeLabel}>{f.label}</div>
+              <div className={styles.basculeDescription}>{f.description}</div>
+            </div>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

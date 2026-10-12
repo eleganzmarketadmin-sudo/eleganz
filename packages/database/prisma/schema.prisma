@@ -27,6 +27,17 @@ model PlatformSettings {
   telegramLink  String?
   tiktokUrl     String?
   instagramUrl  String?
+
+  // Fonctionnalités IA "prévues mais inactives" (demande du 12 oct. 2026) :
+  // le code et les points d'entrée existent déjà dans l'écran (bouton
+  // visible mais désactivé, "Bientôt disponible"), mais restent coupés tant
+  // qu'aucun fournisseur n'est choisi ET payé — ni Claude, qui ne fait ni
+  // comparaison d'image ni génération d'image/vidéo, ni un budget engagé.
+  // L'admin pourra les activer lui-même ici une fois le fournisseur branché,
+  // sans redéploiement, en fonction des recettes/de la croissance.
+  photoSearchEnabled Boolean @default(false)
+  adStudioEnabled    Boolean @default(false)
+
   updatedAt     DateTime @updatedAt
 }
 

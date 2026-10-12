@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
 
 /**
  * Coordonnées officielles de la plateforme ELEGANZ, modifiables depuis le
@@ -47,4 +47,14 @@ export class UpdatePlatformSettingsDto {
   @IsString()
   @MaxLength(300)
   instagramUrl?: string;
+
+  // Fonctionnalités IA prévues mais coupées par défaut (voir schema.prisma) —
+  // l'admin les active lui-même une fois un fournisseur choisi et payé.
+  @IsOptional()
+  @IsBoolean()
+  photoSearchEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  adStudioEnabled?: boolean;
 }
