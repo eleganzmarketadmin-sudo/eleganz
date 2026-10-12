@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { api, ApiError, getToken, setToken } from "./api";
+import { usePathname } from "next/navigation";
+import { api, ApiError, espaceAuth, getToken, setToken } from "./api";
 
 export interface AuthUser {
   id: string;
@@ -46,11 +47,31 @@ function decodeJwtPayload(token: string): AuthUser | null {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const espace = espaceAuth();
 
+  // Relit le jeton (et donc l'utilisateur) à chaque changement d'espace —
+  // Gestion/Marketplace d'un côté, Centre de pilotage (/admin) de l'autre,
+  // chacun avec sa propre clé de stockage (voir api.ts). Sans ça, naviguer
+  // de l'un vers l'autre en navigation côté client (sans rechargement
+  // complet) laissait l'état React affiché périmé.
   useEffect(() => {
     const token = getToken();
-    if (token) setUser(decodeJwtPayload(token));
+    setUser(token ? decodeJwtPayload(token) : null);
     setLoading(false);
+  }, [espace, pathname]);
+
+  // Synchronise entre onglets du même espace : si l'utilisateur se
+  // reconnecte (ou se déconnecte) dans un autre onglet ouvert sur le même
+  // espace, cet onglet-ci ne doit pas continuer d'afficher un état périmé.
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key !== null && !e.key.startsWith("eleganz_")) return;
+      const token = getToken();
+      setUser(token ? decodeJwtPayload(token) : null);
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const login = useCallback(async (identifiant: string, motDePasse: string) => {

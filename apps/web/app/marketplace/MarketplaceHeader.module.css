@@ -10,6 +10,9 @@
 }
 
 .marque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
   font-family: var(--font-display), serif;
   font-size: 1.25rem;
   white-space: nowrap;

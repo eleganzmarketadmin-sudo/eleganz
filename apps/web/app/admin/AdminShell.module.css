@@ -1,5 +1,7 @@
 .cadre {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--color-toile);
 }
 
@@ -10,10 +12,12 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-4);
-  border-bottom: 3px solid var(--color-or);
 }
 
 .marque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
   font-weight: 600;
 }
 
@@ -55,6 +59,8 @@
 }
 
 .contenu {
+  flex: 1;
+  width: 100%;
   padding: var(--espace-5);
   max-width: 960px;
   margin: 0 auto;

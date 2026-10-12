@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { LogoMark, BandeMarque } from "../components/Logo";
+import { Footer } from "../components/Footer";
 import styles from "./AdminShell.module.css";
 
 const LIENS = [
   { href: "/admin/pilotage", label: "Tableau de bord" },
   { href: "/admin/boutiques", label: "Boutiques" },
+  { href: "/admin/suivi-commandes", label: "Suivi commandes" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/tarifs", label: "Tarifs" },
   { href: "/admin/factures", label: "Factures" },
@@ -42,6 +45,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className={styles.cadre}>
       <header className={styles.entete}>
         <span className={styles.marque}>
+          <LogoMark size={28} />
           ELEGANZ <span>Centre de pilotage</span>
         </span>
         <div className={styles.enteteActions}>
@@ -57,6 +61,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </header>
+      <BandeMarque />
       <nav className={styles.nav}>
         {LIENS.map((lien) => (
           <Link
@@ -71,6 +76,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
       </main>
+      <Footer variante="admin" />
     </div>
   );
 }

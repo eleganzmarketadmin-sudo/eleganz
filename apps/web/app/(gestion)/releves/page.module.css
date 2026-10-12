@@ -48,7 +48,7 @@
 }
 
 .boutonSecondaire {
-  background: #fff;
+  background: var(--color-surface);
   color: var(--color-ink);
   border: 2px solid var(--color-ink);
   padding: var(--espace-2) var(--espace-4);

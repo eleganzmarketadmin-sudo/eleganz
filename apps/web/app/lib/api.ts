@@ -10,7 +10,8 @@
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const TOKEN_KEY = "eleganz_token";
+const TOKEN_KEY_DEFAUT = "eleganz_token";
+const TOKEN_KEY_ADMIN = "eleganz_admin_token";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -20,10 +21,30 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Gestion/Marketplace/acheteur et Centre de pilotage partagent le même
+ * domaine Next.js, donc le même `localStorage` — avec une seule clé de
+ * jeton, se connecter côté boutique dans un onglet écrasait silencieusement
+ * la session admin ouverte dans un autre (ou l'inverse), avec un symptôme
+ * trompeur : l'écran admin restait affiché (état React déjà en mémoire)
+ * alors que chaque appel API repartait avec le jeton de l'autre compte et
+ * échouait en 403 « Réservé à l'administration ELEGANZ. » (bug du
+ * 12 oct. 2026). Deux clés séparées, choisies selon que l'URL commence par
+ * /admin, pour que les deux espaces cohabitent sans se marcher dessus.
+ */
+export function espaceAuth(): "admin" | "defaut" {
+  if (typeof window === "undefined") return "defaut";
+  return window.location.pathname.startsWith("/admin") ? "admin" : "defaut";
+}
+
+function cleJeton(espace: "admin" | "defaut" = espaceAuth()): string {
+  return espace === "admin" ? TOKEN_KEY_ADMIN : TOKEN_KEY_DEFAUT;
+}
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(TOKEN_KEY);
+    return window.localStorage.getItem(cleJeton());
   } catch {
     return null;
   }
@@ -32,10 +53,11 @@ export function getToken(): string | null {
 export function setToken(token: string | null): void {
   if (typeof window === "undefined") return;
   try {
+    const cle = cleJeton();
     if (token) {
-      window.localStorage.setItem(TOKEN_KEY, token);
+      window.localStorage.setItem(cle, token);
     } else {
-      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(cle);
     }
   } catch {
     // stockage indisponible (navigation privée) — on continue sans persister

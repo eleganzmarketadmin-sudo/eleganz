@@ -1,0 +1,85 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+  max-width: 72ch;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.section {
+  margin-bottom: var(--espace-7);
+}
+
+.titreSection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-3);
+  font-size: 1.0625rem;
+  margin-bottom: var(--espace-3);
+  padding-bottom: var(--espace-2);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.compteurRetard {
+  background: var(--color-flamme);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 10px;
+}
+
+.vide {
+  color: var(--color-texte-muted);
+}
+
+.note {
+  margin-top: var(--espace-2);
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}
+
+.tableauScroll {
+  overflow-x: auto;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableau th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tableau td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.colChiffre {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.seuil {
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+}

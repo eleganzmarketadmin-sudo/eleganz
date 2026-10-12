@@ -12,7 +12,12 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-4);
-  border-bottom: 3px solid var(--color-cobalt);
+}
+
+.marqueBloc {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
 }
 
 .marque {

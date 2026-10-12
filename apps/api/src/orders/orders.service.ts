@@ -99,6 +99,13 @@ export class OrdersService {
         include: { shopOrders: { include: { lines: true } } },
       });
 
+      // Point de départ de l'historique de statut (demande du 12 oct. 2026,
+      // point 4) — sans cet événement CREATED, le délai d'acceptation d'une
+      // boutique ne pourrait jamais être calculé pour cette commande.
+      await tx.orderStatusEvent.createMany({
+        data: order.shopOrders.map((so) => ({ shopOrderId: so.id, status: OrderStatus.CREATED })),
+      });
+
       return order;
     });
   }
@@ -148,7 +155,11 @@ export class OrdersService {
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
-    return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: newStatus } });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: newStatus } }),
+      this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: newStatus } }),
+    ]);
+    return updated;
   }
 
   /**
@@ -168,9 +179,15 @@ export class OrdersService {
     if (shopOrder.status !== OrderStatus.DELIVERED_DECLARED) {
       throw new BadRequestException("Cette commande n'a pas encore été déclarée livrée par le livreur.");
     }
-    return this.prisma.shopOrder.update({
-      where: { id: shopOrderId },
-      data: { status: OrderStatus.RECEIVED_CONFIRMED },
-    });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.shopOrder.update({
+        where: { id: shopOrderId },
+        data: { status: OrderStatus.RECEIVED_CONFIRMED },
+      }),
+      this.prisma.orderStatusEvent.create({
+        data: { shopOrderId, status: OrderStatus.RECEIVED_CONFIRMED },
+      }),
+    ]);
+    return updated;
   }
 }

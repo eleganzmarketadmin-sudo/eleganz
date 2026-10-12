@@ -12,10 +12,10 @@ export class DisputesService {
    * (buyer via ownership de la commande, vendeur via ShopMembershipGuard).
    */
   async open(shopOrderId: string, reason: string) {
-    await this.prisma.shopOrder.update({
-      where: { id: shopOrderId },
-      data: { status: "DISPUTED" },
-    });
+    await this.prisma.$transaction([
+      this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: "DISPUTED" } }),
+      this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: "DISPUTED" } }),
+    ]);
     return this.prisma.dispute.create({ data: { shopOrderId, reason } });
   }
 

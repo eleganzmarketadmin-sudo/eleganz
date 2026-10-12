@@ -6,6 +6,8 @@ import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
 import { useOfflineSync } from "../lib/offline-sync";
 import { ThemeToggle } from "./ThemeToggle";
+import { LogoMark, BandeMarque } from "./Logo";
+import { Footer } from "./Footer";
 import styles from "./GestionShell.module.css";
 
 const LIENS = [
@@ -30,11 +32,14 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.cadre}>
       <header className={styles.entete}>
-        <div>
-          <div className={styles.marque}>
-            ELEGANZ <span>GESTION</span>
+        <div className={styles.marqueBloc}>
+          <LogoMark size={30} />
+          <div>
+            <div className={styles.marque}>
+              ELEGANZ <span>Gestion</span>
+            </div>
+            {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
           </div>
-          {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
         </div>
         <div className={styles.droite}>
           {nombreEnAttente > 0 && (
@@ -80,6 +85,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </header>
+      <BandeMarque />
       <nav className={styles.nav}>
         {LIENS.map((lien) => (
           <Link
@@ -94,6 +100,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
       </main>
+      <Footer variante="gestion" />
     </div>
   );
 }

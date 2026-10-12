@@ -19,6 +19,7 @@ import { AdminSettingsModule } from "./admin-settings/admin-settings.module";
 import { ImportExportModule } from "./import-export/import-export.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { ReportsModule } from "./reports/reports.module";
+import { SupervisionModule } from "./supervision/supervision.module";
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ReportsModule } from "./reports/reports.module";
     ImportExportModule,
     ReviewsModule,
     ReportsModule,
+    SupervisionModule,
   ],
 })
 export class AppModule {}

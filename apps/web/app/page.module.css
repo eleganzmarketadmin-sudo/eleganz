@@ -1,5 +1,29 @@
-.cadre {
+.page {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+
+.marqueFlottante {
+  position: absolute;
+  z-index: 1;
+  top: var(--espace-4);
+  left: var(--espace-5);
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.marqueFlottante:hover {
+  text-decoration: none;
+}
+
+.cadre {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr;
 }

@@ -462,10 +462,28 @@ model ShopOrder {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  lines     OrderLine[]
-  documents CommercialDocument[]
-  dispute   Dispute?
-  reviews   Review[]
+  lines         OrderLine[]
+  documents     CommercialDocument[]
+  dispute       Dispute?
+  reviews       Review[]
+  statusEvents  OrderStatusEvent[]
+}
+
+// Horodatage de chaque changement de statut d'une sous-commande (demande du
+// 12 oct. 2026, point 4 — suivi des SLA et du comportement des acteurs).
+// ShopOrder.status ne garde que le statut courant ; sans cette table il est
+// impossible de savoir, par exemple, combien de temps une boutique met en
+// moyenne pour accepter une commande. N'existe qu'à partir du déploiement de
+// cette fonctionnalité — les commandes déjà closes avant cette date n'ont
+// pas d'historique rétroactif, seulement leur statut final.
+model OrderStatusEvent {
+  id          String      @id @default(uuid())
+  shopOrderId String
+  shopOrder   ShopOrder   @relation(fields: [shopOrderId], references: [id])
+  status      OrderStatus
+  occurredAt  DateTime    @default(now())
+
+  @@index([shopOrderId])
 }
 
 model OrderLine {
