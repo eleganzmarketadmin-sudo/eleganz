@@ -61,6 +61,7 @@ function BoutiquesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
       setEnCours(null);
     }
   }
@@ -73,6 +74,7 @@ function BoutiquesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Changement de bouquet impossible.");
+    } finally {
       setEnCours(null);
     }
   }
