@@ -4,6 +4,8 @@ Dernière mise à jour : 12 octobre 2026.
 
 ## Fait
 
+- **(12 oct.) Recherche par photo et studio publicitaire IA — préparés, inactifs** : points d'entrée visibles mais désactivés (« Bientôt disponible ») sur la vitrine Marketplace et le catalogue Gestion, plus deux interrupteurs dans Paramètres plateforme (`photoSearchEnabled`, `adStudioEnabled`) que l'admin pourra activer lui-même quand un fournisseur sera choisi et payé — décision explicitement reportée en fonction des recettes/de la croissance. Aucune des deux ne relève de l'API Anthropic : la recherche par photo demande un fournisseur d'embeddings d'image (Google Vision, Replicate…), le studio publicitaire un générateur d'image/vidéo (DALL·E, Stability…) — ce sont des chantiers séparés, avec leur propre compte/clé, le jour où on les attaque.
+
 - **(12 oct.) Identité visuelle, suivi des commandes/SLA, correction d'un bug de session** :
   - Logo ELEGANZ (losange à quatre couleurs de marque) et pied de page, ajoutés à Gestion, Marketplace, Centre de pilotage et à la page d'accueil — aucune des quatre n'en avait.
   - Boutons « Exporter en Excel/PDF » illisibles en mode sombre (fond blanc codé en dur) — corrigés pour utiliser le jeton de surface qui s'inverse avec le thème.
