@@ -4,40 +4,19 @@
 }
 
 .entete {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 760px) {
-  .entete {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.heroPhoto {
-  background: var(--color-ink);
-  min-height: 220px;
-  display: flex;
-  align-items: flex-end;
-  padding: var(--espace-5);
-  color: #fff;
-  font-size: 0.875rem;
-  opacity: 0.8;
-}
-
-.heroBloc {
   background: var(--color-magenta);
   color: #fff;
   padding: var(--espace-7) var(--espace-5);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
-.heroBloc h1 {
+.entete h1 {
   font-family: var(--font-display), serif;
   font-size: clamp(2rem, 5vw, 3rem);
   margin-bottom: var(--espace-3);
+}
+
+.entete p {
+  max-width: 48ch;
 }
 
 .barreRecherche {

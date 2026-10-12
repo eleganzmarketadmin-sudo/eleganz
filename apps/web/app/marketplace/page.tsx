@@ -53,11 +53,8 @@ export default function MarketplacePage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.entete}>
-        <div className={styles.heroPhoto}>Photo de boutique à venir</div>
-        <div className={styles.heroBloc}>
-          <h1>Porter la couleur</h1>
-          <p>Mode et luxe choisis chez des boutiques congolaises, livrés à Kinshasa.</p>
-        </div>
+        <h1>Porter la couleur</h1>
+        <p>Mode et luxe choisis chez des boutiques congolaises, livrés à Kinshasa.</p>
       </div>
 
       <form

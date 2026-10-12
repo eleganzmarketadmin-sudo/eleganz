@@ -1,5 +1,7 @@
 .entete {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: var(--espace-2);
   align-items: center;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-5);
@@ -10,16 +12,30 @@
 .marque {
   font-family: var(--font-display), serif;
   font-size: 1.25rem;
+  white-space: nowrap;
 }
 
 .liens {
   display: flex;
-  gap: var(--espace-4);
+  flex-wrap: wrap;
+  gap: var(--espace-2) var(--espace-4);
   align-items: center;
+}
+
+.liens a,
+.liens button {
+  white-space: nowrap;
 }
 
 .liens a {
   color: #fff;
+}
+
+@media (max-width: 420px) {
+  .liens {
+    gap: var(--espace-2) var(--espace-3);
+    font-size: 0.875rem;
+  }
 }
 
 .panier {
