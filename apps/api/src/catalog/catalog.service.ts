@@ -177,7 +177,10 @@ export class CatalogService {
     return this.prisma.$transaction(async (tx) => {
       const variantesCreees = [];
       for (const combo of combinaisons) {
-        const suffixe = [combo.size, combo.color].filter(Boolean).map(slug).join("-");
+        const suffixe = [combo.size, combo.color]
+          .filter((v): v is string => v != null && v !== "")
+          .map(slug)
+          .join("-");
         const sku = suffixe ? `${dto.skuBase}-${suffixe}` : dto.skuBase;
 
         const existante = await tx.variant.findUnique({ where: { sku } });
