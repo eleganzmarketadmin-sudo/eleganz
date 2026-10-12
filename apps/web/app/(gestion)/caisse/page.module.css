@@ -2,12 +2,60 @@
   margin-bottom: var(--espace-5);
 }
 
+/* Disposition en deux panneaux (prompt du 12 oct. 2026) : la grille
+ * d'articles (plus grande, défilement propre) et le ticket (panneau
+ * vertical) restent tous les deux visibles sans jamais devoir défiler
+ * tout un catalogue de plusieurs milliers d'articles pour atteindre le
+ * total et le bouton d'encaissement. Empilé en une colonne sur mobile. */
+.disposition {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas: "articles" "ticket";
+  gap: var(--espace-4);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .disposition {
+    grid-template-columns: minmax(300px, 360px) 1fr;
+    grid-template-areas: "ticket articles";
+  }
+}
+
+.colonneArticles {
+  grid-area: articles;
+  min-width: 0;
+}
+
+.colonneTicket {
+  grid-area: ticket;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+@media (min-width: 900px) {
+  .colonneTicket {
+    position: sticky;
+    top: var(--espace-4);
+  }
+}
+
 .recherche {
   width: 100%;
   padding: var(--espace-3);
   border: 2px solid var(--color-ink);
   margin-bottom: var(--espace-4);
   min-height: var(--touche-min);
+}
+
+/* Le panneau d'articles défile sur lui-même, indépendamment du reste de
+ * la page — c'est ce qui évite de devoir défiler jusqu'au bout d'un
+ * catalogue de plusieurs milliers d'articles avant de pouvoir encaisser. */
+.zoneArticles {
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  padding-right: var(--espace-2);
 }
 
 .grilleArticles {
@@ -57,6 +105,11 @@
 .ticket {
   border: 2px solid var(--color-ink);
   background: var(--color-surface);
+}
+
+.ligneTicketListe {
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 .ligneTicket {

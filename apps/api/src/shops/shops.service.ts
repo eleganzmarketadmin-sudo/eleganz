@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
+import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
@@ -57,6 +58,31 @@ export class ShopsService {
         OR: [{ ownerId: userId }, { staff: { some: { userId, active: true } } }],
       },
       orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async findOne(shopId: string) {
+    return this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+  }
+
+  /**
+   * Identité affichée sur les documents imprimés de la boutique — chaque
+   * vendeur personnalise ses propres factures/tickets/bons de livraison
+   * avec ses informations (prompt du 12 oct. 2026). Un champ envoyé comme
+   * chaîne vide efface l'information plutôt que de la laisser inchangée.
+   */
+  async updateInvoiceSettings(shopId: string, dto: UpdateInvoiceSettingsDto) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(dto.invoiceAddress !== undefined && { invoiceAddress: dto.invoiceAddress || null }),
+        ...(dto.invoicePhone !== undefined && { invoicePhone: dto.invoicePhone || null }),
+        ...(dto.invoiceLogoUrl !== undefined && { invoiceLogoUrl: dto.invoiceLogoUrl || null }),
+        ...(dto.invoiceFooterNote !== undefined && {
+          invoiceFooterNote: dto.invoiceFooterNote || null,
+        }),
+      },
     });
   }
 

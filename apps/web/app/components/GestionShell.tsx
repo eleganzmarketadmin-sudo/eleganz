@@ -16,6 +16,7 @@ const LIENS = [
   { href: "/factures", label: "Mes factures" },
   { href: "/litiges", label: "Litiges" },
   { href: "/equipe", label: "Équipe" },
+  { href: "/parametres", label: "Paramètres" },
 ];
 
 export function GestionShell({ children }: { children: React.ReactNode }) {

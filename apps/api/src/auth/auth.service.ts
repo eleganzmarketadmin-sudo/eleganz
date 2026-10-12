@@ -62,6 +62,12 @@ export class AuthService {
       throw new UnauthorizedException("Identifiants invalides.");
     }
 
+    if (user.isSuspended) {
+      throw new UnauthorizedException(
+        "Ce compte a été suspendu. Contactez le support ELEGANZ pour plus d'informations.",
+      );
+    }
+
     return this.issueToken(user.id, user.role);
   }
 

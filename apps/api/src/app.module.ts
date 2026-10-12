@@ -14,6 +14,7 @@ import { DisputesModule } from "./disputes/disputes.module";
 import { BillingModule } from "./billing/billing.module";
 import { AdminCockpitModule } from "./admin-cockpit/admin-cockpit.module";
 import { AdminTeamModule } from "./admin-team/admin-team.module";
+import { AdminUsersModule } from "./admin-users/admin-users.module";
 import { ImportExportModule } from "./import-export/import-export.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 
@@ -34,6 +35,7 @@ import { ReviewsModule } from "./reviews/reviews.module";
     BillingModule,
     AdminCockpitModule,
     AdminTeamModule,
+    AdminUsersModule,
     ImportExportModule,
     ReviewsModule,
   ],

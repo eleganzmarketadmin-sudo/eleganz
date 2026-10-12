@@ -1,0 +1,212 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-4);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.formRecherche {
+  display: flex;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+  max-width: 480px;
+}
+
+.formRecherche input {
+  flex: 1;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+}
+
+.boutonRechercher {
+  background: var(--color-encre-fixe);
+  color: #fff;
+  border: none;
+  padding: 0 var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.disposition {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espace-4);
+}
+
+@media (min-width: 900px) {
+  .disposition {
+    grid-template-columns: minmax(280px, 340px) 1fr;
+    align-items: start;
+  }
+}
+
+.liste {
+  border: 2px solid var(--color-ink);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.ligneUtilisateur {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: var(--espace-3) var(--espace-4);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+}
+
+.ligneUtilisateurActive {
+  background: var(--color-toile);
+}
+
+.nom {
+  font-weight: 600;
+}
+
+.contact {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}
+
+.role {
+  font-size: 0.75rem;
+}
+
+.badgeSuspendu {
+  display: inline-block;
+  background: var(--color-flamme);
+  color: #fff;
+  font-size: 0.6875rem;
+  padding: 1px var(--espace-2);
+  margin-top: 2px;
+}
+
+.panneauDetail {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+}
+
+.nomDetail {
+  margin-bottom: var(--espace-1);
+}
+
+.contactDetail {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-1);
+}
+
+.roleDetail {
+  margin-bottom: var(--espace-4);
+  font-size: 0.875rem;
+}
+
+.blocInfo {
+  margin-bottom: var(--espace-4);
+  font-size: 0.875rem;
+}
+
+.blocInfo ul {
+  margin: var(--espace-1) 0 0;
+  padding-left: var(--espace-4);
+}
+
+.section {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--espace-4);
+  margin-top: var(--espace-4);
+}
+
+.note {
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  margin: var(--espace-1) 0 var(--espace-3);
+}
+
+.ligneAction {
+  display: flex;
+  gap: var(--espace-2);
+  flex-wrap: wrap;
+}
+
+.ligneAction input {
+  flex: 1;
+  min-width: 200px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+}
+
+.boutonAction {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: 0 var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.motDePasseResultat {
+  margin-top: var(--espace-3);
+  padding: var(--espace-3);
+  background: var(--color-vert-paiement);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.motDePasseResultat code {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+}
+
+.boutonSuspendre,
+.boutonReactiver {
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSuspendre {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.boutonReactiver {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSuspendre:disabled,
+.boutonReactiver:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}

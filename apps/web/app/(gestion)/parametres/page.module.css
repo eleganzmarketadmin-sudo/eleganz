@@ -1,0 +1,75 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.section {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-6);
+}
+
+.sousTitre {
+  margin-bottom: var(--espace-2);
+}
+
+.note {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+  margin-bottom: var(--espace-4);
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+  max-width: 480px;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.champ input,
+.champ textarea {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  font: inherit;
+}
+
+.champ textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.bouton {
+  align-self: flex-start;
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3) var(--espace-5);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

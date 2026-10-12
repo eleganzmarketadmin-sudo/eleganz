@@ -170,7 +170,15 @@ export class DocumentsService {
     const document = await this.prisma.commercialDocument.findFirst({
       where: { id: documentId, shopId },
       include: {
-        shop: { select: { name: true } },
+        shop: {
+          select: {
+            name: true,
+            invoiceAddress: true,
+            invoicePhone: true,
+            invoiceLogoUrl: true,
+            invoiceFooterNote: true,
+          },
+        },
         posSale: { include: { lines: true, payments: true } },
         shopOrder: {
           include: {
@@ -183,6 +191,14 @@ export class DocumentsService {
     if (!document) {
       throw new NotFoundException("Document introuvable pour cette boutique.");
     }
+
+    const logo = await this.recupererLogo(document.shop.invoiceLogoUrl);
+    const identiteBoutique = {
+      shopAddress: document.shop.invoiceAddress,
+      shopPhone: document.shop.invoicePhone,
+      shopLogo: logo,
+      shopFooterNote: document.shop.invoiceFooterNote,
+    };
 
     if (document.posSale) {
       return renderDocumentPdf({
@@ -202,6 +218,7 @@ export class DocumentsService {
         })),
         totalAmount: Number(document.posSale.totalAmount),
         isFiscallyHomologated: document.isFiscallyHomologated,
+        ...identiteBoutique,
       });
     }
 
@@ -223,12 +240,37 @@ export class DocumentsService {
         noteReglement: "Paiement à la livraison (espèces ou mobile money) — commande Marketplace.",
         totalAmount: Number(document.shopOrder.subtotal),
         isFiscallyHomologated: document.isFiscallyHomologated,
+        ...identiteBoutique,
       });
     }
 
     throw new BadRequestException(
       "Ce document n'est lié ni à une vente de caisse ni à une commande Marketplace.",
     );
+  }
+
+  /**
+   * Récupère le logo d'une boutique pour l'imprimer sur ses documents.
+   * Jamais bloquant pour la génération du PDF : toute erreur (URL absente,
+   * serveur distant indisponible, fichier trop volumineux, délai dépassé)
+   * retourne simplement `null` plutôt que de faire échouer tout le document.
+   */
+  private async recupererLogo(url: string | null): Promise<Buffer | null> {
+    if (!url) return null;
+    try {
+      const controleur = new AbortController();
+      const minuteur = setTimeout(() => controleur.abort(), 4000);
+      const reponse = await fetch(url, { signal: controleur.signal });
+      clearTimeout(minuteur);
+      if (!reponse.ok) return null;
+      const tailleDeclaree = Number(reponse.headers.get("content-length") ?? "0");
+      if (tailleDeclaree > 3_000_000) return null; // garde-fou : 3 Mo max
+      const tampon = Buffer.from(await reponse.arrayBuffer());
+      if (tampon.byteLength > 3_000_000) return null;
+      return tampon;
+    } catch {
+      return null;
+    }
   }
 
   /**

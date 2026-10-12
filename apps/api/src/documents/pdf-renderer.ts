@@ -28,6 +28,17 @@ export interface DonneesDocumentPdf {
   noteReglement?: string;
   totalAmount: number;
   isFiscallyHomologated: boolean;
+  /**
+   * Identité de la boutique sur le document (prompt du 12 oct. 2026) —
+   * personnalisable par chaque vendeur, tous facultatifs. `shopLogoUrl`
+   * n'est utilisé que si l'image a pu être récupérée au préalable par
+   * l'appelant (voir `recupererLogo` / `documents.service.ts`) : le rendu
+   * PDF lui-même ne fait jamais d'accès réseau.
+   */
+  shopAddress?: string | null;
+  shopPhone?: string | null;
+  shopLogo?: Buffer | null;
+  shopFooterNote?: string | null;
 }
 
 const LARGEUR_TICKET = 226; // ~80mm, format imprimante de caisse courant (prompt §6)
@@ -54,8 +65,28 @@ function formaterMontant(montant: number, devise: string): string {
 export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: [LARGEUR_TICKET, 842], margin: MARGE });
 
+  // Logo de la boutique, si elle en a fourni un et qu'il a pu être récupéré
+  // (voir documents.service.ts) — jamais bloquant : une image invalide ou
+  // trop grande ne doit jamais faire échouer tout le document.
+  if (donnees.shopLogo) {
+    try {
+      const largeurLogo = 60;
+      doc.image(donnees.shopLogo, (LARGEUR_TICKET - largeurLogo) / 2, doc.y, { width: largeurLogo });
+      doc.moveDown(0.3);
+    } catch {
+      // Logo illisible (format non supporté, fichier corrompu...) — on
+      // continue sans jamais faire planter la génération du document.
+    }
+  }
+
   doc.font("Helvetica-Bold").fontSize(12).text(donnees.shopName, { align: "center" });
   doc.font("Helvetica").fontSize(9).text(donnees.documentTypeLabel, { align: "center" });
+  if (donnees.shopAddress) {
+    doc.fontSize(7.5).text(donnees.shopAddress, { align: "center" });
+  }
+  if (donnees.shopPhone) {
+    doc.fontSize(7.5).text(`Tél. ${donnees.shopPhone}`, { align: "center" });
+  }
   doc.moveDown(0.5);
   doc.fontSize(8).text(`N° ${donnees.number}`, { align: "center" });
   doc.text(
@@ -110,6 +141,11 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     doc.font("Helvetica").fontSize(8).text(donnees.noteReglement, { align: "center" });
   }
 
+  if (donnees.shopFooterNote) {
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(7.5).text(donnees.shopFooterNote, { align: "center" });
+  }
+
   doc.moveDown(0.8);
   doc
     .fontSize(7)
@@ -120,6 +156,31 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
         : "Document non homologué par la DGI — à conserver pour votre comptabilité interne.",
       { align: "center" },
     );
+  doc.fillColor("#000");
+
+  // Signature de la plateforme — fixe, identique sur tous les documents de
+  // toutes les boutiques (contrairement à l'identité du vendeur ci-dessus,
+  // qui est personnalisable). Prompt du 12 oct. 2026.
+  doc.moveDown(0.6);
+  doc
+    .moveTo(MARGE, doc.y)
+    .lineTo(LARGEUR_TICKET - MARGE, doc.y)
+    .dash(1, { space: 1 })
+    .stroke();
+  doc.undash();
+  doc.moveDown(0.4);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(7)
+    .fillColor("#555")
+    .text("Vendu via ELEGANZ Marketplace", { align: "center" });
+  doc
+    .font("Helvetica")
+    .fontSize(6.5)
+    .fillColor("#555")
+    .text("Mode et luxe choisis chez des boutiques congolaises — eleganz-production.up.railway.app/marketplace", {
+      align: "center",
+    });
   doc.fillColor("#000");
 
   doc.end();

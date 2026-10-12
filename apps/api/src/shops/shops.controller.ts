@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ShopsService } from "./shops.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
+import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "./shop-membership.guard";
 import { ShopRoles } from "./roles.decorator";
@@ -37,6 +38,19 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   unpublish(@Param("shopId") shopId: string, @Body("productIds") productIds: string[]) {
     return this.shopsService.unpublishSelection(shopId, productIds);
+  }
+
+  @Get(":shopId")
+  @UseGuards(ShopMembershipGuard)
+  findOne(@Param("shopId") shopId: string) {
+    return this.shopsService.findOne(shopId);
+  }
+
+  @Patch(":shopId/invoice-settings")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  updateInvoiceSettings(@Param("shopId") shopId: string, @Body() dto: UpdateInvoiceSettingsDto) {
+    return this.shopsService.updateInvoiceSettings(shopId, dto);
   }
 
   @Get(":shopId/staff")

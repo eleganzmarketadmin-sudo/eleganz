@@ -216,124 +216,140 @@ function CaisseContent() {
     <div>
       <h1 className={styles.titre}>Caisse</h1>
 
-      <input
-        className={styles.recherche}
-        type="text"
-        placeholder="Chercher un article par nom, taille ou couleur…"
-        value={recherche}
-        onChange={(e) => setRecherche(e.target.value)}
-      />
+      <div className={styles.disposition}>
+        {/* Panneau articles — plus large, avec son propre défilement : une
+            boutique au catalogue de plusieurs milliers d'articles ne doit
+            jamais obliger à défiler toute la grille pour atteindre le ticket
+            et le bouton d'encaissement, qui restent visibles à côté. */}
+        <div className={styles.colonneArticles}>
+          <input
+            className={styles.recherche}
+            type="text"
+            placeholder="Chercher un article par nom, taille ou couleur…"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+          />
 
-      {variantesVisibles.length === 0 ? (
-        <p className={styles.messageVide}>
-          Aucun article ne correspond. Ajoutez des produits depuis le catalogue.
-        </p>
-      ) : (
-        <div className={styles.grilleArticles}>
-          {variantesVisibles.map(({ produit, variante }) => (
-            <button
-              key={variante.id}
-              className={styles.carteArticle}
-              disabled={variante.stockQty <= 0}
-              onClick={() => ajouterVariante(produit, variante)}
-            >
-              <span className={styles.carteArticleNom}>{produit.name}</span>
-              <span className={styles.carteArticleDetail}>
-                {[variante.size, variante.color].filter(Boolean).join(" · ") || variante.sku}
-                {" — "}
-                {variante.stockQty > 0 ? `${variante.stockQty} en stock` : "épuisé"}
-              </span>
-              <span className={styles.carteArticlePrix}>
-                {formatMoney(Number(variante.sellPrice), variante.currency)}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className={styles.ticket}>
-        {lignes.length === 0 ? (
-          <p className={styles.messageVide}>Le ticket est vide. Touchez un article ci-dessus.</p>
-        ) : (
-          lignes.map((ligne, i) => (
-            <div className={styles.ligneTicket} key={i}>
-              <span className={styles.ligneTicketNom}>{ligne.label}</span>
-              <input
-                className={styles.ligneTicketQte}
-                type="number"
-                min={1}
-                value={ligne.quantity}
-                onChange={(e) => modifierQuantite(i, Number(e.target.value))}
-              />
-              <span className={styles.ligneTicketMontant}>
-                {formatMoney(ligne.quantity * ligne.unitPrice, ligne.currency)}
-              </span>
-              <button
-                className={styles.ligneTicketSupprimer}
-                onClick={() => retirerLigne(i)}
-                aria-label={`Retirer ${ligne.label}`}
-              >
-                ✕
-              </button>
-            </div>
-          ))
-        )}
-
-        <div className={styles.totalLigne}>
-          <span>Total</span>
-          <span className="chiffre">{formatMoney(total, devise)}</span>
-        </div>
-
-        <div className={styles.paiements}>
-          <div className={styles.moyensPaiement}>
-            {MOYENS.map((m) => (
-              <button
-                key={m.valeur}
-                className={`${styles.moyenBouton} ${moyen === m.valeur ? styles.moyenBoutonActif : ""}`}
-                onClick={() => setMoyen(m.valeur)}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {erreurVente && <div className={styles.erreur}>{erreurVente}</div>}
-          {confirmation && (
-            <div className={styles.confirmation}>
-              {confirmation}
-              {dernierTicket && (
-                <>
-                  {" — "}
+          <div className={styles.zoneArticles}>
+            {variantesVisibles.length === 0 ? (
+              <p className={styles.messageVide}>
+                Aucun article ne correspond. Ajoutez des produits depuis le catalogue.
+              </p>
+            ) : (
+              <div className={styles.grilleArticles}>
+                {variantesVisibles.map(({ produit, variante }) => (
                   <button
-                    onClick={imprimerDernierTicket}
-                    disabled={impressionEnCours}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#fff",
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                      padding: 0,
-                      font: "inherit",
-                    }}
+                    key={variante.id}
+                    className={styles.carteArticle}
+                    disabled={variante.stockQty <= 0}
+                    onClick={() => ajouterVariante(produit, variante)}
                   >
-                    Imprimer le ticket
+                    <span className={styles.carteArticleNom}>{produit.name}</span>
+                    <span className={styles.carteArticleDetail}>
+                      {[variante.size, variante.color].filter(Boolean).join(" · ") || variante.sku}
+                      {" — "}
+                      {variante.stockQty > 0 ? `${variante.stockQty} en stock` : "épuisé"}
+                    </span>
+                    <span className={styles.carteArticlePrix}>
+                      {formatMoney(Number(variante.sellPrice), variante.currency)}
+                    </span>
                   </button>
-                </>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Panneau ticket — vertical, toujours visible à côté de la grille
+            (prompt : "disposition verticale... comme un panneau"). */}
+        <div className={styles.colonneTicket}>
+          <div className={styles.ticket}>
+            {lignes.length === 0 ? (
+              <p className={styles.messageVide}>Le ticket est vide. Touchez un article à côté.</p>
+            ) : (
+              <div className={styles.ligneTicketListe}>
+                {lignes.map((ligne, i) => (
+                  <div className={styles.ligneTicket} key={i}>
+                    <span className={styles.ligneTicketNom}>{ligne.label}</span>
+                    <input
+                      className={styles.ligneTicketQte}
+                      type="number"
+                      min={1}
+                      value={ligne.quantity}
+                      onChange={(e) => modifierQuantite(i, Number(e.target.value))}
+                    />
+                    <span className={styles.ligneTicketMontant}>
+                      {formatMoney(ligne.quantity * ligne.unitPrice, ligne.currency)}
+                    </span>
+                    <button
+                      className={styles.ligneTicketSupprimer}
+                      onClick={() => retirerLigne(i)}
+                      aria-label={`Retirer ${ligne.label}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.totalLigne}>
+              <span>Total</span>
+              <span className="chiffre">{formatMoney(total, devise)}</span>
+            </div>
+
+            <div className={styles.paiements}>
+              <div className={styles.moyensPaiement}>
+                {MOYENS.map((m) => (
+                  <button
+                    key={m.valeur}
+                    className={`${styles.moyenBouton} ${moyen === m.valeur ? styles.moyenBoutonActif : ""}`}
+                    onClick={() => setMoyen(m.valeur)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              {erreurVente && <div className={styles.erreur}>{erreurVente}</div>}
+              {confirmation && (
+                <div className={styles.confirmation}>
+                  {confirmation}
+                  {dernierTicket && (
+                    <>
+                      {" — "}
+                      <button
+                        onClick={imprimerDernierTicket}
+                        disabled={impressionEnCours}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#fff",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          padding: 0,
+                          font: "inherit",
+                        }}
+                      >
+                        Imprimer le ticket
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className={styles.barreAction}>
-        <button
-          className={styles.boutonEncaisser}
-          disabled={lignes.length === 0 || enCours}
-          onClick={encaisser}
-        >
-          {enCours ? "Enregistrement…" : `Enregistrer la vente — ${formatMoney(total, devise)}`}
-        </button>
+          <div className={styles.barreAction}>
+            <button
+              className={styles.boutonEncaisser}
+              disabled={lignes.length === 0 || enCours}
+              onClick={encaisser}
+            >
+              {enCours ? "Enregistrement…" : `Enregistrer la vente — ${formatMoney(total, devise)}`}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

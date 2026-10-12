@@ -47,6 +47,10 @@ model User {
   role          UserRole
   fullName      String
   locale        String   @default("fr")
+  // Support admin (prompt du 12 oct. 2026, "Centre de pilotage" — gestion
+  // des comptes utilisateurs) : un admin peut bloquer la connexion d'un
+  // compte posant problème, sans jamais supprimer ses données.
+  isSuspended   Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -103,6 +107,16 @@ model Shop {
 
   // Marketplace : visibilité publique
   isPubliclyListed Boolean    @default(false)
+
+  // Identité affichée sur les documents imprimés (factures, bons de
+  // livraison, tickets...) — personnalisable par chaque boutique (prompt
+  // du 12 oct. 2026). Tous facultatifs : une boutique qui ne les renseigne
+  // pas voit simplement son document sans cette ligne, jamais une valeur
+  // inventée à sa place.
+  invoiceAddress    String?
+  invoicePhone      String?
+  invoiceLogoUrl    String?
+  invoiceFooterNote String? // ex. "Merci pour votre achat !", conditions de retour, etc.
 
   // Monétisation — champs admin-configurables, aucune valeur figée dans le code
   freeTrialStartedAt   DateTime?
