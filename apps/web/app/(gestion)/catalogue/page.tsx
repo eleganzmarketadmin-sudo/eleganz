@@ -283,33 +283,151 @@ function ImagesProduit({
   );
 }
 
+interface VariantOptionsListe {
+  sizes: string[];
+  colors: string[];
+}
+
+/**
+ * Sélecteur à choix multiple pour une liste déroulante taille/couleur de la
+ * boutique (demande du 12 oct. 2026) — remplace la saisie libre. Un petit
+ * champ "+ ajouter" permet d'enrichir la liste de la boutique sans quitter
+ * l'écran ; la nouvelle valeur est aussitôt sélectionnée.
+ */
+function SelecteurMultiple({
+  label,
+  valeurs,
+  selection,
+  onChangeSelection,
+  onAjouterValeur,
+}: {
+  label: string;
+  valeurs: string[];
+  selection: string[];
+  onChangeSelection: (v: string[]) => void;
+  onAjouterValeur: (valeur: string) => Promise<void>;
+}) {
+  const [nouvelleValeur, setNouvelleValeur] = useState("");
+  const [enCours, setEnCours] = useState(false);
+
+  async function ajouter() {
+    const v = nouvelleValeur.trim();
+    if (!v) return;
+    setEnCours(true);
+    try {
+      await onAjouterValeur(v);
+      setNouvelleValeur("");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div className={styles.champ}>
+      <label>{label}</label>
+      <select
+        multiple
+        value={selection}
+        onChange={(e) => onChangeSelection(Array.from(e.target.selectedOptions, (o) => o.value))}
+        style={{ minHeight: "84px" }}
+      >
+        {valeurs.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+      <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
+        <input
+          placeholder={`+ nouvelle valeur`}
+          value={nouvelleValeur}
+          onChange={(e) => setNouvelleValeur(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              ajouter();
+            }
+          }}
+          style={{ flex: 1, padding: "6px", fontSize: "0.8125rem" }}
+        />
+        <button
+          type="button"
+          className={styles.boutonSecondaire}
+          style={{ padding: "4px 10px", minHeight: "32px" }}
+          onClick={ajouter}
+          disabled={enCours || !nouvelleValeur.trim()}
+        >
+          Ajouter
+        </button>
+      </div>
+      <span style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)" }}>
+        Ctrl/Cmd + clic pour sélectionner plusieurs valeurs — une variante sera créée par
+        combinaison.
+      </span>
+    </div>
+  );
+}
+
 function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
   const { currentShop } = useShop();
+  const [options, setOptions] = useState<VariantOptionsListe>({ sizes: [], colors: [] });
   const [sku, setSku] = useState("");
-  const [taille, setTaille] = useState("");
-  const [couleur, setCouleur] = useState("");
+  const [taillesChoisies, setTaillesChoisies] = useState<string[]>([]);
+  const [couleursChoisies, setCouleursChoisies] = useState<string[]>([]);
   const [prixAchat, setPrixAchat] = useState("");
   const [prixVente, setPrixVente] = useState("");
   const [stock, setStock] = useState("0");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentShop) return;
+    api
+      .get<VariantOptionsListe>(`/shops/${currentShop.id}/variant-options`)
+      .then(setOptions)
+      .catch(() => {
+        // Non bloquant : les listes restent simplement vides, on peut encore
+        // ajouter des valeurs à la volée.
+      });
+  }, [currentShop]);
+
+  async function ajouterOption(kind: "SIZE" | "COLOR", valeur: string) {
+    if (!currentShop) return;
+    const resultat = await api.post<VariantOptionsListe>(`/shops/${currentShop.id}/variant-options`, {
+      kind,
+      value: valeur,
+    });
+    setOptions(resultat);
+    if (kind === "SIZE") setTaillesChoisies((prev) => [...new Set([...prev, valeur])]);
+    else setCouleursChoisies((prev) => [...new Set([...prev, valeur])]);
+  }
+
+  const nombreVariantes = Math.max(taillesChoisies.length, 1) * Math.max(couleursChoisies.length, 1);
 
   async function ajouter() {
     if (!currentShop || !sku || !prixVente) return;
     setEnCours(true);
     setErreur(null);
+    setConfirmation(null);
     try {
-      await api.post(`/shops/${currentShop.id}/products/${produitId}/variants`, {
-        sku,
-        size: taille || undefined,
-        color: couleur || undefined,
-        costPrice: prixAchat ? Number(prixAchat) : undefined,
-        sellPrice: Number(prixVente),
-        initialStockQty: stock ? Number(stock) : 0,
-      });
+      const variantes = await api.post<unknown[]>(
+        `/shops/${currentShop.id}/products/${produitId}/variants/bulk`,
+        {
+          skuBase: sku,
+          sizes: taillesChoisies.length ? taillesChoisies : undefined,
+          colors: couleursChoisies.length ? couleursChoisies : undefined,
+          costPrice: prixAchat ? Number(prixAchat) : undefined,
+          sellPrice: Number(prixVente),
+          initialStockQty: stock ? Number(stock) : 0,
+        },
+      );
+      setConfirmation(
+        variantes.length > 1 ? `${variantes.length} variantes créées.` : "Variante créée.",
+      );
       setSku("");
-      setTaille("");
-      setCouleur("");
+      setTaillesChoisies([]);
+      setCouleursChoisies([]);
       setPrixAchat("");
       setPrixVente("");
       setStock("0");
@@ -323,9 +441,25 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
 
   return (
     <div className={styles.ajoutVariante}>
-      <input placeholder="Référence (SKU)" value={sku} onChange={(e) => setSku(e.target.value)} />
-      <input placeholder="Taille" value={taille} onChange={(e) => setTaille(e.target.value)} />
-      <input placeholder="Couleur" value={couleur} onChange={(e) => setCouleur(e.target.value)} />
+      <input
+        placeholder="Référence (SKU) — préfixe si plusieurs tailles/couleurs"
+        value={sku}
+        onChange={(e) => setSku(e.target.value)}
+      />
+      <SelecteurMultiple
+        label="Tailles"
+        valeurs={options.sizes}
+        selection={taillesChoisies}
+        onChangeSelection={setTaillesChoisies}
+        onAjouterValeur={(v) => ajouterOption("SIZE", v)}
+      />
+      <SelecteurMultiple
+        label="Couleurs"
+        valeurs={options.colors}
+        selection={couleursChoisies}
+        onChangeSelection={setCouleursChoisies}
+        onAjouterValeur={(v) => ajouterOption("COLOR", v)}
+      />
       <input
         placeholder="Prix d'achat"
         type="number"
@@ -339,15 +473,16 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
         onChange={(e) => setPrixVente(e.target.value)}
       />
       <input
-        placeholder="Stock initial"
+        placeholder="Stock initial (par variante)"
         type="number"
         value={stock}
         onChange={(e) => setStock(e.target.value)}
       />
       <button className={styles.bouton} onClick={ajouter} disabled={enCours || !sku || !prixVente}>
-        Ajouter la variante
+        {nombreVariantes > 1 ? `Créer ${nombreVariantes} variantes` : "Ajouter la variante"}
       </button>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
+      {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
     </div>
   );
 }

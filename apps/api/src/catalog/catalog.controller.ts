@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
+import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
+import { CreateVariantOptionDto } from "./dto/variant-option.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -57,5 +59,49 @@ export class CatalogController {
     @Body() dto: CreateVariantDto,
   ) {
     return this.catalogService.addVariant(shopId, productId, dto);
+  }
+
+  /**
+   * Création en lot (demande du 12 oct. 2026) : une variante par combinaison
+   * taille × couleur sélectionnée dans les listes déroulantes de la
+   * boutique, plutôt qu'une saisie manuelle répétée.
+   */
+  @Post(":productId/variants/bulk")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  addVariantsBulk(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Body() dto: CreateVariantsBulkDto,
+  ) {
+    return this.catalogService.addVariantsBulk(shopId, productId, dto);
+  }
+}
+
+/**
+ * Listes déroulantes taille/couleur propres à chaque boutique — voir
+ * VariantOption dans schema.prisma. Contrôleur séparé car indépendant d'un
+ * produit précis (les valeurs sont partagées par tout le catalogue de la
+ * boutique).
+ */
+@Controller("shops/:shopId/variant-options")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
+export class VariantOptionsController {
+  constructor(private readonly catalogService: CatalogService) {}
+
+  @Get()
+  list(@Param("shopId") shopId: string) {
+    return this.catalogService.listVariantOptions(shopId);
+  }
+
+  @Post()
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  create(@Param("shopId") shopId: string, @Body() dto: CreateVariantOptionDto) {
+    return this.catalogService.createVariantOption(shopId, dto);
+  }
+
+  @Delete(":optionId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  remove(@Param("shopId") shopId: string, @Param("optionId") optionId: string) {
+    return this.catalogService.deleteVariantOption(shopId, optionId);
   }
 }

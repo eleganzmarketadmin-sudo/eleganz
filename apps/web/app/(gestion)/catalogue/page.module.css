@@ -170,3 +170,10 @@
   padding: var(--espace-3);
   margin-bottom: var(--espace-4);
 }
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}

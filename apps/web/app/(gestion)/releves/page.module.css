@@ -1,0 +1,118 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+  max-width: 72ch;
+}
+
+.formulaire {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: flex-end;
+  margin-bottom: var(--espace-5);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.champ input,
+.champ select {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  min-width: 170px;
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonSecondaire {
+  background: #fff;
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionsExport {
+  display: flex;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.tableauScroll {
+  overflow-x: auto;
+  margin-bottom: var(--espace-4);
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableau th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tableau td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.colChiffre {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ligneTotal {
+  background: var(--color-fond-alterne, #f4f4f4);
+  font-weight: 600;
+}
+
+.certification {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}

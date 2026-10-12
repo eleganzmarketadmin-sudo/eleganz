@@ -172,6 +172,7 @@ model Shop {
   creditWallet   AiCreditWallet?
   auditLogs      AuditLog[]
   reviews        Review[]
+  variantOptions VariantOption[]
 }
 
 model ShopStaff {
@@ -205,6 +206,29 @@ model Product {
 
   variants Variant[]
   reviews  Review[]
+}
+
+enum VariantOptionKind {
+  SIZE
+  COLOR
+}
+
+/**
+ * Valeurs prédéfinies de taille/couleur propres à chaque boutique (demande
+ * du 12 oct. 2026) — remplace la saisie libre par une liste déroulante à
+ * choix multiple côté catalogue, pour éviter les doublons dus à des fautes
+ * de frappe ("Rouge" / "rouge " / "ROUGE"). Chaque boutique construit sa
+ * propre liste au fil de l'eau ; aucune valeur n'est imposée globalement.
+ */
+model VariantOption {
+  id        String            @id @default(uuid())
+  shopId    String
+  shop      Shop              @relation(fields: [shopId], references: [id])
+  kind      VariantOptionKind
+  value     String
+  createdAt DateTime          @default(now())
+
+  @@unique([shopId, kind, value])
 }
 
 model Variant {

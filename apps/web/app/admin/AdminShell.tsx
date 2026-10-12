@@ -13,6 +13,7 @@ const LIENS = [
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/tarifs", label: "Tarifs" },
   { href: "/admin/factures", label: "Factures" },
+  { href: "/admin/releves", label: "Relevés d'activité" },
   { href: "/admin/litiges", label: "Litiges" },
   { href: "/admin/equipe", label: "Équipe admin" },
   { href: "/admin/parametres", label: "Paramètres plateforme" },

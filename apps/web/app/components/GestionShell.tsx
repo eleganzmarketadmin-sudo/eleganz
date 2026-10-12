@@ -14,6 +14,7 @@ const LIENS = [
   { href: "/catalogue", label: "Catalogue" },
   { href: "/commandes", label: "Commandes" },
   { href: "/factures", label: "Mes factures" },
+  { href: "/releves", label: "Relevés d'activité" },
   { href: "/litiges", label: "Litiges" },
   { href: "/equipe", label: "Équipe" },
   { href: "/parametres", label: "Paramètres" },
