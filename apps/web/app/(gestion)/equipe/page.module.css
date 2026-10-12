@@ -50,7 +50,7 @@
 .tableau th {
   text-align: left;
   padding: var(--espace-3) var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   font-size: 0.8125rem;
 }

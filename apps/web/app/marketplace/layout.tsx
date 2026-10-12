@@ -5,7 +5,7 @@ export default function MarketplaceLayout({ children }: { children: React.ReactN
   return (
     <CartProvider>
       <MarketplaceHeader />
-      {children}
+      <div className="entree-page">{children}</div>
     </CartProvider>
   );
 }

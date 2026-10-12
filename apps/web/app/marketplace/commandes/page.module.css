@@ -17,7 +17,7 @@
   display: flex;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   font-size: 0.875rem;
 }
@@ -32,5 +32,5 @@
 .messageVide {
   padding: var(--espace-6);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

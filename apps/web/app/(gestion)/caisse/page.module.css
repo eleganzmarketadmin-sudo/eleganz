@@ -43,7 +43,7 @@
 
 .carteArticleDetail {
   font-size: 0.8125rem;
-  color: #555;
+  color: var(--color-texte-muted);
   display: block;
   margin-bottom: var(--espace-2);
 }
@@ -102,7 +102,7 @@
   display: flex;
   justify-content: space-between;
   padding: var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   font-size: 1.25rem;
   font-weight: 600;
@@ -167,7 +167,7 @@
 .messageVide {
   padding: var(--espace-5);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }
 
 .confirmation {

@@ -1,9 +1,19 @@
-/* Jetons de design ELEGANZ — voir docs/DESIGN_SYSTEM.md à la racine du dépôt. */
+/* Jetons de design ELEGANZ — voir docs/DESIGN_SYSTEM.md à la racine du dépôt.
+   Mode sombre : voir la section "Mode sombre" plus bas — les teintes de
+   marque (cobalt, flamme, magenta, or) ne changent jamais, seuls le fond,
+   les surfaces, le texte et les filets se retournent. */
 
 :root {
+  /* Encre fixe : jamais retournée par le thème — sert aux bandeaux et aplats
+     volontairement sombres (en-têtes, badges) qui doivent rester sombres
+     même en mode clair comme en mode sombre. */
+  --color-encre-fixe: #15171c;
+
   --color-ink: #15171c;
   --color-toile: #f3f3ee;
   --color-cobalt: #17408a;
+  --color-cobalt-texte: var(--color-cobalt);
+  --color-texte-muted: #55554f;
   --color-cobalt-dark: #0f2c61;
   --color-flamme: #c83e1f;
   --color-magenta: #a62368;
@@ -26,6 +36,44 @@
   --espace-7: 48px;
 
   --touche-min: 48px; /* cible tactile minimale, comptoir/téléphone */
+
+  --duree-transition: 160ms;
+  color-scheme: light;
+}
+
+/* Mode sombre — choisi explicitement par la personne (ThemeToggle), avec la
+   préférence système comme valeur de départ tant qu'aucun choix n'est
+   enregistré. Pas une simple inversion : le fond descend vers un
+   anthracite proche de l'Encre de marque plutôt qu'un noir pur, les
+   surfaces se détachent d'un cran, et seuls le cobalt et les filets fins
+   reçoivent une variante plus claire pour rester lisibles — flamme,
+   magenta et or restent inchangés, ils portent déjà assez de lumière. */
+:root[data-theme="dark"] {
+  --color-ink: #f0efe9;
+  --color-toile: #121318;
+  --color-cobalt-texte: #6d99f2;
+  --color-texte-muted: #9a9a93;
+
+  --color-surface: #1c1e24;
+  --color-surface-muted: #181a1f;
+  --color-border: #34363d;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-ink: #f0efe9;
+    --color-toile: #121318;
+    --color-cobalt-texte: #6d99f2;
+    --color-texte-muted: #9a9a93;
+
+    --color-surface: #1c1e24;
+    --color-surface-muted: #181a1f;
+    --color-border: #34363d;
+
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -45,6 +93,7 @@ body {
   font-size: 16px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--duree-transition) ease, color var(--duree-transition) ease;
 }
 
 h1,
@@ -62,7 +111,7 @@ h3 {
 }
 
 a {
-  color: var(--color-cobalt);
+  color: var(--color-cobalt-texte);
   text-decoration: none;
 }
 
@@ -78,6 +127,13 @@ textarea {
   font-size: 1rem;
 }
 
+button,
+a,
+select {
+  transition: background-color var(--duree-transition) ease, border-color var(--duree-transition) ease,
+    color var(--duree-transition) ease, opacity var(--duree-transition) ease, transform var(--duree-transition) ease;
+}
+
 .chiffre {
   font-family: var(--font-mono), "IBM Plex Mono", monospace;
   font-variant-numeric: tabular-nums;
@@ -85,8 +141,25 @@ textarea {
 
 /* Visibilité du focus clavier — jamais supprimée */
 :focus-visible {
-  outline: 3px solid var(--color-cobalt);
+  outline: 3px solid var(--color-cobalt-texte);
   outline-offset: 2px;
+}
+
+/* Un seul moment animé à l'entrée de chaque page — jamais un fondu répété
+   sur chaque carte ou chaque survol, voir docs/DESIGN_SYSTEM.md. */
+@keyframes eleganz-entree {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entree-page {
+  animation: eleganz-entree 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -39,7 +39,7 @@
 
 .verifDescription {
   font-size: 0.8125rem;
-  color: #555;
+  color: var(--color-texte-muted);
   max-width: 48ch;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .statutHistorique {
-  color: #555;
+  color: var(--color-texte-muted);
 }
 
 .boutonPayer {
@@ -104,5 +104,5 @@
 
 .messageVide {
   padding: var(--espace-3);
-  color: #555;
+  color: var(--color-texte-muted);
 }

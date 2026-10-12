@@ -13,7 +13,7 @@
   justify-content: space-between;
   margin-bottom: var(--espace-2);
   font-size: 0.875rem;
-  color: #555;
+  color: var(--color-texte-muted);
 }
 
 .motif {
@@ -50,5 +50,5 @@
 .messageVide {
   padding: var(--espace-5);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
+import { ThemeToggle } from "../components/ThemeToggle";
 import styles from "./AdminShell.module.css";
 
 const LIENS = [
@@ -40,15 +41,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <span className={styles.marque}>
           ELEGANZ <span>Centre de pilotage</span>
         </span>
-        <button
-          className={styles.deconnexion}
-          onClick={() => {
-            logout();
-            router.push("/admin/connexion");
-          }}
-        >
-          Se déconnecter
-        </button>
+        <div className={styles.enteteActions}>
+          <ThemeToggle clair />
+          <button
+            className={styles.deconnexion}
+            onClick={() => {
+              logout();
+              router.push("/admin/connexion");
+            }}
+          >
+            Se déconnecter
+          </button>
+        </div>
       </header>
       <nav className={styles.nav}>
         {LIENS.map((lien) => (
@@ -61,7 +65,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
       </nav>
-      <main className={styles.contenu}>{children}</main>
+      <main className={styles.contenu} key={pathname}>
+        <div className="entree-page">{children}</div>
+      </main>
     </div>
   );
 }

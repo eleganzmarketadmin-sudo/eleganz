@@ -44,6 +44,11 @@
 
 .carte {
   display: block;
+  transition: transform 180ms ease;
+}
+
+.carte:hover {
+  transform: translateY(-4px);
 }
 
 .imageProduit {
@@ -53,19 +58,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: var(--color-texte-muted);
   font-size: 0.8125rem;
   margin-bottom: var(--espace-2);
+  transition: border-color 180ms ease;
+}
+
+.carte:hover .imageProduit {
+  border-color: var(--color-magenta);
+  border-width: 2px;
 }
 
 .nomProduit {
   font-weight: 600;
   margin-bottom: var(--espace-1);
+  transition: color 180ms ease;
+}
+
+.carte:hover .nomProduit {
+  color: var(--color-magenta);
 }
 
 .boutique {
   font-size: 0.8125rem;
-  color: #666;
+  color: var(--color-texte-muted);
   margin-bottom: var(--espace-1);
 }
 
@@ -78,5 +94,5 @@
 .messageVide {
   padding: var(--espace-6);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

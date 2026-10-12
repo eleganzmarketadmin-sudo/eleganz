@@ -24,7 +24,7 @@
   display: flex;
   justify-content: space-between;
   padding: var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   font-size: 1.125rem;
   font-weight: 600;
@@ -53,7 +53,7 @@
 }
 
 .note {
-  color: #555;
+  color: var(--color-texte-muted);
   font-size: 0.875rem;
   margin-bottom: var(--espace-4);
 }

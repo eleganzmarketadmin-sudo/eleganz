@@ -3,7 +3,7 @@
 }
 
 .sousTitre {
-  color: #555;
+  color: var(--color-texte-muted);
   margin-bottom: var(--espace-5);
   max-width: 56ch;
 }
@@ -67,7 +67,7 @@
 }
 
 .contact {
-  color: #555;
+  color: var(--color-texte-muted);
   font-size: 0.875rem;
 }
 

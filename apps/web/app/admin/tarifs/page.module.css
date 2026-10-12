@@ -30,7 +30,7 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--espace-2) var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
 }
 
@@ -135,5 +135,5 @@
 
 .messageVide {
   padding: var(--espace-3);
-  color: #555;
+  color: var(--color-texte-muted);
 }

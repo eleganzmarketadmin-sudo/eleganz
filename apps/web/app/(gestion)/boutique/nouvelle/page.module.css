@@ -9,7 +9,7 @@
 }
 
 .sousTitre {
-  color: #555;
+  color: var(--color-texte-muted);
   margin-bottom: var(--espace-5);
 }
 

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
 import { useOfflineSync } from "../lib/offline-sync";
+import { ThemeToggle } from "./ThemeToggle";
 import styles from "./GestionShell.module.css";
 
 const LIENS = [
@@ -39,7 +40,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               title="Cliquer pour tenter de synchroniser maintenant"
               style={{
                 background: "var(--color-or)",
-                color: "var(--color-ink)",
+                color: "var(--color-encre-fixe)",
                 border: "none",
                 padding: "8px 12px",
                 minHeight: "40px",
@@ -64,6 +65,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               ))}
             </select>
           )}
+          <ThemeToggle clair />
           <button
             className={styles.deconnexion}
             onClick={() => {
@@ -86,7 +88,9 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
       </nav>
-      <main className={styles.contenu}>{children}</main>
+      <main className={styles.contenu} key={pathname}>
+        <div className="entree-page">{children}</div>
+      </main>
     </div>
   );
 }

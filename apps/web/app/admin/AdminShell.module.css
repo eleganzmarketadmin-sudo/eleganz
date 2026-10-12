@@ -4,7 +4,7 @@
 }
 
 .entete {
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   display: flex;
   align-items: center;
@@ -45,6 +45,13 @@
 
 .navLienActif {
   background: var(--color-or);
+  color: var(--color-encre-fixe);
+}
+
+.enteteActions {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
 }
 
 .contenu {

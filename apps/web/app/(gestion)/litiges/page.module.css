@@ -27,5 +27,5 @@
 .messageVide {
   padding: var(--espace-5);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

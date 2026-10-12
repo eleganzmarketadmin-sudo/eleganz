@@ -21,7 +21,7 @@
   justify-content: space-between;
   align-items: baseline;
   padding: var(--espace-3) var(--espace-4);
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
 }
 
@@ -62,7 +62,7 @@
 
 .champLabel {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--color-texte-muted);
 }
 
 .champInfo select {
@@ -107,5 +107,5 @@
 .messageVide {
   padding: var(--espace-5);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

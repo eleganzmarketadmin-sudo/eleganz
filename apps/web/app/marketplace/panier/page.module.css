@@ -22,7 +22,7 @@
 
 .boutique {
   font-size: 0.8125rem;
-  color: #666;
+  color: var(--color-texte-muted);
 }
 
 .qte {
@@ -75,5 +75,5 @@
 .messageVide {
   padding: var(--espace-6);
   text-align: center;
-  color: #555;
+  color: var(--color-texte-muted);
 }

@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1fr;
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
 }
 
 @media (min-width: 760px) {

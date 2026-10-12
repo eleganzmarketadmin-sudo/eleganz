@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart-context";
+import { ThemeToggle } from "../components/ThemeToggle";
 import styles from "./MarketplaceHeader.module.css";
 
 export function MarketplaceHeader() {
@@ -16,6 +17,7 @@ export function MarketplaceHeader() {
         ELEGANZ
       </Link>
       <nav className={styles.liens}>
+        <ThemeToggle clair />
         <Link href="/marketplace/panier" className={styles.panier}>
           Panier
           {nombreArticles > 0 && <span className={styles.compteur}>{nombreArticles}</span>}

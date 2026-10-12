@@ -79,4 +79,86 @@ export class AdminCockpitService {
       },
     };
   }
+
+  /**
+   * Séries temporelles pour les graphiques du tableau de bord (évolution
+   * sur `days` jours, 30 par défaut). Les agrégations sont faites en JS
+   * plutôt qu'en SQL brut : le volume de données d'une plateforme qui
+   * démarre reste largement sous ce qui justifierait un groupBy par date
+   * côté base, et ça évite toute dépendance à la syntaxe SQL du moteur en
+   * production. Chaque jour sans activité apparaît avec la valeur 0 — pas
+   * de trou dans la série, pour que le graphique reste lisible dès les
+   * premières semaines.
+   */
+  async evolution(days = 30) {
+    const aujourdHui = new Date();
+    aujourdHui.setHours(23, 59, 59, 999);
+    const debut = new Date(aujourdHui);
+    debut.setDate(debut.getDate() - (days - 1));
+    debut.setHours(0, 0, 0, 0);
+
+    const [shops, products, orders, paidInvoices] = await Promise.all([
+      this.prisma.shop.findMany({
+        where: { createdAt: { gte: debut } },
+        select: { createdAt: true },
+      }),
+      this.prisma.product.findMany({
+        where: { createdAt: { gte: debut } },
+        select: { createdAt: true },
+      }),
+      this.prisma.order.findMany({
+        where: { createdAt: { gte: debut } },
+        select: { createdAt: true, totalAmount: true },
+      }),
+      this.prisma.invoice.findMany({
+        where: { status: "PAID", paidAt: { gte: debut } },
+        select: { paidAt: true, amount: true },
+      }),
+    ]);
+
+    const cle = (d: Date) => d.toISOString().slice(0, 10);
+
+    const jours: string[] = [];
+    for (let i = 0; i < days; i += 1) {
+      const d = new Date(debut);
+      d.setDate(d.getDate() + i);
+      jours.push(cle(d));
+    }
+
+    const nouvellesBoutiques = Object.fromEntries(jours.map((j) => [j, 0]));
+    const nouveauxProduits = Object.fromEntries(jours.map((j) => [j, 0]));
+    const commandes = Object.fromEntries(jours.map((j) => [j, 0]));
+    const valeurCommandes = Object.fromEntries(jours.map((j) => [j, 0]));
+    const revenuPlateforme = Object.fromEntries(jours.map((j) => [j, 0]));
+
+    for (const s of shops) {
+      const k = cle(s.createdAt);
+      if (k in nouvellesBoutiques) nouvellesBoutiques[k] += 1;
+    }
+    for (const p of products) {
+      const k = cle(p.createdAt);
+      if (k in nouveauxProduits) nouveauxProduits[k] += 1;
+    }
+    for (const o of orders) {
+      const k = cle(o.createdAt);
+      if (k in commandes) {
+        commandes[k] += 1;
+        valeurCommandes[k] += Number(o.totalAmount);
+      }
+    }
+    for (const f of paidInvoices) {
+      if (!f.paidAt) continue;
+      const k = cle(f.paidAt);
+      if (k in revenuPlateforme) revenuPlateforme[k] += Number(f.amount);
+    }
+
+    return {
+      jours,
+      nouvellesBoutiques: jours.map((j) => nouvellesBoutiques[j]),
+      nouveauxProduits: jours.map((j) => nouveauxProduits[j]),
+      commandes: jours.map((j) => commandes[j]),
+      valeurCommandes: jours.map((j) => valeurCommandes[j]),
+      revenuPlateforme: jours.map((j) => revenuPlateforme[j]),
+    };
+  }
 }

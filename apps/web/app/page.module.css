@@ -17,14 +17,34 @@
   justify-content: center;
   color: #fff;
   min-height: 50vh;
+  animation: entree-bloc 480ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .gestion {
   background: var(--color-cobalt);
+  animation-delay: 0ms;
 }
 
 .marketplace {
   background: var(--color-magenta);
+  animation-delay: 90ms;
+}
+
+@keyframes entree-bloc {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloc {
+    animation: none;
+  }
 }
 
 .bloc h1 {
@@ -45,16 +65,18 @@
 
 .lien {
   display: inline-block;
-  background: var(--color-ink);
+  background: var(--color-encre-fixe);
   color: #fff;
   padding: var(--espace-3) var(--espace-5);
   font-weight: 600;
   width: fit-content;
   min-height: var(--touche-min);
   line-height: calc(var(--touche-min) - var(--espace-3) * 2);
+  transition: transform 160ms ease, background-color 160ms ease;
 }
 
 .lien:hover {
   text-decoration: none;
   background: #000;
+  transform: translateY(-2px);
 }
