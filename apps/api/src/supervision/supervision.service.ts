@@ -123,7 +123,7 @@ export class SupervisionService {
       select: {
         id: true,
         name: true,
-        shopOrders: {
+        orders: {
           select: {
             status: true,
             dispute: { select: { id: true } },
@@ -134,11 +134,11 @@ export class SupervisionService {
     });
 
     return boutiques
-      .filter((b) => b.shopOrders.length > 0)
+      .filter((b) => b.orders.length > 0)
       .map((b) => {
-        const total = b.shopOrders.length;
-        const annulees = b.shopOrders.filter((o) => o.status === OrderStatus.CANCELLED).length;
-        const litiges = b.shopOrders.filter((o) => o.dispute).length;
+        const total = b.orders.length;
+        const annulees = b.orders.filter((o) => o.status === OrderStatus.CANCELLED).length;
+        const litiges = b.orders.filter((o) => o.dispute).length;
         return {
           boutiqueId: b.id,
           boutique: b.name,
@@ -146,7 +146,7 @@ export class SupervisionService {
           tauxAnnulationPct: Math.round((annulees / total) * 1000) / 10,
           tauxLitigePct: Math.round((litiges / total) * 1000) / 10,
           delaiMoyenAcceptationHeures: this.delaiMoyenHeures(
-            b.shopOrders,
+            b.orders,
             OrderStatus.CREATED,
             OrderStatus.ACCEPTED,
           ),
