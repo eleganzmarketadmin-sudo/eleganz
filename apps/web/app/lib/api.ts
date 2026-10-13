@@ -36,8 +36,13 @@ export class ApiError extends Error {
 export function espaceAuth(): "admin" | "livreur" | "defaut" {
   if (typeof window === "undefined") return "defaut";
   const chemin = window.location.pathname;
-  if (chemin.startsWith("/admin")) return "admin";
-  if (chemin.startsWith("/livreur")) return "livreur";
+  // `startsWith` seul confondait l'espace livreur plateforme (/livreur/...)
+  // avec la page Livreurs d'ELEGANZ Gestion (/livreurs, 13 oct. 2026) : cette
+  // dernière partageait alors silencieusement le jeton de l'espace livreur
+  // (vide), si bien que tous ses appels API échouaient sans jeton valable.
+  // On exige maintenant une frontière de segment après "/admin"/"/livreur".
+  if (chemin === "/admin" || chemin.startsWith("/admin/")) return "admin";
+  if (chemin === "/livreur" || chemin.startsWith("/livreur/")) return "livreur";
   return "defaut";
 }
 
