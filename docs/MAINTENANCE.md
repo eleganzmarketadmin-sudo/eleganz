@@ -114,3 +114,46 @@ Aucun mot de passe par défaut n'est codé en dur : sans `ELEGANZ_ADMIN_PASSWORD
 le script s'arrête sans rien créer. À exécuter une fois la base de données
 réelle en place (hors de ce bac à sable, puisque `prisma generate` y est
 bloqué — voir plus haut).
+
+## Piège fréquent : tout nouveau module avec `@UseGuards(JwtAuthGuard)` doit importer `AuthModule`
+
+**Incident du 13 oct. 2026** : le déploiement du module ELEGANZ Mon Comptable
+a fait planter **toute** l'API en production (502 "Application failed to
+respond" sur tous les endpoints, pas seulement les nouveaux), pendant plus de
+10 minutes, parce que `ComptableModule` déclarait des contrôleurs utilisant
+`@UseGuards(JwtAuthGuard)` sans importer `AuthModule`. Log Railway :
+
+```
+[Nest] ERROR [ExceptionHandler] Nest can't resolve dependencies of the
+JwtAuthGuard (?). Please make sure that the argument JwtService at index [0]
+is available in the ComptableModule context.
+```
+
+`JwtAuthGuard` dépend de `JwtService`, fourni par `JwtModule` et
+ré-exporté par `AuthModule` (voir `apps/api/src/auth/auth.module.ts`). Au
+démarrage, Nest tente d'instancier tous les providers de tous les modules
+déclarés dans `app.module.ts` — si un seul échoue, **le processus entier
+ne démarre pas** (`node dist/main.js` sort en `exit status 1`), ce qui
+explique pourquoi une panne localisée à un seul module a mis l'intégralité
+de l'API hors service.
+
+**Règle à appliquer systématiquement pour tout nouveau module** : dès qu'un
+contrôleur utilise `@UseGuards(JwtAuthGuard)` (ou tout autre guard qui
+dépend de `JwtService`/`AuthService`), son module doit lister `AuthModule`
+dans `imports`. Voir `admin-cockpit.module.ts`, `admin-settings.module.ts`
+ou `comptable.module.ts` pour le pattern correct.
+
+**Leçon sur le processus de déploiement** : ce bac à sable n'a aucun accès
+aux logs Railway (`railway whoami` → non autorisé) et ne peut pas exécuter
+`prisma generate`/`tsc` complet sur `apps/api` (réseau bloqué vers
+`binaries.prisma.sh`) — seule une vérification syntaxique (parser TS) est
+possible, qui ne détecte pas ce genre d'erreur de câblage NestJS (résolue
+seulement à l'exécution, au démarrage du conteneur). En conséquence, pour
+tout nouveau module volumineux touchant à la fois le schéma Prisma et du
+code applicatif : **déployer en deux temps** — (1) schéma Prisma seul, sans
+enregistrer le nouveau module dans `app.module.ts`, vérifier que l'API
+survit ; (2) code applicatif ensuite, vérifié séparément. Si une panne
+totale survient sans accès aux logs, `git revert --no-edit <commit>` pour
+rétablir le service immédiatement, diagnostiquer ensuite une fois les logs
+obtenus (demander au propriétaire un copier-coller de l'onglet "Deploy
+Logs" du service concerné sur le dashboard Railway).

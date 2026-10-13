@@ -14,6 +14,16 @@ export default function HomePage() {
         ELEGANZ
       </Link>
       <div className={styles.cadre}>
+        <div className={`${styles.bloc} ${styles.comptable}`}>
+          <h1>ELEGANZ Mon Comptable</h1>
+          <p>
+            Mon carnet de gestion au quotidien : ventes, dépenses, dettes,
+            loyers et échéances — sans boutique ni catalogue à créer.
+          </p>
+          <Link className={styles.lien} href="/comptable">
+            Ouvrir mon carnet
+          </Link>
+        </div>
         <div className={`${styles.bloc} ${styles.gestion}`}>
           <h1>ELEGANZ Gestion</h1>
           <p>

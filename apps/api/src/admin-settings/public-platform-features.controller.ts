@@ -23,4 +23,9 @@ export class PublicPlatformFeaturesController {
   driverPricing() {
     return this.adminSettingsService.publicDriverPricing();
   }
+
+  @Get("comptable-pricing")
+  comptablePricing() {
+    return this.adminSettingsService.publicComptablePricing();
+  }
 }
