@@ -571,6 +571,49 @@ moins-value de cession calculée à la mise au rebut (le statut est
 enregistré, mais aucune écriture de sortie d'actif n'est générée — limite
 connue, à traiter si un besoin réel apparaît).
 
+## 8quinquies. Assistant de clôture de période (13 oct. 2026, Phase 5)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6.
+Verrouille un mois comptable et fige un résumé, sans transformer l'outil en
+registre légalement immuable (la réouverture reste possible).
+
+### 9quater.1. Ce qui est construit
+
+- Nouveau modèle `AccountingClosure` (`scope`, `shopId`, `periodDate`,
+  totaux débit/crédit et résultat net figés au moment de la clôture,
+  `closedBy`).
+- `AccountingService.enregistrer()` (point d'entrée unique de toute
+  écriture, quel que soit son origine) refuse désormais toute écriture dont
+  la date tombe dans un mois déjà clôturé (`ConflictException`). Comme les
+  appelants (`ExpensesService`, `PosService`, etc.) avalent déjà l'échec de
+  comptabilisation sans annuler l'opération métier (`.catch(... logger.error)`
+  — décision déjà prise en Phase 2), clôturer un mois ne bloque jamais une
+  vente ou une dépense réelle : seule son écriture comptable échoue
+  silencieusement (journalisée côté serveur), ce qui est le comportement
+  voulu pour un mois qu'on a choisi de clôturer.
+- `ClosureService.close()` : calcule et fige le résumé (balance + compte de
+  résultat du mois, déjà construits en Phase 2/3) puis verrouille.
+  `.reopen()` : supprime la clôture (réouverture assumée, pas un registre
+  légalement immuable à ce stade de maturité du produit). `.list()` :
+  historique des clôtures.
+- Routes `GET/POST shops/:shopId/finance/clotures`,
+  `DELETE shops/:shopId/finance/clotures/:periode` (+ miroir
+  `/admin/finance/clotures`).
+- Nouvel onglet **Clôture** dans `/finance` (ELEGANZ Gestion) : choix du
+  mois, bouton de clôture, historique avec réouverture.
+
+### 9quater.2. Ce que ce chantier ne livre pas
+
+Pas de clôture d'exercice annuel distincte (un exercice se clôture ici mois
+par mois, sans notion de report à nouveau ni d'affectation du résultat) ;
+pas de génération de liasse fiscale à la clôture ; pas de rôle dédié
+"peut clôturer mais pas rouvrir" (même permission OWNER/MANAGER/ACCOUNTANT
+pour les deux actions, comme pour le reste du module) ; pas de verrouillage
+au niveau de la base de données (uniquement applicatif, dans
+`AccountingService.enregistrer()` — une écriture insérée par un autre
+chemin que ce service contournerait le verrou, mais aucun chemin de ce type
+n'existe dans le code à ce jour).
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après
