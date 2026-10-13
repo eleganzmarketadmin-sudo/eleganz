@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { fraunces, plexMono, plexSans } from "./fonts";
 import { AuthProvider } from "./lib/auth";
+import { ExchangeRateProvider } from "./lib/exchange-rate";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import { SCRIPT_INIT_THEME } from "./components/ThemeToggle";
 import "./globals.css";
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ServiceWorkerRegistration />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ExchangeRateProvider>{children}</ExchangeRateProvider>
+        </AuthProvider>
       </body>
     </html>
   );

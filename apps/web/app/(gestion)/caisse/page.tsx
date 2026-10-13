@@ -8,6 +8,7 @@ import { formatMoney } from "../../lib/money";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { ajouterOperation } from "../../lib/offline-queue";
 import { useOfflineSync } from "../../lib/offline-sync";
+import { useExchangeRate } from "../../lib/exchange-rate";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -65,6 +66,7 @@ const TYPES_DOCUMENT: { valeur: string; label: string; reserveHomologation?: boo
 function CaisseContent() {
   const { currentShop } = useShop();
   const { rafraichirCompteur, synchroniser } = useOfflineSync();
+  const { equivalent } = useExchangeRate();
   const [produits, setProduits] = useState<Product[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreurChargement, setErreurChargement] = useState<string | null>(null);
@@ -312,6 +314,12 @@ function CaisseContent() {
                     </span>
                     <span className={styles.carteArticlePrix}>
                       {formatMoney(Number(variante.sellPrice), variante.currency)}
+                      {equivalent(Number(variante.sellPrice), variante.currency) && (
+                        <span className={styles.carteArticlePrixEquivalent}>
+                          {" "}
+                          {equivalent(Number(variante.sellPrice), variante.currency)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 ))}
@@ -385,7 +393,12 @@ function CaisseContent() {
 
             <div className={styles.totalLigne}>
               <span>Total</span>
-              <span className="chiffre">{formatMoney(total, devise)}</span>
+              <span className="chiffre">
+                {formatMoney(total, devise)}
+                {equivalent(total, devise) && (
+                  <span className={styles.totalLigneEquivalent}> {equivalent(total, devise)}</span>
+                )}
+              </span>
             </div>
 
             <div className={styles.paiements}>

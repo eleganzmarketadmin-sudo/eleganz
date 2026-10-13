@@ -420,6 +420,125 @@ function TarifsComptableSection() {
   );
 }
 
+interface TauxChangeHistorique {
+  id: string;
+  cdfPerUsd: string;
+  setAt: string;
+}
+
+/**
+ * Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) — un
+ * seul taux pour toute la plateforme, modifiable uniquement ici. Un aperçu
+ * du calcul ("1 USD = X CDF", "1000 CDF ≈ Y USD") s'affiche en direct
+ * pendant la saisie, avant d'enregistrer, pour repérer une faute de frappe
+ * qui fausserait l'affichage sur toute la plateforme (ex. 2.9 au lieu de
+ * 2900). Phase 1 seulement : affichage courant, rien n'est figé sur les
+ * ventes/opérations déjà enregistrées (voir docs/PROJECT_STATUS.md).
+ */
+function TauxChangeSection() {
+  const [tauxActuel, setTauxActuel] = useState<string | null>(null);
+  const [misAJourLe, setMisAJourLe] = useState<string | null>(null);
+  const [saisie, setSaisie] = useState("");
+  const [historique, setHistorique] = useState<TauxChangeHistorique[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function recharger() {
+    Promise.all([
+      api.get<{ cdfPerUsd: string | null; exchangeRateUpdatedAt: string | null }>("/admin/platform-settings"),
+      api.get<TauxChangeHistorique[]>("/admin/platform-settings/exchange-rate-history"),
+    ])
+      .then(([s, h]) => {
+        setTauxActuel(s.cdfPerUsd);
+        setMisAJourLe(s.exchangeRateUpdatedAt);
+        setSaisie(s.cdfPerUsd ?? "");
+        setHistorique(h);
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, []);
+
+  const valeur = Number(saisie.replace(",", "."));
+  const apercuValide = saisie.trim() !== "" && Number.isFinite(valeur) && valeur > 0;
+
+  async function enregistrer() {
+    if (!apercuValide) return;
+    setEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings/exchange-rate", { cdfPerUsd: valeur });
+      setMessage("Taux de change enregistré.");
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  if (chargement) return <p>Chargement du taux de change…</p>;
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>Taux de change système (CDF / USD)</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Un seul taux pour toute la plateforme — utilisé pour afficher un équivalent de devise partout
+        où c&apos;est utile (Marketplace, Caisse, Mon Comptable). Les boutiques peuvent vous demander une
+        mise à jour en cas d&apos;oubli ou de retard, mais ne le modifient pas elles-mêmes.
+      </p>
+      {tauxActuel ? (
+        <p style={{ padding: "0 16px", fontSize: "0.875rem" }}>
+          Taux actuel : <strong>1 USD = {tauxActuel} CDF</strong>
+          {misAJourLe && ` — mis à jour le ${new Date(misAJourLe).toLocaleString("fr-FR")}`}
+        </p>
+      ) : (
+        <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-flamme)" }}>
+          Aucun taux configuré pour l&apos;instant — aucun équivalent de devise ne s&apos;affiche nulle part
+          tant que ce n&apos;est pas fait.
+        </p>
+      )}
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>Combien de CDF pour 1 USD ?</span>
+          <input value={saisie} onChange={(e) => setSaisie(e.target.value)} placeholder="ex. 2900" />
+        </label>
+      </div>
+      {apercuValide && (
+        <p style={{ padding: "0 16px", fontSize: "0.875rem", fontFamily: "var(--font-mono), monospace" }}>
+          Aperçu avant d&apos;enregistrer : 1 USD = {valeur.toLocaleString("fr-FR")} CDF — 1 000 CDF ≈{" "}
+          {(1000 / valeur).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} USD
+        </p>
+      )}
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours || !apercuValide} onClick={enregistrer}>
+          Enregistrer le taux
+        </button>
+      </div>
+      {historique.length > 0 && (
+        <details style={{ padding: "0 16px 16px" }}>
+          <summary style={{ cursor: "pointer", fontSize: "0.875rem" }}>Historique des changements</summary>
+          <ul style={{ fontSize: "0.8125rem", marginTop: 8 }}>
+            {historique.map((h) => (
+              <li key={h.id}>
+                1 USD = {h.cdfPerUsd} CDF — {new Date(h.setAt).toLocaleString("fr-FR")}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function TarifsContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -464,6 +583,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>Tarifs Mon Comptable</h2>
       <TarifsComptableSection />
+
+      <h2 className={styles.sectionTitre}>Taux de change</h2>
+      <TauxChangeSection />
     </div>
   );
 }

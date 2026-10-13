@@ -102,6 +102,13 @@
   font-weight: 600;
 }
 
+.carteArticlePrixEquivalent,
+.totalLigneEquivalent {
+  font-weight: 400;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
 .ticket {
   border: 2px solid var(--color-ink);
   background: var(--color-surface);
