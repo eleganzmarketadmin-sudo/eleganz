@@ -48,8 +48,9 @@ function FinanceAdminContenu() {
   return (
     <div>
       <h1 className={styles.titre}>Finance &amp; Comptabilité ELEGANZ</h1>
-      <p style={{ marginBottom: "16px" }}>
+      <p style={{ marginBottom: "16px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
         <Link href="/admin/finance/regles-fiscales">Règles fiscales applicables à ELEGANZ →</Link>
+        <Link href="/admin/finance/comptabilite">Comptabilité (journal, balance) →</Link>
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}

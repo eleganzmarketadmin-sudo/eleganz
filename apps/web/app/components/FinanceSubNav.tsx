@@ -10,6 +10,7 @@ const ONGLETS = [
   { href: "/finance", label: "Tableau de bord" },
   { href: "/finance/charges", label: "Charges" },
   { href: "/finance/regles-fiscales", label: "Règles fiscales" },
+  { href: "/finance/comptabilite", label: "Comptabilité" },
 ];
 
 export function FinanceSubNav() {
