@@ -246,6 +246,9 @@ model Shop {
   variantOptions VariantOption[]
   shopDrivers    ShopDriver[]
   fiscalRules    FiscalRule[]
+  accounts       Account[]
+  journals       Journal[]
+  journalEntries JournalEntry[]
 }
 
 model ShopStaff {
@@ -447,6 +450,12 @@ model Purchase {
   supplierId String
   supplier   Supplier @relation(fields: [supplierId], references: [id])
   amount     Decimal  @db.Decimal(12, 2)
+  // Conservé sur l'achat lui-même depuis le 13 oct. 2026 (moteur comptable,
+  // docs/ARCHITECTURE_FINANCE.md §8bis.4) — jusqu'ici seul
+  // Supplier.balanceOwed était mis à jour, sans garder trace par achat.
+  // Défaut false pour l'historique déjà enregistré (hypothèse "payé", la
+  // plus sûre pour ne pas inventer une dette fournisseur rétroactive).
+  onCredit   Boolean  @default(false)
   receivedAt DateTime?
   createdAt  DateTime @default(now())
 }
@@ -1145,4 +1154,101 @@ model FiscalRuleVersion {
   createdAt     DateTime         @default(now())
 
   @@index([ruleId])
+}
+
+// ---------------------------------------------------------------------------
+// MOTEUR DE COMPTABILITÉ EN PARTIE DOUBLE (13 oct. 2026, Phase 2 — voir
+// docs/ARCHITECTURE_FINANCE.md §8bis). Reprend le patron déjà validé pour
+// FiscalRule : un seul jeu de modèles, séparé par scope (SHOP/PLATFORM) +
+// shopId nullable, isolation imposée côté service/contrôleur, jamais
+// seulement par l'affichage. Volontairement minimal : assez pour un journal
+// général, un grand livre et une balance réels — pas de clôture, pas d'états
+// financiers réglementaires (toujours listés comme différés).
+// ---------------------------------------------------------------------------
+
+enum AccountNormalSide {
+  DEBIT
+  CREDIT
+}
+
+model Account {
+  id            String            @id @default(uuid())
+  scope         FiscalRuleScope
+  shopId        String?
+  shop          Shop?             @relation(fields: [shopId], references: [id])
+  code          String // ex. "571", "701", "601" (SYSCOHADA révisé)
+  label         String
+  normalSide    AccountNormalSide
+  // true pour les comptes seedés automatiquement par AccountingSeedService,
+  // false pour un compte créé manuellement plus tard (non exposé à cette
+  // phase, mais le champ existe pour ne pas distinguer les deux origines
+  // après coup si un écran de création manuelle est ajouté).
+  systemDefined Boolean           @default(true)
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+
+  lines JournalLine[]
+
+  @@unique([scope, shopId, code])
+  @@index([scope, shopId])
+}
+
+enum JournalEntrySource {
+  POS_SALE
+  SHOP_ORDER
+  EXPENSE
+  PURCHASE
+  INVOICE
+  MANUAL
+}
+
+model Journal {
+  id     String          @id @default(uuid())
+  scope  FiscalRuleScope
+  shopId String?
+  shop   Shop?           @relation(fields: [shopId], references: [id])
+  code   String // VE (ventes), AC (achats), TR (trésorerie), OD (opérations diverses)
+  label  String
+
+  entries JournalEntry[]
+
+  @@unique([scope, shopId, code])
+}
+
+model JournalEntry {
+  id         String             @id @default(uuid())
+  scope      FiscalRuleScope
+  shopId     String?
+  shop       Shop?              @relation(fields: [shopId], references: [id])
+  journalId  String
+  journal    Journal            @relation(fields: [journalId], references: [id])
+  entryDate  DateTime
+  label      String
+  sourceType JournalEntrySource
+  // id de PosSale/ShopOrder/Expense/Purchase/Invoice à l'origine de
+  // l'écriture ; null pour une écriture MANUAL. Sert de garde-fou anti
+  // double-comptabilisation via l'unicité ci-dessous (NULL n'entre jamais en
+  // conflit avec un index unique Postgres, donc les écritures MANUAL ne se
+  // bloquent jamais entre elles).
+  sourceId   String?
+  createdAt  DateTime           @default(now())
+
+  lines JournalLine[]
+
+  @@unique([scope, shopId, sourceType, sourceId])
+  @@index([scope, shopId, entryDate])
+}
+
+model JournalLine {
+  id        String       @id @default(uuid())
+  entryId   String
+  entry     JournalEntry @relation(fields: [entryId], references: [id])
+  accountId String
+  account   Account      @relation(fields: [accountId], references: [id])
+  debit     Decimal      @default(0) @db.Decimal(12, 2)
+  credit    Decimal      @default(0) @db.Decimal(12, 2)
+  label     String?
+
+  @@index([entryId])
+  @@index([accountId])
 }

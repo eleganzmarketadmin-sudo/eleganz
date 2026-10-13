@@ -252,6 +252,233 @@ complètement indépendantes des règles boutique, selon le modèle du §3.2.
 - Unification Mon Comptable / Finance boutique (aujourd'hui deux carnets
   séparés, rattachés respectivement à `User` et à `Shop`).
 
+## 8bis. Moteur de comptabilité en partie double (13 oct. 2026, Phase 2)
+
+Démarré sur autorisation explicite du propriétaire ("démarrer", en réponse à
+la question posée sur la priorité parmi les points différés du §7). Couvre
+le premier point du §7 ci-dessus : **le §7 reste la liste de ce qui n'est
+toujours pas livré par cette phase**, hormis le moteur en partie double
+lui-même. Ce moteur reste volontairement minimal — assez pour produire un
+journal général, un grand livre et une balance **réels** (alimentés par les
+opérations déjà enregistrées), pas un système comptable complet au sens
+SYSCOHADA (pas de clôture, pas d'états financiers réglementaires, pas de
+gestion d'exercice verrouillé — ces points restent au §7).
+
+### 9.1. Modèle de données
+
+Réutilise le patron déjà validé pour `FiscalRule` (une seule table par
+concept, séparée par `scope` SHOP/PLATFORM + `shopId` nullable, isolation
+imposée côté service/contrôleur) :
+
+```prisma
+enum AccountNormalSide { DEBIT CREDIT }
+
+model Account {
+  id            String          @id @default(uuid())
+  scope         FiscalRuleScope
+  shopId        String?
+  shop          Shop?           @relation(fields: [shopId], references: [id])
+  code          String          // ex. "571", "701", "601" (SYSCOHADA révisé)
+  label         String
+  normalSide    AccountNormalSide
+  systemDefined Boolean         @default(true) // seedé automatiquement vs créé manuellement
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+
+  debitLines  JournalLine[] @relation("AccountDebitLines")
+  // (une seule relation JournalLine -> Account ; voir modèle ci-dessous)
+
+  @@unique([scope, shopId, code])
+  @@index([scope, shopId])
+}
+
+enum JournalEntrySource { POS_SALE SHOP_ORDER EXPENSE PURCHASE INVOICE MANUAL }
+
+model Journal {
+  id      String          @id @default(uuid())
+  scope   FiscalRuleScope
+  shopId  String?
+  shop    Shop?           @relation(fields: [shopId], references: [id])
+  code    String          // VE (ventes), AC (achats), TR (trésorerie), OD (opérations diverses)
+  label   String
+
+  entries JournalEntry[]
+
+  @@unique([scope, shopId, code])
+}
+
+model JournalEntry {
+  id         String              @id @default(uuid())
+  scope      FiscalRuleScope
+  shopId     String?
+  shop       Shop?               @relation(fields: [shopId], references: [id])
+  journalId  String
+  journal    Journal             @relation(fields: [journalId], references: [id])
+  entryDate  DateTime
+  label      String
+  sourceType JournalEntrySource
+  sourceId   String?             // id de PosSale/ShopOrder/Expense/Purchase/Invoice — null si MANUAL
+  createdAt  DateTime            @default(now())
+
+  lines JournalLine[]
+
+  // Empêche une double comptabilisation de la même opération source — des
+  // écritures MANUAL (sourceId = null) ne se bloquent jamais entre elles
+  // (NULL n'entre jamais en conflit avec un index unique Postgres).
+  @@unique([scope, shopId, sourceType, sourceId])
+  @@index([scope, shopId, entryDate])
+}
+
+model JournalLine {
+  id      String  @id @default(uuid())
+  entryId String
+  entry   JournalEntry @relation(fields: [entryId], references: [id])
+  accountId String
+  account   Account    @relation(fields: [accountId], references: [id])
+  debit   Decimal @default(0) @db.Decimal(12, 2)
+  credit  Decimal @default(0) @db.Decimal(12, 2)
+  label   String?
+
+  @@index([entryId])
+  @@index([accountId])
+}
+```
+
+Toute écriture (`JournalEntry` + ses `JournalLine`) est créée dans une seule
+transaction Prisma, avec un contrôle systématique **avant insertion** :
+somme des débits = somme des crédits de l'écriture, sinon l'opération est
+rejetée (`InternalServerErrorException`) plutôt que d'enregistrer une
+écriture déséquilibrée — aucune exception à cette règle, y compris pour les
+écritures générées automatiquement.
+
+### 9.2. Plan comptable minimal seedé (par boutique, et séparément pour ELEGANZ)
+
+Comptes SYSCOHADA révisé réellement utilisés par les règles de
+comptabilisation ci-dessous (liste volontairement courte — un compte n'est
+créé que s'il sert à une écriture réelle générée par le code, jamais pour
+« faire complet ») :
+
+| Code | Libellé | Sens normal |
+|------|---------|--------------|
+| 5711 | Caisse USD | Débit |
+| 5712 | Caisse CDF | Débit |
+| 411  | Clients (créances, dont créances Marketplace à recevoir de la plateforme) | Débit |
+| 401  | Fournisseurs (dettes) | Crédit |
+| 601  | Achats de marchandises | Débit |
+| 6220 | Charges de fonctionnement | Débit |
+| 6221 | Charges administratives | Débit |
+| 6222 | Charges commerciales | Débit |
+| 661  | Charges de personnel | Débit |
+| 641  | Impôts et taxes | Débit |
+| 671  | Charges financières | Débit |
+| 701  | Ventes de marchandises (caisse) | Crédit |
+| 7012 | Ventes Marketplace | Crédit |
+
+Côté ELEGANZ (`scope=PLATFORM`), un plan séparé et plus court : `5711`/`5712`
+(trésorerie ELEGANZ), `411` (sommes dues par les boutiques, non utilisé tant
+qu'aucune facture n'est en retard), `706` (produits des abonnements et
+services, alimenté par `Invoice`/`DriverInvoice`/`ComptableInvoice` réglées).
+**Aucun compte de type « sommes à reverser aux vendeurs » n'est alimenté
+automatiquement** : la commission Marketplace (`ShopOrder.commissionAmount`)
+n'est toujours pas calculée (§2 point 2), donc aucune écriture ne doit
+inventer un montant de sommes collectées pour compte de tiers — ce point
+reste listé au §7 (états financiers, trésorerie réelle) tant que la
+commission elle-même n'est pas implémentée.
+
+Le seed (`AccountingSeedService.ensureShopChartOfAccounts(shopId)` /
+`ensurePlatformChartOfAccounts()`) est **idempotent** et appelé paresseusement
+avant la première comptabilisation d'une boutique (`upsert` sur
+`[scope, shopId, code]`) plutôt que par une migration de données — une
+boutique déjà existante reçoit son plan comptable à sa première opération
+comptabilisée, sans script de rattrapage distinct à exécuter.
+
+### 9.3. Règles de comptabilisation automatique (`AccountingService`)
+
+Déclenchée **après** l'opération métier existante (jamais en réécrivant
+l'historique), avec l'écriture gardée par l'unicité `[scope, shopId,
+sourceType, sourceId]` ci-dessus — appeler deux fois la comptabilisation
+d'une même vente ne crée jamais deux écritures.
+
+- **`PosSale`** (vente caisse, statut `COMPLETED`) : Débit Caisse (5711 ou
+  5712 selon `PosSale.currency`) du montant `totalAmount`, Crédit `701`. Le
+  commentaire du modèle `PosSaleLine` rappelle que l'argent est réellement
+  encaissé à la caisse — pas de créance client ici.
+- **`Expense`** : Débit le compte de charge correspondant au groupe de la
+  catégorie (mapping statique des 6 familles du §3.3 vers 6220/6221/6222/
+  661/641/671), Crédit Caisse (5711/5712 selon `Expense.currency`) — une
+  charge est supposée payée immédiatement, cohérent avec l'absence de notion
+  de « charge à payer » dans le schéma actuel (limite documentée, pas
+  comblée ici).
+- **`Purchase`** : Débit `601`, Crédit `401` si `Purchase.onCredit` (champ
+  ajouté cette phase — jusqu'ici `onCredit` n'existait que comme paramètre
+  transitoire du DTO, jamais conservé ; voir §9.4), sinon Crédit Caisse. Les
+  achats ne portent pas de devise dans le schéma actuel (`Purchase.amount`
+  sans `currency`) — limite déjà connue, non comblée ici ; la comptabilisation
+  suppose USD par défaut comme le reste du module avant l'ajout de
+  `Expense.currency`, et l'écran correspondant le rappelle.
+- **`ShopOrder`** (commande Marketplace) : comptabilisée **une seule fois**,
+  au passage à `RECEIVED_CONFIRMED` ou `CLOSED` (réception confirmée) : Débit
+  `411` (créance envers la plateforme — la boutique a vendu mais rien ne
+  modélise encore le reversement réel des fonds par ELEGANZ), Crédit `7012`
+  du `subtotal`. **Limite assumée et documentée** : rien ne vient
+  automatiquement solder ce compte `411` à la réception effective des fonds,
+  puisqu'aucun mécanisme de reversement réel n'existe encore (voir §7,
+  « Compte de trésorerie multidevise réel ») — la créance reste donc ouverte
+  indéfiniment dans le grand livre jusqu'à ce qu'un vrai flux de reversement
+  soit modélisé. Ce n'est pas un bug caché : c'est documenté ici et redit
+  dans l'écran grand livre/balance.
+- **`Invoice`/`DriverInvoice`/`ComptableInvoice`** (scope PLATFORM, revenu
+  ELEGANZ) : comptabilisées au passage à `status=PAID` uniquement (jamais à
+  la facturation) : Débit Caisse ELEGANZ, Crédit `706`.
+
+Aucune règle de TVA n'écrit automatiquement dans `445` : la bibliothèque de
+règles fiscales (§3.2) n'a toujours pas de moteur de calcul réel (§3.2, note
+sur la fonction de simulation), donc aucune écriture fiscale n'est générée
+tant que ce calcul n'existe pas — afficher une TVA automatique inventée
+serait exactement l'erreur que le prompt interdit.
+
+### 9.4. Petit complément de schéma lié (`Purchase.onCredit`)
+
+`Purchase.onCredit Boolean @default(false)` est ajouté au modèle existant
+(champ manquant jusqu'ici : `SuppliersService.recordPurchase` recevait déjà
+`dto.onCredit` mais ne le conservait pas sur l'enregistrement, seulement sur
+`Supplier.balanceOwed` de façon globale — voir §2 point 3, qui reste
+partiellement vrai : toujours aucune ligne de paiement échelonné, mais
+chaque achat sait désormais s'il a été fait à crédit). Changement additif,
+non destructif : les achats déjà enregistrés reçoivent `false` par défaut
+(hypothèse "payé" pour l'historique, la plus sûre pour ne pas créer de dette
+fournisseur rétroactive inventée).
+
+### 9.5. API et écrans
+
+- `GET /shops/:shopId/finance/journal?from=&to=&journal=` — journal général
+  (toutes écritures, triées par date), gardé par `ShopMembershipGuard`.
+- `GET /shops/:shopId/finance/grand-livre?compte=` — mouvements d'un compte
+  + solde cumulé.
+- `GET /shops/:shopId/finance/balance?from=&to=` — balance (tous comptes,
+  total débit/crédit/solde), avec un contrôle de cohérence affiché (somme
+  débit = somme crédit sur toute la période, sinon un signal d'anomalie
+  visible plutôt que masqué).
+- Mêmes trois routes en miroir sous `/admin/finance/...` (scope PLATFORM
+  uniquement, même séparation stricte qu'au §3.2/§5/§6).
+- Écran `/finance/comptabilite` (et son miroir `/admin/finance/comptabilite`)
+  présente le journal, un sélecteur de compte pour le grand livre, et la
+  balance — toujours avec la mention « généré automatiquement à partir des
+  opérations enregistrées, ne remplace pas une comptabilité tenue par un
+  professionnel » (cohérent avec le statut `CONFIGUREE` jamais présenté comme
+  `VERIFIEE` au §3.2).
+
+### 9.6. Ce qui reste déclaré non comblé par ce chantier
+
+Le §7 ci-dessus reste la référence : ce chantier livre uniquement le moteur
+d'écritures (journal/grand livre/balance réels), pas la clôture, pas les
+états financiers réglementaires (bilan/compte de résultat/TFT — qui
+nécessiteront des règles de regroupement par classe de compte, non
+construites ici), pas de verrouillage d'exercice, pas de rapprochement
+bancaire. La créance Marketplace (`411`) qui ne se solde jamais
+automatiquement (§9.3) est une limite connue et assumée, pas une régression
+silencieuse.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après
