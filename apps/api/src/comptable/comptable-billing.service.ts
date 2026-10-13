@@ -1,8 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ComptableBillingStatus } from "@eleganz/database";
 import { AdminSettingsService } from "../admin-settings/admin-settings.service";
-import { AccountingService } from "../finance/accounting.service";
 
 /**
  * Facturation d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) — même
@@ -13,12 +12,9 @@ import { AccountingService } from "../finance/accounting.service";
  */
 @Injectable()
 export class ComptableBillingService {
-  private readonly logger = new Logger(ComptableBillingService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminSettingsService: AdminSettingsService,
-    private readonly accounting: AccountingService,
   ) {}
 
   async processTrialExpirations() {
@@ -117,19 +113,13 @@ export class ComptableBillingService {
     const renewsAt = new Date();
     renewsAt.setMonth(renewsAt.getMonth() + (sub.plan === "YEARLY" ? 12 : 1));
 
-    const resultats = await this.prisma.$transaction([
+    return this.prisma.$transaction([
       this.prisma.comptableInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.comptableSubscription.update({
         where: { id: invoice.subscriptionId },
         data: { billingStatus: ComptableBillingStatus.ACTIVE, renewsAt },
       }),
     ]);
-
-    await this.accounting.postPlatformInvoicePaid(resultats[0], "comptableInvoice").catch((err) => {
-      this.logger.error(`Comptabilisation de la facture Mon Comptable ${invoiceId} échouée`, err);
-    });
-
-    return resultats;
   }
 
   listInvoices(subscriptionId: string) {

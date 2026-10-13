@@ -1,17 +1,11 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateSaleDto } from "./dto/create-sale.dto";
 import { PaymentMethod, StockMovementType } from "@eleganz/database";
-import { AccountingService } from "../finance/accounting.service";
 
 @Injectable()
 export class PosService {
-  private readonly logger = new Logger(PosService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly accounting: AccountingService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Vente de caisse transactionnelle : décompte du stock et enregistrement de
@@ -33,7 +27,7 @@ export class PosService {
     dto: CreateSaleDto & { cashierId: string; clientOperationId?: string },
     options: { allowNegativeStock?: boolean } = {},
   ) {
-    const sale = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       let total = 0;
       const discrepancyByLineIndex = new Set<number>();
 
@@ -124,16 +118,6 @@ export class PosService {
 
       return sale;
     });
-
-    // Comptabilisation après la transaction métier (jamais avant, jamais en
-    // la réécrivant) — voir docs/ARCHITECTURE_FINANCE.md §8bis. Une erreur
-    // de comptabilisation ne doit jamais annuler une vente dont l'argent a
-    // réellement été encaissé : elle est journalisée, pas propagée.
-    await this.accounting.postPosSale(sale).catch((err) => {
-      this.logger.error(`Comptabilisation de la vente ${sale.id} échouée`, err);
-    });
-
-    return sale;
   }
 
   /**

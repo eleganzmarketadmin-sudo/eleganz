@@ -1,8 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { OrderStatus, StockMovementType } from "@eleganz/database";
-import { AccountingService } from "../finance/accounting.service";
 
 // Transitions légales du statut d'une sous-commande (prompt §42). Toute
 // transition hors de cette carte est refusée — évite qu'un statut saute une
@@ -29,12 +28,7 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 @Injectable()
 export class OrdersService {
-  private readonly logger = new Logger(OrdersService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly accounting: AccountingService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Commande multivendeurs (prompt §48) : une seule commande client,
@@ -204,15 +198,6 @@ export class OrdersService {
         data: { shopOrderId, status: OrderStatus.RECEIVED_CONFIRMED },
       }),
     ]);
-
-    // Comptabilisée une seule fois, à la réception confirmée (voir
-    // docs/ARCHITECTURE_FINANCE.md §8bis.3) — gardée par l'unicité
-    // [scope, shopId, sourceType, sourceId] côté AccountingService, donc un
-    // retour en arrière puis une nouvelle confirmation ne duplique rien.
-    await this.accounting.postShopOrderReceived(updated, shopOrder.order.currency).catch((err) => {
-      this.logger.error(`Comptabilisation de la commande ${shopOrderId} échouée`, err);
-    });
-
     return updated;
   }
 }
