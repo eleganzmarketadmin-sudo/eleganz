@@ -659,6 +659,39 @@ chaque écran. Construire une variante strictement lecture seule de chaque
 l'essentiel (aucune écriture possible, aucune donnée hors Finance visible)
 est garanti côté serveur, qui est la seule barrière qui compte réellement.
 
+## 8septies. Simulation fiscale (13 oct. 2026, Phase 7)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6.
+Aucune nouvelle table — lecture des `FiscalRule` déjà configurées (statut
+`CONFIGUREE` ou `VERIFIEE`, jamais `PROPOSEE`/`OBSOLETE`) croisée avec le
+compte de résultat déjà construit en Phase 3 (§8ter).
+
+### 9sexies.1. Ce qui est construit
+
+- `FiscalSimulationService.simulerShop(shopId, from, to)` : pour chaque
+  règle fiscale active sur la période, tente de lire `rateOrFormula` comme
+  un pourcentage simple (`"16%"`) ; **si ce n'est pas un pourcentage simple**
+  (texte libre, formule complexe), la règle est listée à part comme « non
+  simulable automatiquement » avec le motif — jamais devinée, jamais
+  ignorée silencieusement.
+- Base appliquée selon la catégorie de la règle : TVA → chiffre d'affaires
+  (produits de la période) ; Impôt → résultat net si positif, 0 sinon (on
+  ne simule jamais un impôt sur une perte) ; Retenue → charges de personnel
+  (compte 661) ; Contribution/Autre → chiffre d'affaires par défaut,
+  explicitement marqué comme base approximative.
+- Route `GET /shops/:shopId/finance/simulation-fiscale?from=&to=`. Nouvel
+  onglet **Simulation fiscale** dans `/finance` (ELEGANZ Gestion) :
+  période, tableau des lignes simulées, total estimé, et la liste des
+  règles non simulables automatiquement. Avertissement explicite : jamais
+  une déclaration officielle.
+
+### 9sexies.2. Ce que ce chantier ne livre pas
+
+Pas de miroir ELEGANZ (simulation fiscale de la plateforme elle-même, non
+demandée à cette phase) ; pas de parsing de formules complexes (barèmes
+progressifs, forfaits, plafonds) — seul un taux pourcentage simple est
+simulé automatiquement ; pas de génération de déclaration électronique.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après

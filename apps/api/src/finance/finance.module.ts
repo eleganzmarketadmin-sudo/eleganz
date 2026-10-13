@@ -11,6 +11,7 @@ import { AccountingQueryService } from "./accounting-query.service";
 import { AssetsService } from "./assets.service";
 import { AssetsController } from "./assets.controller";
 import { ClosureService } from "./closure.service";
+import { FiscalSimulationService } from "./fiscal-simulation.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -29,6 +30,7 @@ import { ClosureService } from "./closure.service";
     AccountingQueryService,
     AssetsService,
     ClosureService,
+    FiscalSimulationService,
   ],
   controllers: [FinanceController, AdminFinanceController, AssetsController],
   exports: [AccountingService],

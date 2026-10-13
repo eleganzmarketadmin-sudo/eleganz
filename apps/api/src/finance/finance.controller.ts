@@ -3,6 +3,7 @@ import { FinanceService } from "./finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
+import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -27,6 +28,7 @@ export class FinanceController {
     private readonly fiscalRulesService: FiscalRulesService,
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
+    private readonly fiscalSimulation: FiscalSimulationService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -101,6 +103,14 @@ export class FinanceController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
   reouvrirPeriode(@Param("shopId") shopId: string, @Param("periode") periode: string) {
     return this.closureService.reopen(FiscalRuleScope.SHOP, shopId, periode);
+  }
+
+  // Simulation fiscale (docs/ARCHITECTURE_FINANCE.md §8septies) — jamais
+  // une déclaration officielle, toujours un ordre de grandeur.
+  @Get("simulation-fiscale")
+  simulationFiscale(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.fiscalSimulation.simulerShop(shopId, fromDate, toDate);
   }
 
   @Get("fiscal-identity")
