@@ -48,6 +48,14 @@ model PlatformSettings {
   driverMonthlyFee   Decimal  @default(5)  @db.Decimal(12, 2)
   driverFreeMonths   Int      @default(8)
 
+  // Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) —
+  // 6 mois gratuits à compter de la première activation effective, puis
+  // 1 $/mois ou 10 $/an, entièrement paramétrable depuis le Centre de
+  // pilotage sans redéploiement.
+  comptableMonthlyFee Decimal @default(1)  @db.Decimal(12, 2)
+  comptableYearlyFee  Decimal @default(10) @db.Decimal(12, 2)
+  comptableFreeMonths Int     @default(6)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -102,6 +110,8 @@ model User {
   addresses       Address[]
   auditLogs       AuditLog[]
   reviews         Review[]
+  comptableSubscription  ComptableSubscription?
+  comptableActivities    ComptableActivity[]
 }
 
 model Address {
@@ -687,6 +697,237 @@ model DriverInvoice {
   status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
   kind      String   // "opening_fee" | "subscription"
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// ELEGANZ MON COMPTABLE — carnet de gestion quotidienne (prompt du
+// 13 oct. 2026, mission complémentaire). Module fonctionnellement autonome
+// (aucune boutique ni catalogue requis) mais rattaché au compte ELEGANZ
+// commun : chaque modèle ci-dessous part de `User`, jamais de `Shop`. Les
+// montants restent toujours dans leur devise d'origine (CDF ou USD) — on ne
+// fusionne jamais deux devises dans un même total sans conversion explicite
+// (prompt §5), d'où `ComptableCurrency` répété sur chaque ligne plutôt
+// qu'un total unique par activité.
+// ---------------------------------------------------------------------------
+
+enum ComptableCurrency {
+  CDF
+  USD
+}
+
+enum ComptableActivityCategory {
+  COMMERCE
+  LOCATION
+  VEHICULE
+  SERVICE
+  AUTRE
+}
+
+model ComptableActivity {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  name       String
+  category   ComptableActivityCategory
+  archived   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  entries           ComptableEntry[]
+  debts             ComptableDebt[]
+  rentalUnits       ComptableRentalUnit[]
+  workerRemittances ComptableWorkerRemittance[]
+}
+
+// Sens du flux — une vente et un emprunt reçu sont tous deux des ENTREE,
+// mais ne doivent jamais être confondus dans l'analyse (prompt §6) : c'est
+// `category`, pas `direction`, qui porte cette distinction.
+enum ComptableFlowDirection {
+  ENTREE
+  SORTIE
+}
+
+enum ComptableFlowCategory {
+  // Entrées
+  VENTE
+  PRESTATION
+  LOYER_RECU
+  REMBOURSEMENT_CREANCE
+  APPORT_PERSONNEL
+  EMPRUNT_RECU
+  AUTRE_ENTREE
+  // Sorties
+  ACHAT
+  TRANSPORT
+  LOYER_PAYE
+  ENTRETIEN
+  REPARATION
+  DEPENSE_FONCTIONNEMENT
+  REMBOURSEMENT_DETTE
+  AUTRE_SORTIE
+}
+
+// Une ligne de carnet (vente, dépense, loyer reçu...). La saisie simplifiée
+// à une ligne par jour (prompt §5) crée jusqu'à 4 lignes ici (vente CDF,
+// vente USD, dépense CDF, dépense USD) plutôt qu'un format dénormalisé —
+// garde les statistiques par devise/catégorie fiables sans réécrire de
+// logique d'agrégation séparée pour la saisie rapide.
+model ComptableEntry {
+  id          String   @id @default(uuid())
+  activityId  String
+  activity    ComptableActivity @relation(fields: [activityId], references: [id])
+  date        DateTime // date réelle de l'opération (saisie rétroactive permise, prompt §5)
+  direction   ComptableFlowDirection
+  category    ComptableFlowCategory
+  currency    ComptableCurrency
+  amount      Decimal  @db.Decimal(14, 2)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ComptableDebtType {
+  DETTE   // ce que je dois payer
+  CREANCE // ce que d'autres me doivent
+  EMPRUNT // somme empruntée, avec ses propres modalités
+}
+
+model ComptableDebt {
+  id               String   @id @default(uuid())
+  activityId       String
+  activity         ComptableActivity @relation(fields: [activityId], references: [id])
+  type             ComptableDebtType
+  counterpartyName String
+  description      String?
+  amount           Decimal  @db.Decimal(14, 2)
+  currency         ComptableCurrency
+  startDate        DateTime @default(now())
+  dueDate          DateTime?
+  settled          Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  payments ComptableDebtPayment[]
+}
+
+model ComptableDebtPayment {
+  id      String   @id @default(uuid())
+  debtId  String
+  debt    ComptableDebt @relation(fields: [debtId], references: [id])
+  amount  Decimal  @db.Decimal(14, 2)
+  paidAt  DateTime @default(now())
+  note    String?
+}
+
+enum ComptableRentFrequency {
+  MENSUEL
+  TRIMESTRIEL
+  ANNUEL
+  PERSONNALISE
+}
+
+model ComptableRentalUnit {
+  id            String   @id @default(uuid())
+  activityId    String
+  activity      ComptableActivity @relation(fields: [activityId], references: [id])
+  label         String // désignation (ex. "Appartement 2, Lemba")
+  location      String?
+  tenantName    String?
+  rentAmount    Decimal  @db.Decimal(14, 2)
+  currency      ComptableCurrency
+  frequency     ComptableRentFrequency @default(MENSUEL)
+  leaseStart    DateTime?
+  leaseEnd      DateTime?
+  // Garantie locative — distincte des loyers encaissés (prompt §8), jamais
+  // comptée dans les montants reçus/attendus d'une période.
+  depositAmount Decimal? @db.Decimal(14, 2)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  payments ComptableRentPayment[]
+  expenses ComptableRentExpense[]
+}
+
+model ComptableRentPayment {
+  id             String   @id @default(uuid())
+  unitId         String
+  unit           ComptableRentalUnit @relation(fields: [unitId], references: [id])
+  periodLabel    String // ex. "Octobre 2026"
+  expectedAmount Decimal  @db.Decimal(14, 2)
+  receivedAmount Decimal  @default(0) @db.Decimal(14, 2)
+  dueDate        DateTime
+  paidAt         DateTime?
+  note           String?
+  createdAt      DateTime @default(now())
+}
+
+model ComptableRentExpense {
+  id         String   @id @default(uuid())
+  unitId     String
+  unit       ComptableRentalUnit @relation(fields: [unitId], references: [id])
+  category   String // entretien | réparation | travaux | gardiennage | eau | électricité | autre
+  amount     Decimal  @db.Decimal(14, 2)
+  currency   ComptableCurrency
+  date       DateTime @default(now())
+  note       String?
+}
+
+// Suivi des versements d'un travailleur confié à une activité (prompt §9) —
+// `paidAmount` est ce que le travailleur a réellement remis au propriétaire ;
+// `declaredRevenue`/`declaredExpenses` restent déclaratifs, jamais vérifiés
+// automatiquement. Un transfert entre la caisse du travailleur et celle du
+// propriétaire reste ici, hors de ComptableEntry, pour ne jamais être compté
+// deux fois comme un revenu (prompt §9).
+model ComptableWorkerRemittance {
+  id               String   @id @default(uuid())
+  activityId       String
+  activity         ComptableActivity @relation(fields: [activityId], references: [id])
+  workerName       String
+  periodLabel      String
+  expectedAmount   Decimal? @db.Decimal(14, 2)
+  declaredRevenue  Decimal? @db.Decimal(14, 2)
+  declaredExpenses Decimal? @db.Decimal(14, 2)
+  paidAmount       Decimal  @default(0) @db.Decimal(14, 2)
+  currency         ComptableCurrency
+  dueDate          DateTime?
+  settledAt        DateTime?
+  note             String?
+  createdAt        DateTime @default(now())
+}
+
+enum ComptableBillingStatus {
+  FREE_PERIOD
+  PAYMENT_DUE
+  ACTIVE
+  SUSPENDED
+}
+
+// Un seul abonnement Mon Comptable par compte ELEGANZ (prompt §3 : compte
+// commun), partagé par toutes les activités de l'utilisateur — jamais un
+// abonnement par activité. `freeTrialStartedAt` n'est posé qu'à la première
+// activation effective (prompt §14), pas à la création du compte ELEGANZ.
+model ComptableSubscription {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  billingStatus      ComptableBillingStatus @default(FREE_PERIOD)
+  activatedAt        DateTime @default(now())
+  freeTrialStartedAt DateTime @default(now())
+  plan               String? // "MONTHLY" | "YEARLY" — choisi à la première échéance
+  renewsAt           DateTime?
+  createdAt          DateTime @default(now())
+
+  invoices ComptableInvoice[]
+}
+
+model ComptableInvoice {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  subscription   ComptableSubscription @relation(fields: [subscriptionId], references: [id])
+  amount         Decimal  @db.Decimal(12, 2)
+  dueAt          DateTime
+  paidAt         DateTime?
+  status         String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
+  kind           String   // "monthly" | "yearly"
+  createdAt      DateTime @default(now())
 }
 
 model AiCreditWallet {
