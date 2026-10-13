@@ -117,6 +117,7 @@ const fr: Dictionnaire = {
   dossierFinancement_telecharger: "Télécharger le dossier (PDF)",
   dossierFinancement_avertissement:
     "Ce document n'est pas une attestation financière certifiée. Il résume vos chiffres déclarés dans Mon Comptable.",
+  horsLigne_enAttente: "saisie(s) en attente de synchronisation",
   periode_aujourdhui: "Aujourd'hui",
   periode_semaine: "Cette semaine",
   periode_mois: "Ce mois-ci",
@@ -221,6 +222,7 @@ const en: Dictionnaire = {
   dossierFinancement_telecharger: "Download the file (PDF)",
   dossierFinancement_avertissement:
     "This document is not a certified financial statement. It summarizes the figures you declared in My Accountant.",
+  horsLigne_enAttente: "entr(y/ies) waiting to sync",
   periode_aujourdhui: "Today",
   periode_semaine: "This week",
   periode_mois: "This month",
@@ -323,6 +325,7 @@ const es: Dictionnaire = {
   dossierFinancement_telecharger: "Descargar el expediente (PDF)",
   dossierFinancement_avertissement:
     "Este documento no es un estado financiero certificado. Resume las cifras que declaraste en Mi Contador.",
+  horsLigne_enAttente: "registro(s) pendiente(s) de sincronización",
   periode_aujourdhui: "Hoy",
   periode_semaine: "Esta semana",
   periode_mois: "Este mes",
@@ -423,6 +426,7 @@ const ar: Dictionnaire = {
   chiffres_comparaison: "مقارنة حسب النشاط",
   dossierFinancement_telecharger: "تحميل الملف (PDF)",
   dossierFinancement_avertissement: "هذا المستند ليس بيانًا ماليًا معتمدًا. وهو يلخص الأرقام التي صرّحت بها في محاسبي.",
+  horsLigne_enAttente: "عملية (عمليات) بانتظار المزامنة",
   periode_aujourdhui: "اليوم",
   periode_semaine: "هذا الأسبوع",
   periode_mois: "هذا الشهر",
@@ -525,6 +529,7 @@ const pt: Dictionnaire = {
   dossierFinancement_telecharger: "Baixar o dossiê (PDF)",
   dossierFinancement_avertissement:
     "Este documento não é uma demonstração financeira certificada. Ele resume os números que você declarou no Meu Contador.",
+  horsLigne_enAttente: "lançamento(s) aguardando sincronização",
   periode_aujourdhui: "Hoje",
   periode_semaine: "Esta semana",
   periode_mois: "Este mês",
@@ -626,6 +631,7 @@ const sw: Dictionnaire = {
   dossierFinancement_telecharger: "Pakua faili (PDF)",
   dossierFinancement_avertissement:
     "Hati hii si taarifa ya kifedha iliyothibitishwa. Inafupisha namba ulizotangaza katika Mhasibu Wangu.",
+  horsLigne_enAttente: "kipengele/vipengele vinavyosubiri kusawazishwa",
   periode_aujourdhui: "Leo",
   periode_semaine: "Wiki hii",
   periode_mois: "Mwezi huu",

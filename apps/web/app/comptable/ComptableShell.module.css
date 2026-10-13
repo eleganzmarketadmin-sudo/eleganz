@@ -45,6 +45,17 @@
   border-color: #fff;
 }
 
+.pendingSync {
+  background: var(--color-or, #d4a017);
+  color: var(--color-encre-fixe);
+  border: none;
+  padding: var(--espace-2) var(--espace-3);
+  min-height: var(--touche-min);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
 .bandeauRevue {
   background: #fff3cd;
   color: #664d03;

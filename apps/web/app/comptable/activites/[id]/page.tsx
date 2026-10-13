@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { ComptableShell } from "../../ComptableShell";
 import { api, ApiError } from "../../../lib/api";
 import { formatMoney, formatDate } from "../../../lib/money";
+import { ajouterOperation } from "../../../lib/offline-queue";
+import { useOfflineSync } from "../../../lib/offline-sync";
 import styles from "./page.module.css";
 
 interface Activite {
@@ -100,6 +102,7 @@ function aujourdHui(): string {
 }
 
 function ActiviteContenu({ activityId }: { activityId: string }) {
+  const { rafraichirCompteur, synchroniser } = useOfflineSync();
   const [activite, setActivite] = useState<Activite | null>(null);
   const [entrees, setEntrees] = useState<Entree[]>([]);
   const [dettes, setDettes] = useState<Dette[]>([]);
@@ -174,16 +177,17 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       return;
     }
     setEnCours(true);
+    const payload = {
+      activityId,
+      date,
+      salesCdf: ventesCdf ? Number(ventesCdf) : undefined,
+      salesUsd: ventesUsd ? Number(ventesUsd) : undefined,
+      expensesCdf: depensesCdf ? Number(depensesCdf) : undefined,
+      expensesUsd: depensesUsd ? Number(depensesUsd) : undefined,
+      note: observation.trim() || undefined,
+    };
     try {
-      await api.post("/comptable/entries/quick", {
-        activityId,
-        date,
-        salesCdf: ventesCdf ? Number(ventesCdf) : undefined,
-        salesUsd: ventesUsd ? Number(ventesUsd) : undefined,
-        expensesCdf: depensesCdf ? Number(depensesCdf) : undefined,
-        expensesUsd: depensesUsd ? Number(depensesUsd) : undefined,
-        note: observation.trim() || undefined,
-      });
+      await api.post("/comptable/entries/quick", payload);
       setVentesCdf("");
       setVentesUsd("");
       setDepensesCdf("");
@@ -191,8 +195,42 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       setObservation("");
       setMessage("Saisie enregistrée.");
       recharger();
+      return;
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      // statusCode === 0 : serveur inatteignable (coupure réseau), pas un
+      // refus — on met la saisie en file d'attente plutôt que de la perdre
+      // (réponse du 13 oct. 2026, point 2 : "saisie différée synchronisée au
+      // retour du réseau"), même principe que la Caisse hors-ligne
+      // (docs/ARCHITECTURE_HORS_LIGNE.md).
+      if (err instanceof ApiError && err.statusCode === 0) {
+        try {
+          const clientOperationId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          await ajouterOperation({
+            clientOperationId,
+            type: "COMPTABLE_QUICK_ENTRY",
+            payload,
+            createdAtClient: new Date().toISOString(),
+            tentatives: 0,
+          });
+          await rafraichirCompteur();
+          setVentesCdf("");
+          setVentesUsd("");
+          setDepensesCdf("");
+          setDepensesUsd("");
+          setObservation("");
+          setMessage("Saisie enregistrée hors-ligne — elle se synchronisera automatiquement dès le retour du réseau.");
+          synchroniser();
+        } catch {
+          setErreur(
+            "Pas de réseau et la saisie n'a pas pu être mise en attente localement — notez-la manuellement.",
+          );
+        }
+      } else {
+        setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      }
     } finally {
       setEnCours(false);
     }

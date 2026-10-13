@@ -7,10 +7,19 @@
  * de ventes en attente.
  */
 
+// "POS_SALE" : vente Caisse (shopId requis, voir (gestion)/caisse/page.tsx).
+// "COMPTABLE_QUICK_ENTRY" : saisie rapide Mon Comptable (prompt du 13 oct.
+// 2026, point 2 — "saisie différée synchronisée au retour du réseau" ; pas
+// de shopId, l'activité est dans le payload et le compte authentifié suffit
+// à la retrouver côté serveur, voir comptable/activites/[id]/page.tsx).
+export type TypeOperationEnAttente = "POS_SALE" | "COMPTABLE_QUICK_ENTRY";
+
 export interface OperationEnAttente {
   clientOperationId: string;
-  shopId: string;
-  type: "POS_SALE";
+  // Requis seulement pour POS_SALE — absent pour les types qui n'ont pas
+  // de notion de boutique (voir ci-dessus).
+  shopId?: string;
+  type: TypeOperationEnAttente;
   payload: unknown;
   createdAtClient: string;
   tentatives: number;

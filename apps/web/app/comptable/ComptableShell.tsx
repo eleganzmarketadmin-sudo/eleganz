@@ -9,6 +9,7 @@ import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { LocaleProvider, useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
+import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
 import styles from "./ComptableShell.module.css";
 
 /**
@@ -22,11 +23,19 @@ import styles from "./ComptableShell.module.css";
  *
  * Enveloppé dans LocaleProvider (prompt §21 + réponse du 13 oct. 2026) :
  * choix de langue pour les menus/titres/boutons, mémorisé par navigateur.
+ *
+ * Enveloppé aussi dans OfflineSyncProvider (réponse du 13 oct. 2026, point 2 :
+ * "saisie différée synchronisée au retour du réseau") — même contexte déjà
+ * utilisé côté Caisse (apps/web/app/(gestion)/layout.tsx), ici pour que la
+ * saisie rapide du Carnet puisse se mettre en file d'attente hors-ligne et
+ * se synchroniser automatiquement, voir activites/[id]/page.tsx.
  */
 export function ComptableShell({ children }: { children: React.ReactNode }) {
   return (
     <LocaleProvider>
-      <ComptableShellInterieur>{children}</ComptableShellInterieur>
+      <OfflineSyncProvider>
+        <ComptableShellInterieur>{children}</ComptableShellInterieur>
+      </OfflineSyncProvider>
     </LocaleProvider>
   );
 }
@@ -36,6 +45,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, reviewRecommended } = useLocale();
+  const { nombreEnAttente, synchroniser } = useOfflineSync();
 
   useEffect(() => {
     if (!loading && !user) router.replace("/marketplace/compte?retour=/comptable");
@@ -59,6 +69,15 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>{t("titre_accueil")}</span>
         </span>
         <div className={styles.enteteActions}>
+          {nombreEnAttente > 0 && (
+            <button
+              className={styles.pendingSync}
+              onClick={synchroniser}
+              title="Cliquer pour tenter de synchroniser maintenant"
+            >
+              {nombreEnAttente} {t("horsLigne_enAttente")}
+            </button>
+          )}
           <LanguageSwitcher />
           <ThemeToggle clair />
           <button

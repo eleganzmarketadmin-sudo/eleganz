@@ -9,6 +9,21 @@ import {
   type OperationEnAttente,
 } from "./offline-queue";
 
+/**
+ * Chaque type d'opération en attente a son propre chemin de synchronisation
+ * côté serveur — voir offline-queue.ts pour la liste des types. Ajouter un
+ * type ici = ajouter une entrée dans cette table, rien d'autre à changer
+ * dans la boucle de synchronisation ci-dessous.
+ */
+function cheminSynchronisation(op: OperationEnAttente): string {
+  switch (op.type) {
+    case "POS_SALE":
+      return `/shops/${op.shopId}/pos/sales/sync`;
+    case "COMPTABLE_QUICK_ENTRY":
+      return "/comptable/entries/quick/sync";
+  }
+}
+
 interface OfflineSyncContextValue {
   nombreEnAttente: number;
   synchroniser: () => Promise<void>;
@@ -46,7 +61,7 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
 
       for (const op of ops) {
         try {
-          await api.post(`/shops/${op.shopId}/pos/sales/sync`, {
+          await api.post(cheminSynchronisation(op), {
             ...(op.payload as Record<string, unknown>),
             clientOperationId: op.clientOperationId,
           });
