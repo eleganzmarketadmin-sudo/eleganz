@@ -250,6 +250,7 @@ model Shop {
   journals       Journal[]
   journalEntries JournalEntry[]
   assets         Asset[]
+  accountingClosures AccountingClosure[]
 }
 
 model ShopStaff {
@@ -1295,4 +1296,27 @@ model AssetDepreciation {
   createdAt  DateTime @default(now())
 
   @@unique([assetId, periodDate])
+}
+
+// Assistant de clôture de période (13 oct. 2026, Finance & Comptabilité
+// Phase 5) — voir docs/ARCHITECTURE_FINANCE.md §8quinquies. La présence
+// d'une ligne pour `[scope, shopId, periodDate]` verrouille ce mois : toute
+// tentative d'écriture (AccountingService.enregistrer) dont la date tombe
+// dans un mois clôturé est refusée. `@@unique` ici sert uniquement de
+// garde-fou en base (vérifié par `findFirst` + `create`, jamais par
+// `findUnique`/`upsert` sur la clé composite — leçon déjà documentée dans
+// MAINTENANCE.md) : le champ `shopId` nullable ne pose donc aucun risque.
+model AccountingClosure {
+  id          String   @id @default(uuid())
+  scope       FiscalRuleScope
+  shopId      String?
+  shop        Shop?    @relation(fields: [shopId], references: [id])
+  periodDate  DateTime
+  closedAt    DateTime @default(now())
+  closedBy    String?
+  totalDebit  Decimal  @db.Decimal(12, 2)
+  totalCredit Decimal  @db.Decimal(12, 2)
+  resultatNet Decimal  @db.Decimal(12, 2)
+
+  @@unique([scope, shopId, periodDate])
 }
