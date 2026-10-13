@@ -69,6 +69,19 @@ export class QuickEntryDto {
   note?: string;
 }
 
+/**
+ * Saisie différée synchronisée au retour du réseau (prompt du 13 oct. 2026,
+ * point 2) — même DTO que QuickEntryDto, avec l'identifiant d'opération
+ * généré côté client avant tout appel réseau (voir apps/web/app/lib/offline-queue.ts
+ * et le même principe déjà en place pour les ventes Caisse,
+ * apps/api/src/pos/dto/create-sale.dto.ts). Permet de rejouer la
+ * synchronisation sans risque de doublon si la réponse réseau s'est perdue.
+ */
+export class SyncQuickEntryDto extends QuickEntryDto {
+  @IsString()
+  clientOperationId!: string;
+}
+
 export class CreateEntryDto {
   @IsString()
   activityId!: string;

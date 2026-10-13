@@ -812,6 +812,22 @@ model ComptableEntry {
   updatedAt   DateTime @updatedAt
 }
 
+// Marqueur d'idempotence pour la saisie différée hors-ligne de Mon Comptable
+// (prompt du 13 oct. 2026, point 2 : "saisie différée synchronisée au retour
+// du réseau") — même principe que PosSale.clientOperationId, mais sous forme
+// de ligne séparée plutôt qu'un champ sur ComptableEntry, car une seule
+// soumission de saisie rapide peut créer plusieurs ComptableEntry à la fois
+// (ventes et dépenses CDF/USD en une fois) : on ne peut pas mettre la
+// contrainte @unique sur plusieurs lignes nées de la même opération. Rejouer
+// la synchronisation avec le même clientOperationId est donc un no-op sûr
+// plutôt qu'un doublon.
+model ComptableSyncMarker {
+  id                String   @id @default(uuid())
+  clientOperationId String   @unique
+  userId            String
+  createdAt         DateTime @default(now())
+}
+
 enum ComptableDebtType {
   DETTE   // ce que je dois payer
   CREANCE // ce que d'autres me doivent

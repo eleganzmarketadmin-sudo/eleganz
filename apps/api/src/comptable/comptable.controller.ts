@@ -16,6 +16,7 @@ import {
   CreateRentalUnitDto,
   CreateWorkerRemittanceDto,
   QuickEntryDto,
+  SyncQuickEntryDto,
   RecordRentPaymentDto,
   ChoosePlanDto,
 } from "./dto/comptable.dto";
@@ -52,6 +53,13 @@ export class ComptableController {
   @Post("entries/quick")
   quickEntry(@CurrentUser() user: AuthenticatedUser, @Body() dto: QuickEntryDto) {
     return this.comptableService.quickEntry(user.id, dto);
+  }
+
+  // Saisie différée hors-ligne, synchronisée au retour du réseau (prompt du
+  // 13 oct. 2026, point 2) — même principe que /shops/:id/pos/sales/sync.
+  @Post("entries/quick/sync")
+  syncQuickEntry(@CurrentUser() user: AuthenticatedUser, @Body() dto: SyncQuickEntryDto) {
+    return this.comptableService.syncQuickEntry(user.id, dto);
   }
 
   @Post("entries")

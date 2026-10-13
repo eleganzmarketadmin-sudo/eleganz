@@ -15,6 +15,7 @@ import {
   CreateWorkerRemittanceDto,
   QuickEntryDto,
   RecordRentPaymentDto,
+  SyncQuickEntryDto,
 } from "./dto/comptable.dto";
 
 /**
@@ -59,17 +60,24 @@ export class ComptableService {
 
   // --- Carnet (entrées/sorties) ---------------------------------------
 
-  async quickEntry(userId: string, dto: QuickEntryDto) {
-    await this.getOwnedActivity(userId, dto.activityId);
-    const date = new Date(dto.date);
+  /** Construit les lignes à créer pour une saisie rapide — partagé par quickEntry() et syncQuickEntry(). */
+  private construireLignesSaisieRapide(
+    dto: QuickEntryDto,
+  ): { direction: ComptableFlowDirection; category: ComptableFlowCategory; currency: "CDF" | "USD"; amount: number }[] {
     const lignes: { direction: ComptableFlowDirection; category: ComptableFlowCategory; currency: "CDF" | "USD"; amount: number }[] = [];
-
     if (dto.salesCdf) lignes.push({ direction: "ENTREE", category: "VENTE", currency: "CDF", amount: dto.salesCdf });
     if (dto.salesUsd) lignes.push({ direction: "ENTREE", category: "VENTE", currency: "USD", amount: dto.salesUsd });
     if (dto.expensesCdf)
       lignes.push({ direction: "SORTIE", category: "DEPENSE_FONCTIONNEMENT", currency: "CDF", amount: dto.expensesCdf });
     if (dto.expensesUsd)
       lignes.push({ direction: "SORTIE", category: "DEPENSE_FONCTIONNEMENT", currency: "USD", amount: dto.expensesUsd });
+    return lignes;
+  }
+
+  async quickEntry(userId: string, dto: QuickEntryDto) {
+    await this.getOwnedActivity(userId, dto.activityId);
+    const date = new Date(dto.date);
+    const lignes = this.construireLignesSaisieRapide(dto);
 
     if (lignes.length === 0) {
       throw new BadRequestException("Indiquez au moins un montant (vente ou dépense).");
@@ -82,6 +90,39 @@ export class ComptableService {
         }),
       ),
     );
+  }
+
+  /**
+   * Saisie différée hors-ligne, synchronisée au retour du réseau (prompt du
+   * 13 oct. 2026, point 2). Idempotent sur `clientOperationId` (généré côté
+   * client avant tout appel réseau) : si cette opération a déjà été
+   * appliquée — appel rejoué après une réponse perdue en cours de route —
+   * on ne recrée rien, même principe que PosService.syncOfflineSale.
+   */
+  async syncQuickEntry(userId: string, dto: SyncQuickEntryDto) {
+    const dejaAppliquee = await this.prisma.comptableSyncMarker.findUnique({
+      where: { clientOperationId: dto.clientOperationId },
+    });
+    if (dejaAppliquee) return { alreadyApplied: true };
+
+    await this.getOwnedActivity(userId, dto.activityId);
+    const date = new Date(dto.date);
+    const lignes = this.construireLignesSaisieRapide(dto);
+
+    if (lignes.length === 0) {
+      throw new BadRequestException("Indiquez au moins un montant (vente ou dépense).");
+    }
+
+    return this.prisma.$transaction([
+      ...lignes.map((ligne) =>
+        this.prisma.comptableEntry.create({
+          data: { activityId: dto.activityId, date, note: dto.note, ...ligne },
+        }),
+      ),
+      this.prisma.comptableSyncMarker.create({
+        data: { clientOperationId: dto.clientOperationId, userId },
+      }),
+    ]);
   }
 
   async createEntry(userId: string, dto: CreateEntryDto) {
