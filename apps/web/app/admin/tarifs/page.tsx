@@ -181,6 +181,9 @@ interface PlatformSettings {
   driverOpeningFee: string;
   driverMonthlyFee: string;
   driverFreeMonths: number;
+  comptableMonthlyFee: string;
+  comptableYearlyFee: string;
+  comptableFreeMonths: number;
 }
 
 /**
@@ -301,6 +304,122 @@ function TarifsLivreursSection() {
   );
 }
 
+/**
+ * Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) —
+ * même découpage que TarifsLivreursSection : 6 mois gratuits dès la
+ * première activation, puis une formule mensuelle ou annuelle, 100 %
+ * paramétrables ici.
+ */
+function TarifsComptableSection() {
+  const [mensuel, setMensuel] = useState("");
+  const [annuel, setAnnuel] = useState("");
+  const [moisGratuits, setMoisGratuits] = useState("");
+  const [chargement, setChargement] = useState(true);
+  const [enCours, setEnCours] = useState(false);
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<PlatformSettings>("/admin/platform-settings")
+      .then((s) => {
+        setMensuel(s.comptableMonthlyFee);
+        setAnnuel(s.comptableYearlyFee);
+        setMoisGratuits(String(s.comptableFreeMonths));
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, []);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        comptableMonthlyFee: Number(mensuel),
+        comptableYearlyFee: Number(annuel),
+        comptableFreeMonths: Number(moisGratuits),
+      });
+      setMessage("Tarifs Mon Comptable enregistrés.");
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function declencher(action: string, chemin: string) {
+    setActionEnCours(action);
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultat = await api.post<{ action: string }[]>(chemin, {});
+      setMessage(`${action} : ${resultat.length} compte(s) concerné(s).`);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setActionEnCours(null);
+    }
+  }
+
+  if (chargement) return <p>Chargement des tarifs Mon Comptable…</p>;
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>Tarification d&apos;ELEGANZ Mon Comptable</span>
+      </div>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>Abonnement mensuel (USD)</span>
+          <input value={mensuel} onChange={(e) => setMensuel(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Abonnement annuel (USD)</span>
+          <input value={annuel} onChange={(e) => setAnnuel(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Mois de gratuité dès la première activation</span>
+          <input value={moisGratuits} onChange={(e) => setMoisGratuits(e.target.value)} />
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          Enregistrer les tarifs
+        </button>
+      </div>
+      <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Vérification des gratuités échues", "/admin/comptable/run-trial-check")}
+        >
+          Vérifier les gratuités échues
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Facturation de renouvellement", "/admin/comptable/run-renewal-billing")}
+        >
+          Lancer la facturation de renouvellement
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Suspension des impayés", "/admin/comptable/run-suspension-check")}
+        >
+          Suspendre les comptes en impayé
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TarifsContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -342,6 +461,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>Tarifs livreurs</h2>
       <TarifsLivreursSection />
+
+      <h2 className={styles.sectionTitre}>Tarifs Mon Comptable</h2>
+      <TarifsComptableSection />
     </div>
   );
 }

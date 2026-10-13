@@ -1,0 +1,78 @@
+.titre {
+  margin-bottom: var(--espace-4);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+}
+
+.activite {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-3) var(--espace-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activiteNom {
+  font-weight: 600;
+}
+
+.activiteCategorie {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}
+
+.messageVide {
+  padding: var(--espace-3);
+  color: var(--color-texte-muted);
+}
+
+.formulaire {
+  border: 1px dashed var(--color-border);
+  padding: var(--espace-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: flex-end;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+}
+
+.champ input,
+.champ select {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  min-width: 200px;
+}
+
+.bouton {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

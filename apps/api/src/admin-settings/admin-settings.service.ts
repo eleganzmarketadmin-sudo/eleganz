@@ -39,6 +39,9 @@ export class AdminSettingsService {
         ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
         ...(dto.driverMonthlyFee !== undefined && { driverMonthlyFee: dto.driverMonthlyFee }),
         ...(dto.driverFreeMonths !== undefined && { driverFreeMonths: dto.driverFreeMonths }),
+        ...(dto.comptableMonthlyFee !== undefined && { comptableMonthlyFee: dto.comptableMonthlyFee }),
+        ...(dto.comptableYearlyFee !== undefined && { comptableYearlyFee: dto.comptableYearlyFee }),
+        ...(dto.comptableFreeMonths !== undefined && { comptableFreeMonths: dto.comptableFreeMonths }),
       },
     });
   }
@@ -69,6 +72,16 @@ export class AdminSettingsService {
       driverOpeningFee: settings.driverOpeningFee,
       driverMonthlyFee: settings.driverMonthlyFee,
       driverFreeMonths: settings.driverFreeMonths,
+    };
+  }
+
+  /** Lecture publique de la tarification Mon Comptable (prompt §14) — même logique que publicDriverPricing. */
+  async publicComptablePricing() {
+    const settings = await this.get();
+    return {
+      comptableMonthlyFee: settings.comptableMonthlyFee,
+      comptableYearlyFee: settings.comptableYearlyFee,
+      comptableFreeMonths: settings.comptableFreeMonths,
     };
   }
 }

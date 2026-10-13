@@ -74,4 +74,20 @@ export class UpdatePlatformSettingsDto {
   @IsInt()
   @Min(0)
   driverFreeMonths?: number;
+
+  // Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14).
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  comptableMonthlyFee?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  comptableYearlyFee?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  comptableFreeMonths?: number;
 }

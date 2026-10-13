@@ -30,6 +30,18 @@ interface FactureLivreur {
   createdAt: string;
 }
 
+interface FactureComptable {
+  id: string;
+  subscriptionId: string;
+  subscription: { id: string; user: { fullName: string } };
+  amount: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: string;
+  kind: string;
+  createdAt: string;
+}
+
 const LIBELLES_STATUT: Record<string, string> = {
   PENDING: "En attente",
   PAID: "Payée",
@@ -40,6 +52,7 @@ const LIBELLES_STATUT: Record<string, string> = {
 function FacturesContent() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [facturesLivreurs, setFacturesLivreurs] = useState<FactureLivreur[]>([]);
+  const [facturesComptable, setFacturesComptable] = useState<FactureComptable[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -50,10 +63,12 @@ function FacturesContent() {
     Promise.all([
       api.get<Facture[]>("/admin/billing/invoices"),
       api.get<FactureLivreur[]>("/admin/driver-billing/invoices"),
+      api.get<FactureComptable[]>("/admin/comptable/invoices"),
     ])
-      .then(([listeFactures, listeFacturesLivreurs]) => {
+      .then(([listeFactures, listeFacturesLivreurs, listeFacturesComptable]) => {
         setFactures(listeFactures);
         setFacturesLivreurs(listeFacturesLivreurs);
+        setFacturesComptable(listeFacturesComptable);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
@@ -79,6 +94,19 @@ function FacturesContent() {
     setErreur(null);
     try {
       await api.post(`/admin/driver-billing/invoices/${invoiceId}/mark-paid`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function marquerPayeeComptable(invoiceId: string) {
+    setEnCours(invoiceId);
+    setErreur(null);
+    try {
+      await api.post(`/admin/comptable/invoices/${invoiceId}/mark-paid`);
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Action impossible.");
@@ -223,6 +251,49 @@ function FacturesContent() {
               <div className={styles.factureInfo}>
                 <span className={styles.boutiqueNom}>{f.driver.user.fullName}</span>
                 <span>{f.kind === "opening_fee" ? "Frais d'ouverture" : "Abonnement mensuel"}</span>
+                <span>{formatMoney(Number(f.amount))}</span>
+                <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
+              </div>
+            </div>
+          ))
+      )}
+
+      <h2 className={styles.sectionTitre}>Factures Mon Comptable — en attente de paiement</h2>
+      {facturesComptable.filter((f) => f.status === "PENDING").length === 0 ? (
+        <p className={styles.messageVide}>Aucune facture Mon Comptable en attente.</p>
+      ) : (
+        facturesComptable
+          .filter((f) => f.status === "PENDING")
+          .map((f) => (
+            <div className={styles.facture} key={f.id}>
+              <div className={styles.factureInfo}>
+                <span className={styles.boutiqueNom}>{f.subscription.user.fullName}</span>
+                <span>{f.kind === "yearly" ? "Abonnement annuel" : "Abonnement mensuel"}</span>
+                <span>{formatMoney(Number(f.amount))}</span>
+                <span>Échéance : {formatDate(f.dueAt)}</span>
+              </div>
+              <button
+                className={styles.boutonPayer}
+                disabled={enCours === f.id}
+                onClick={() => marquerPayeeComptable(f.id)}
+              >
+                Marquer payée
+              </button>
+            </div>
+          ))
+      )}
+
+      <h2 className={styles.sectionTitre}>Factures Mon Comptable — historique</h2>
+      {facturesComptable.filter((f) => f.status !== "PENDING").length === 0 ? (
+        <p className={styles.messageVide}>Aucune autre facture Mon Comptable.</p>
+      ) : (
+        facturesComptable
+          .filter((f) => f.status !== "PENDING")
+          .map((f) => (
+            <div className={styles.facture} key={f.id}>
+              <div className={styles.factureInfo}>
+                <span className={styles.boutiqueNom}>{f.subscription.user.fullName}</span>
+                <span>{f.kind === "yearly" ? "Abonnement annuel" : "Abonnement mensuel"}</span>
                 <span>{formatMoney(Number(f.amount))}</span>
                 <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
               </div>
