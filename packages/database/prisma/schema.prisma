@@ -56,7 +56,36 @@ model PlatformSettings {
   comptableYearlyFee  Decimal @default(10) @db.Decimal(12, 2)
   comptableFreeMonths Int     @default(6)
 
+  // Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) — un
+  // seul taux pour toute la plateforme, géré uniquement depuis le Centre de
+  // pilotage. Nullable tant qu'aucun admin ne l'a configuré : tant qu'il est
+  // vide, aucun équivalent de devise ne s'affiche nulle part plutôt que
+  // d'inventer une valeur de départ. Phase 1 (affichage courant uniquement,
+  // voir docs/PROJECT_STATUS.md) : converti "au taux du jour", jamais figé
+  // rétroactivement sur une vente/opération déjà enregistrée — c'est
+  // exchangeRateUpdatedAt + ExchangeRateHistory qui permettent de savoir
+  // quel taux était affiché à quel moment, pas une conversion a posteriori
+  // des montants déjà enregistrés.
+  cdfPerUsd             Decimal?  @db.Decimal(14, 4)
+  exchangeRateUpdatedAt DateTime?
+
   updatedAt     DateTime @updatedAt
+}
+
+/**
+ * Historique des changements du taux de change système (prompt du 13 oct.
+ * 2026, point 5) — append-only, jamais modifié ni supprimé. Sert à répondre
+ * à "quel taux était affiché à telle date", notamment utile le jour où une
+ * phase 2 voudra figer le taux sur chaque transaction au lieu de toujours
+ * utiliser le taux courant (voir note sur PlatformSettings.cdfPerUsd).
+ */
+model ExchangeRateHistory {
+  id          String   @id @default(cuid())
+  cdfPerUsd   Decimal  @db.Decimal(14, 4)
+  setAt       DateTime @default(now())
+  setByUserId String?
+
+  @@index([setAt])
 }
 
 // ---------------------------------------------------------------------------

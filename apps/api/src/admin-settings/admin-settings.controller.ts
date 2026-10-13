@@ -1,6 +1,7 @@
 import { Body, Controller, ForbiddenException, Get, Patch, UseGuards } from "@nestjs/common";
 import { AdminSettingsService } from "./admin-settings.service";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
+import { UpdateExchangeRateDto } from "./dto/update-exchange-rate.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -31,5 +32,20 @@ export class AdminSettingsController {
   update(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdatePlatformSettingsDto) {
     requireAdmin(user);
     return this.adminSettingsService.update(dto);
+  }
+
+  // Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) — un
+  // seul taux pour toute la plateforme, modifiable uniquement ici (Centre de
+  // pilotage) ; chaque changement garde une trace dans ExchangeRateHistory.
+  @Patch("exchange-rate")
+  updateExchangeRate(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateExchangeRateDto) {
+    requireAdmin(user);
+    return this.adminSettingsService.updateExchangeRate(dto.cdfPerUsd, user.id);
+  }
+
+  @Get("exchange-rate-history")
+  exchangeRateHistory(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.adminSettingsService.exchangeRateHistory();
   }
 }

@@ -84,4 +84,47 @@ export class AdminSettingsService {
       comptableFreeMonths: settings.comptableFreeMonths,
     };
   }
+
+  /**
+   * Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) — un
+   * champ dédié plutôt que de passer par update() générique, car chaque
+   * changement doit aussi écrire une ligne d'historique (ExchangeRateHistory),
+   * jamais juste écraser la valeur précédente.
+   */
+  async updateExchangeRate(cdfPerUsd: number, setByUserId?: string) {
+    await this.get();
+    const [settings] = await this.prisma.$transaction([
+      this.prisma.platformSettings.update({
+        where: { id: ID_SINGLETON },
+        data: { cdfPerUsd, exchangeRateUpdatedAt: new Date() },
+      }),
+      this.prisma.exchangeRateHistory.create({
+        data: { cdfPerUsd, setByUserId },
+      }),
+    ]);
+    return settings;
+  }
+
+  /** Les 50 derniers changements de taux, les plus récents d'abord — pour l'écran admin. */
+  async exchangeRateHistory() {
+    return this.prisma.exchangeRateHistory.findMany({
+      orderBy: { setAt: "desc" },
+      take: 50,
+    });
+  }
+
+  /**
+   * Lecture publique du taux de change (prompt du 13 oct. 2026, point 5) —
+   * sans authentification, pour que Marketplace, Caisse et Mon Comptable
+   * puissent tous afficher les équivalents de devise. `cdfPerUsd` est `null`
+   * tant qu'aucun admin ne l'a configuré : l'appelant doit alors simplement
+   * ne rien convertir, jamais supposer une valeur par défaut.
+   */
+  async publicExchangeRate() {
+    const settings = await this.get();
+    return {
+      cdfPerUsd: settings.cdfPerUsd,
+      updatedAt: settings.exchangeRateUpdatedAt,
+    };
+  }
 }
