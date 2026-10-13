@@ -249,6 +249,7 @@ model Shop {
   accounts       Account[]
   journals       Journal[]
   journalEntries JournalEntry[]
+  assets         Asset[]
 }
 
 model ShopStaff {
@@ -1200,6 +1201,7 @@ enum JournalEntrySource {
   PURCHASE
   INVOICE
   MANUAL
+  DEPRECIATION
 }
 
 model Journal {
@@ -1251,4 +1253,46 @@ model JournalLine {
 
   @@index([entryId])
   @@index([accountId])
+}
+
+// Immobilisations et amortissements (13 oct. 2026, Finance & Comptabilité
+// Phase 4) — voir docs/ARCHITECTURE_FINANCE.md §8quater. Amortissement
+// linéaire uniquement à cette phase (le seul mode réellement demandé).
+// Comptabilisé via AccountingService (compte 681 débité / 2841 crédité),
+// jamais calculé ici directement.
+model Asset {
+  id               String    @id @default(uuid())
+  scope            FiscalRuleScope
+  shopId           String?
+  shop             Shop?     @relation(fields: [shopId], references: [id])
+  label            String
+  acquisitionDate  DateTime
+  acquisitionCost  Decimal   @db.Decimal(12, 2)
+  currency         String    @default("USD")
+  // Durée d'amortissement en mois (ex. 60 pour 5 ans) — pas de table de
+  // durées réglementaires par catégorie à cette phase, saisie libre par
+  // l'utilisateur.
+  durationMonths   Int
+  disposed         Boolean   @default(false)
+  disposedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  depreciations AssetDepreciation[]
+
+  @@index([scope, shopId])
+}
+
+// Une ligne par mois réellement comptabilisé pour un actif donné — la clé
+// `[assetId, periodDate]` est composite mais SANS champ nullable (contrairement
+// à l'incident déjà documenté dans MAINTENANCE.md), donc utilisable sans
+// risque dans `findUnique`/`upsert` si besoin plus tard.
+model AssetDepreciation {
+  id         String   @id @default(uuid())
+  assetId    String
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  periodDate DateTime
+  amount     Decimal  @db.Decimal(12, 2)
+  createdAt  DateTime @default(now())
+
+  @@unique([assetId, periodDate])
 }
