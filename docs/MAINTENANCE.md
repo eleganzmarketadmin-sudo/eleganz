@@ -182,3 +182,32 @@ pousser — ou, si une route nouvellement ajoutée répond 404 en boucle bien
 après le délai de déploiement habituel alors que le reste de l'API va
 bien, soupçonner en premier un échec silencieux de `prisma generate`/`db push`
 plutôt qu'un problème de câblage NestJS.
+
+## Piège fréquent : `startsWith` sur un préfixe de route qui n'est pas aussi un segment
+
+**Incident du 13 oct. 2026 (ter)** : `espaceAuth()` (`apps/web/app/lib/api.ts`)
+choisissait la clé de jeton à utiliser avec `chemin.startsWith("/livreur")`,
+pour distinguer l'espace livreur plateforme (`/livreur/...`) des deux autres
+espaces. Lors de l'ajout de la nouvelle page **Livreurs** d'ELEGANZ Gestion
+(`/livreurs` — gestion des livreurs propres à la boutique), ce
+`startsWith` a aussi matché `/livreurs` : la page utilisait alors
+silencieusement le jeton de l'espace livreur plateforme (vide, puisque le
+compte boutique ne s'y est jamais connecté) au lieu du jeton Gestion.
+Résultat : tous les appels API de cette page échouaient silencieusement
+(401, intercepté par un simple `.catch` non bloquant côté `shop-context.tsx`),
+et l'écran affichait en boucle "Aucune boutique n'est encore associée à ce
+compte" alors que le compte en avait bien une — aucune erreur console, et
+`read_network_requests` ne montrait même pas de requête `/shops/mine` partie
+(le fetch ne se déclenche que si `user` est non nul, lui-même dépendant du
+même jeton mal choisi).
+
+**Règle à appliquer systématiquement** : un `startsWith("/prefixe")` sur un
+chemin n'est sûr que si aucune autre route ne commence par la même chaîne de
+caractères sans être le même segment — `/livreur` et `/livreurs` partagent un
+préfixe mais sont deux pages différentes. Toujours vérifier la frontière de
+segment explicitement (`chemin === "/x" || chemin.startsWith("/x/")`) dès
+qu'un chemin de test sert à distinguer des espaces applicatifs (ici,
+`espaceAuth()`), et plus généralement avant de nommer une nouvelle route
+dans n'importe quel module, vérifier qu'elle ne commence pas par le nom
+(pluriel ou non) d'un module existant déjà testé par préfixe ailleurs dans
+le code (`grep -rn 'startsWith("/<préfixe>' apps/web`).
