@@ -36,10 +36,63 @@ interface Dette {
   solde: number;
 }
 
+interface PaiementLoyer {
+  id: string;
+  periodLabel: string;
+  expectedAmount: string;
+  receivedAmount: string;
+  dueDate: string;
+  paidAt: string | null;
+}
+
+interface DepenseLocative {
+  id: string;
+  category: string;
+  amount: string;
+  currency: "CDF" | "USD";
+  date: string;
+}
+
+interface BienLocatif {
+  id: string;
+  label: string;
+  location: string | null;
+  tenantName: string | null;
+  rentAmount: string;
+  currency: "CDF" | "USD";
+  frequency: "MENSUEL" | "TRIMESTRIEL" | "ANNUEL" | "PERSONNALISE";
+  leaseStart: string | null;
+  leaseEnd: string | null;
+  depositAmount: string | null;
+  payments: PaiementLoyer[];
+  expenses: DepenseLocative[];
+}
+
+interface VersementTravailleur {
+  id: string;
+  workerName: string;
+  periodLabel: string;
+  expectedAmount: string | null;
+  declaredRevenue: string | null;
+  declaredExpenses: string | null;
+  paidAmount: string;
+  currency: "CDF" | "USD";
+  dueDate: string | null;
+  settledAt: string | null;
+  note: string | null;
+}
+
 const LABELS_TYPE_DETTE: Record<string, string> = {
   DETTE: "Dette (je dois payer)",
   CREANCE: "Créance (on me doit)",
   EMPRUNT: "Emprunt",
+};
+
+const LABELS_FREQUENCE: Record<string, string> = {
+  MENSUEL: "Mensuel",
+  TRIMESTRIEL: "Trimestriel",
+  ANNUEL: "Annuel",
+  PERSONNALISE: "Personnalisé",
 };
 
 function aujourdHui(): string {
@@ -50,7 +103,9 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
   const [activite, setActivite] = useState<Activite | null>(null);
   const [entrees, setEntrees] = useState<Entree[]>([]);
   const [dettes, setDettes] = useState<Dette[]>([]);
-  const [onglet, setOnglet] = useState<"carnet" | "dettes">("carnet");
+  const [biens, setBiens] = useState<BienLocatif[]>([]);
+  const [versements, setVersements] = useState<VersementTravailleur[]>([]);
+  const [onglet, setOnglet] = useState<"carnet" | "dettes" | "locatif" | "travailleurs">("carnet");
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,16 +127,37 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
   const [deviseDette, setDeviseDette] = useState<"CDF" | "USD">("USD");
   const [echeanceDette, setEcheanceDette] = useState("");
 
+  // Formulaire bien locatif
+  const [formulaireBienOuvert, setFormulaireBienOuvert] = useState(false);
+  const [labelBien, setLabelBien] = useState("");
+  const [lieuBien, setLieuBien] = useState("");
+  const [locataireBien, setLocataireBien] = useState("");
+  const [loyerBien, setLoyerBien] = useState("");
+  const [deviseBien, setDeviseBien] = useState<"CDF" | "USD">("USD");
+  const [frequenceBien, setFrequenceBien] = useState<BienLocatif["frequency"]>("MENSUEL");
+  const [depotBien, setDepotBien] = useState("");
+
+  // Formulaire versement travailleur
+  const [formulaireVersementOuvert, setFormulaireVersementOuvert] = useState(false);
+  const [nomTravailleur, setNomTravailleur] = useState("");
+  const [periodeVersement, setPeriodeVersement] = useState("");
+  const [montantVerse, setMontantVerse] = useState("");
+  const [deviseVersement, setDeviseVersement] = useState<"CDF" | "USD">("USD");
+
   function recharger() {
     Promise.all([
       api.get<Activite[]>("/comptable/activities"),
       api.get<Entree[]>(`/comptable/entries?activityId=${activityId}`),
       api.get<Dette[]>(`/comptable/debts?activityId=${activityId}`),
+      api.get<BienLocatif[]>(`/comptable/rental-units?activityId=${activityId}`),
+      api.get<VersementTravailleur[]>(`/comptable/worker-remittances?activityId=${activityId}`),
     ])
-      .then(([activites, listeEntrees, listeDettes]) => {
+      .then(([activites, listeEntrees, listeDettes, listeBiens, listeVersements]) => {
         setActivite(activites.find((a) => a.id === activityId) ?? null);
         setEntrees(listeEntrees);
         setDettes(listeDettes);
+        setBiens(listeBiens);
+        setVersements(listeVersements);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
@@ -172,6 +248,114 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
     }
   }
 
+  async function creerBien(e: React.FormEvent) {
+    e.preventDefault();
+    if (!labelBien.trim() || !loyerBien) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.post("/comptable/rental-units", {
+        activityId,
+        label: labelBien.trim(),
+        location: lieuBien.trim() || undefined,
+        tenantName: locataireBien.trim() || undefined,
+        rentAmount: Number(loyerBien),
+        currency: deviseBien,
+        frequency: frequenceBien,
+        depositAmount: depotBien ? Number(depotBien) : undefined,
+      });
+      setLabelBien("");
+      setLieuBien("");
+      setLocataireBien("");
+      setLoyerBien("");
+      setDepotBien("");
+      setFormulaireBienOuvert(false);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function enregistrerLoyer(unit: BienLocatif) {
+    const periode = window.prompt("Période concernée (ex. Octobre 2026)", "");
+    if (!periode) return;
+    const recuTexte = window.prompt(`Montant reçu pour ce loyer (attendu : ${unit.rentAmount} ${unit.currency})`, unit.rentAmount);
+    if (recuTexte === null) return;
+    const recu = Number(recuTexte);
+    if (Number.isNaN(recu) || recu < 0) return;
+    const echeance = window.prompt("Date d'échéance (AAAA-MM-JJ)", aujourdHui());
+    if (!echeance) return;
+    setErreur(null);
+    try {
+      await api.post(`/comptable/rental-units/${unit.id}/payments`, {
+        periodLabel: periode,
+        expectedAmount: Number(unit.rentAmount),
+        receivedAmount: recu,
+        dueDate: echeance,
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    }
+  }
+
+  async function ajouterDepenseLocative(unit: BienLocatif) {
+    const categorie = window.prompt("Catégorie de dépense (entretien, réparation, eau, électricité…)", "");
+    if (!categorie) return;
+    const montantTexte = window.prompt("Montant", "");
+    if (!montantTexte) return;
+    const montant = Number(montantTexte);
+    if (!montant || montant <= 0) return;
+    setErreur(null);
+    try {
+      await api.post(`/comptable/rental-units/${unit.id}/expenses`, {
+        category: categorie,
+        amount: montant,
+        currency: unit.currency,
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    }
+  }
+
+  async function creerVersement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nomTravailleur.trim() || !periodeVersement.trim() || !montantVerse) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.post("/comptable/worker-remittances", {
+        activityId,
+        workerName: nomTravailleur.trim(),
+        periodLabel: periodeVersement.trim(),
+        paidAmount: Number(montantVerse),
+        currency: deviseVersement,
+      });
+      setNomTravailleur("");
+      setPeriodeVersement("");
+      setMontantVerse("");
+      setFormulaireVersementOuvert(false);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function soldeVersement(id: string) {
+    setErreur(null);
+    try {
+      await api.post(`/comptable/worker-remittances/${id}/settled`, {});
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Opération impossible.");
+    }
+  }
+
   if (chargement) return <p>Chargement…</p>;
   if (!activite) return <p className={styles.erreur}>Activité introuvable.</p>;
 
@@ -250,6 +434,18 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           onClick={() => setOnglet("dettes")}
         >
           Dettes, créances, emprunts
+        </button>
+        <button
+          className={`${styles.onglet} ${onglet === "locatif" ? styles.ongletActif : ""}`}
+          onClick={() => setOnglet("locatif")}
+        >
+          Locatif
+        </button>
+        <button
+          className={`${styles.onglet} ${onglet === "travailleurs" ? styles.ongletActif : ""}`}
+          onClick={() => setOnglet("travailleurs")}
+        >
+          Travailleurs
         </button>
       </div>
 
@@ -357,6 +553,223 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                     {!d.settled && (
                       <button className={styles.boutonSecondaire} onClick={() => payerDette(d.id, d.solde)}>
                         Enregistrer un règlement
+                      </button>
+                    )}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {onglet === "locatif" && (
+        <>
+          <h2 className={styles.sectionTitre}>Biens locatifs</h2>
+          {!formulaireBienOuvert ? (
+            <button className={styles.bouton} onClick={() => setFormulaireBienOuvert(true)}>
+              + Nouveau bien
+            </button>
+          ) : (
+            <form className={styles.formulaireDette} onSubmit={creerBien} style={{ marginTop: "16px" }}>
+              <label className={styles.champLarge}>
+                <span>Désignation</span>
+                <input
+                  placeholder="Ex. Appartement 2, Lemba"
+                  value={labelBien}
+                  onChange={(e) => setLabelBien(e.target.value)}
+                  required
+                />
+              </label>
+              <label className={styles.champLarge}>
+                <span>Lieu (facultatif)</span>
+                <input value={lieuBien} onChange={(e) => setLieuBien(e.target.value)} />
+              </label>
+              <label className={styles.champLarge}>
+                <span>Locataire (facultatif)</span>
+                <input value={locataireBien} onChange={(e) => setLocataireBien(e.target.value)} />
+              </label>
+              <label className={styles.champ}>
+                <span>Loyer</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={loyerBien}
+                  onChange={(e) => setLoyerBien(e.target.value)}
+                  required
+                />
+              </label>
+              <label className={styles.champ}>
+                <span>Devise</span>
+                <select value={deviseBien} onChange={(e) => setDeviseBien(e.target.value as "CDF" | "USD")}>
+                  <option value="USD">USD</option>
+                  <option value="CDF">CDF</option>
+                </select>
+              </label>
+              <label className={styles.champ}>
+                <span>Fréquence</span>
+                <select
+                  value={frequenceBien}
+                  onChange={(e) => setFrequenceBien(e.target.value as BienLocatif["frequency"])}
+                >
+                  {Object.entries(LABELS_FREQUENCE).map(([valeur, label]) => (
+                    <option key={valeur} value={valeur}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.champ}>
+                <span>Garantie (facultative)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={depotBien}
+                  onChange={(e) => setDepotBien(e.target.value)}
+                />
+              </label>
+              <button className={styles.bouton} type="submit" disabled={enCours}>
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                className={styles.boutonSecondaire}
+                onClick={() => setFormulaireBienOuvert(false)}
+              >
+                Annuler
+              </button>
+            </form>
+          )}
+
+          <div style={{ marginTop: "16px" }}>
+            {biens.length === 0 ? (
+              <p className={styles.messageVide}>Aucun bien locatif enregistré pour l&apos;instant.</p>
+            ) : (
+              biens.map((b) => {
+                const totalRecu = b.payments.reduce((s, p) => s + Number(p.receivedAmount), 0);
+                const totalDepenses = b.expenses.reduce((s, dep) => s + Number(dep.amount), 0);
+                return (
+                  <div className={styles.carteBien} key={b.id}>
+                    <div className={styles.carteBienEntete}>
+                      <strong>{b.label}</strong>
+                      <span>
+                        {formatMoney(Number(b.rentAmount), b.currency)} / {LABELS_FREQUENCE[b.frequency].toLowerCase()}
+                      </span>
+                    </div>
+                    <p className={styles.carteBienDetail}>
+                      {b.tenantName ? `Locataire : ${b.tenantName}` : "Pas de locataire renseigné"}
+                      {b.location ? ` · ${b.location}` : ""}
+                      {b.depositAmount ? ` · Garantie : ${formatMoney(Number(b.depositAmount), b.currency)}` : ""}
+                    </p>
+                    <p className={styles.carteBienDetail}>
+                      Reçu sur les 12 dernières périodes : <strong>{formatMoney(totalRecu, b.currency)}</strong> ·
+                      Dépenses récentes : <strong>{formatMoney(totalDepenses, b.currency)}</strong>
+                    </p>
+                    <div className={styles.carteBienActions}>
+                      <button className={styles.boutonSecondaire} onClick={() => enregistrerLoyer(b)}>
+                        Enregistrer un loyer
+                      </button>
+                      <button className={styles.boutonSecondaire} onClick={() => ajouterDepenseLocative(b)}>
+                        Ajouter une dépense
+                      </button>
+                    </div>
+                    {b.payments.length > 0 && (
+                      <div className={styles.sousListe}>
+                        {b.payments.slice(0, 5).map((p) => (
+                          <div className={styles.ligne} key={p.id}>
+                            <span>
+                              {p.periodLabel} — échéance {formatDate(p.dueDate)}
+                              {p.paidAt ? " · réglé" : " · en attente"}
+                            </span>
+                            <strong>
+                              {formatMoney(Number(p.receivedAmount), b.currency)} / {formatMoney(Number(p.expectedAmount), b.currency)}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+
+      {onglet === "travailleurs" && (
+        <>
+          <h2 className={styles.sectionTitre}>Versements des travailleurs</h2>
+          <p className={styles.sousTitre}>
+            Pour une activité confiée à quelqu&apos;un (chauffeur, gérant…) — ce que le travailleur vous remet, pas un
+            revenu de la caisse.
+          </p>
+          {!formulaireVersementOuvert ? (
+            <button className={styles.bouton} onClick={() => setFormulaireVersementOuvert(true)}>
+              + Nouveau versement
+            </button>
+          ) : (
+            <form className={styles.formulaireDette} onSubmit={creerVersement} style={{ marginTop: "16px" }}>
+              <label className={styles.champLarge}>
+                <span>Nom du travailleur</span>
+                <input value={nomTravailleur} onChange={(e) => setNomTravailleur(e.target.value)} required />
+              </label>
+              <label className={styles.champ}>
+                <span>Période</span>
+                <input
+                  placeholder="Ex. Semaine du 6 au 12 oct."
+                  value={periodeVersement}
+                  onChange={(e) => setPeriodeVersement(e.target.value)}
+                  required
+                />
+              </label>
+              <label className={styles.champ}>
+                <span>Montant remis</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={montantVerse}
+                  onChange={(e) => setMontantVerse(e.target.value)}
+                  required
+                />
+              </label>
+              <label className={styles.champ}>
+                <span>Devise</span>
+                <select value={deviseVersement} onChange={(e) => setDeviseVersement(e.target.value as "CDF" | "USD")}>
+                  <option value="USD">USD</option>
+                  <option value="CDF">CDF</option>
+                </select>
+              </label>
+              <button className={styles.bouton} type="submit" disabled={enCours}>
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                className={styles.boutonSecondaire}
+                onClick={() => setFormulaireVersementOuvert(false)}
+              >
+                Annuler
+              </button>
+            </form>
+          )}
+
+          <div style={{ marginTop: "16px" }}>
+            {versements.length === 0 ? (
+              <p className={styles.messageVide}>Aucun versement enregistré pour l&apos;instant.</p>
+            ) : (
+              versements.map((v) => (
+                <div className={`${styles.ligne} ${v.settledAt ? styles.ligneSoldee : ""}`} key={v.id}>
+                  <span>
+                    <strong>{v.workerName}</strong> — {v.periodLabel}
+                    {v.settledAt && " · soldé"}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <strong>{formatMoney(Number(v.paidAmount), v.currency)}</strong>
+                    {!v.settledAt && (
+                      <button className={styles.boutonSecondaire} onClick={() => soldeVersement(v.id)}>
+                        Marquer soldé
                       </button>
                     )}
                   </span>
