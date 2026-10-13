@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { FinanceService } from "./finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
+import { ClosureService } from "./closure.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -25,6 +26,7 @@ export class FinanceController {
     private readonly financeService: FinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
     private readonly accountingQuery: AccountingQueryService,
+    private readonly closureService: ClosureService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -76,6 +78,29 @@ export class FinanceController {
   @Get("bilan")
   bilan(@Param("shopId") shopId: string, @Query("asOf") asOf?: string) {
     return this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, asOf ? new Date(asOf) : new Date());
+  }
+
+  // Assistant de clôture (docs/ARCHITECTURE_FINANCE.md §8quinquies) —
+  // verrouille un mois (plus aucune écriture acceptée) et fige un résumé.
+  @Get("clotures")
+  listClotures(@Param("shopId") shopId: string) {
+    return this.closureService.list(FiscalRuleScope.SHOP, shopId);
+  }
+
+  @Post("clotures")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  cloturerPeriode(
+    @Param("shopId") shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body("periode") periode: string,
+  ) {
+    return this.closureService.close(FiscalRuleScope.SHOP, shopId, periode, user.id);
+  }
+
+  @Delete("clotures/:periode")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  reouvrirPeriode(@Param("shopId") shopId: string, @Param("periode") periode: string) {
+    return this.closureService.reopen(FiscalRuleScope.SHOP, shopId, periode);
   }
 
   @Get("fiscal-identity")

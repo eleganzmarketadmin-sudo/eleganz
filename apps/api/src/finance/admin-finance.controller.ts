@@ -1,7 +1,8 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { AdminFinanceService } from "./admin-finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
+import { ClosureService } from "./closure.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -27,6 +28,7 @@ export class AdminFinanceController {
     private readonly adminFinanceService: AdminFinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
     private readonly accountingQuery: AccountingQueryService,
+    private readonly closureService: ClosureService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -79,6 +81,24 @@ export class AdminFinanceController {
   bilan(@CurrentUser() user: AuthenticatedUser, @Query("asOf") asOf?: string) {
     requireAdmin(user);
     return this.accountingQuery.bilan(FiscalRuleScope.PLATFORM, null, asOf ? new Date(asOf) : new Date());
+  }
+
+  @Get("clotures")
+  listClotures(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.closureService.list(FiscalRuleScope.PLATFORM, null);
+  }
+
+  @Post("clotures")
+  cloturerPeriode(@CurrentUser() user: AuthenticatedUser, @Body("periode") periode: string) {
+    requireAdmin(user);
+    return this.closureService.close(FiscalRuleScope.PLATFORM, null, periode, user.id);
+  }
+
+  @Delete("clotures/:periode")
+  reouvrirPeriode(@CurrentUser() user: AuthenticatedUser, @Param("periode") periode: string) {
+    requireAdmin(user);
+    return this.closureService.reopen(FiscalRuleScope.PLATFORM, null, periode);
   }
 
   @Get("dashboard")

@@ -10,6 +10,7 @@ import { AccountingService } from "./accounting.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { AssetsService } from "./assets.service";
 import { AssetsController } from "./assets.controller";
+import { ClosureService } from "./closure.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -27,6 +28,7 @@ import { AssetsController } from "./assets.controller";
     AccountingService,
     AccountingQueryService,
     AssetsService,
+    ClosureService,
   ],
   controllers: [FinanceController, AdminFinanceController, AssetsController],
   exports: [AccountingService],

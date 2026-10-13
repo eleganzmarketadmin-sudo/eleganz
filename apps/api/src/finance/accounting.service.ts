@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
+import { ConflictException, Injectable, InternalServerErrorException, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { AccountingSeedService } from "./accounting-seed.service";
 import { FiscalRuleScope, JournalEntrySource } from "@eleganz/database";
@@ -225,6 +225,21 @@ export class AccountingService {
       // préféré à un silence qui laisserait une écriture déséquilibrée.
       throw new InternalServerErrorException(
         `Écriture déséquilibrée refusée (débit ${totalDebit} ≠ crédit ${totalCredit}) pour ${params.sourceType} ${params.sourceId}.`,
+      );
+    }
+
+    // Verrouillage de période (docs/ARCHITECTURE_FINANCE.md §8quinquies) —
+    // toute écriture dont la date tombe dans un mois clôturé est refusée,
+    // qu'elle vienne d'une vente du jour ou d'une dotation d'amortissement
+    // rétroactive.
+    const debutMoisEntree = new Date(Date.UTC(params.entryDate.getUTCFullYear(), params.entryDate.getUTCMonth(), 1));
+    const cloture = await this.prisma.accountingClosure.findFirst({
+      where: { scope: params.scope, shopId: params.shopId, periodDate: debutMoisEntree },
+      select: { id: true },
+    });
+    if (cloture) {
+      throw new ConflictException(
+        `La période ${debutMoisEntree.toISOString().slice(0, 7)} est clôturée : aucune nouvelle écriture n'est acceptée pour ce mois.`,
       );
     }
 
