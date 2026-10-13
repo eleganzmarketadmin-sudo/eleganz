@@ -1,0 +1,118 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.marqueFlottante {
+  position: absolute;
+  z-index: 1;
+  top: var(--espace-4);
+  left: var(--espace-5);
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  color: var(--color-ink);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.marqueFlottante:hover {
+  text-decoration: none;
+}
+
+.hero {
+  background: var(--color-encre-fixe);
+  color: #fff;
+  padding: var(--espace-7) var(--espace-5) var(--espace-6);
+  text-align: center;
+}
+
+.hero h1 {
+  font-family: var(--font-display), serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  max-width: 20ch;
+  margin: 0 auto var(--espace-4);
+}
+
+.hero p {
+  max-width: 62ch;
+  margin: 0 auto;
+  opacity: 0.88;
+  line-height: 1.6;
+}
+
+.modules {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espace-5);
+  padding: var(--espace-6) var(--espace-5);
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 720px) {
+  .modules {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.carte {
+  padding: var(--espace-5);
+  border-left: 4px solid var(--color-border-forte);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.carte h2 {
+  font-size: 1.25rem;
+}
+
+.carte p {
+  margin: 0;
+  color: var(--color-texte-muted);
+  line-height: 1.6;
+}
+
+.carte a {
+  align-self: flex-start;
+  font-weight: 600;
+}
+
+.comptable {
+  border-color: var(--color-vert-paiement);
+}
+
+.gestion {
+  border-color: var(--color-cobalt);
+}
+
+.marketplace {
+  border-color: var(--color-magenta);
+}
+
+.livreur {
+  border-color: var(--color-flamme);
+}
+
+.engagement {
+  background: var(--color-surface-muted);
+  border-top: 2px solid var(--color-border);
+  padding: var(--espace-6) var(--espace-5);
+}
+
+.engagement h2 {
+  font-size: 1.125rem;
+  max-width: 760px;
+  margin: 0 auto var(--espace-3);
+}
+
+.engagement p {
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--color-texte-muted);
+  line-height: 1.6;
+}

@@ -6,7 +6,9 @@ import { AdminSettingsService } from "./admin-settings.service";
  * 12 oct. 2026) — Gestion et la Marketplace en ont besoin sans être
  * authentifiées en admin, pour savoir si "Recherche par photo" et "Studio
  * publicitaire IA" doivent s'afficher actifs ou "Bientôt disponible".
- * Jamais les coordonnées de contact ici, seulement ces deux booléens.
+ * Jamais les coordonnées de contact dans cette route précise, seulement ces
+ * deux booléens — les coordonnées de contact ont leur propre route dédiée,
+ * `contact()` ci-dessous.
  */
 @Controller("platform-settings")
 export class PublicPlatformFeaturesController {
@@ -15,6 +17,14 @@ export class PublicPlatformFeaturesController {
   @Get("features")
   features() {
     return this.adminSettingsService.publicFeatures();
+  }
+
+  // Coordonnées de contact affichées dans le pied de page et la page "À
+  // propos" (prompt du 13 oct. 2026, point 3) — mêmes valeurs que celles
+  // gérées dans /admin/parametres, jamais dupliquées ni inventées côté écran.
+  @Get("contact")
+  contact() {
+    return this.adminSettingsService.publicContactInfo();
   }
 
   // Tarification livreur, publique pour affichage à l'inscription (prompt

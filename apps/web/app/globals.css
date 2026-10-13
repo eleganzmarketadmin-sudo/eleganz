@@ -20,6 +20,17 @@
   --color-or: #d9a61a;
   --color-vert-paiement: #2f6b3f;
 
+  /* Variante claire du cobalt, jamais retournée par le thème (comme
+     --color-encre-fixe ci-dessus) : le cobalt brut (#17408a) est trop sombre
+     pour rester lisible en texte sur les en-têtes à fond fixe-sombre
+     (--color-encre-fixe) — contrôlé : ~1.8:1, bien sous le seuil AAA/AA.
+     Cette variante (~6.4:1) sert uniquement à ce cas, jamais ailleurs. */
+  --color-cobalt-sur-fonce: #6d99f2;
+  /* Même logique pour le magenta : le ton de marque brut (#a62368) tombe
+     sous 3:1 en texte sur un fond fixe-sombre ; cette variante (~4.9:1)
+     sert uniquement à ce cas (ex. "ELEGANZ Market" dans l'en-tête). */
+  --color-magenta-sur-fonce: #d6579e;
+
   --color-surface: #ffffff;
   --color-surface-muted: var(--color-toile);
   --color-border: #d8d8d0;

@@ -55,8 +55,12 @@ export default function MarketplacePage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.entete}>
-        <h1>Porter la couleur</h1>
-        <p>Mode et luxe choisis chez des boutiques congolaises, livrés à Kinshasa.</p>
+        <h1>ELEGANZ Market</h1>
+        <p>
+          Porter la couleur : la marketplace qui réunit les boutiques de mode
+          et de luxe congolaises dans une seule vitrine — recherche, fiche
+          produit, commande et livraison suivie à Kinshasa.
+        </p>
       </div>
 
       <form

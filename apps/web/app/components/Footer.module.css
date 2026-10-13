@@ -52,6 +52,48 @@
   color: #fff;
 }
 
+.titreColonne {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #fff;
+}
+
+.texteColonne {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.bloc a {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.82);
+  align-self: flex-start;
+}
+
+.bloc a:hover {
+  color: #fff;
+}
+
+.liensContact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.liensContact a {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.liensContact a:hover {
+  color: #fff;
+}
+
 .copyright {
   margin: 0;
   font-size: 0.8125rem;

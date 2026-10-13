@@ -17,8 +17,10 @@ export default function HomePage() {
         <div className={`${styles.bloc} ${styles.comptable}`}>
           <h1>ELEGANZ Mon Comptable</h1>
           <p>
-            Mon carnet de gestion au quotidien : ventes, dépenses, dettes,
-            loyers et échéances — sans boutique ni catalogue à créer.
+            Ventes et dépenses par devise, dettes et créances, loyers,
+            versements des travailleurs, agenda des échéances et synthèses
+            exportables — un carnet de gestion complet, sans boutique ni
+            catalogue à créer.
           </p>
           <Link className={styles.lien} href="/comptable">
             Ouvrir mon carnet
@@ -27,16 +29,21 @@ export default function HomePage() {
         <div className={`${styles.bloc} ${styles.gestion}`}>
           <h1>ELEGANZ Gestion</h1>
           <p>
-            La caisse, le stock et les comptes de votre boutique à Kinshasa — du
-            comptoir jusqu&apos;au tableau de bord du soir.
+            La caisse, le stock, les factures et les commandes de votre
+            boutique à Kinshasa, avec livraison suivie et équipe intégrée —
+            du comptoir jusqu&apos;au tableau de bord du soir.
           </p>
           <Link className={styles.lien} href="/connexion">
             Ouvrir ma caisse
           </Link>
         </div>
         <div className={`${styles.bloc} ${styles.marketplace}`}>
-          <h1 className="titre-vitrine">Porter la couleur</h1>
-          <p>La mode et le luxe congolais, choisis chez des boutiques d&apos;ici.</p>
+          <h1 className="titre-vitrine">ELEGANZ Market</h1>
+          <p>
+            Porter la couleur : la marketplace qui réunit les boutiques de
+            mode et de luxe congolaises dans une seule vitrine — recherche,
+            commande et livraison suivie à Kinshasa.
+          </p>
           <Link className={styles.lien} href="/marketplace">
             Parcourir la vitrine
           </Link>
@@ -44,8 +51,10 @@ export default function HomePage() {
         <div className={`${styles.bloc} ${styles.livreur}`}>
           <h1>ELEGANZ Livreur</h1>
           <p>
-            Recevez des missions de livraison pour les boutiques ELEGANZ de
-            votre commune, de l&apos;enlèvement jusqu&apos;à la remise.
+            Missions de livraison par commune pour les boutiques ELEGANZ,
+            affectées par le vendeur et suivies jusqu&apos;à la remise, avec
+            une tarification transparente et une période de gratuité à
+            l&apos;inscription.
           </p>
           <Link className={styles.lien} href="/livreur/inscription">
             Devenir livreur

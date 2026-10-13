@@ -27,7 +27,7 @@
 }
 
 .marque span {
-  color: var(--color-or);
+  color: var(--color-cobalt-sur-fonce);
 }
 
 .boutiqueNom {
@@ -58,7 +58,7 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-ink);
+  border-bottom: 2px solid var(--color-cobalt);
   overflow-x: auto;
 }
 

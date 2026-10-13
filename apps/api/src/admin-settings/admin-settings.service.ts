@@ -61,10 +61,36 @@ export class AdminSettingsService {
   }
 
   /**
+   * Coordonnées officielles ELEGANZ (demande du 13 oct. 2026, point 3 —
+   * "prévoir les champs contact et nos infos qui seront liés aux infos de
+   * la plateforme gérée dans le Centre de pilotage") — lecture publique,
+   * sans authentification, pour que le pied de page (tous les espaces) et
+   * la page "À propos" affichent les vraies coordonnées éditées par l'admin
+   * dans /admin/parametres, jamais une adresse ou un contact inventés.
+   * Chaque champ est optionnel : un champ non renseigné est simplement
+   * omis à l'affichage plutôt que de montrer une valeur vide ou un espace
+   * réservé.
+   */
+  async publicContactInfo() {
+    const settings = await this.get();
+    return {
+      address: settings.address,
+      website: settings.website,
+      supportEmail: settings.supportEmail,
+      supportPhone: settings.supportPhone,
+      whatsappLink: settings.whatsappLink,
+      telegramLink: settings.telegramLink,
+      tiktokUrl: settings.tiktokUrl,
+      instagramUrl: settings.instagramUrl,
+    };
+  }
+
+  /**
    * Lecture publique de la tarification livreur (prompt du 13 oct. 2026,
    * point 1) — affichée sur l'écran d'inscription livreur pour la
-   * transparence, sans authentification. Jamais les coordonnées de contact
-   * ni rien d'autre ici, seulement ces trois valeurs.
+   * transparence, sans authentification. Seulement ces trois valeurs ici ;
+   * les coordonnées de contact ont leur propre point d'entrée dédié,
+   * `publicContactInfo()` ci-dessus.
    */
   async publicDriverPricing() {
     const settings = await this.get();

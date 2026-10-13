@@ -7,6 +7,7 @@
   padding: var(--espace-3) var(--espace-5);
   background: var(--color-encre-fixe);
   color: #fff;
+  border-bottom: 2px solid var(--color-magenta);
 }
 
 .marque {
@@ -16,6 +17,17 @@
   font-family: var(--font-display), serif;
   font-size: 1.25rem;
   white-space: nowrap;
+  color: #fff;
+}
+
+/* Touche propre au module (demande du 13 oct. 2026, point 4) — même
+   principe que "ELEGANZ <span>Gestion</span>" dans les autres espaces,
+   décliné ici en magenta pour rester cohérent avec le quartier magenta du
+   logo et avec le bloc "ELEGANZ Market" de la page d'accueil. */
+.nomModule {
+  color: var(--color-magenta-sur-fonce);
+  font-weight: 600;
+  font-size: 0.9em;
 }
 
 .liens {

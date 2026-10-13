@@ -69,7 +69,7 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-ink);
+  border-bottom: 2px solid var(--color-vert-paiement);
   overflow-x: auto;
 }
 
