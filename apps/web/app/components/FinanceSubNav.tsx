@@ -14,6 +14,7 @@ const ONGLETS = [
   { href: "/finance/comptabilite", label: "Comptabilité" },
   { href: "/finance/immobilisations", label: "Immobilisations" },
   { href: "/finance/cloture", label: "Clôture" },
+  { href: "/finance/analytique", label: "Analytique" },
 ];
 
 export function FinanceSubNav() {

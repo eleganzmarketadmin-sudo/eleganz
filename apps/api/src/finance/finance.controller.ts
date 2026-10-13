@@ -113,6 +113,15 @@ export class FinanceController {
     return this.fiscalSimulation.simulerShop(shopId, fromDate, toDate);
   }
 
+  // Analytique et prévisions (docs/ARCHITECTURE_FINANCE.md §8octies) —
+  // évolution mensuelle réelle, projection calculée côté client (moyenne
+  // mobile), toujours étiquetée comme estimation.
+  @Get("analytique")
+  analytique(@Param("shopId") shopId: string, @Query("mois") mois?: string) {
+    const nombreMois = Math.min(Math.max(Number(mois) || 6, 1), 24);
+    return this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, nombreMois);
+  }
+
   @Get("fiscal-identity")
   fiscalIdentity(@Param("shopId") shopId: string) {
     return this.financeService.fiscalIdentity(shopId);

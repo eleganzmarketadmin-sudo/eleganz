@@ -232,4 +232,28 @@ export class AccountingQueryService {
       lignes.map((l) => [l.accountId, { debit: Number(l._sum.debit ?? 0), credit: Number(l._sum.credit ?? 0) }]),
     );
   }
+
+  /**
+   * Évolution mensuelle réelle (docs/ARCHITECTURE_FINANCE.md §8octies) —
+   * un compte de résultat déjà construit (§8ter), recalculé mois par mois
+   * sur les `nombreMois` derniers mois (le mois courant inclus, même
+   * partiel). Jamais de donnée inventée pour un mois sans écriture : il
+   * apparaît avec des totaux à 0, pas masqué ni interpolé.
+   */
+  async evolutionMensuelle(scope: FiscalRuleScope, shopId: string | null, nombreMois: number) {
+    const maintenant = new Date();
+    const serie: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[] = [];
+    for (let i = nombreMois - 1; i >= 0; i--) {
+      const debut = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - i, 1));
+      const fin = new Date(Date.UTC(debut.getUTCFullYear(), debut.getUTCMonth() + 1, 1));
+      const cr = await this.compteDeResultat(scope, shopId, debut, fin);
+      serie.push({
+        mois: debut.toISOString().slice(0, 7),
+        chiffreAffaires: cr.totalProduits,
+        charges: cr.totalCharges,
+        resultatNet: cr.resultatNet,
+      });
+    }
+    return serie;
+  }
 }

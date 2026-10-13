@@ -83,6 +83,13 @@ export class AdminFinanceController {
     return this.accountingQuery.bilan(FiscalRuleScope.PLATFORM, null, asOf ? new Date(asOf) : new Date());
   }
 
+  @Get("analytique")
+  analytique(@CurrentUser() user: AuthenticatedUser, @Query("mois") mois?: string) {
+    requireAdmin(user);
+    const nombreMois = Math.min(Math.max(Number(mois) || 6, 1), 24);
+    return this.accountingQuery.evolutionMensuelle(FiscalRuleScope.PLATFORM, null, nombreMois);
+  }
+
   @Get("clotures")
   listClotures(@CurrentUser() user: AuthenticatedUser) {
     requireAdmin(user);

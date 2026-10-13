@@ -692,6 +692,33 @@ demandée à cette phase) ; pas de parsing de formules complexes (barèmes
 progressifs, forfaits, plafonds) — seul un taux pourcentage simple est
 simulé automatiquement ; pas de génération de déclaration électronique.
 
+## 8octies. Analytique et prévisions financières (13 oct. 2026, Phase 8)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6.
+Aucune nouvelle table — le compte de résultat (§8ter) est recalculé mois
+par mois sur une fenêtre glissante.
+
+### 9septies.1. Ce qui est construit
+
+- `AccountingQueryService.evolutionMensuelle(scope, shopId, nombreMois)` :
+  recalcule le compte de résultat pour chacun des `nombreMois` derniers
+  mois (le mois courant inclus, explicitement marqué comme partiel côté
+  écran — jamais présenté comme un mois clos). Aucune donnée inventée pour
+  un mois sans écriture : il apparaît avec des totaux à 0.
+- Route `GET /shops/:shopId/finance/analytique?mois=6` (+ miroir
+  `/admin/finance/analytique`).
+- Nouvel onglet **Analytique** : tableau mensuel (CA, charges, résultat net)
+  avec une barre visuelle simple, et une projection du CA du mois suivant
+  par **moyenne mobile des 3 derniers mois complets** (le mois en cours,
+  partiel par définition, est exclu du calcul de la moyenne) — toujours
+  étiquetée comme estimation.
+
+### 9septies.2. Ce que ce chantier ne livre pas
+
+Pas de modèle de prévision plus sophistiqué (saisonnalité, régression) ;
+pas d'export de la série ; pas de comparaison à une période antérieure
+(année précédente) — seule une fenêtre glissante des derniers mois.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après
