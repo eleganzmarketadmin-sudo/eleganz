@@ -6,9 +6,10 @@ import { DriverBillingController } from "./driver-billing.controller";
 import { ShopsModule } from "../shops/shops.module";
 import { OrdersModule } from "../orders/orders.module";
 import { AdminSettingsModule } from "../admin-settings/admin-settings.module";
+import { FinanceModule } from "../finance/finance.module";
 
 @Module({
-  imports: [ShopsModule, OrdersModule, AdminSettingsModule],
+  imports: [ShopsModule, OrdersModule, AdminSettingsModule, FinanceModule],
   providers: [DeliveryService, DriverBillingService],
   controllers: [DeliveryController, AssignDriverController, DriverBillingController],
   exports: [DeliveryService, DriverBillingService],

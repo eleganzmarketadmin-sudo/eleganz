@@ -1,13 +1,19 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateExpenseDto } from "./dto/expense.dto";
+import { AccountingService } from "../finance/accounting.service";
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ExpensesService.name);
 
-  create(shopId: string, dto: CreateExpenseDto) {
-    return this.prisma.expense.create({
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accounting: AccountingService,
+  ) {}
+
+  async create(shopId: string, dto: CreateExpenseDto) {
+    const expense = await this.prisma.expense.create({
       data: {
         shopId,
         category: dto.category,
@@ -16,6 +22,14 @@ export class ExpensesService {
         note: dto.note,
       },
     });
+
+    // Comptabilisation après coup (docs/ARCHITECTURE_FINANCE.md §8bis) — une
+    // dépense déjà enregistrée n'est jamais annulée par un échec d'écriture.
+    await this.accounting.postExpense(expense).catch((err) => {
+      this.logger.error(`Comptabilisation de la dépense ${expense.id} échouée`, err);
+    });
+
+    return expense;
   }
 
   list(shopId: string) {

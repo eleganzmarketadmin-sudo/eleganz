@@ -1,12 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { FinanceService } from "./finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
+import { AccountingQueryService } from "./accounting-query.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
-import { StaffRole } from "@eleganz/database";
+import { StaffRole, FiscalRuleScope } from "@eleganz/database";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 
@@ -23,7 +24,45 @@ export class FinanceController {
   constructor(
     private readonly financeService: FinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
+    private readonly accountingQuery: AccountingQueryService,
   ) {}
+
+  private periode(from?: string, to?: string) {
+    const toDate = to ? new Date(to) : new Date();
+    const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+    return { fromDate, toDate };
+  }
+
+  // Moteur de comptabilité en partie double (docs/ARCHITECTURE_FINANCE.md
+  // §8bis) — lecture seule : les écritures sont générées automatiquement par
+  // AccountingService à partir des opérations réelles, jamais saisies ici.
+  @Get("journal")
+  journal(
+    @Param("shopId") shopId: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("journal") journalCode?: string,
+  ) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.journal(FiscalRuleScope.SHOP, shopId, fromDate, toDate, journalCode);
+  }
+
+  @Get("grand-livre")
+  grandLivre(
+    @Param("shopId") shopId: string,
+    @Query("compte") compte: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.grandLivre(FiscalRuleScope.SHOP, shopId, compte, fromDate, toDate);
+  }
+
+  @Get("balance")
+  balance(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.balance(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+  }
 
   @Get("fiscal-identity")
   fiscalIdentity(@Param("shopId") shopId: string) {

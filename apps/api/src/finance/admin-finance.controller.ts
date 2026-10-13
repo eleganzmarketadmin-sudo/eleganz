@@ -1,10 +1,12 @@
 import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { AdminFinanceService } from "./admin-finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
+import { AccountingQueryService } from "./accounting-query.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { FiscalRuleScope } from "@eleganz/database";
 
 function requireAdmin(user: AuthenticatedUser) {
   if (!user.role.startsWith("ADMIN_")) {
@@ -24,7 +26,47 @@ export class AdminFinanceController {
   constructor(
     private readonly adminFinanceService: AdminFinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
+    private readonly accountingQuery: AccountingQueryService,
   ) {}
+
+  private periode(from?: string, to?: string) {
+    const toDate = to ? new Date(to) : new Date();
+    const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+    return { fromDate, toDate };
+  }
+
+  // Moteur comptable ELEGANZ (scope PLATFORM uniquement — jamais de
+  // :shopId sur ces routes, voir docs/ARCHITECTURE_FINANCE.md §8bis.5/§6).
+  @Get("journal")
+  journal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("journal") journalCode?: string,
+  ) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.journal(FiscalRuleScope.PLATFORM, null, fromDate, toDate, journalCode);
+  }
+
+  @Get("grand-livre")
+  grandLivre(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("compte") compte: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.grandLivre(FiscalRuleScope.PLATFORM, null, compte, fromDate, toDate);
+  }
+
+  @Get("balance")
+  balance(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.balance(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
 
   @Get("dashboard")
   dashboard(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {

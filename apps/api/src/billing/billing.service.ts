@@ -1,10 +1,16 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ShopStatus } from "@eleganz/database";
+import { AccountingService } from "../finance/accounting.service";
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(BillingService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accounting: AccountingService,
+  ) {}
 
   /**
    * Fait passer les boutiques dont la période gratuite est écoulée de
@@ -83,10 +89,18 @@ export class BillingService {
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-    return this.prisma.$transaction([
+    const resultats = await this.prisma.$transaction([
       this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.shop.update({ where: { id: invoice.shopId }, data: { status: ShopStatus.ACTIVE } }),
     ]);
+
+    // Revenu ELEGANZ reconnu au règlement effectif, jamais à la facturation
+    // (docs/ARCHITECTURE_FINANCE.md §8bis.3).
+    await this.accounting.postPlatformInvoicePaid(resultats[0], "invoice").catch((err) => {
+      this.logger.error(`Comptabilisation de la facture ${invoiceId} échouée`, err);
+    });
+
+    return resultats;
   }
 
   listInvoices(shopId: string) {

@@ -211,3 +211,68 @@ qu'un chemin de test sert à distinguer des espaces applicatifs (ici,
 dans n'importe quel module, vérifier qu'elle ne commence pas par le nom
 (pluriel ou non) d'un module existant déjà testé par préfixe ailleurs dans
 le code (`grep -rn 'startsWith("/<préfixe>' apps/web`).
+
+## Piège Prisma : clé composite `@@unique` avec un champ nullable, inutilisable dans `findUnique`/`upsert`
+
+**Incident du 13 oct. 2026 (quater)** : lors de la construction du moteur
+comptable en partie double (`Account`, `Journal`, `JournalEntry` —
+`docs/ARCHITECTURE_FINANCE.md` §8bis), un `@@unique([scope, shopId, code])`
+a été ajouté sur plusieurs modèles pour reprendre le patron déjà validé par
+`FiscalRule` (séparation `scope: SHOP|PLATFORM` + `shopId` nullable). Mais
+`FiscalRule` n'avait qu'un `@@index`, jamais un `@@unique`, sur ce triplet —
+et c'est précisément la différence qui a tout cassé : Prisma **accepte**
+sans broncher un `@@unique` composite incluant un champ nullable au niveau
+du schéma (`prisma generate`/`db push` réussissent), mais **ne génère pas**
+de champ `scope_shopId_code` utilisable dans le `where` de `findUnique`,
+`findUniqueOrThrow` ou `upsert` pour ce modèle — une erreur TypeScript bien
+réelle (`Object literal may only specify known properties`), mais invisible
+ici car ce bac à sable ne peut pas exécuter `prisma generate` (réseau
+bloqué, voir plus haut) : le code passait notre seul filet de sécurité local
+(un parseur TypeScript syntaxique, qui ne connaît pas les types générés par
+Prisma) et semblait donc correct.
+
+**Symptôme observé** : les deux premiers commits de ce chantier (schéma
+seul, puis code applicatif) ont été poussés sans alerte locale, mais le
+déploiement Railway du service `eleganz-api` a échoué silencieusement et de
+façon répétée (`gh api repos/<owner>/<repo>/commits/<sha>/status` — jamais
+consulté avant cet incident) pendant que le reste de l'API continuait de
+tourner sur l'ancien build. Le symptôme côté navigateur était un `Cannot
+GET /shops/.../finance/journal` (texte brut, pas une erreur JSON de
+NestJS) sur les nouvelles routes uniquement, alors que les routes
+existantes du même contrôleur (`/finance/dashboard`) répondaient
+normalement — signe quasi certain que l'ancien build tournait encore et
+que le nouveau n'avait jamais démarré, plutôt qu'un simple délai de
+déploiement.
+
+**Méthode de diagnostic qui a fonctionné** (à réutiliser directement la
+prochaine fois qu'une route nouvellement déployée répond 404/« Cannot GET »
+bien après le délai habituel) :
+1. `gh api repos/<owner>/<repo>/commits/<sha>/status --jq '.statuses[]'`
+   donne immédiatement l'état réel du déploiement par service Railway
+   (`state: "failure"` avec `target_url` vers le tableau de bord Railway) —
+   bien plus fiable que de deviner via le navigateur.
+2. Sans accès aux logs de build eux-mêmes (Railway CLI non authentifié
+   dans ce bac à sable, et la page de build n'est pas accessible sans
+   session), la bissection par petits commits de diagnostic est la seule
+   méthode praticable : `git checkout <dernier_commit_sain> -- <fichiers
+   suspects>`, commit, push, puis repoller `gh api .../status` après
+   ~100-130 s. Chaque aller-retour coûte ~2 min mais converge vite en
+   divisant le périmètre par deux à chaque fois (ici : retrait du câblage
+   inter-modules → toujours en échec → retrait des 3 nouveaux fichiers du
+   module finance → succès → réintroduction fichier par fichier → le
+   coupable isolé en 3 étapes).
+
+**Règle à appliquer systématiquement** : ne jamais utiliser `@@unique([...])`
+sur une combinaison de champs incluant un champ nullable dans l'intention
+de l'exploiter ensuite via `findUnique`/`findUniqueOrThrow`/`upsert` avec la
+clé composite générée (`champ1_champ2_champ3`) — ce schéma est accepté par
+Prisma mais son usage côté client ne l'est pas toujours selon la version.
+Préférer un `@@index([...])` (non unique) plus une recherche par
+`findFirst`/`findFirstOrThrow` avec un `where` à champs plats
+(`{ scope, shopId, code }`) — ça fonctionne dans tous les cas, au prix de
+ne pas avoir de contrainte d'unicité réelle en base (à documenter comme
+limite assumée si l'unicité est garantie uniquement par la logique
+applicative plutôt que par la base de données). Et, plus généralement :
+après tout push touchant `apps/api`, vérifier `gh api
+repos/<owner>/<repo>/commits/<sha>/status` avant de supposer qu'un 404 sur
+une route neuve est juste un déploiement encore en cours.

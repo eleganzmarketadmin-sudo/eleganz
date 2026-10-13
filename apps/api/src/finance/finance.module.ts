@@ -5,6 +5,9 @@ import { FinanceController } from "./finance.controller";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AdminFinanceController } from "./admin-finance.controller";
+import { AccountingSeedService } from "./accounting-seed.service";
+import { AccountingService } from "./accounting.service";
+import { AccountingQueryService } from "./accounting-query.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -14,7 +17,15 @@ import { AdminFinanceController } from "./admin-finance.controller";
 // dans docs/MAINTENANCE.md, incident AuthModule).
 @Module({
   imports: [ShopsModule],
-  providers: [FinanceService, FiscalRulesService, AdminFinanceService],
+  providers: [
+    FinanceService,
+    FiscalRulesService,
+    AdminFinanceService,
+    AccountingSeedService,
+    AccountingService,
+    AccountingQueryService,
+  ],
   controllers: [FinanceController, AdminFinanceController],
+  exports: [AccountingService],
 })
 export class FinanceModule {}
