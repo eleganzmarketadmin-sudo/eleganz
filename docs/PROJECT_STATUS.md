@@ -1,8 +1,12 @@
 # État du projet
 
-Dernière mise à jour : 12 octobre 2026.
+Dernière mise à jour : 13 octobre 2026.
 
 ## Fait
+
+- **(13 oct.) Mon Comptable — choix de langue (9 locales)** : sélecteur de langue dans l'en-tête, mémorisé par navigateur (`localStorage`, jamais envoyé au serveur). Français (langue par défaut), anglais, espagnol, arabe, portugais et kiswahili sont des langues complètes de pilotage. Lingala, kikongo et tshiluba (les 3 autres langues nationales de la RDC) ont été ajoutées uniquement pour aider à la compréhension des menus/options — un bandeau invite à une relecture par un locuteur natif tant que ce n'est pas fait. Portée volontairement limitée : seuls les menus, titres, boutons et libellés de champs sont traduits ; les données saisies par l'utilisateur (noms d'activités, observations…) restent dans leur langue d'origine. **Pas encore fait** : traduction des pages de détail d'activité (onglets Carnet/Dettes/Locatif/Travailleurs) et des textes dynamiques (statut d'abonnement, etc.) — seule la coquille et les pages principales sont couvertes pour l'instant.
+- **(13 oct.) Incident de déploiement et correction** : voir l'entrée détaillée plus bas (module Mon Comptable qui faisait planter toute l'API en production, corrigé et documenté dans `MAINTENANCE.md`).
+- **(13 oct.) Proposition en cours de discussion avec le propriétaire du projet** (pas encore codée) : (1) prix négocié/libre à la facturation pour le secteur informel (Gestion) ; (2) taux de change système piloté depuis le Centre de pilotage, pour l'affichage et les calculs multi-devises (CDF/USD) sur toute la plateforme. Voir le message du 13 octobre dans l'historique de la conversation pour le détail des propositions affinées.
 
 - **(12 oct.) Nouveau module : Espace Livreur** (troisième grand espace de la plateforme, après Gestion et Marketplace — prompt §10). Le backend des missions existait déjà partiellement (affectation, confirmation d'enlèvement/livraison), mais aucun livreur ne pouvait ni s'inscrire ni se connecter : c'est maintenant complet.
   - **Inscription et connexion** (`/livreur/inscription`, `/livreur/connexion`) : un livreur crée un compte (rôle `DRIVER`) puis son profil (zone/commune), toujours créé **non vérifié** — aucune mission réelle n'est affectable à un livreur non vérifié (`assignDriver` le bloque déjà côté serveur).
