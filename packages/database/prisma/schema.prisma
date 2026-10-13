@@ -112,6 +112,14 @@ enum StaffRole {
   STOCK_KEEPER
   SALES_LEAD
   ACCOUNTANT
+  // Comptable externe invité par la boutique (13 oct. 2026, Finance &
+  // Comptabilité Phase 6) — contrairement à ACCOUNTANT (staff interne, accès
+  // large comme tout membre actif sauf exceptions ponctuelles), ce rôle est
+  // volontairement restreint en LECTURE SEULE aux routes Finance &
+  // Comptabilité (finance/assets/expenses) par ShopMembershipGuard — voir
+  // docs/ARCHITECTURE_FINANCE.md §8sexies. Jamais d'accès à la Caisse, au
+  // Catalogue, aux Commandes, à l'Équipe ou aux Paramètres.
+  EXTERNAL_ACCOUNTANT
 }
 
 model User {
