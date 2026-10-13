@@ -16,6 +16,7 @@ interface Variant {
   size?: string | null;
   color?: string | null;
   sellPrice: string;
+  costPrice?: string | null;
   currency: string;
   stockQty: number;
 }
@@ -33,6 +34,14 @@ interface LigneTicket {
   quantity: number;
   unitPrice: number;
   currency: string;
+  // Prix catalogue au moment de l'ajout au ticket — jamais modifié ensuite,
+  // sert uniquement de repère pour signaler visuellement un prix négocié et
+  // avertir (sans bloquer) si le prix saisi tombe sous le prix de revient.
+  // (demande du 13 oct. 2026 : le secteur informel vend rarement au prix
+  // affiché, le vendeur doit pouvoir ajuster le prix ligne par ligne sans
+  // jamais toucher au catalogue.)
+  prixCatalogue: number;
+  prixRevient?: number | null;
 }
 
 const MOYENS = [
@@ -154,6 +163,8 @@ function CaisseContent() {
           quantity: 1,
           unitPrice: Number(variante.sellPrice),
           currency: variante.currency,
+          prixCatalogue: Number(variante.sellPrice),
+          prixRevient: variante.costPrice != null ? Number(variante.costPrice) : null,
         },
       ];
     });
@@ -162,6 +173,12 @@ function CaisseContent() {
   function modifierQuantite(index: number, quantite: number) {
     setLignes((prev) =>
       prev.map((l, i) => (i === index ? { ...l, quantity: Math.max(1, quantite) } : l)),
+    );
+  }
+
+  function modifierPrix(index: number, prix: number) {
+    setLignes((prev) =>
+      prev.map((l, i) => (i === index ? { ...l, unitPrice: Math.max(0, prix) } : l)),
     );
   }
 
@@ -311,28 +328,58 @@ function CaisseContent() {
               <p className={styles.messageVide}>Le ticket est vide. Touchez un article à côté.</p>
             ) : (
               <div className={styles.ligneTicketListe}>
-                {lignes.map((ligne, i) => (
-                  <div className={styles.ligneTicket} key={i}>
-                    <span className={styles.ligneTicketNom}>{ligne.label}</span>
-                    <input
-                      className={styles.ligneTicketQte}
-                      type="number"
-                      min={1}
-                      value={ligne.quantity}
-                      onChange={(e) => modifierQuantite(i, Number(e.target.value))}
-                    />
-                    <span className={styles.ligneTicketMontant}>
-                      {formatMoney(ligne.quantity * ligne.unitPrice, ligne.currency)}
-                    </span>
-                    <button
-                      className={styles.ligneTicketSupprimer}
-                      onClick={() => retirerLigne(i)}
-                      aria-label={`Retirer ${ligne.label}`}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                {lignes.map((ligne, i) => {
+                  const prixModifie = ligne.unitPrice !== ligne.prixCatalogue;
+                  const sousRevient =
+                    ligne.prixRevient != null && ligne.unitPrice < ligne.prixRevient;
+                  return (
+                    <div className={styles.ligneTicket} key={i}>
+                      <span className={styles.ligneTicketNom}>
+                        {ligne.label}
+                        {prixModifie && (
+                          <span
+                            className={styles.pucePrixModifie}
+                            title={`Prix catalogue : ${formatMoney(ligne.prixCatalogue, ligne.currency)}`}
+                          >
+                            prix négocié
+                          </span>
+                        )}
+                      </span>
+                      <input
+                        className={styles.ligneTicketQte}
+                        type="number"
+                        min={1}
+                        value={ligne.quantity}
+                        onChange={(e) => modifierQuantite(i, Number(e.target.value))}
+                      />
+                      <input
+                        className={`${styles.ligneTicketPrix} ${prixModifie ? styles.ligneTicketPrixModifie : ""}`}
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={ligne.unitPrice}
+                        title="Prix unitaire pour cette vente (modifiable — ne change pas le catalogue)"
+                        onChange={(e) => modifierPrix(i, Number(e.target.value))}
+                      />
+                      <span className={styles.ligneTicketMontant}>
+                        {formatMoney(ligne.quantity * ligne.unitPrice, ligne.currency)}
+                      </span>
+                      <button
+                        className={styles.ligneTicketSupprimer}
+                        onClick={() => retirerLigne(i)}
+                        aria-label={`Retirer ${ligne.label}`}
+                      >
+                        ✕
+                      </button>
+                      {sousRevient && (
+                        <div className={styles.averPrixBas}>
+                          ⚠ Prix sous le coût de revient ({formatMoney(ligne.prixRevient!, ligne.currency)}) —
+                          vérifiez avant d&apos;encaisser.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
