@@ -157,3 +157,28 @@ totale survient sans accès aux logs, `git revert --no-edit <commit>` pour
 rétablir le service immédiatement, diagnostiquer ensuite une fois les logs
 obtenus (demander au propriétaire un copier-coller de l'onglet "Deploy
 Logs" du service concerné sur le dashboard Railway).
+
+## Piège fréquent : les commentaires `/** ... */` sont invalides dans `schema.prisma`
+
+**Incident du 13 oct. 2026 (bis)** : le modèle `ExchangeRateHistory` a été
+documenté avec un commentaire de style JSDoc (`/** ... */`), syntaxe
+invalide dans le langage de schéma Prisma — **seuls `//` (et `///` pour la
+doc générée) sont acceptés**. Résultat : `prisma generate` échoue à la
+validation (`P1012`, "This line is invalid. It does not start with any
+known Prisma schema keyword."), donc `prisma db push` échoue aussi au
+démarrage du conteneur — mais ici Railway a gardé l'ancienne version en
+service plutôt que de planter (contrairement à l'incident `AuthModule`
+ci-dessus, qui lui faisait planter le process), donc **le symptôme était
+silencieux : l'API restait saine, seule la nouvelle route répondait 404 en
+boucle**, sans aucune erreur visible sans les logs de build.
+
+**Règle à appliquer systématiquement** : dans `packages/database/prisma/schema.prisma`,
+toujours utiliser `//` ligne par ligne pour documenter un modèle ou un
+champ, jamais `/** ... */` (qui est valide en TypeScript mais pas en
+Prisma Schema Language). Comme `prisma validate`/`generate` ne peuvent pas
+tourner dans ce bac à sable (réseau bloqué, voir plus haut), c'est une
+relecture manuelle du diff qui doit attraper ce genre d'erreur avant de
+pousser — ou, si une route nouvellement ajoutée répond 404 en boucle bien
+après le délai de déploiement habituel alors que le reste de l'API va
+bien, soupçonner en premier un échec silencieux de `prisma generate`/`db push`
+plutôt qu'un problème de câblage NestJS.

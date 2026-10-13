@@ -72,15 +72,13 @@ model PlatformSettings {
   updatedAt     DateTime @updatedAt
 }
 
-/**
- * Historique des changements du taux de change système (prompt du 13 oct.
- * 2026, point 5) — append-only, jamais modifié ni supprimé. Sert à répondre
- * à "quel taux était affiché à telle date", notamment utile le jour où une
- * phase 2 voudra figer le taux sur chaque transaction au lieu de toujours
- * utiliser le taux courant (voir note sur PlatformSettings.cdfPerUsd).
- */
+// Historique des changements du taux de change système (prompt du 13 oct.
+// 2026, point 5) — append-only, jamais modifié ni supprimé. Sert à répondre
+// à "quel taux était affiché à telle date", notamment utile le jour où une
+// phase 2 voudra figer le taux sur chaque transaction au lieu de toujours
+// utiliser le taux courant (voir note sur PlatformSettings.cdfPerUsd).
 model ExchangeRateHistory {
-  id          String   @id @default(cuid())
+  id          String   @id @default(uuid())
   cdfPerUsd   Decimal  @db.Decimal(14, 4)
   setAt       DateTime @default(now())
   setByUserId String?
