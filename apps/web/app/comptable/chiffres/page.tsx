@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ComptableShell } from "../ComptableShell";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { GraphiqueEvolution, GraphiqueComparaison } from "./Graphiques";
 import styles from "./page.module.css";
 
 interface Periode {
@@ -64,15 +65,39 @@ function CartePeriode({ titre, periode }: { titre: string; periode: Periode }) {
   );
 }
 
+interface PointHistorique {
+  date: string;
+  ventesCdf: number;
+  ventesUsd: number;
+  depensesCdf: number;
+  depensesUsd: number;
+}
+
+interface LigneComparaison {
+  activityId: string;
+  activityName: string;
+  resultatCdf: number;
+  resultatUsd: number;
+}
+
 function ChiffresContenu() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [historique, setHistorique] = useState<PointHistorique[]>([]);
+  const [comparaison, setComparaison] = useState<LigneComparaison[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<Dashboard>("/comptable/dashboard")
-      .then(setDashboard)
+    Promise.all([
+      api.get<Dashboard>("/comptable/dashboard"),
+      api.get<PointHistorique[]>("/comptable/dashboard/historique?jours=14"),
+      api.get<LigneComparaison[]>("/comptable/dashboard/comparaison"),
+    ])
+      .then(([d, h, c]) => {
+        setDashboard(d);
+        setHistorique(h);
+        setComparaison(c);
+      })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
   }, []);
@@ -94,6 +119,22 @@ function ChiffresContenu() {
         <CartePeriode titre="Ce mois-ci" periode={dashboard.mois} />
         <CartePeriode titre="Cette année" periode={dashboard.annee} />
       </div>
+
+      {historique.length > 0 && (
+        <>
+          <h2 className={styles.sectionTitre}>Évolution</h2>
+          <GraphiqueEvolution items={historique} currency="USD" />
+          <GraphiqueEvolution items={historique} currency="CDF" />
+        </>
+      )}
+
+      {comparaison.length > 1 && (
+        <>
+          <h2 className={styles.sectionTitre}>Comparaison entre activités</h2>
+          <GraphiqueComparaison items={comparaison} currency="USD" />
+          <GraphiqueComparaison items={comparaison} currency="CDF" />
+        </>
+      )}
 
       <h2 className={styles.sectionTitre}>Dettes, créances et emprunts en cours</h2>
       <div className={styles.grillePeriodes}>

@@ -1,0 +1,180 @@
+.carte {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-2);
+}
+
+.titreGraphique {
+  font-weight: 700;
+}
+
+.boutonBascule {
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink);
+  padding: var(--espace-1) var(--espace-3);
+  min-height: 36px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.legende {
+  display: flex;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-2);
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}
+
+.legendeItem {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-1);
+}
+
+.pastilleVentes {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--color-vert-paiement);
+}
+
+.pastilleDepenses {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--color-flamme);
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.axe {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.ligneVentes {
+  stroke: var(--color-vert-paiement);
+  stroke-width: 2;
+}
+
+.ligneDepenses {
+  stroke: var(--color-flamme);
+  stroke-width: 2;
+}
+
+.pointVentes {
+  fill: var(--color-vert-paiement);
+  cursor: pointer;
+}
+
+.pointDepenses {
+  fill: var(--color-flamme);
+  cursor: pointer;
+}
+
+.etiquetteAxe {
+  fill: var(--color-texte-muted);
+  font-size: 9px;
+}
+
+.infobulleFond {
+  fill: var(--color-ink);
+  opacity: 0.92;
+}
+
+.infobulleTitre {
+  fill: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.infobulleTexte {
+  fill: #fff;
+  font-size: 9px;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableau th,
+.tableau td {
+  text-align: left;
+  padding: var(--espace-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.positif {
+  color: var(--color-vert-paiement);
+  font-weight: 600;
+}
+
+.negatif {
+  color: var(--color-flamme);
+  font-weight: 600;
+}
+
+.barresDivergentes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.ligneBarre {
+  display: grid;
+  grid-template-columns: 140px 1fr 110px;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: 0.8125rem;
+}
+
+.nomActivite {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pisteBarre {
+  position: relative;
+  height: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.axeCentral {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-ink);
+}
+
+.barrePositive {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: var(--color-vert-paiement);
+}
+
+.barreNegative {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  background: var(--color-flamme);
+}

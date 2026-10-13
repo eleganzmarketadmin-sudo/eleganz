@@ -157,6 +157,16 @@ export class ComptableController {
     return this.comptableService.dashboard(user.id);
   }
 
+  @Get("dashboard/historique")
+  dashboardHistorique(@CurrentUser() user: AuthenticatedUser, @Query("jours") jours?: string) {
+    return this.comptableService.dashboardHistorique(user.id, jours ? Number(jours) : undefined);
+  }
+
+  @Get("dashboard/comparaison")
+  dashboardComparaison(@CurrentUser() user: AuthenticatedUser) {
+    return this.comptableService.dashboardComparaison(user.id);
+  }
+
   @Get("reminders")
   reminders(@CurrentUser() user: AuthenticatedUser) {
     return this.comptableService.reminders(user.id);

@@ -387,6 +387,75 @@ export class ComptableService {
   }
 
   /**
+   * Historique journalier (prompt §10.3, graphiques) — les N derniers jours,
+   * ventes et dépenses par devise, pour tracer une courbe d'évolution. Jamais
+   * de point inventé pour un jour sans saisie : le jour apparaît avec des
+   * montants à zéro, ce qui est la vérité (pas d'opération ce jour-là).
+   */
+  async dashboardHistorique(userId: string, jours = 14) {
+    const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
+    const activityIds = activites.map((a) => a.id);
+    const nbJours = Math.min(Math.max(jours, 7), 60);
+    const debut = new Date();
+    debut.setHours(0, 0, 0, 0);
+    debut.setDate(debut.getDate() - (nbJours - 1));
+
+    const entries = await this.prisma.comptableEntry.findMany({
+      where: { activityId: { in: activityIds }, date: { gte: debut } },
+    });
+
+    const jours_: { date: string; ventesCdf: number; ventesUsd: number; depensesCdf: number; depensesUsd: number }[] = [];
+    for (let i = 0; i < nbJours; i++) {
+      const jour = new Date(debut);
+      jour.setDate(jour.getDate() + i);
+      const lendemain = new Date(jour);
+      lendemain.setDate(lendemain.getDate() + 1);
+      const duJour = entries.filter((e) => e.date >= jour && e.date < lendemain);
+      const somme = (direction: ComptableFlowDirection, currency: "CDF" | "USD") =>
+        duJour.filter((e) => e.direction === direction && e.currency === currency).reduce((s, e) => s + Number(e.amount), 0);
+      jours_.push({
+        date: jour.toISOString().slice(0, 10),
+        ventesCdf: somme("ENTREE", "CDF"),
+        ventesUsd: somme("ENTREE", "USD"),
+        depensesCdf: somme("SORTIE", "CDF"),
+        depensesUsd: somme("SORTIE", "USD"),
+      });
+    }
+    return jours_;
+  }
+
+  /**
+   * Comparaison entre activités sur le mois civil en cours (prompt §10.3) —
+   * résultat net (ventes - dépenses) par activité et par devise, pour un
+   * classement visuel. Les résultats de deux activités ne sont jamais
+   * fusionnés en un seul chiffre composite (prompt §2) : chaque activité
+   * garde sa propre ligne.
+   */
+  async dashboardComparaison(userId: string) {
+    const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
+    const debutMois = new Date();
+    debutMois.setDate(1);
+    debutMois.setHours(0, 0, 0, 0);
+
+    const resultats = await Promise.all(
+      activites.map(async (a) => {
+        const entries = await this.prisma.comptableEntry.findMany({
+          where: { activityId: a.id, date: { gte: debutMois } },
+        });
+        const somme = (direction: ComptableFlowDirection, currency: "CDF" | "USD") =>
+          entries.filter((e) => e.direction === direction && e.currency === currency).reduce((s, e) => s + Number(e.amount), 0);
+        return {
+          activityId: a.id,
+          activityName: a.name,
+          resultatCdf: somme("ENTREE", "CDF") - somme("SORTIE", "CDF"),
+          resultatUsd: somme("ENTREE", "USD") - somme("SORTIE", "USD"),
+        };
+      }),
+    );
+    return resultats;
+  }
+
+  /**
    * Rappels priorisés pour la page d'accueil (prompt §12), calculés à
    * l'ouverture à partir des données réellement enregistrées — aucune
    * notification externe, aucun envoi périodique (prompt §11).
