@@ -158,11 +158,12 @@ function ComptabiliteContenu() {
         Journal, grand livre et balance générés automatiquement à partir des
         opérations réellement enregistrées (ventes, charges, achats,
         commandes Marketplace reçues, factures réglées) — voir{" "}
-        <em>docs/ARCHITECTURE_FINANCE.md</em>. Cette comptabilisation ne
-        remplace pas une comptabilité tenue par un professionnel et ne
-        constitue pas un état financier réglementaire (pas de bilan, pas de
-        compte de résultat, pas de clôture d&apos;exercice à cette phase).
-        La créance « 411 » (ventes Marketplace) ne se solde jamais
+        <em>docs/ARCHITECTURE_FINANCE.md</em>. Le compte de résultat et le
+        bilan sont des estimations générées automatiquement à partir de ces
+        mêmes écritures : ils ne remplacent pas une comptabilité tenue par
+        un professionnel et ne constituent pas une liasse fiscale (pas de
+        clôture d&apos;exercice, pas de verrouillage de période à cette
+        phase). La créance « 411 » (ventes Marketplace) ne se solde jamais
         automatiquement tant qu&apos;aucun reversement réel de fonds par la
         plateforme n&apos;est modélisé.
       </p>

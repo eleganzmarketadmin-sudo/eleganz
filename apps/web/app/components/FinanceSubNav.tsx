@@ -11,6 +11,7 @@ const ONGLETS = [
   { href: "/finance/charges", label: "Charges" },
   { href: "/finance/regles-fiscales", label: "Règles fiscales" },
   { href: "/finance/comptabilite", label: "Comptabilité" },
+  { href: "/finance/immobilisations", label: "Immobilisations" },
 ];
 
 export function FinanceSubNav() {

@@ -166,6 +166,14 @@ export class AccountingQueryService {
       const { debit, credit } = aggBilan.get(compte.id) ?? { debit: 0, credit: 0 };
       const solde = compte.normalSide === "DEBIT" ? debit - credit : credit - debit;
       if (solde === 0) continue;
+      // Les comptes d'amortissement (classe 28, ex. 2841) sont des
+      // contra-actifs : solde normalement créditeur, mais présentés en
+      // déduction de l'actif (valeur nette comptable), jamais comme une
+      // ligne de passif — voir docs/ARCHITECTURE_FINANCE.md §8quater.
+      if (compte.code.startsWith("28")) {
+        actif.push({ code: compte.code, label: compte.label, montant: -solde });
+        continue;
+      }
       const ligne = { code: compte.code, label: compte.label, montant: solde };
       if (compte.normalSide === "DEBIT") actif.push(ligne);
       else passif.push(ligne);

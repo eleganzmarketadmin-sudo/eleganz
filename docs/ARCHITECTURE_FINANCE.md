@@ -522,6 +522,55 @@ ces trois blocs par des comptes dédiés). Ces états restent des **estimations
 générées automatiquement**, jamais un substitut à une liasse fiscale établie
 par un professionnel — la même réserve déjà affichée pour le reste du module.
 
+## 8quater. Immobilisations et amortissements (13 oct. 2026, Phase 4)
+
+Chantier choisi par le propriétaire parmi les points différés au §7/§9.6,
+dans la continuité de la Phase 3 (§8ter). Amortissement **linéaire
+uniquement** — aucune autre méthode (dégressif, etc.) à cette phase.
+
+### 9ter.1. Ce qui est construit
+
+- Nouveaux modèles `Asset` (une immobilisation : libellé, date
+  d'acquisition, coût, durée d'amortissement en mois, statut mis au rebut)
+  et `AssetDepreciation` (une ligne par mois réellement comptabilisé pour un
+  actif donné — clé composite `[assetId, periodDate]` **sans champ
+  nullable**, donc sans le piège déjà documenté dans `MAINTENANCE.md`).
+- Nouveaux comptes seedés pour la boutique : `2441` (Matériel et mobilier de
+  bureau, actif), `2841` (Amortissements du matériel, contra-actif
+  créditeur bien que classe 2), `681` (Dotations aux amortissements,
+  charge). Nouvelle valeur d'enum `JournalEntrySource.DEPRECIATION`.
+- `AssetsService.runDepreciationForMonth(shopId, periodDate)` : pour chaque
+  immobilisation active dont la durée n'est pas écoulée, calcule la dotation
+  mensuelle (coût ÷ durée) et la comptabilise (Débit 681 / Crédit 2841) via
+  `AccountingService.postAssetDepreciation()`. **Action explicite
+  déclenchée par l'utilisateur** (bouton « Comptabiliser les dotations »
+  dans l'écran Immobilisations, avec le mois en paramètre) — **pas de
+  scheduler serveur à cette phase** : présenter une comptabilisation
+  automatique mensuelle silencieuse serait mentir sur ce qui tourne
+  réellement. Idempotent par actif et par mois.
+- `AccountingQueryService.bilan()` modifié : les comptes dont le code
+  commence par `28` (amortissements, contra-actif) sont désormais présentés
+  en **déduction de l'actif** (valeur nette comptable), pas comme une ligne
+  de passif — traitement comptable standard, nécessaire pour qu'un bilan
+  avec immobilisations reste à la fois équilibré et lisible.
+- Nouvelles routes `shops/:shopId/assets` (GET liste, POST création, POST
+  `:assetId/mise-au-rebut`, POST `depreciation/run?period=AAAA-MM`).
+- Nouvel onglet **Immobilisations** dans `/finance` (ELEGANZ Gestion) :
+  formulaire de création, liste avec valeur nette calculée, mise au rebut,
+  et le bouton de comptabilisation des dotations du mois choisi.
+
+### 9ter.2. Ce que ce chantier ne livre pas
+
+Pas de comptabilisation automatique périodique (voir ci-dessus — choix
+assumé, pas un oubli) ; pas de table de durées réglementaires par catégorie
+d'immobilisation (durée saisie librement par l'utilisateur) ; pas
+d'amortissement dégressif ni d'autres méthodes ; pas de miroir ELEGANZ
+(immobilisations non pertinentes pour la plateforme elle-même à ce stade,
+aucun actif propre modélisé ailleurs dans l'application) ; pas de plus/
+moins-value de cession calculée à la mise au rebut (le statut est
+enregistré, mais aucune écriture de sortie d'actif n'est générée — limite
+connue, à traiter si un besoin réel apparaît).
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après
