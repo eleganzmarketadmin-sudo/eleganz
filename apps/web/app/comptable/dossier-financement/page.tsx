@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { ComptableShell } from "../ComptableShell";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 function DossierContenu() {
+  const { t } = useLocale();
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -23,7 +25,7 @@ function DossierContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Dossier pour une demande de financement</h1>
+      <h1 className={styles.titre}>{t("titre_dossierFinancement")}</h1>
       <p className={styles.sousTitre}>
         Un document prêt à joindre à une demande de crédit — historique sur 6 mois de vos activités,
         dettes et créances en cours.

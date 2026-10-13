@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ComptableShell } from "../ComptableShell";
 import { api, ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Subscription {
@@ -28,6 +29,7 @@ const LABELS_STATUT: Record<string, string> = {
 };
 
 function AbonnementContenu() {
+  const { t } = useLocale();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tarification, setTarification] = useState<Tarification | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -62,12 +64,12 @@ function AbonnementContenu() {
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
   if (!subscription || !tarification) return <p className={styles.erreur}>{erreur}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Mon abonnement</h1>
+      <h1 className={styles.titre}>{t("titre_abonnement")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       <div className={styles.carte}>

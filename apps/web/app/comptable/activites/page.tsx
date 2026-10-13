@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ComptableShell } from "../ComptableShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Activite {
@@ -23,6 +24,7 @@ const CATEGORIES: { valeur: string; label: string }[] = [
 const LABELS_CATEGORIE: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.valeur, c.label]));
 
 function ActivitesContenu() {
+  const { t } = useLocale();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -56,16 +58,16 @@ function ActivitesContenu() {
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Mes activités</h1>
+      <h1 className={styles.titre}>{t("activites_titre")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       <div className={styles.liste}>
         {activites.length === 0 ? (
-          <p className={styles.messageVide}>Aucune activité créée pour l&apos;instant.</p>
+          <p className={styles.messageVide}>{t("vide_aucuneActivite")}</p>
         ) : (
           activites.map((a) => (
             <Link className={styles.activite} href={`/comptable/activites/${a.id}`} key={a.id}>
@@ -78,7 +80,7 @@ function ActivitesContenu() {
 
       <form className={styles.formulaire} onSubmit={creer}>
         <label className={styles.champ}>
-          <span>Nom de l&apos;activité</span>
+          <span>{t("activites_nom")}</span>
           <input
             placeholder="Ex. Petit commerce, Maison Lemba…"
             value={nom}
@@ -87,7 +89,7 @@ function ActivitesContenu() {
           />
         </label>
         <label className={styles.champ}>
-          <span>Catégorie</span>
+          <span>{t("activites_categorie")}</span>
           <select value={categorie} onChange={(e) => setCategorie(e.target.value)}>
             {CATEGORIES.map((c) => (
               <option key={c.valeur} value={c.valeur}>
@@ -97,7 +99,7 @@ function ActivitesContenu() {
           </select>
         </label>
         <button className={styles.bouton} type="submit" disabled={enCours}>
-          {enCours ? "Création…" : "Créer l'activité"}
+          {enCours ? t("commun_chargement") : t("activites_nouvelle")}
         </button>
       </form>
     </div>

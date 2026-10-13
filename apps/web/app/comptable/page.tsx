@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ComptableShell } from "./ComptableShell";
 import { api, ApiError } from "../lib/api";
 import { formatMoney } from "../lib/money";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Activite {
@@ -80,6 +81,7 @@ function RappelLigne({ rappel, niveau }: { rappel: Rappel; niveau: "urgent" | "a
 }
 
 function AccueilContenu() {
+  const { t } = useLocale();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [reminders, setReminders] = useState<Reminders | null>(null);
@@ -104,7 +106,7 @@ function AccueilContenu() {
       .finally(() => setChargement(false));
   }, []);
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
 
   const joursGratuitRestants = subscription
@@ -121,8 +123,8 @@ function AccueilContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Mon Comptable</h1>
-      <p className={styles.sousTitre}>Mon carnet de gestion au quotidien.</p>
+      <h1 className={styles.titre}>{t("titre_accueil")}</h1>
+      <p className={styles.sousTitre}>{t("soustitre_accueil")}</p>
 
       {subscription && (
         <div
@@ -139,16 +141,16 @@ function AccueilContenu() {
             {subscription.billingStatus === "ACTIVE" && "Abonnement à jour."}
             {subscription.billingStatus === "SUSPENDED" && "Abonnement suspendu pour impayé."}
           </span>
-          <Link href="/comptable/abonnement">Gérer l&apos;abonnement</Link>
+          <Link href="/comptable/abonnement">{t("accueil_gererAbonnement")}</Link>
         </div>
       )}
 
       {activites.length === 0 ? (
         <div className={styles.decouvrir}>
-          <p>Commencez par créer votre première activité (commerce, location, véhicule, service…).</p>
+          <p>{t("accueil_creerPremiere")}</p>
           <p style={{ marginTop: "12px" }}>
             <Link className={styles.boutonPrincipal} href="/comptable/activites">
-              Créer ma première activité
+              {t("bouton_creerActivite")}
             </Link>
           </p>
         </div>
@@ -158,7 +160,7 @@ function AccueilContenu() {
             <>
               {reminders.urgents.length > 0 && (
                 <>
-                  <h2 className={styles.sectionTitre}>Urgent</h2>
+                  <h2 className={styles.sectionTitre}>{t("accueil_urgent")}</h2>
                   {reminders.urgents.map((r, i) => (
                     <RappelLigne key={`u-${i}`} rappel={r} niveau="urgent" />
                   ))}
@@ -166,7 +168,7 @@ function AccueilContenu() {
               )}
               {reminders.aVenir.length > 0 && (
                 <>
-                  <h2 className={styles.sectionTitre}>À venir prochainement</h2>
+                  <h2 className={styles.sectionTitre}>{t("accueil_aVenir")}</h2>
                   {reminders.aVenir.map((r, i) => (
                     <RappelLigne key={`v-${i}`} rappel={r} niveau="aVenir" />
                   ))}
@@ -174,7 +176,7 @@ function AccueilContenu() {
               )}
               {reminders.infos.length > 0 && (
                 <>
-                  <h2 className={styles.sectionTitre}>Informations utiles</h2>
+                  <h2 className={styles.sectionTitre}>{t("accueil_infosUtiles")}</h2>
                   {reminders.infos.map((r, i) => (
                     <RappelLigne key={`i-${i}`} rappel={r} niveau="info" />
                   ))}
@@ -185,28 +187,28 @@ function AccueilContenu() {
 
           {dashboard && (
             <>
-              <h2 className={styles.sectionTitre}>Aujourd&apos;hui</h2>
+              <h2 className={styles.sectionTitre}>{t("accueil_aujourdhui")}</h2>
               <div className={styles.grilleChiffres}>
                 <div className={styles.carteChiffre}>
-                  <div className={styles.carteChiffreLabel}>Ventes du jour</div>
+                  <div className={styles.carteChiffreLabel}>{t("accueil_ventesJour")}</div>
                   <div className={styles.carteChiffreValeur}>{formatMoney(dashboard.jour.ventesCdf, "CDF")}</div>
                   <div className={styles.carteChiffreSecondaire}>{formatMoney(dashboard.jour.ventesUsd, "USD")}</div>
                 </div>
                 <div className={styles.carteChiffre}>
-                  <div className={styles.carteChiffreLabel}>Dépenses du jour</div>
+                  <div className={styles.carteChiffreLabel}>{t("accueil_depensesJour")}</div>
                   <div className={styles.carteChiffreValeur}>{formatMoney(dashboard.jour.depensesCdf, "CDF")}</div>
                   <div className={styles.carteChiffreSecondaire}>{formatMoney(dashboard.jour.depensesUsd, "USD")}</div>
                 </div>
-                <LigneSolde label={`Dettes en cours (${dashboard.nombreDettesEnCours})`} parDevise={dashboard.dettesRestantes} />
-                <LigneSolde label={`Créances en cours (${dashboard.nombreCreancesEnCours})`} parDevise={dashboard.creancesRestantes} />
+                <LigneSolde label={`${t("accueil_dettesEnCours")} (${dashboard.nombreDettesEnCours})`} parDevise={dashboard.dettesRestantes} />
+                <LigneSolde label={`${t("accueil_creancesEnCours")} (${dashboard.nombreCreancesEnCours})`} parDevise={dashboard.creancesRestantes} />
               </div>
               <p>
-                <Link href="/comptable/chiffres">Voir mon activité en chiffres →</Link>
+                <Link href="/comptable/chiffres">{t("accueil_voirChiffres")}</Link>
               </p>
             </>
           )}
 
-          <h2 className={styles.sectionTitre}>Mes activités</h2>
+          <h2 className={styles.sectionTitre}>{t("accueil_mesActivites")}</h2>
           <div className={styles.activites}>
             {activites.map((a) => (
               <Link key={a.id} className={styles.activiteLien} href={`/comptable/activites/${a.id}`}>
@@ -214,17 +216,17 @@ function AccueilContenu() {
               </Link>
             ))}
             <Link className={styles.activiteLien} href="/comptable/activites">
-              + Nouvelle activité
+              {t("accueil_nouvelleActivite")}
             </Link>
           </div>
         </>
       )}
 
       <div className={styles.decouvrir}>
-        <strong>Découvrez les autres services ELEGANZ</strong>
+        <strong>{t("accueil_decouvrirTitre")}</strong>
         <p style={{ marginTop: "8px" }}>
-          Vous souhaitez suivre vos produits et vos stocks ?{" "}
-          <Link href="/inscription">Découvrez ELEGANZ Gestion</Link>.
+          {t("accueil_suiviProduits")}{" "}
+          <Link href="/inscription">{t("accueil_decouvrirGestion")}</Link>.
         </p>
       </div>
     </div>

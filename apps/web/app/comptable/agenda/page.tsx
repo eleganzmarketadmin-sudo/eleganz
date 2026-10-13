@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ComptableShell } from "../ComptableShell";
 import { api, ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Evenement {
@@ -13,14 +14,6 @@ interface Evenement {
   type: "dette" | "creance" | "emprunt" | "loyer" | "versement";
   refId: string;
 }
-
-const LABELS_TYPE: Record<Evenement["type"], string> = {
-  dette: "Dette",
-  creance: "Créance",
-  emprunt: "Emprunt",
-  loyer: "Loyer",
-  versement: "Versement",
-};
 
 function cleJour(iso: string): string {
   return iso.slice(0, 10);
@@ -38,6 +31,14 @@ function construireGrilleMois(annee: number, mois: number): (Date | null)[] {
 }
 
 function AgendaContenu() {
+  const { t } = useLocale();
+  const LABELS_TYPE: Record<Evenement["type"], string> = {
+    dette: t("agenda_dette"),
+    creance: t("agenda_creance"),
+    emprunt: t("agenda_emprunt"),
+    loyer: t("agenda_loyer"),
+    versement: t("agenda_versement"),
+  };
   const [evenements, setEvenements] = useState<Evenement[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -69,7 +70,7 @@ function AgendaContenu() {
   const joursTries = useMemo(() => Array.from(parJour.keys()).sort(), [parJour]);
   const grille = useMemo(() => construireGrilleMois(anneeAffichee, moisAffiche), [anneeAffichee, moisAffiche]);
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
 
   const nomMois = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(
@@ -78,7 +79,7 @@ function AgendaContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Agenda</h1>
+      <h1 className={styles.titre}>{t("titre_agenda")}</h1>
       <p className={styles.sousTitre}>
         Vos échéances réelles — dettes, créances, emprunts, loyers attendus et versements des travailleurs.
       </p>
@@ -88,19 +89,19 @@ function AgendaContenu() {
           className={`${styles.onglet} ${vue === "chronologique" ? styles.ongletActif : ""}`}
           onClick={() => setVue("chronologique")}
         >
-          Chronologique
+          {t("agenda_vueChrono")}
         </button>
         <button
           className={`${styles.onglet} ${vue === "calendrier" ? styles.ongletActif : ""}`}
           onClick={() => setVue("calendrier")}
         >
-          Calendrier
+          {t("agenda_vueCalendrier")}
         </button>
       </div>
 
       {vue === "chronologique" ? (
         joursTries.length === 0 ? (
-          <p className={styles.messageVide}>Aucune échéance à venir pour l&apos;instant.</p>
+          <p className={styles.messageVide}>{t("vide_aucuneEcheance")}</p>
         ) : (
           joursTries.map((jour) => (
             <div key={jour} className={styles.groupeJour}>
@@ -128,7 +129,7 @@ function AgendaContenu() {
                 } else setMoisAffiche((m) => m - 1);
               }}
             >
-              ← Mois précédent
+              {t("agenda_moisPrecedent")}
             </button>
             <span className={styles.nomMois}>{nomMois}</span>
             <button
@@ -140,7 +141,7 @@ function AgendaContenu() {
                 } else setMoisAffiche((m) => m + 1);
               }}
             >
-              Mois suivant →
+              {t("agenda_moisSuivant")}
             </button>
           </div>
 
@@ -174,7 +175,7 @@ function AgendaContenu() {
             <div className={styles.groupeJour} style={{ marginTop: "20px" }}>
               <div className={styles.groupeJourTitre}>{formatDate(`${jourSelectionne}T00:00:00`)}</div>
               {(parJour.get(jourSelectionne) ?? []).length === 0 ? (
-                <p className={styles.messageVide}>Rien ce jour-là.</p>
+                <p className={styles.messageVide}>{t("agenda_rienCeJour")}</p>
               ) : (
                 parJour.get(jourSelectionne)!.map((e, i) => (
                   <div className={`${styles.ligne} ${styles["type_" + e.type]}`} key={i}>

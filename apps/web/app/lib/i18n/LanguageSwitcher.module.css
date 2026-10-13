@@ -1,0 +1,26 @@
+.cadre {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  padding: var(--espace-1) var(--espace-2);
+  min-height: 36px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.pastilleRevue {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-or, #d4a017);
+  pointer-events: none;
+}
