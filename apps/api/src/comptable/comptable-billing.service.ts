@@ -117,7 +117,7 @@ export class ComptableBillingService {
     const renewsAt = new Date();
     renewsAt.setMonth(renewsAt.getMonth() + (sub.plan === "YEARLY" ? 12 : 1));
 
-    const [updatedInvoice] = await this.prisma.$transaction([
+    const resultats = await this.prisma.$transaction([
       this.prisma.comptableInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.comptableSubscription.update({
         where: { id: invoice.subscriptionId },
@@ -125,11 +125,11 @@ export class ComptableBillingService {
       }),
     ]);
 
-    await this.accounting.postPlatformInvoicePaid(updatedInvoice, "comptableInvoice").catch((err) => {
+    await this.accounting.postPlatformInvoicePaid(resultats[0], "comptableInvoice").catch((err) => {
       this.logger.error(`Comptabilisation de la facture Mon Comptable ${invoiceId} échouée`, err);
     });
 
-    return [updatedInvoice];
+    return resultats;
   }
 
   listInvoices(subscriptionId: string) {

@@ -89,18 +89,18 @@ export class BillingService {
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-    const [updatedInvoice] = await this.prisma.$transaction([
+    const resultats = await this.prisma.$transaction([
       this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.shop.update({ where: { id: invoice.shopId }, data: { status: ShopStatus.ACTIVE } }),
     ]);
 
     // Revenu ELEGANZ reconnu au règlement effectif, jamais à la facturation
     // (docs/ARCHITECTURE_FINANCE.md §8bis.3).
-    await this.accounting.postPlatformInvoicePaid(updatedInvoice, "invoice").catch((err) => {
+    await this.accounting.postPlatformInvoicePaid(resultats[0], "invoice").catch((err) => {
       this.logger.error(`Comptabilisation de la facture ${invoiceId} échouée`, err);
     });
 
-    return [updatedInvoice];
+    return resultats;
   }
 
   listInvoices(shopId: string) {

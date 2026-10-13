@@ -56,13 +56,17 @@ export class AccountingQueryService {
 
   async balance(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
     const comptes = await this.prisma.account.findMany({ where: { scope, shopId, active: true } });
-    const lignes = comptes.length
+    const entrees = comptes.length
+      ? await this.prisma.journalEntry.findMany({
+          where: { scope, shopId, entryDate: { gte: from, lt: to } },
+          select: { id: true },
+        })
+      : [];
+    const entryIds = entrees.map((e) => e.id);
+    const lignes = entryIds.length
       ? await this.prisma.journalLine.groupBy({
           by: ["accountId"],
-          where: {
-            accountId: { in: comptes.map((c) => c.id) },
-            entry: { entryDate: { gte: from, lt: to } },
-          },
+          where: { entryId: { in: entryIds } },
           _sum: { debit: true, credit: true },
         })
       : [];

@@ -142,7 +142,7 @@ export class DriverBillingService {
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.driverInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-    const [updatedInvoice] = await this.prisma.$transaction([
+    const resultats = await this.prisma.$transaction([
       this.prisma.driverInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.driver.update({
         where: { id: invoice.driverId },
@@ -150,11 +150,11 @@ export class DriverBillingService {
       }),
     ]);
 
-    await this.accounting.postPlatformInvoicePaid(updatedInvoice, "driverInvoice").catch((err) => {
+    await this.accounting.postPlatformInvoicePaid(resultats[0], "driverInvoice").catch((err) => {
       this.logger.error(`Comptabilisation de la facture livreur ${invoiceId} échouée`, err);
     });
 
-    return [updatedInvoice];
+    return resultats;
   }
 
   listInvoices(driverId: string) {
