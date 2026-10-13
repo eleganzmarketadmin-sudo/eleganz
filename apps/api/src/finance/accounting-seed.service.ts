@@ -26,6 +26,13 @@ const COMPTES_BOUTIQUE: SeedAccount[] = [
   { code: "671", label: "Charges financières", normalSide: AccountNormalSide.DEBIT },
   { code: "701", label: "Ventes de marchandises (caisse)", normalSide: AccountNormalSide.CREDIT },
   { code: "7012", label: "Ventes Marketplace", normalSide: AccountNormalSide.CREDIT },
+  // Immobilisations et amortissements (voir docs/ARCHITECTURE_FINANCE.md
+  // §8quater) — 2441 est un compte d'actif normal (DEBIT), 2841 est son
+  // compte d'amortissement contra-actif (CREDIT bien que classe 2 : voir
+  // le traitement spécial dans AccountingQueryService.bilan()).
+  { code: "2441", label: "Matériel et mobilier de bureau", normalSide: AccountNormalSide.DEBIT },
+  { code: "2841", label: "Amortissements du matériel et mobilier", normalSide: AccountNormalSide.CREDIT },
+  { code: "681", label: "Dotations aux amortissements", normalSide: AccountNormalSide.DEBIT },
 ];
 
 const COMPTES_ELEGANZ: SeedAccount[] = [

@@ -8,6 +8,8 @@ import { AdminFinanceController } from "./admin-finance.controller";
 import { AccountingSeedService } from "./accounting-seed.service";
 import { AccountingService } from "./accounting.service";
 import { AccountingQueryService } from "./accounting-query.service";
+import { AssetsService } from "./assets.service";
+import { AssetsController } from "./assets.controller";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -24,8 +26,9 @@ import { AccountingQueryService } from "./accounting-query.service";
     AccountingSeedService,
     AccountingService,
     AccountingQueryService,
+    AssetsService,
   ],
-  controllers: [FinanceController, AdminFinanceController],
+  controllers: [FinanceController, AdminFinanceController, AssetsController],
   exports: [AccountingService],
 })
 export class FinanceModule {}

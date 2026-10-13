@@ -182,6 +182,32 @@ export class AccountingService {
     });
   }
 
+  /**
+   * Dotation aux amortissements d'un actif pour un mois donné
+   * (docs/ARCHITECTURE_FINANCE.md §8quater) — appelé par AssetsService,
+   * jamais calculé ici (ce service ne fait que comptabiliser un montant déjà
+   * calculé). `sourceId` inclut le mois (AAAA-MM) pour que la contrainte
+   * d'unicité sur JournalEntry empêche toute double comptabilisation du
+   * même mois pour le même actif.
+   */
+  async postAssetDepreciation(shopId: string, asset: { id: string; label: string }, periodDate: Date, montant: number) {
+    await this.seed.ensureShopChartOfAccounts(shopId);
+    const moisCle = periodDate.toISOString().slice(0, 7);
+    await this.enregistrer({
+      scope: FiscalRuleScope.SHOP,
+      shopId,
+      journalCode: "OD",
+      entryDate: periodDate,
+      label: `Dotation amortissement — ${asset.label} (${moisCle})`,
+      sourceType: JournalEntrySource.DEPRECIATION,
+      sourceId: `asset:${asset.id}:${moisCle}`,
+      lignes: [
+        { accountCode: "681", debit: montant },
+        { accountCode: "2841", credit: montant },
+      ],
+    });
+  }
+
   private async enregistrer(params: {
     scope: FiscalRuleScope;
     shopId: string | null;
