@@ -719,6 +719,37 @@ Pas de modèle de prévision plus sophistiqué (saisonnalité, régression) ;
 pas d'export de la série ; pas de comparaison à une période antérieure
 (année précédente) — seule une fenêtre glissante des derniers mois.
 
+## 8nonies. Trésorerie multidevise réelle (13 oct. 2026, Phase 9)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6.
+Analyse préalable : les soldes réels par devise existent déjà, portés par
+les comptes `5711` (Caisse USD) et `5712` (Caisse CDF) depuis la Phase 2
+(§8bis) — chaque vente, charge et achat les mouvemente déjà correctement.
+Ce qui manquait : un écran dédié avec solde d'ouverture, historique, et un
+équivalent consolidé.
+
+### 9octies.1. Ce qui est construit
+
+- `AccountingQueryService.releveTresorerie(scope, shopId, from, to)` :
+  calcule le solde d'ouverture (cumulé avant `from`) de chaque compte de
+  caisse, puis les mouvements de la période avec un solde cumulé qui part
+  de ce solde d'ouverture (contrairement à `grandLivre()`, conçu pour une
+  simple consultation de compte et qui repart toujours de zéro).
+- Route `GET /shops/:shopId/finance/tresorerie?from=&to=` (+ miroir admin).
+- Nouvel onglet **Trésorerie** : deux cartes de solde (USD, CDF), une carte
+  d'équivalent total indicatif en USD calculée à partir du taux de change
+  système déjà existant (`/platform-settings/exchange-rate`, public) — si ce
+  taux n'est pas configuré, aucun équivalent n'est affiché (jamais de
+  valeur inventée, même règle que la Phase 1 du taux de change) — et
+  l'historique des mouvements par caisse.
+
+### 9octies.2. Ce que ce chantier ne livre pas
+
+Pas de taux figé par transaction (la Phase 2 du taux de change, déjà
+différée ailleurs, reste différée) ; pas de compte de caisse
+supplémentaire pour une devise tierce ; pas de rapprochement avec un solde
+bancaire réel (aucune intégration bancaire n'existe dans l'application).
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après

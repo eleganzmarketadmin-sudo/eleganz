@@ -90,6 +90,13 @@ export class AdminFinanceController {
     return this.accountingQuery.evolutionMensuelle(FiscalRuleScope.PLATFORM, null, nombreMois);
   }
 
+  @Get("tresorerie")
+  tresorerie(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.releveTresorerie(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
+
   @Get("clotures")
   listClotures(@CurrentUser() user: AuthenticatedUser) {
     requireAdmin(user);

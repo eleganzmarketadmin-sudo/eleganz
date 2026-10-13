@@ -122,6 +122,14 @@ export class FinanceController {
     return this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, nombreMois);
   }
 
+  // Relevé de trésorerie réel par devise (docs/ARCHITECTURE_FINANCE.md
+  // §8nonies) — soldes et mouvements réels des comptes 5711/5712.
+  @Get("tresorerie")
+  tresorerie(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.releveTresorerie(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+  }
+
   @Get("fiscal-identity")
   fiscalIdentity(@Param("shopId") shopId: string) {
     return this.financeService.fiscalIdentity(shopId);

@@ -256,4 +256,63 @@ export class AccountingQueryService {
     }
     return serie;
   }
+
+  /**
+   * Relevé de trésorerie réel (docs/ARCHITECTURE_FINANCE.md §8nonies) — les
+   * soldes par devise (5711 Caisse USD, 5712 Caisse CDF) existaient déjà
+   * dans le grand livre ; cette méthode ajoute le **solde d'ouverture**
+   * (cumulé avant `from`) pour que les mouvements de la période partent du
+   * bon solde de départ, et non de zéro comme le fait `grandLivre()` (conçu
+   * pour une simple consultation de compte, pas un relevé de caisse).
+   * Jamais de conversion CDF→USD ici : l'équivalent indicatif, s'il est
+   * affiché, est calculé côté écran à partir du taux public déjà existant
+   * (`/platform-settings/exchange-rate`), jamais inventé si ce taux n'est
+   * pas configuré.
+   */
+  async releveTresorerie(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
+    const comptesCaisse = await this.prisma.account.findMany({
+      where: { scope, shopId, code: { in: ["5711", "5712"] }, active: true },
+    });
+
+    const comptes = [];
+    for (const compte of comptesCaisse) {
+      const soldeInitialAgg = await this.agregerParCompte([compte.id], { lt: from });
+      const { debit: debitInit, credit: creditInit } = soldeInitialAgg.get(compte.id) ?? { debit: 0, credit: 0 };
+      const soldeInitial = debitInit - creditInit;
+
+      const lignes = await this.prisma.journalLine.findMany({
+        where: { accountId: compte.id, entry: { entryDate: { gte: from, lt: to } } },
+        include: { entry: true },
+        orderBy: { entry: { entryDate: "asc" } },
+      });
+
+      let solde = soldeInitial;
+      const mouvements = lignes.map((l) => {
+        const debit = Number(l.debit);
+        const credit = Number(l.credit);
+        solde += debit - credit;
+        return {
+          date: l.entry.entryDate,
+          label: l.label ?? l.entry.label,
+          sourceType: l.entry.sourceType,
+          debit,
+          credit,
+          soldeCumule: solde,
+        };
+      });
+
+      comptes.push({
+        code: compte.code,
+        label: compte.label,
+        soldeInitial,
+        mouvements,
+        soldeFinal: solde,
+      });
+    }
+
+    return {
+      periode: { from: from.toISOString(), to: to.toISOString() },
+      comptes,
+    };
+  }
 }
