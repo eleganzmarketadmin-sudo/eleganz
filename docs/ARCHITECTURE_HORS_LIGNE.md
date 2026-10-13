@@ -1,4 +1,4 @@
-# Mode hors-ligne de la caisse — spécification et état d'implémentation
+# Mode hors-ligne — spécification et état d'implémentation
 
 Décision #8 : le mode hors-ligne fait partie du V1, mais doit être spécifié
 avant d'être codé — c'est un point d'architecture (ordre des opérations,
@@ -6,11 +6,32 @@ résolution de conflits), pas un détail d'écran. Ce document fixe la
 conception.
 
 **État** : la phase 1 (file d'opérations + synchronisation idempotente) est
-implémentée — voir `apps/api/src/pos/pos.service.ts`
-(`syncOfflineSale`/`listStockDiscrepancies`), `apps/web/app/lib/offline-queue.ts`,
-`apps/web/app/lib/offline-sync.tsx`, et l'intégration dans l'écran caisse et
-le tableau de bord. La phase 2 (app shell installable/PWA) n'est pas
-commencée.
+implémentée pour **deux** types d'opération :
+
+- `POS_SALE` (vente Caisse) — voir `apps/api/src/pos/pos.service.ts`
+  (`syncOfflineSale`/`listStockDiscrepancies`), intégration dans l'écran
+  caisse et le tableau de bord.
+- `COMPTABLE_QUICK_ENTRY` (saisie rapide Mon Comptable, ajouté le 13 oct.
+  2026 en réponse au point 2 du prompt de ce jour — « saisie différée
+  synchronisée au retour du réseau ») — voir
+  `apps/api/src/comptable/comptable.service.ts` (`syncQuickEntry`),
+  intégration dans `apps/web/app/comptable/activites/[id]/page.tsx`.
+
+Les deux types partagent la même file locale (`apps/web/app/lib/offline-queue.ts`,
+généralisée via `TypeOperationEnAttente`) et le même moteur de
+synchronisation (`apps/web/app/lib/offline-sync.tsx`, qui route chaque
+opération vers son endpoint via `cheminSynchronisation()`). Ajouter un
+troisième type = ajouter une entrée dans cette fonction de routage, rien
+d'autre à changer dans la boucle.
+
+**Portée actuelle de `COMPTABLE_QUICK_ENTRY`** : uniquement le formulaire de
+« saisie rapide » du Carnet (onglet principal d'une activité). Les formulaires
+Locatif/Travailleurs (saisis via `window.prompt`) et le point d'entrée
+`createEntry` non-rapide restent en ligne uniquement pour l'instant — limite
+connue, pas un oubli.
+
+La phase 2 (app shell installable/PWA) n'est pas commencée, pour aucun des
+deux types d'opération.
 
 ## Le problème réel
 
@@ -100,6 +121,23 @@ Flux côté caisse :
 - Sinon → exécute `PosService.createSale`, avec la politique de stock
   négatif décrite ci-dessous, puis enregistre `clientOperationId` sur la
   vente créée.
+
+### Variante d'idempotence pour une opération multi-lignes
+
+`POS_SALE` stocke directement `clientOperationId` en colonne unique sur
+`PosSale`, parce qu'une vente crée une seule ligne. La saisie rapide Mon
+Comptable est différente : une seule soumission peut créer 1 à 4 lignes
+`ComptableEntry` d'un coup (vente CDF, vente USD, dépense CDF, dépense USD).
+Une colonne unique sur `ComptableEntry` ne suffirait pas à garantir
+l'exactly-once sur l'ensemble des lignes créées par une soumission.
+
+Solution retenue : une table de marqueurs séparée, `ComptableSyncMarker`
+(`clientOperationId String @unique`), écrite une fois que toutes les lignes
+de la soumission sont créées avec succès. `syncQuickEntry` vérifie d'abord
+ce marqueur ; s'il existe déjà, la soumission est considérée comme déjà
+synchronisée et n'est pas rejouée. C'est le patron à réutiliser pour toute
+future opération hors-ligne qui touche plusieurs lignes en une fois — une
+table de marqueur plutôt qu'une colonne unique sur la table de destination.
 
 ### Politique de stock négatif en synchronisation différée — validée par le propriétaire
 
