@@ -8,7 +8,13 @@ export class ExpensesService {
 
   create(shopId: string, dto: CreateExpenseDto) {
     return this.prisma.expense.create({
-      data: { shopId, category: dto.category, amount: dto.amount, note: dto.note },
+      data: {
+        shopId,
+        category: dto.category,
+        amount: dto.amount,
+        currency: dto.currency ?? "USD",
+        note: dto.note,
+      },
     });
   }
 

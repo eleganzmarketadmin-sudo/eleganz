@@ -202,6 +202,19 @@ model Shop {
   // administrateur ELEGANZ, après vérification réelle de son homologation.
   fiscalHomologationConfirmed Boolean @default(false)
 
+  // Identité fiscale de l'entreprise (Finance & Comptabilité, 13 oct. 2026,
+  // §5.1) — tous facultatifs et vides par défaut : rien n'est présumé pour
+  // une boutique qui ne les a pas renseignés, et aucune valeur n'est
+  // déduite automatiquement d'un autre champ.
+  fiscalLegalName       String?
+  fiscalLegalForm       String?
+  fiscalIdNumber        String?
+  fiscalAddress         String?
+  fiscalJurisdiction    String?
+  fiscalRegime          String?
+  fiscalExercice        String? // ex. "01/01-31/12"
+  fiscalVatRegistered   Boolean @default(false)
+
   // Monétisation — champs admin-configurables, aucune valeur figée dans le code
   freeTrialStartedAt   DateTime?
   freeTrialDurationDays Int      @default(90) // décision #3 : 3 mois par défaut, modifiable en admin
@@ -232,6 +245,7 @@ model Shop {
   reviews        Review[]
   variantOptions VariantOption[]
   shopDrivers    ShopDriver[]
+  fiscalRules    FiscalRule[]
 }
 
 model ShopStaff {
@@ -443,6 +457,10 @@ model Expense {
   shop      Shop     @relation(fields: [shopId], references: [id])
   category  String   // loyer, transport, salaires, électricité, télécom, livraison, autre
   amount    Decimal  @db.Decimal(12, 2)
+  // Devise de la dépense (Finance & Comptabilité, 13 oct. 2026) — absente
+  // jusqu'ici, contrairement à PosSale.currency ; défaut "USD" pour ne pas
+  // réinterpréter silencieusement les dépenses déjà enregistrées.
+  currency  String   @default("USD")
   note      String?
   createdAt DateTime @default(now())
 }
@@ -1048,4 +1066,83 @@ model AuditLog {
   action    String
   details   Json?
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// FINANCE & COMPTABILITÉ (prompt du 13 oct. 2026) — voir docs/ARCHITECTURE_FINANCE.md
+// ---------------------------------------------------------------------------
+
+// Une seule table pour les deux niveaux "boutique" et "ELEGANZ elle-même"
+// (§15 du prompt exige 3 niveaux : référentiel central, boutique, ELEGANZ ;
+// le référentiel central n'est pas encore modélisé séparément à cette phase,
+// voir docs/ARCHITECTURE_FINANCE.md §7). La séparation stricte exigée par le
+// prompt ("dans le modèle de données et les contrôles d'accès, pas
+// seulement dans l'affichage") est appliquée au niveau service/contrôleur :
+// les routes boutique ne touchent jamais scope=PLATFORM, les routes admin
+// ne touchent jamais scope=SHOP — jamais une simple confiance dans l'UI.
+enum FiscalRuleScope {
+  SHOP
+  PLATFORM
+}
+
+enum FiscalRuleCategory {
+  TVA
+  IMPOT
+  RETENUE
+  CONTRIBUTION
+  AUTRE
+}
+
+// Statuts du §5.5 du prompt. VERIFIEE existe dans le modèle mais n'a pas
+// encore de flux d'invitation de professionnel réel à cette phase (voir
+// docs/ARCHITECTURE_FINANCE.md §7) — n'atteindre ce statut que par bascule
+// manuelle documentée comme limite, jamais présenté comme une vérification
+// professionnelle réellement effectuée par le système.
+enum FiscalRuleStatus {
+  PROPOSEE
+  CONFIGUREE
+  VERIFIEE
+  OBSOLETE
+}
+
+model FiscalRule {
+  id               String             @id @default(uuid())
+  scope            FiscalRuleScope
+  shopId           String?
+  shop             Shop?              @relation(fields: [shopId], references: [id])
+  label            String
+  category         FiscalRuleCategory
+  rateOrFormula    String
+  baseCalcul       String?
+  champApplication String?
+  regime           String?
+  effectiveFrom    DateTime
+  effectiveTo      DateTime?
+  sourceReference  String?
+  status           FiscalRuleStatus   @default(PROPOSEE)
+  lastModifiedBy   String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  versions FiscalRuleVersion[]
+
+  @@index([shopId])
+  @@index([scope])
+}
+
+// Historique de versions (§5.7 du prompt) — jamais d'effacement silencieux :
+// chaque modification ajoute une ligne, ne réécrit jamais l'ancienne.
+model FiscalRuleVersion {
+  id            String           @id @default(uuid())
+  ruleId        String
+  rule          FiscalRule       @relation(fields: [ruleId], references: [id])
+  oldValue      Json?
+  newValue      Json
+  authorId      String?
+  motif         String?
+  effectiveDate DateTime
+  status        FiscalRuleStatus
+  createdAt     DateTime         @default(now())
+
+  @@index([ruleId])
 }
