@@ -1,5 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { ComptableService } from "./comptable.service";
+import { ComptableExportService } from "./comptable-export.service";
+import { renderSynthesePdf, renderDossierFinancementPdf } from "./comptable-pdf-renderer";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -26,7 +29,10 @@ import {
 @Controller("comptable")
 @UseGuards(JwtAuthGuard)
 export class ComptableController {
-  constructor(private readonly comptableService: ComptableService) {}
+  constructor(
+    private readonly comptableService: ComptableService,
+    private readonly comptableExportService: ComptableExportService,
+  ) {}
 
   @Post("activities")
   createActivity(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateActivityDto) {
@@ -185,5 +191,54 @@ export class ComptableController {
   @Post("subscription/plan")
   choosePlan(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChoosePlanDto) {
     return this.comptableService.choosePlan(user.id, dto.plan);
+  }
+
+  /**
+   * Synthèse périodique exportable (prompt §10.5) — JSON par défaut, ou
+   * PDF/Excel via ?format=. Jamais présentée comme un état financier
+   * certifié (voir le disclaimer dans le renderer PDF).
+   */
+  @Get("export/synthese")
+  async exportSynthese(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query("from") fromStr: string,
+    @Query("to") toStr: string,
+    @Query("format") format: string | undefined,
+    @Res() res: Response,
+  ) {
+    if (!fromStr || !toStr) throw new BadRequestException("Les paramètres from et to sont requis (AAAA-MM-JJ).");
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      throw new BadRequestException("Dates invalides.");
+    }
+    const synthese = await this.comptableExportService.synthesePeriode(user.id, from, to);
+
+    if (format === "xlsx") {
+      const buffer = this.comptableExportService.exporterSyntheseExcel(synthese);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", 'attachment; filename="synthese-mon-comptable.xlsx"');
+      return res.send(buffer);
+    }
+    if (format === "pdf") {
+      const doc = renderSynthesePdf(synthese);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'inline; filename="synthese-mon-comptable.pdf"');
+      return doc.pipe(res);
+    }
+    return res.json(synthese);
+  }
+
+  /**
+   * Dossier préparatoire pour demande de financement (prompt §15) — PDF
+   * uniquement, avec bandeau d'avertissement intégré au document.
+   */
+  @Get("export/dossier-financement")
+  async exportDossierFinancement(@CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
+    const dossier = await this.comptableExportService.dossierFinancement(user.id);
+    const doc = renderDossierFinancementPdf(dossier);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'inline; filename="dossier-financement-eleganz.pdf"');
+    return doc.pipe(res);
   }
 }

@@ -61,3 +61,44 @@
   border: 1px dashed var(--color-border);
   padding: var(--espace-3) var(--espace-4);
 }
+
+.note a {
+  color: var(--color-vert-paiement);
+}
+
+.exportZone {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: flex-end;
+  border: 1px solid var(--color-border);
+  padding: var(--espace-4);
+}
+
+.exportChamp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+}
+
+.exportChamp input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+}
+
+.boutonExport {
+  background: var(--color-ink);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonExport:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

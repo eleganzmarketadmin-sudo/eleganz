@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ComptableService } from "./comptable.service";
 import { ComptableBillingService } from "./comptable-billing.service";
+import { ComptableExportService } from "./comptable-export.service";
 import { ComptableController } from "./comptable.controller";
 import { ComptableBillingController } from "./comptable-billing.controller";
 import { AdminSettingsModule } from "../admin-settings/admin-settings.module";
@@ -13,8 +14,8 @@ import { AuthModule } from "../auth/auth.module";
 // plante (voir incident du 13 oct. 2026, docs/MAINTENANCE.md).
 @Module({
   imports: [AdminSettingsModule, AuthModule],
-  providers: [ComptableService, ComptableBillingService],
+  providers: [ComptableService, ComptableBillingService, ComptableExportService],
   controllers: [ComptableController, ComptableBillingController],
-  exports: [ComptableService, ComptableBillingService],
+  exports: [ComptableService, ComptableBillingService, ComptableExportService],
 })
 export class ComptableModule {}

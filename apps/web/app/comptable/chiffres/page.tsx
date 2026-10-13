@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ComptableShell } from "../ComptableShell";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { telechargerFichier } from "../../lib/telecharger-fichier";
+import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { GraphiqueEvolution, GraphiqueComparaison } from "./Graphiques";
 import styles from "./page.module.css";
+
+function debutMoisCourant(): string {
+  const d = new Date();
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+function aujourdHui(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 interface Periode {
   ventesCdf: number;
@@ -87,6 +100,33 @@ function ChiffresContenu() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  const [exportDe, setExportDe] = useState(debutMoisCourant());
+  const [exportA, setExportA] = useState(aujourdHui());
+  const [exportEnCours, setExportEnCours] = useState<"xlsx" | "pdf" | null>(null);
+  const [erreurExport, setErreurExport] = useState<string | null>(null);
+
+  async function exporterSynthese(format: "xlsx" | "pdf") {
+    setExportEnCours(format);
+    setErreurExport(null);
+    try {
+      const params = new URLSearchParams({
+        from: new Date(exportDe).toISOString(),
+        to: new Date(new Date(exportA).getTime() + 86_400_000).toISOString(),
+        format,
+      });
+      const path = `/comptable/export/synthese?${params.toString()}`;
+      if (format === "xlsx") {
+        await telechargerFichier(path, "synthese-mon-comptable.xlsx");
+      } else {
+        await ouvrirDocumentPdf(path);
+      }
+    } catch (err) {
+      setErreurExport(err instanceof Error ? err.message : "Export impossible.");
+    } finally {
+      setExportEnCours(null);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
       api.get<Dashboard>("/comptable/dashboard"),
@@ -166,9 +206,37 @@ function ChiffresContenu() {
         </div>
       </div>
 
+      <h2 className={styles.sectionTitre}>Exporter une synthèse</h2>
+      {erreurExport && <p className={styles.erreur}>{erreurExport}</p>}
+      <div className={styles.exportZone}>
+        <label className={styles.exportChamp}>
+          <span>Du</span>
+          <input type="date" value={exportDe} onChange={(e) => setExportDe(e.target.value)} />
+        </label>
+        <label className={styles.exportChamp}>
+          <span>Au</span>
+          <input type="date" value={exportA} onChange={(e) => setExportA(e.target.value)} />
+        </label>
+        <button
+          className={styles.boutonExport}
+          onClick={() => exporterSynthese("xlsx")}
+          disabled={exportEnCours !== null}
+        >
+          {exportEnCours === "xlsx" ? "…" : "Exporter en Excel"}
+        </button>
+        <button
+          className={styles.boutonExport}
+          onClick={() => exporterSynthese("pdf")}
+          disabled={exportEnCours !== null}
+        >
+          {exportEnCours === "pdf" ? "…" : "Exporter en PDF"}
+        </button>
+      </div>
+
       <p className={styles.note}>
         Ces chiffres sont calculés à partir de vos saisies déclaratives. Ils ne constituent pas un état
-        financier certifié ni un relevé bancaire officiel.
+        financier certifié ni un relevé bancaire officiel.{" "}
+        <Link href="/comptable/dossier-financement">Besoin d&apos;un dossier pour une demande de financement ?</Link>
       </p>
     </div>
   );
