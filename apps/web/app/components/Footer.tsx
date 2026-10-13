@@ -2,13 +2,12 @@ import Link from "next/link";
 import { LogoMark, BandeMarque } from "./Logo";
 import styles from "./Footer.module.css";
 
-const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable", string> = {
+const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur", string> = {
   accueil: "Une maison, plusieurs pièces : la boutique, la vitrine et la route.",
   gestion: "La caisse et la boutique, tenues au carré.",
   admin: "La plateforme, supervisée en un coup d'œil.",
   marketplace: "La mode congolaise, du tissu au client.",
   livreur: "De l'enlèvement à la remise, mission par mission.",
-  comptable: "Mon carnet de gestion au quotidien.",
 };
 
 /**
@@ -22,7 +21,7 @@ const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreu
 export function Footer({
   variante,
 }: {
-  variante: "accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable";
+  variante: "accueil" | "gestion" | "admin" | "marketplace" | "livreur";
 }) {
   return (
     <footer className={styles.pied}>
@@ -40,7 +39,6 @@ export function Footer({
           <Link href="/marketplace">Marketplace</Link>
           <Link href="/connexion">Gestion</Link>
           <Link href="/livreur/connexion">Livreur</Link>
-          <Link href="/comptable">Mon Comptable</Link>
           <Link href="/admin/connexion">Centre de pilotage</Link>
         </nav>
         <p className={styles.copyright}>

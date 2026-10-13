@@ -13,7 +13,6 @@ const LIENS = [
   { href: "/admin/pilotage", label: "Tableau de bord" },
   { href: "/admin/boutiques", label: "Boutiques" },
   { href: "/admin/livreurs", label: "Livreurs" },
-  { href: "/admin/comptable", label: "Mon Comptable" },
   { href: "/admin/suivi-commandes", label: "Suivi commandes" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/tarifs", label: "Tarifs" },

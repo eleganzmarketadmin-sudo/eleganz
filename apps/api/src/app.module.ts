@@ -20,7 +20,6 @@ import { ImportExportModule } from "./import-export/import-export.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SupervisionModule } from "./supervision/supervision.module";
-import { ComptableModule } from "./comptable/comptable.module";
 
 @Module({
   imports: [
@@ -45,7 +44,6 @@ import { ComptableModule } from "./comptable/comptable.module";
     ReviewsModule,
     ReportsModule,
     SupervisionModule,
-    ComptableModule,
   ],
 })
 export class AppModule {}
