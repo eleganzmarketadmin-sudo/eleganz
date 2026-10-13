@@ -47,6 +47,12 @@ const JOURNAUX = [
  * avant la première comptabilisation d'une boutique ou d'ELEGANZ (jamais par
  * une migration de données séparée). Voir docs/ARCHITECTURE_FINANCE.md
  * §8bis.2.
+ *
+ * Recherche par `findFirst` + création conditionnelle plutôt que par
+ * `upsert`/`findUnique` sur la clé composite `[scope, shopId, code]` :
+ * `shopId` étant nullable, on évite de dépendre de la forme exacte que
+ * Prisma donne à cette clé composite dans les types `WhereUniqueInput` —
+ * un simple filtre par champs plats fonctionne dans tous les cas.
  */
 @Injectable()
 export class AccountingSeedService {
@@ -61,36 +67,42 @@ export class AccountingSeedService {
   }
 
   private async ensure(scope: FiscalRuleScope, shopId: string | null, comptes: SeedAccount[]) {
-    await Promise.all(
-      comptes.map((compte) =>
-        this.prisma.account.upsert({
-          where: { scope_shopId_code: { scope, shopId, code: compte.code } },
-          update: {},
-          create: { scope, shopId, code: compte.code, label: compte.label, normalSide: compte.normalSide },
-        }),
-      ),
-    );
-    await Promise.all(
-      JOURNAUX.map((journal) =>
-        this.prisma.journal.upsert({
-          where: { scope_shopId_code: { scope, shopId, code: journal.code } },
-          update: {},
-          create: { scope, shopId, code: journal.code, label: journal.label },
-        }),
-      ),
-    );
+    for (const compte of comptes) {
+      const existant = await this.prisma.account.findFirst({
+        where: { scope, shopId, code: compte.code },
+        select: { id: true },
+      });
+      if (!existant) {
+        await this.prisma.account.create({
+          data: { scope, shopId, code: compte.code, label: compte.label, normalSide: compte.normalSide },
+        });
+      }
+    }
+    for (const journal of JOURNAUX) {
+      const existant = await this.prisma.journal.findFirst({
+        where: { scope, shopId, code: journal.code },
+        select: { id: true },
+      });
+      if (!existant) {
+        await this.prisma.journal.create({
+          data: { scope, shopId, code: journal.code, label: journal.label },
+        });
+      }
+    }
   }
 
   async accountId(scope: FiscalRuleScope, shopId: string | null, code: string): Promise<string> {
-    const compte = await this.prisma.account.findUniqueOrThrow({
-      where: { scope_shopId_code: { scope, shopId, code } },
+    const compte = await this.prisma.account.findFirstOrThrow({
+      where: { scope, shopId, code },
+      select: { id: true },
     });
     return compte.id;
   }
 
   async journalId(scope: FiscalRuleScope, shopId: string | null, code: string): Promise<string> {
-    const journal = await this.prisma.journal.findUniqueOrThrow({
-      where: { scope_shopId_code: { scope, shopId, code } },
+    const journal = await this.prisma.journal.findFirstOrThrow({
+      where: { scope, shopId, code },
+      select: { id: true },
     });
     return journal.id;
   }
