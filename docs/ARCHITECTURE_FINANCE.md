@@ -479,6 +479,49 @@ bancaire. La créance Marketplace (`411`) qui ne se solde jamais
 automatiquement (§9.3) est une limite connue et assumée, pas une régression
 silencieuse.
 
+## 8ter. États financiers réglementaires simplifiés (13 oct. 2026, Phase 3)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6, dans la
+continuité directe de la Phase 2 (§8bis) : le moteur de comptabilité en partie
+double existe déjà et génère des écritures réelles équilibrées ; ce chantier
+ajoute uniquement une **lecture regroupée** de ces mêmes écritures par classe
+de compte, sans aucune nouvelle écriture ni nouvelle table.
+
+### 9bis.1. Ce qui est construit
+
+- **Compte de résultat** (sur une période `[from, to)`) : regroupe les comptes
+  de classe 6 (charges, solde normal débiteur) et de classe 7 (produits,
+  solde normal créditeur) du plan comptable minimal déjà seedé (§9.2),
+  calcule `résultat net = total produits − total charges`.
+- **Bilan** (à une date donnée `asOf`) : regroupe les comptes de classes 1 à 5
+  cumulés **depuis l'origine** (pas seulement sur la période affichée) —
+  actif = comptes à solde normal débiteur (411 Clients, 5711/5712 Caisse),
+  passif = comptes à solde normal créditeur (401 Fournisseurs). Le résultat
+  net cumulé depuis l'origine (classes 6/7) est ajouté au passif en
+  « Résultat net de l'exercice » pour équilibrer le bilan — convention
+  standard en l'absence d'un compte de capital social saisi par ailleurs
+  (aucun compte de classe 1 n'est seedé à ce jour : le plan comptable
+  minimal du §9.2 ne modélise ni apport ni capital).
+- Nouvelles méthodes `AccountingQueryService.compteDeResultat()` et
+  `.bilan()`, nouvelles routes `GET /shops/:shopId/finance/compte-resultat`,
+  `GET /shops/:shopId/finance/bilan` et leurs miroirs
+  `/admin/finance/compte-resultat` / `/admin/finance/bilan` (scope PLATFORM).
+- Écran `/finance/comptabilite` : deux nouvelles entrées dans le sélecteur
+  « Vue » (Compte de résultat, Bilan) ; écran admin : sections ajoutées sous
+  le journal/la balance existants.
+
+### 9bis.2. Ce que ce chantier ne livre toujours pas
+
+Conformément au §9.6 : ni clôture de période (chantier séparé, §voir tâche
+« Assistant de clôture »), ni verrouillage d'exercice, ni TFT (tableau des
+flux de trésorerie — nécessiterait un suivi des mouvements de trésorerie par
+nature, pas seulement les soldes des comptes 5711/5712), ni rapprochement
+bancaire, ni sous-totaux réglementaires détaillés (résultat d'exploitation /
+financier / HAO séparés — le plan comptable minimal actuel ne distingue pas
+ces trois blocs par des comptes dédiés). Ces états restent des **estimations
+générées automatiquement**, jamais un substitut à une liasse fiscale établie
+par un professionnel — la même réserve déjà affichée pour le reste du module.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après

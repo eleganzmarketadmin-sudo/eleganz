@@ -62,6 +62,30 @@ interface Balance {
   equilibree: boolean;
 }
 
+interface LigneEtat {
+  code: string;
+  label: string;
+  montant: number;
+}
+
+interface CompteDeResultat {
+  periode: { from: string; to: string };
+  charges: LigneEtat[];
+  produits: LigneEtat[];
+  totalCharges: number;
+  totalProduits: number;
+  resultatNet: number;
+}
+
+interface Bilan {
+  asOf: string;
+  actif: LigneEtat[];
+  passif: LigneEtat[];
+  totalActif: number;
+  totalPassif: number;
+  equilibre: boolean;
+}
+
 function f(n: number | string): string {
   return Number(n).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 }
@@ -79,12 +103,15 @@ function ComptabiliteContenu() {
   const { currentShop } = useShop();
   const [from, setFrom] = useState(debutMois());
   const [to, setTo] = useState(aujourdhui());
-  const [vue, setVue] = useState<"journal" | "grand-livre" | "balance">("journal");
+  const [asOf, setAsOf] = useState(aujourdhui());
+  const [vue, setVue] = useState<"journal" | "grand-livre" | "balance" | "compte-resultat" | "bilan">("journal");
 
   const [journal, setJournal] = useState<Ecriture[] | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [compteChoisi, setCompteChoisi] = useState("5711");
   const [grandLivre, setGrandLivre] = useState<GrandLivre | null>(null);
+  const [compteResultat, setCompteResultat] = useState<CompteDeResultat | null>(null);
+  const [bilan, setBilan] = useState<Bilan | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -101,14 +128,26 @@ function ComptabiliteContenu() {
         ? api.get<Ecriture[]>(`/shops/${currentShop.id}/finance/journal?${params}`).then(setJournal)
         : vue === "balance"
         ? api.get<Balance>(`/shops/${currentShop.id}/finance/balance?${params}`).then(setBalance)
-        : api
+        : vue === "grand-livre"
+        ? api
             .get<GrandLivre>(`/shops/${currentShop.id}/finance/grand-livre?compte=${compteChoisi}&${params}`)
-            .then(setGrandLivre);
+            .then(setGrandLivre)
+        : vue === "compte-resultat"
+        ? api
+            .get<CompteDeResultat>(`/shops/${currentShop.id}/finance/compte-resultat?${params}`)
+            .then(setCompteResultat)
+        : (() => {
+            const asOfExclusif = new Date(asOf);
+            asOfExclusif.setDate(asOfExclusif.getDate() + 1);
+            return api
+              .get<Bilan>(`/shops/${currentShop.id}/finance/bilan?asOf=${asOfExclusif.toISOString().slice(0, 10)}`)
+              .then(setBilan);
+          })();
 
     requete
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
-  }, [currentShop, vue, from, to, compteChoisi]);
+  }, [currentShop, vue, from, to, asOf, compteChoisi]);
 
   return (
     <div>
@@ -129,20 +168,31 @@ function ComptabiliteContenu() {
       </p>
 
       <div className={styles.formulaire}>
-        <div className={styles.champ}>
-          <label>Du</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div className={styles.champ}>
-          <label>Au</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
+        {vue === "bilan" ? (
+          <div className={styles.champ}>
+            <label>À la date du</label>
+            <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
+          </div>
+        ) : (
+          <>
+            <div className={styles.champ}>
+              <label>Du</label>
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </div>
+            <div className={styles.champ}>
+              <label>Au</label>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </div>
+          </>
+        )}
         <div className={styles.champ}>
           <label>Vue</label>
           <select value={vue} onChange={(e) => setVue(e.target.value as typeof vue)}>
             <option value="journal">Journal général</option>
             <option value="grand-livre">Grand livre</option>
             <option value="balance">Balance</option>
+            <option value="compte-resultat">Compte de résultat</option>
+            <option value="bilan">Bilan</option>
           </select>
         </div>
         {vue === "grand-livre" && (
@@ -174,8 +224,12 @@ function ComptabiliteContenu() {
         <JournalTable ecritures={journal} />
       ) : vue === "grand-livre" ? (
         <GrandLivreTable data={grandLivre} />
-      ) : (
+      ) : vue === "balance" ? (
         <BalanceTable data={balance} />
+      ) : vue === "compte-resultat" ? (
+        <CompteDeResultatTable data={compteResultat} />
+      ) : (
+        <BilanTable data={bilan} />
       )}
     </div>
   );
@@ -294,6 +348,123 @@ function BalanceTable({ data }: { data: Balance | null }) {
         </tfoot>
       </table>
     </>
+  );
+}
+
+function CompteDeResultatTable({ data }: { data: CompteDeResultat | null }) {
+  if (!data) return <p>Aucune donnée.</p>;
+  if (data.charges.length === 0 && data.produits.length === 0) {
+    return <p>Aucune charge ni aucun produit sur cette période.</p>;
+  }
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+      <div>
+        <h3>Charges</h3>
+        <table className={styles.tableau}>
+          <tbody>
+            {data.charges.map((l) => (
+              <tr key={l.code}>
+                <td>
+                  {l.code} — {l.label}
+                </td>
+                <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ fontWeight: 700 }}>
+              <td>Total charges</td>
+              <td style={{ textAlign: "right" }}>{f(data.totalCharges)} $</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div>
+        <h3>Produits</h3>
+        <table className={styles.tableau}>
+          <tbody>
+            {data.produits.map((l) => (
+              <tr key={l.code}>
+                <td>
+                  {l.code} — {l.label}
+                </td>
+                <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ fontWeight: 700 }}>
+              <td>Total produits</td>
+              <td style={{ textAlign: "right" }}>{f(data.totalProduits)} $</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p style={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: "1.1rem" }}>
+        Résultat net de la période : {f(data.resultatNet)} $ (
+        {data.resultatNet >= 0 ? "bénéfice" : "perte"})
+      </p>
+    </div>
+  );
+}
+
+function BilanTable({ data }: { data: Bilan | null }) {
+  if (!data) return <p>Aucune donnée.</p>;
+  if (data.actif.length === 0 && data.passif.length === 0) {
+    return <p>Aucun solde à cette date.</p>;
+  }
+  return (
+    <div>
+      {!data.equilibre && (
+        <div className={styles.erreur}>
+          Anomalie : le total actif ne correspond pas au total passif sur ce bilan — à signaler, ne pas ignorer.
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div>
+          <h3>Actif</h3>
+          <table className={styles.tableau}>
+            <tbody>
+              {data.actif.map((l) => (
+                <tr key={l.code}>
+                  <td>
+                    {l.code} — {l.label}
+                  </td>
+                  <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ fontWeight: 700 }}>
+                <td>Total actif</td>
+                <td style={{ textAlign: "right" }}>{f(data.totalActif)} $</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div>
+          <h3>Passif</h3>
+          <table className={styles.tableau}>
+            <tbody>
+              {data.passif.map((l) => (
+                <tr key={l.code}>
+                  <td>
+                    {l.code} — {l.label}
+                  </td>
+                  <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ fontWeight: 700 }}>
+                <td>Total passif</td>
+                <td style={{ textAlign: "right" }}>{f(data.totalPassif)} $</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -68,6 +68,19 @@ export class AdminFinanceController {
     return this.accountingQuery.balance(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
   }
 
+  @Get("compte-resultat")
+  compteDeResultat(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.compteDeResultat(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
+
+  @Get("bilan")
+  bilan(@CurrentUser() user: AuthenticatedUser, @Query("asOf") asOf?: string) {
+    requireAdmin(user);
+    return this.accountingQuery.bilan(FiscalRuleScope.PLATFORM, null, asOf ? new Date(asOf) : new Date());
+  }
+
   @Get("dashboard")
   dashboard(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
     requireAdmin(user);

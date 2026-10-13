@@ -40,6 +40,28 @@ interface Balance {
   equilibree: boolean;
 }
 
+interface LigneEtat {
+  code: string;
+  label: string;
+  montant: number;
+}
+
+interface CompteDeResultat {
+  charges: LigneEtat[];
+  produits: LigneEtat[];
+  totalCharges: number;
+  totalProduits: number;
+  resultatNet: number;
+}
+
+interface Bilan {
+  actif: LigneEtat[];
+  passif: LigneEtat[];
+  totalActif: number;
+  totalPassif: number;
+  equilibre: boolean;
+}
+
 function f(n: number | string): string {
   return Number(n).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 }
@@ -58,6 +80,8 @@ function ComptabiliteAdminContenu() {
   const [to, setTo] = useState(aujourdhui());
   const [journal, setJournal] = useState<Ecriture[] | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
+  const [compteResultat, setCompteResultat] = useState<CompteDeResultat | null>(null);
+  const [bilan, setBilan] = useState<Bilan | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -65,14 +89,19 @@ function ComptabiliteAdminContenu() {
     setChargement(true);
     const toExclusif = new Date(to);
     toExclusif.setDate(toExclusif.getDate() + 1);
-    const params = `from=${from}&to=${toExclusif.toISOString().slice(0, 10)}`;
+    const toExclusifStr = toExclusif.toISOString().slice(0, 10);
+    const params = `from=${from}&to=${toExclusifStr}`;
     Promise.all([
       api.get<Ecriture[]>(`/admin/finance/journal?${params}`),
       api.get<Balance>(`/admin/finance/balance?${params}`),
+      api.get<CompteDeResultat>(`/admin/finance/compte-resultat?${params}`),
+      api.get<Bilan>(`/admin/finance/bilan?asOf=${toExclusifStr}`),
     ])
-      .then(([j, b]) => {
+      .then(([j, b, cr, bi]) => {
         setJournal(j);
         setBalance(b);
+        setCompteResultat(cr);
+        setBilan(bi);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
       .finally(() => setChargement(false));
@@ -183,6 +212,107 @@ function ComptabiliteAdminContenu() {
                 </tfoot>
               </table>
             </>
+          )}
+
+          <h2 className={styles.sectionTitre}>Compte de résultat (période)</h2>
+          {!compteResultat || (compteResultat.charges.length === 0 && compteResultat.produits.length === 0) ? (
+            <p>Aucune charge ni aucun produit sur cette période.</p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "28px" }}>
+              <div>
+                <h3>Charges</h3>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {compteResultat.charges.map((l) => (
+                      <tr key={l.code}>
+                        <td>{l.code} — {l.label}</td>
+                        <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight: 700 }}>
+                      <td>Total charges</td>
+                      <td style={{ textAlign: "right" }}>{f(compteResultat.totalCharges)} $</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <h3>Produits</h3>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {compteResultat.produits.map((l) => (
+                      <tr key={l.code}>
+                        <td>{l.code} — {l.label}</td>
+                        <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight: 700 }}>
+                      <td>Total produits</td>
+                      <td style={{ textAlign: "right" }}>{f(compteResultat.totalProduits)} $</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <p style={{ gridColumn: "1 / -1", fontWeight: 700 }}>
+                Résultat net de la période : {f(compteResultat.resultatNet)} $ (
+                {compteResultat.resultatNet >= 0 ? "bénéfice" : "perte"})
+              </p>
+            </div>
+          )}
+
+          <h2 className={styles.sectionTitre}>Bilan (à la date « Au »)</h2>
+          {!bilan || (bilan.actif.length === 0 && bilan.passif.length === 0) ? (
+            <p>Aucun solde à cette date.</p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+              {!bilan.equilibre && (
+                <div className={styles.erreur} style={{ gridColumn: "1 / -1" }}>
+                  Anomalie : le total actif ne correspond pas au total passif — à signaler, ne pas ignorer.
+                </div>
+              )}
+              <div>
+                <h3>Actif</h3>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {bilan.actif.map((l) => (
+                      <tr key={l.code}>
+                        <td>{l.code} — {l.label}</td>
+                        <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight: 700 }}>
+                      <td>Total actif</td>
+                      <td style={{ textAlign: "right" }}>{f(bilan.totalActif)} $</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div>
+                <h3>Passif</h3>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <tbody>
+                    {bilan.passif.map((l) => (
+                      <tr key={l.code}>
+                        <td>{l.code} — {l.label}</td>
+                        <td style={{ textAlign: "right" }}>{f(l.montant)} $</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight: 700 }}>
+                      <td>Total passif</td>
+                      <td style={{ textAlign: "right" }}>{f(bilan.totalPassif)} $</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
           )}
         </>
       )}

@@ -64,6 +64,20 @@ export class FinanceController {
     return this.accountingQuery.balance(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
   }
 
+  // États financiers réglementaires simplifiés (docs/ARCHITECTURE_FINANCE.md
+  // §8ter) — générés automatiquement à partir des mêmes écritures, jamais
+  // un substitut à une liasse fiscale établie par un professionnel.
+  @Get("compte-resultat")
+  compteDeResultat(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.compteDeResultat(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+  }
+
+  @Get("bilan")
+  bilan(@Param("shopId") shopId: string, @Query("asOf") asOf?: string) {
+    return this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, asOf ? new Date(asOf) : new Date());
+  }
+
   @Get("fiscal-identity")
   fiscalIdentity(@Param("shopId") shopId: string) {
     return this.financeService.fiscalIdentity(shopId);
