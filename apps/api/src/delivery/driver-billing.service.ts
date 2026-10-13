@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { DriverBillingStatus } from "@eleganz/database";
 import { AdminSettingsService } from "../admin-settings/admin-settings.service";
+import { AccountingService } from "../finance/accounting.service";
 
 /**
  * Facturation de l'espace livreur (prompt du 13 oct. 2026, point 1) —
@@ -17,9 +18,12 @@ import { AdminSettingsService } from "../admin-settings/admin-settings.service";
  */
 @Injectable()
 export class DriverBillingService {
+  private readonly logger = new Logger(DriverBillingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminSettingsService: AdminSettingsService,
+    private readonly accounting: AccountingService,
   ) {}
 
   /**
@@ -138,13 +142,19 @@ export class DriverBillingService {
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.driverInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-    return this.prisma.$transaction([
+    const [updatedInvoice] = await this.prisma.$transaction([
       this.prisma.driverInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.driver.update({
         where: { id: invoice.driverId },
         data: { billingStatus: DriverBillingStatus.ACTIVE },
       }),
     ]);
+
+    await this.accounting.postPlatformInvoicePaid(updatedInvoice, "driverInvoice").catch((err) => {
+      this.logger.error(`Comptabilisation de la facture livreur ${invoiceId} échouée`, err);
+    });
+
+    return [updatedInvoice];
   }
 
   listInvoices(driverId: string) {

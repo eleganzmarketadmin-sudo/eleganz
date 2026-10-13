@@ -4,9 +4,10 @@ import { BillingController } from "./billing.controller";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 import { SubscriptionPlansController } from "./subscription-plans.controller";
 import { ShopsModule } from "../shops/shops.module";
+import { FinanceModule } from "../finance/finance.module";
 
 @Module({
-  imports: [ShopsModule],
+  imports: [ShopsModule, FinanceModule],
   providers: [BillingService, SubscriptionPlansService],
   controllers: [BillingController, SubscriptionPlansController],
   exports: [BillingService, SubscriptionPlansService],
