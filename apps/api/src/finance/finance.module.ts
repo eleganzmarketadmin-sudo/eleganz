@@ -1,0 +1,20 @@
+import { Module } from "@nestjs/common";
+import { ShopsModule } from "../shops/shops.module";
+import { FinanceService } from "./finance.service";
+import { FinanceController } from "./finance.controller";
+import { FiscalRulesService } from "./fiscal-rules.service";
+import { AdminFinanceService } from "./admin-finance.service";
+import { AdminFinanceController } from "./admin-finance.controller";
+
+// Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
+// docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
+// JwtAuthGuard + ShopMembershipGuard en une seule ligne (même pattern que
+// OperationsModule) — sans cet import, JwtAuthGuard ne résout pas ses
+// dépendances et l'API entière refuse de démarrer (leçon déjà documentée
+// dans docs/MAINTENANCE.md, incident AuthModule).
+@Module({
+  imports: [ShopsModule],
+  providers: [FinanceService, FiscalRulesService, AdminFinanceService],
+  controllers: [FinanceController, AdminFinanceController],
+})
+export class FinanceModule {}

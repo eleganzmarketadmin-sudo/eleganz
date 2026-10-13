@@ -1,0 +1,87 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { FinanceService } from "./finance.service";
+import { FiscalRulesService } from "./fiscal-rules.service";
+import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
+import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ShopMembershipGuard } from "../shops/shop-membership.guard";
+import { ShopRoles } from "../shops/roles.decorator";
+import { StaffRole } from "@eleganz/database";
+import { CurrentUser } from "../auth/current-user.decorator";
+import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+
+/**
+ * FINANCE & COMPTABILITÉ — boutique (prompt du 13 oct. 2026). Lecture ouverte
+ * à tout membre actif de la boutique ; écriture (charges déjà gérée par
+ * ExpensesController, ici : règles fiscales) réservée à
+ * OWNER/MANAGER/ACCOUNTANT — première utilisation réelle du rôle ACCOUNTANT,
+ * jusqu'ici défini dans le schéma mais non câblé à aucune permission.
+ */
+@Controller("shops/:shopId/finance")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
+export class FinanceController {
+  constructor(
+    private readonly financeService: FinanceService,
+    private readonly fiscalRulesService: FiscalRulesService,
+  ) {}
+
+  @Get("fiscal-identity")
+  fiscalIdentity(@Param("shopId") shopId: string) {
+    return this.financeService.fiscalIdentity(shopId);
+  }
+
+  @Patch("fiscal-identity")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  updateFiscalIdentity(@Param("shopId") shopId: string, @Body() dto: UpdateFiscalIdentityDto) {
+    return this.financeService.updateFiscalIdentity(shopId, dto);
+  }
+
+  @Get("dashboard")
+  dashboard(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const toDate = to ? new Date(to) : new Date();
+    const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+    return this.financeService.dashboardForShop(shopId, fromDate, toDate);
+  }
+
+  @Get("fiscal-rules")
+  listFiscalRules(@Param("shopId") shopId: string) {
+    return this.fiscalRulesService.listForShop(shopId);
+  }
+
+  @Get("fiscal-rules/:ruleId/versions")
+  ruleVersions(@Param("shopId") shopId: string, @Param("ruleId") ruleId: string) {
+    return this.fiscalRulesService.versionsForShopRule(shopId, ruleId);
+  }
+
+  @Post("fiscal-rules")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  createFiscalRule(
+    @Param("shopId") shopId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateFiscalRuleDto,
+  ) {
+    return this.fiscalRulesService.createForShop(shopId, user.id, dto);
+  }
+
+  @Patch("fiscal-rules/:ruleId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  updateFiscalRule(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateFiscalRuleDto,
+  ) {
+    return this.fiscalRulesService.updateForShop(shopId, ruleId, user.id, dto);
+  }
+
+  @Delete("fiscal-rules/:ruleId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  archiveFiscalRule(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body("motif") motif: string,
+  ) {
+    return this.fiscalRulesService.archiveForShop(shopId, ruleId, user.id, motif || "Archivage");
+  }
+}
