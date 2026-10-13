@@ -1,0 +1,66 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.message {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-5);
+}
+
+.carte {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+}
+
+.carteLabel {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-2);
+}
+
+.carteValeur {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.sectionTitre {
+  font-size: 1rem;
+  margin: var(--espace-5) 0 var(--espace-3);
+  padding-bottom: var(--espace-2);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.verifications {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.boutonVerif {
+  border: 1px solid var(--color-ink);
+  background: var(--color-surface);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.boutonVerif:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

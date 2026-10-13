@@ -18,6 +18,7 @@ const LIENS = [
   { href: "/factures", label: "Mes factures" },
   { href: "/releves", label: "Relevés d'activité" },
   { href: "/litiges", label: "Litiges" },
+  { href: "/finance", label: "Finance & Comptabilité" },
   { href: "/livreurs", label: "Livreurs" },
   { href: "/equipe", label: "Équipe" },
   { href: "/parametres", label: "Paramètres" },
@@ -92,7 +93,9 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           <Link
             key={lien.href}
             href={lien.href}
-            className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
+            className={`${styles.navLien} ${
+              pathname === lien.href || pathname?.startsWith(`${lien.href}/`) ? styles.navLienActif : ""
+            }`}
           >
             {lien.label}
           </Link>

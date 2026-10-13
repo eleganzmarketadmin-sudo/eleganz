@@ -14,6 +14,7 @@ const LIENS = [
   { href: "/admin/boutiques", label: "Boutiques" },
   { href: "/admin/livreurs", label: "Livreurs" },
   { href: "/admin/comptable", label: "Mon Comptable" },
+  { href: "/admin/finance", label: "Finance & Comptabilité" },
   { href: "/admin/suivi-commandes", label: "Suivi commandes" },
   { href: "/admin/utilisateurs", label: "Utilisateurs" },
   { href: "/admin/tarifs", label: "Tarifs" },
@@ -69,7 +70,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <Link
             key={lien.href}
             href={lien.href}
-            className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
+            className={`${styles.navLien} ${
+              pathname === lien.href || pathname?.startsWith(`${lien.href}/`) ? styles.navLienActif : ""
+            }`}
           >
             {lien.label}
           </Link>
