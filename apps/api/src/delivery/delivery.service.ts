@@ -21,26 +21,21 @@ export class DeliveryService {
     return this.prisma.deliveryZone.findMany({ where: { active: true } });
   }
 
-  async registerDriver(userId: string, dto: RegisterDriverDto) {
-    const existing = await this.prisma.driver.findUnique({ where: { userId } });
-    if (existing) return existing;
-    // verified reste false : la vérification du dossier (identité, véhicule)
-    // est une action administrative distincte, jamais automatique à
-    // l'inscription (prompt §10 et prompt du 13 oct. 2026, point 2).
-    return this.prisma.driver.create({
-      data: {
-        userId,
-        zone: dto.zone,
-        phone: dto.phone,
-        whatsapp: dto.whatsapp,
-        address: dto.address,
-        vehicleType: dto.vehicleType,
-        vehiclePlate: dto.vehiclePlate,
-        licenseNumber: dto.licenseNumber,
-        idDocumentNumber: dto.idDocumentNumber,
-        verified: false,
-      },
-    });
+  /**
+   * Inscription livreur FERMÉE au grand public (décision du 13 oct. 2026,
+   * 3ᵉ demande du jour) : un réseau de livreurs ouvert à tout le monde dès
+   * le lancement présente un risque de malhonnêteté trop élevé (vol, perte
+   * de marchandise, sans garantie de sérieux du livreur). Chaque boutique
+   * gère maintenant ses propres livreurs sous sa propre responsabilité —
+   * voir ShopDriversService. Le code ci-dessous est conservé intact pour
+   * une réouverture future du réseau plateforme, juste rendu inatteignable
+   * par ce refus en première ligne.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async registerDriver(userId: string, _dto: RegisterDriverDto) {
+    throw new ForbiddenException(
+      "L'inscription livreur est temporairement fermée. Chaque boutique gère pour l'instant ses propres livreurs.",
+    );
   }
 
   /**
@@ -64,6 +59,29 @@ export class DeliveryService {
       }
     }
     return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
+  }
+
+  /**
+   * Même principe qu'assignDriver() ci-dessus, mais pour un livreur propre
+   * à la boutique (ShopDriver — 13 oct. 2026, 1ʳᵉ demande du jour) : pas de
+   * vérification plateforme à contrôler, juste que la fiche appartienne
+   * bien à CETTE boutique (shopId) et soit active. `shopDriverId: null`
+   * retire l'affectation. On efface aussi l'éventuel driverId plateforme
+   * historique pour qu'une sous-commande n'ait jamais les deux à la fois.
+   */
+  async assignShopDriver(shopId: string, shopOrderId: string, shopDriverId: string | null) {
+    if (shopDriverId) {
+      const shopDriver = await this.prisma.shopDriver.findFirstOrThrow({
+        where: { id: shopDriverId, shopId },
+      });
+      if (!shopDriver.active) {
+        throw new BadRequestException("Ce livreur a été désactivé par la boutique.");
+      }
+    }
+    return this.prisma.shopOrder.update({
+      where: { id: shopOrderId },
+      data: { shopDriverId, driverId: null },
+    });
   }
 
   /**

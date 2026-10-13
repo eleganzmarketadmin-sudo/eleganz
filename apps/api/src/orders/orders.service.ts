@@ -136,6 +136,9 @@ export class OrdersService {
         // Le vendeur garde la main sur l'affectation et doit voir qui est
         // affecté pour pouvoir en changer (prompt du 13 oct. 2026, point 1).
         driver: { select: { id: true, user: { select: { fullName: true } } } },
+        // Livreur propre à la boutique (13 oct. 2026, remplace le réseau
+        // plateforme pour les nouvelles affectations) — voir ShopDriver.
+        shopDriver: { select: { id: true, fullName: true, phone: true } },
         order: {
           select: {
             id: true,

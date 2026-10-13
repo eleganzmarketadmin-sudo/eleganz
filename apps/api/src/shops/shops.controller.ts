@@ -3,6 +3,7 @@ import { ShopsService } from "./shops.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "./shop-membership.guard";
 import { ShopRoles } from "./roles.decorator";
@@ -71,5 +72,33 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   removeStaff(@Param("shopId") shopId: string, @Param("staffId") staffId: string) {
     return this.shopsService.deactivateStaff(shopId, staffId);
+  }
+
+  // Livreurs propres à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) —
+  // mêmes rôles que l'affectation de livreur existante (ShopRoles sur
+  // AssignDriverController, delivery.controller.ts), pour rester cohérent :
+  // qui peut affecter un livreur peut aussi gérer la liste.
+  @Get(":shopId/drivers")
+  @UseGuards(ShopMembershipGuard)
+  listShopDrivers(@Param("shopId") shopId: string) {
+    return this.shopsService.listShopDrivers(shopId);
+  }
+
+  @Post(":shopId/drivers")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
+  createShopDriver(@Param("shopId") shopId: string, @Body() dto: CreateShopDriverDto) {
+    return this.shopsService.createShopDriver(shopId, dto);
+  }
+
+  @Patch(":shopId/drivers/:driverId")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
+  updateShopDriver(
+    @Param("shopId") shopId: string,
+    @Param("driverId") driverId: string,
+    @Body() dto: UpdateShopDriverDto,
+  ) {
+    return this.shopsService.updateShopDriver(shopId, driverId, dto);
   }
 }

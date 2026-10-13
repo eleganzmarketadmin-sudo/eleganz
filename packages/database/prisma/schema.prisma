@@ -231,6 +231,7 @@ model Shop {
   auditLogs      AuditLog[]
   reviews        Review[]
   variantOptions VariantOption[]
+  shopDrivers    ShopDriver[]
 }
 
 model ShopStaff {
@@ -515,8 +516,19 @@ model ShopOrder {
   status    OrderStatus @default(CREATED)
   subtotal  Decimal     @db.Decimal(12, 2)
   commissionAmount Decimal @default(0) @db.Decimal(12, 2)
+  // Réseau de livreurs plateforme (Driver) — fermé au grand public depuis le
+  // 13 oct. 2026, conservé tel quel pour une réouverture future. Les
+  // nouvelles affectations passent par shopDriverId ci-dessous.
   driverId  String?
   driver    Driver?     @relation(fields: [driverId], references: [id])
+  // Livreur propre à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) : pas
+  // de compte ELEGANZ, pas de vérification plateforme — sous la seule
+  // responsabilité de la boutique qui l'a enregistré. Une sous-commande n'a
+  // jamais les deux à la fois en pratique (voir DeliveryService.assignDriver
+  // / assignShopDriver), mais les deux champs restent indépendants dans le
+  // schéma pour ne pas invalider l'historique si le réseau plateforme rouvre.
+  shopDriverId String?
+  shopDriver   ShopDriver? @relation(fields: [shopDriverId], references: [id])
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -659,6 +671,29 @@ enum DriverBillingStatus {
   PAYMENT_DUE  // gratuité écoulée, facture(s) en attente de règlement
   ACTIVE       // à jour de ses paiements
   SUSPENDED    // impayé au-delà du délai de grâce — missions bloquées
+}
+
+// Livreur propre à une boutique (13 oct. 2026, 1ʳᵉ demande du jour — en
+// remplacement du réseau de livreurs plateforme, fermé au grand public pour
+// limiter le risque de malhonnêteté au lancement). Pas de compte ELEGANZ :
+// une simple fiche gérée par la boutique elle-même, sous sa propre
+// responsabilité en cas de perte ou de vol — jamais celle de la plateforme.
+// Le personnel de boutique marque lui-même les étapes de livraison (via
+// PATCH /shops/:shopId/orders/:shopOrderId/status, déjà existant), puisque
+// ce livreur n'a pas de compte pour confirmer ses propres étapes.
+model ShopDriver {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  fullName    String
+  phone       String?
+  vehicleType String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  deliveries ShopOrder[]
+
+  @@index([shopId])
 }
 
 model DeliveryZone {

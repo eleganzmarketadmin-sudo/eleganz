@@ -6,9 +6,12 @@ import styles from "./page.module.css";
 /**
  * Page "À propos d'ELEGANZ" (demande du 13 oct. 2026, point 2 : le pied de
  * page n'avait pas de section "à propos" — ce lien y mène maintenant depuis
- * tous les espaces). Présente les quatre modules réels de la plateforme,
- * sans survendre : chaque description reprend ce qui existe réellement
- * (voir docs/PROJECT_STATUS.md), rien d'inventé ni de prématuré.
+ * tous les espaces). Présente les modules réels de la plateforme ouverts au
+ * public, sans survendre : chaque description reprend ce qui existe
+ * réellement (voir docs/PROJECT_STATUS.md), rien d'inventé ni de prématuré.
+ * ELEGANZ Livreur (réseau ouvert à tout le monde) n'est volontairement pas
+ * listé ici depuis le 13 oct. 2026 — inscription fermée, voir
+ * livreur/inscription/page.tsx et delivery.service.ts.
  */
 export default function AProposPage() {
   return (
@@ -19,13 +22,14 @@ export default function AProposPage() {
       </Link>
 
       <section className={styles.hero}>
-        <h1>Une maison, quatre pièces</h1>
+        <h1>Une maison, trois pièces</h1>
         <p>
           ELEGANZ est un écosystème pensé pour le commerce congolais, du petit
           vendeur informel à la boutique installée : tenir ses comptes, gérer
-          une boutique, vendre en ligne et organiser la livraison — quatre
-          outils séparés, une seule plateforme, construite et exploitée depuis
-          Kinshasa.
+          une boutique et vendre en ligne — trois outils séparés, une seule
+          plateforme, construite et exploitée depuis Kinshasa. La livraison,
+          elle, reste pour l&apos;instant organisée par chaque boutique avec
+          ses propres livreurs, sous sa propre responsabilité.
         </p>
       </section>
 
@@ -65,17 +69,6 @@ export default function AProposPage() {
             congolais sans sortir de chez soi.
           </p>
           <Link href="/marketplace">Parcourir la vitrine</Link>
-        </div>
-
-        <div className={`${styles.carte} ${styles.livreur}`}>
-          <h2>ELEGANZ Livreur</h2>
-          <p>
-            Le réseau de livreurs qui relie les boutiques ELEGANZ à leurs
-            clients : missions par commune, affectation par le vendeur,
-            suivi de délai et de litige, et une tarification transparente
-            avec une période de gratuité à l&apos;inscription.
-          </p>
-          <Link href="/livreur/inscription">Devenir livreur</Link>
         </div>
       </section>
 

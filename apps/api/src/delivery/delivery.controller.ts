@@ -128,8 +128,20 @@ export class DeliveryController {
 export class AssignDriverController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
+  // `shopDriverId` est le chemin normal depuis le 13 oct. 2026 (livreur
+  // propre à la boutique). `driverId` (réseau plateforme) est conservé en
+  // body pour ne pas casser un appel existant, mais l'inscription livreur
+  // plateforme étant fermée, ce chemin ne reçoit plus de nouveaux livreurs.
   @Post()
-  assign(@Param("shopOrderId") shopOrderId: string, @Body("driverId") driverId: string | null) {
+  assign(
+    @Param("shopId") shopId: string,
+    @Param("shopOrderId") shopOrderId: string,
+    @Body("shopDriverId") shopDriverId: string | null | undefined,
+    @Body("driverId") driverId: string | null | undefined,
+  ) {
+    if (shopDriverId !== undefined) {
+      return this.deliveryService.assignShopDriver(shopId, shopOrderId, shopDriverId || null);
+    }
     return this.deliveryService.assignDriver(shopOrderId, driverId || null);
   }
 }

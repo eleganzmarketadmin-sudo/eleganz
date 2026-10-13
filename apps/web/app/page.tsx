@@ -48,18 +48,6 @@ export default function HomePage() {
             Parcourir la vitrine
           </Link>
         </div>
-        <div className={`${styles.bloc} ${styles.livreur}`}>
-          <h1>ELEGANZ Livreur</h1>
-          <p>
-            Missions de livraison par commune pour les boutiques ELEGANZ,
-            affectées par le vendeur et suivies jusqu&apos;à la remise, avec
-            une tarification transparente et une période de gratuité à
-            l&apos;inscription.
-          </p>
-          <Link className={styles.lien} href="/livreur/inscription">
-            Devenir livreur
-          </Link>
-        </div>
       </div>
       <Footer variante="accueil" />
     </div>

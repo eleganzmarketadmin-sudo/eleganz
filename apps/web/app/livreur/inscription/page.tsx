@@ -36,7 +36,34 @@ const VEHICULES: { valeur: string; label: string; documentsRequis: boolean }[] =
   { valeur: "VOITURE", label: "Voiture", documentsRequis: true },
 ];
 
+/**
+ * Inscription livreur FERMÉE au grand public (décision du 13 oct. 2026) :
+ * risque de malhonnêteté trop élevé pour un réseau de livreurs ouvert dès le
+ * lancement (vol, perte de marchandise sans garantie de sérieux du livreur).
+ * Chaque boutique gère maintenant ses propres livreurs, sous sa propre
+ * responsabilité (voir (gestion)/livreurs/page.tsx). Le formulaire complet
+ * ci-dessous est conservé tel quel (fonction renommée, plus exportée par
+ * défaut) pour une réouverture future du réseau de livreurs plateforme,
+ * sans avoir à le réécrire — l'API refuse de toute façon déjà l'inscription
+ * côté serveur (voir DeliveryService.registerDriver).
+ */
 export default function InscriptionLivreurPage() {
+  return (
+    <div style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
+      <h1 style={{ marginBottom: 16 }}>Inscription livreur temporairement fermée</h1>
+      <p style={{ color: "var(--color-texte-muted)", lineHeight: 1.6 }}>
+        Le réseau de livreurs ouvert à tout le monde n&apos;est pas encore disponible : chaque
+        boutique ELEGANZ gère pour l&apos;instant ses propres livreurs, sous sa propre
+        responsabilité. Cette fonctionnalité sera reconsidérée plus tard.
+      </p>
+      <p style={{ marginTop: 24 }}>
+        <Link href="/">Retour à l&apos;accueil</Link>
+      </p>
+    </div>
+  );
+}
+
+function _FormulaireInscriptionLivreurReserve() {
   const { register } = useAuth();
   const router = useRouter();
   const [fullName, setFullName] = useState("");

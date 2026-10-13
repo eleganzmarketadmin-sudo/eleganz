@@ -59,11 +59,6 @@
   animation-delay: 120ms;
 }
 
-.livreur {
-  background: var(--color-flamme);
-  animation-delay: 180ms;
-}
-
 @keyframes entree-bloc {
   from {
     opacity: 0;

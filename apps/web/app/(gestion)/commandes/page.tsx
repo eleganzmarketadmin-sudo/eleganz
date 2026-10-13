@@ -18,21 +18,17 @@ interface OrderLine {
   variant: { size: string | null; color: string | null; product: { name: string } };
 }
 
+// Livreur propre à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) — en
+// remplacement du réseau de livreurs plateforme (fermé au grand public) :
+// une fiche gérée par la boutique elle-même, sous sa propre responsabilité,
+// voir (gestion)/livreurs/page.tsx.
 interface Livreur {
   id: string;
-  zone: string | null;
+  fullName: string;
   phone: string | null;
-  whatsapp: string | null;
   vehicleType: string | null;
-  user: { fullName: string };
+  active: boolean;
 }
-
-const LABELS_VEHICULE: Record<string, string> = {
-  PIED: "à pied",
-  VELO: "vélo",
-  MOTO: "moto",
-  VOITURE: "voiture",
-};
 
 interface ShopOrder {
   id: string;
@@ -40,7 +36,7 @@ interface ShopOrder {
   subtotal: string;
   createdAt: string;
   lines: OrderLine[];
-  driver: { id: string; user: { fullName: string } } | null;
+  shopDriver: { id: string; fullName: string; phone: string | null } | null;
   order: {
     id: string;
     createdAt: string;
@@ -162,23 +158,24 @@ function CommandesContent() {
   useEffect(recharger, [currentShop]);
 
   useEffect(() => {
+    if (!currentShop) return;
     api
-      .get<Livreur[]>("/delivery/available")
-      .then(setLivreurs)
+      .get<Livreur[]>(`/shops/${currentShop.id}/drivers`)
+      .then((tous) => setLivreurs(tous.filter((l) => l.active)))
       .catch(() => {
         // Non bloquant : la liste des livreurs n'existe que pour le
         // sélecteur d'affectation, son indisponibilité ne doit pas empêcher
         // de consulter ou traiter les commandes.
       });
-  }, []);
+  }, [currentShop]);
 
   async function affecterLivreur(shopOrderId: string) {
-    const driverId = selectionLivreur[shopOrderId];
-    if (!driverId) return;
+    const shopDriverId = selectionLivreur[shopOrderId];
+    if (!shopDriverId) return;
     setEnCours(shopOrderId);
     setErreur(null);
     try {
-      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { driverId });
+      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { shopDriverId });
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Affectation impossible.");
@@ -191,7 +188,7 @@ function CommandesContent() {
     setEnCours(shopOrderId);
     setErreur(null);
     try {
-      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { driverId: null });
+      await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { shopDriverId: null });
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Retrait impossible.");
@@ -305,8 +302,8 @@ function CommandesContent() {
                 <div className={styles.contactLigne}>
                   <strong>Livreur</strong>
                   <span>
-                    {so.driver
-                      ? so.driver.user.fullName
+                    {so.shopDriver
+                      ? so.shopDriver.fullName
                       : "Pas encore affecté"}
                   </span>
                 </div>
@@ -319,13 +316,13 @@ function CommandesContent() {
                     }
                   >
                     <option value="">
-                      {livreurs.length === 0 ? "Aucun livreur vérifié disponible" : "Choisir un livreur…"}
+                      {livreurs.length === 0 ? "Aucun livreur enregistré — voir Livreurs" : "Choisir un livreur…"}
                     </option>
                     {livreurs.map((l) => (
                       <option key={l.id} value={l.id}>
-                        {l.user.fullName}
-                        {l.zone ? ` — ${l.zone}` : ""}
-                        {l.vehicleType ? ` (${LABELS_VEHICULE[l.vehicleType] ?? l.vehicleType})` : ""}
+                        {l.fullName}
+                        {l.phone ? ` — ${l.phone}` : ""}
+                        {l.vehicleType ? ` (${l.vehicleType})` : ""}
                       </option>
                     ))}
                   </select>
@@ -334,9 +331,9 @@ function CommandesContent() {
                     disabled={enCours === so.id || !selectionLivreur[so.id]}
                     onClick={() => affecterLivreur(so.id)}
                   >
-                    {so.driver ? "Changer de livreur" : "Affecter"}
+                    {so.shopDriver ? "Changer de livreur" : "Affecter"}
                   </button>
-                  {so.driver && (
+                  {so.shopDriver && (
                     <button
                       className={`${styles.boutonAction} ${styles.boutonAnnuler}`}
                       disabled={enCours === so.id}

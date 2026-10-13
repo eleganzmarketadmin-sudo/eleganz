@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
@@ -231,5 +232,32 @@ export class ShopsService {
           ? { gestionBouquetId: planId }
           : { marketplaceBouquetId: planId },
     });
+  }
+
+  // ---------------------------------------------------------------------
+  // Livreurs propres à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) — en
+  // remplacement du réseau de livreurs plateforme, fermé au grand public.
+  // Pas de compte ELEGANZ ni de vérification administrative : une simple
+  // fiche gérée par la boutique, sous sa seule responsabilité.
+  // ---------------------------------------------------------------------
+
+  listShopDrivers(shopId: string) {
+    return this.prisma.shopDriver.findMany({
+      where: { shopId },
+      orderBy: { fullName: "asc" },
+    });
+  }
+
+  createShopDriver(shopId: string, dto: CreateShopDriverDto) {
+    return this.prisma.shopDriver.create({
+      data: { shopId, fullName: dto.fullName, phone: dto.phone, vehicleType: dto.vehicleType },
+    });
+  }
+
+  async updateShopDriver(shopId: string, driverId: string, dto: UpdateShopDriverDto) {
+    // findFirstOrThrow avec shopId : empêche une boutique de modifier la
+    // fiche livreur d'une autre boutique en devinant un id.
+    await this.prisma.shopDriver.findFirstOrThrow({ where: { id: driverId, shopId } });
+    return this.prisma.shopDriver.update({ where: { id: driverId }, data: dto });
   }
 }
