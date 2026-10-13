@@ -18,6 +18,7 @@ export class InviteStaffDto {
     StaffRole.STOCK_KEEPER,
     StaffRole.SALES_LEAD,
     StaffRole.ACCOUNTANT,
+    StaffRole.EXTERNAL_ACCOUNTANT,
   ])
   role!: Exclude<StaffRole, typeof StaffRole.OWNER>;
 }

@@ -4,7 +4,16 @@ import type { Request } from "express";
 import { PrismaService } from "../prisma/prisma.service";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { SHOP_ROLES_KEY } from "./roles.decorator";
-import type { StaffRole } from "@eleganz/database";
+import { StaffRole } from "@eleganz/database";
+
+// Préfixes de routes Finance & Comptabilité — seuls accessibles, et
+// seulement en lecture (GET), à un StaffRole.EXTERNAL_ACCOUNTANT (voir
+// docs/ARCHITECTURE_FINANCE.md §8sexies). Basé sur le chemin réel de la
+// requête (pas le gabarit de route Express), donc insensible à l'ajout
+// futur de nouvelles routes dans ces contrôleurs : tout ce qui vit sous
+// ces préfixes est automatiquement couvert, sans liste à maintenir route
+// par route.
+const PREFIXES_COMPTABLE_EXTERNE = [/^\/shops\/[^/]+\/finance(\/|$)/, /^\/shops\/[^/]+\/assets(\/|$)/, /^\/shops\/[^/]+\/expenses(\/|$)/];
 
 // À utiliser APRÈS JwtAuthGuard. Vérifie que l'utilisateur authentifié est
 // bien staff de la boutique ciblée par :shopId dans l'URL — c'est ce qui
@@ -37,6 +46,17 @@ export class ShopMembershipGuard implements CanActivate {
 
     if (!membership?.active) {
       throw new ForbiddenException("Vous n'avez pas accès à cette boutique.");
+    }
+
+    if (membership.role === StaffRole.EXTERNAL_ACCOUNTANT) {
+      const chemin = request.path;
+      const estLectureFinance = request.method === "GET" && PREFIXES_COMPTABLE_EXTERNE.some((p) => p.test(chemin));
+      if (!estLectureFinance) {
+        throw new ForbiddenException(
+          "Un comptable externe n'a accès qu'en lecture seule à Finance & Comptabilité.",
+        );
+      }
+      return true;
     }
 
     // getAllAndOverride : un décorateur posé sur la méthode l'emporte sur celui

@@ -19,6 +19,10 @@ const ROLES = [
   { valeur: "STOCK_KEEPER", label: "Magasinier" },
   { valeur: "SALES_LEAD", label: "Responsable commercial" },
   { valeur: "ACCOUNTANT", label: "Comptable" },
+  // Accès restreint à Finance & Comptabilité en lecture seule — voir
+  // docs/ARCHITECTURE_FINANCE.md §8sexies. Jamais d'accès à la Caisse, au
+  // Catalogue, aux Commandes, à l'Équipe ou aux Paramètres.
+  { valeur: "EXTERNAL_ACCOUNTANT", label: "Comptable externe (lecture seule)" },
 ] as const;
 
 const LABELS_ROLE: Record<string, string> = {
@@ -28,6 +32,7 @@ const LABELS_ROLE: Record<string, string> = {
   STOCK_KEEPER: "Magasinier",
   SALES_LEAD: "Responsable commercial",
   ACCOUNTANT: "Comptable",
+  EXTERNAL_ACCOUNTANT: "Comptable externe (lecture seule)",
 };
 
 function EquipeContent() {

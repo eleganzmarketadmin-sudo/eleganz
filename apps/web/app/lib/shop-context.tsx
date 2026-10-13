@@ -10,6 +10,10 @@ export interface Shop {
   slug: string;
   mode: "PRIVATE" | "MARKETPLACE" | "HYBRID";
   status: string;
+  // Rôle du membre connecté dans CETTE boutique — confort de navigation
+  // uniquement (filtrer les onglets visibles pour un comptable externe en
+  // lecture seule) ; la vraie barrière reste ShopMembershipGuard côté API.
+  myRole?: string | null;
 }
 
 interface ShopContextValue {

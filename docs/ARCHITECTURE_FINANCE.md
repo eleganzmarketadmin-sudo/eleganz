@@ -614,6 +614,51 @@ au niveau de la base de données (uniquement applicatif, dans
 chemin que ce service contournerait le verrou, mais aucun chemin de ce type
 n'existe dans le code à ce jour).
 
+## 8sexies. Invitation et accès d'un comptable externe (13 oct. 2026, Phase 6)
+
+Chantier choisi par le propriétaire parmi les points différés au §9.6.
+Analyse préalable : `StaffRole.ACCOUNTANT` existe déjà et est déjà invitable
+(`InviteStaffDto`), mais `ShopMembershipGuard` autorise par défaut **tout**
+membre actif staff à lire n'importe quelle route sans `@ShopRoles` (Caisse,
+Catalogue, Commandes...) — seules les routes d'écriture sont restreintes par
+rôle. `ACCOUNTANT` a donc, de fait, un accès en lecture à toute la boutique,
+pas seulement à Finance & Comptabilité. Conserver `ACCOUNTANT` tel quel pour
+le personnel interne (c'est son usage voulu) et créer un **nouveau rôle
+dédié** pour un comptable externe à qui l'on ne souhaite donner accès qu'aux
+seuls écrans financiers, jamais à la Caisse ou au Catalogue.
+
+### 9quinquies.1. Ce qui est construit
+
+- Nouvelle valeur d'enum `StaffRole.EXTERNAL_ACCOUNTANT`, invitable via le
+  mécanisme d'invitation déjà existant (même écran `/equipe`, même
+  `InviteStaffDto`) — aucune nouvelle UI d'invitation nécessaire, seulement
+  une nouvelle option dans le sélecteur de rôle.
+- `ShopMembershipGuard` : pour ce rôle spécifiquement, court-circuite la
+  vérification habituelle par `@ShopRoles` et impose à la place une règle
+  propre à ce rôle — accès autorisé **uniquement** aux requêtes `GET` dont
+  le chemin commence par `/shops/:shopId/finance`, `/shops/:shopId/assets`
+  (immobilisations) ou `/shops/:shopId/expenses` (charges). Toute autre
+  requête (Caisse, Catalogue, Commandes, Équipe, Paramètres, et toute
+  écriture même sur Finance) est refusée avec un message explicite. Basé sur
+  le chemin réel de la requête, donc couvre automatiquement toute route
+  future ajoutée sous ces préfixes, sans liste à maintenir.
+- `GET /shops/mine` renvoie désormais `myRole` (rôle du membre connecté dans
+  chaque boutique) — confort de navigation uniquement : `GestionShell`
+  masque tous les onglets sauf « Finance & Comptabilité » pour ce rôle, pour
+  éviter de montrer un lien qui échouerait systématiquement en 403. La vraie
+  barrière reste toujours `ShopMembershipGuard` côté API.
+
+### 9quinquies.2. Limite connue, assumée
+
+Les formulaires d'écriture *à l'intérieur* de Finance & Comptabilité (créer
+une charge, une règle fiscale, une immobilisation, clôturer un mois) restent
+visibles pour ce rôle — seule la soumission échoue, avec le message
+d'erreur du serveur affiché dans le bandeau d'erreur déjà présent sur
+chaque écran. Construire une variante strictement lecture seule de chaque
+écran (masquer chaque formulaire et bouton) n'a pas été fait à cette phase :
+l'essentiel (aucune écriture possible, aucune donnée hors Finance visible)
+est garanti côté serveur, qui est la seule barrière qui compte réellement.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après

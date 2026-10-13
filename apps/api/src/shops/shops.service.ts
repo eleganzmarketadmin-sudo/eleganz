@@ -54,12 +54,21 @@ export class ShopsService {
    * travaille pour ouvrir la caisse.
    */
   async findMine(userId: string) {
-    return this.prisma.shop.findMany({
+    const boutiques = await this.prisma.shop.findMany({
       where: {
         OR: [{ ownerId: userId }, { staff: { some: { userId, active: true } } }],
       },
       orderBy: { createdAt: "desc" },
+      include: { staff: { where: { userId }, select: { role: true } } },
     });
+    // `myRole` permet au front de masquer la navigation hors Finance &
+    // Comptabilité pour un StaffRole.EXTERNAL_ACCOUNTANT (voir
+    // docs/ARCHITECTURE_FINANCE.md §8sexies) — la vraie barrière reste
+    // ShopMembershipGuard côté API, ceci n'est qu'un confort de navigation.
+    return boutiques.map(({ staff, ...boutique }) => ({
+      ...boutique,
+      myRole: boutique.ownerId === userId ? "OWNER" : (staff[0]?.role ?? null),
+    }));
   }
 
   async findOne(shopId: string) {

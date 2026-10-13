@@ -24,12 +24,19 @@ const LIENS = [
   { href: "/parametres", label: "Paramètres" },
 ];
 
+// Un comptable externe (StaffRole.EXTERNAL_ACCOUNTANT) n'a, côté API, accès
+// qu'en lecture seule à Finance & Comptabilité (docs/ARCHITECTURE_FINANCE.md
+// §8sexies) — masquer les autres onglets évite de lui montrer un lien qui
+// échouerait systématiquement avec une erreur 403.
+const LIEN_FINANCE_SEUL = LIENS.filter((l) => l.href === "/finance");
+
 export function GestionShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
   const { shops, currentShop, setCurrentShopId } = useShop();
   const { nombreEnAttente, synchroniser } = useOfflineSync();
+  const liens = currentShop?.myRole === "EXTERNAL_ACCOUNTANT" ? LIEN_FINANCE_SEUL : LIENS;
 
   return (
     <div className={styles.cadre}>
@@ -89,7 +96,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
       </header>
       <BandeMarque />
       <nav className={styles.nav}>
-        {LIENS.map((lien) => (
+        {liens.map((lien) => (
           <Link
             key={lien.href}
             href={lien.href}
