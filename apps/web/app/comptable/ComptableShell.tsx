@@ -13,6 +13,7 @@ const LIENS = [
   { href: "/comptable", label: "Accueil" },
   { href: "/comptable/activites", label: "Mes activités" },
   { href: "/comptable/chiffres", label: "Mon activité en chiffres" },
+  { href: "/comptable/agenda", label: "Agenda" },
   { href: "/comptable/abonnement", label: "Abonnement" },
 ];
 

@@ -471,6 +471,85 @@ export class ComptableService {
     return { urgents, aVenir, infos };
   }
 
+  /**
+   * Agenda personnel (prompt §13) — liste chronologique des échéances
+   * réelles (dettes/créances/emprunts, loyers attendus, versements de
+   * travailleurs), jamais générée, jamais inventée. Fenêtre large (passé
+   * proche + 90 jours à venir) pour couvrir vue chronologique et vue
+   * calendrier côté écran sans multiplier les appels.
+   */
+  async agenda(userId: string) {
+    const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
+    const activityIds = activites.map((a) => a.id);
+    const maintenant = new Date();
+    const borneBasse = new Date(maintenant.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const borneHaute = new Date(maintenant.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+    type Evenement = { date: string; label: string; detail: string; type: "dette" | "creance" | "emprunt" | "loyer" | "versement"; refId: string };
+    const evenements: Evenement[] = [];
+
+    const dettesEtCreances = await this.prisma.comptableDebt.findMany({
+      where: {
+        activityId: { in: activityIds },
+        settled: false,
+        dueDate: { gte: borneBasse, lte: borneHaute },
+      },
+      include: { activity: { select: { name: true } } },
+    });
+    for (const d of dettesEtCreances) {
+      if (!d.dueDate) continue;
+      const type = d.type === "CREANCE" ? "creance" : d.type === "EMPRUNT" ? "emprunt" : "dette";
+      const libelle = d.type === "CREANCE" ? "Créance attendue" : d.type === "EMPRUNT" ? "Emprunt à rembourser" : "Dette à payer";
+      evenements.push({
+        date: d.dueDate.toISOString(),
+        label: `${libelle} — ${d.counterpartyName}`,
+        detail: d.activity.name,
+        type,
+        refId: d.id,
+      });
+    }
+
+    const loyers = await this.prisma.comptableRentPayment.findMany({
+      where: {
+        unit: { activityId: { in: activityIds } },
+        paidAt: null,
+        dueDate: { gte: borneBasse, lte: borneHaute },
+      },
+      include: { unit: { select: { label: true, activity: { select: { name: true } } } } },
+    });
+    for (const l of loyers) {
+      evenements.push({
+        date: l.dueDate.toISOString(),
+        label: `Loyer attendu — ${l.unit.label} (${l.periodLabel})`,
+        detail: l.unit.activity.name,
+        type: "loyer",
+        refId: l.id,
+      });
+    }
+
+    const versements = await this.prisma.comptableWorkerRemittance.findMany({
+      where: {
+        activityId: { in: activityIds },
+        settledAt: null,
+        dueDate: { gte: borneBasse, lte: borneHaute },
+      },
+      include: { activity: { select: { name: true } } },
+    });
+    for (const v of versements) {
+      if (!v.dueDate) continue;
+      evenements.push({
+        date: v.dueDate.toISOString(),
+        label: `Versement attendu — ${v.workerName}`,
+        detail: v.activity.name,
+        type: "versement",
+        refId: v.id,
+      });
+    }
+
+    evenements.sort((a, b) => a.date.localeCompare(b.date));
+    return evenements;
+  }
+
   // --- Abonnement Mon Comptable -------------------------------------------
 
   /** Activation effective = premier appel authentifié à l'espace Mon Comptable (prompt §14). */

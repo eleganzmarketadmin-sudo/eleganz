@@ -162,6 +162,11 @@ export class ComptableController {
     return this.comptableService.reminders(user.id);
   }
 
+  @Get("agenda")
+  agenda(@CurrentUser() user: AuthenticatedUser) {
+    return this.comptableService.agenda(user.id);
+  }
+
   @Get("subscription")
   subscription(@CurrentUser() user: AuthenticatedUser) {
     return this.comptableService.getOrCreateSubscription(user.id);
