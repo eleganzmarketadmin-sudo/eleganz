@@ -95,10 +95,72 @@ exclure ces sous-commandes d'un prochain cycle (pas de double facturation).
 Même logique manuelle que les autres cycles de facturation du projet
 (aucun planificateur automatique nulle part).
 
-## ELEGANZ Mon Comptable — révision
+## ELEGANZ Mon Comptable — proposition de bouquets premium (PAS ENCORE APPROUVÉE)
 
-Hors scope de ce chantier (tarification déjà en place et jugée adaptée :
-1 $/mois ou 10 $/an, 6 mois gratuits). Non modifié.
+Demandé le 14 octobre 2026 ("prevoir egalement les proposition su eleganz
+mon comptable"). **Ceci est une proposition à valider par le propriétaire,
+pas un changement déjà construit** — même démarche que pour les bouquets
+ELEGANZ Gestion (document d'abord, code ensuite, seulement après accord),
+parce que Mon Comptable a déjà des abonnés payants réels sur l'offre
+actuelle et qu'un changement de grille tarifaire touche des comptes en
+production, pas seulement une valeur de configuration.
+
+**Constat (lecture du code, pas d'hypothèse)** : contrairement à ELEGANZ
+Gestion, Mon Comptable n'a aujourd'hui **aucun levier de différenciation
+déjà construit** — un seul abonnement plat (1 $/mois ou 10 $/an, 6 mois
+gratuits), et tout le module est disponible sans aucune limite : nombre
+illimité d'« activités » suivies (`ComptableActivity` — commerce, location,
+véhicule, service, autre), saisie illimitée, suivi de dettes/créances,
+unités locatives, envois à des travailleurs, tableau de bord avec
+historique et comparaison de périodes, rappels/agenda, export Excel/PDF de
+la synthèse ET export d'un dossier de financement pour une demande de prêt
+bancaire. Proposer des « bouquets » suppose donc de choisir *quoi* mettre
+derrière un palier supérieur — une décision commerciale, pas technique,
+d'où la nécessité de la soumettre avant de coder.
+
+**Principe non négociable** : aucun abonné actuel ne doit perdre un accès
+qu'il utilise déjà (même règle que pour le rattachement automatique au
+bouquet "Pro" lors du chantier Gestion). L'offre actuelle deviendrait donc
+le palier de base ("Essentiel"), inchangée, et les paliers supérieurs
+n'ajoutent que de la valeur nouvelle.
+
+| | Essentiel (actuel, inchangé) | Pro | Premium |
+|---|---|---|---|
+| Prix | 1 $/mois ou 10 $/an (inchangé) | 3 $/mois ou 30 $/an | 7 $/mois ou 70 $/an |
+| Activités suivies simultanément | 1 | 5 | Illimité |
+| Saisie, dettes/créances, unités locatives, envois travailleurs | ✓ | ✓ | ✓ |
+| Tableau de bord — historique | 3 derniers mois | Illimité | Illimité |
+| Comparaison de périodes | — | ✓ | ✓ |
+| Rappels et agenda proactifs | — | ✓ | ✓ |
+| Export synthèse Excel/PDF | ✓ | ✓ | ✓ |
+| Export dossier de financement (banque) | — | — | ✓ |
+
+Raisonnement par ligne : la limite à 1 activité sur l'Essentiel reflète
+l'usage réel observé (une personne qui ne suit qu'une seule activité n'a
+besoin de rien de plus) sans rien retirer à qui en suit déjà plusieurs —
+voir le principe de migration ci-dessous. L'historique/comparaison et les
+rappels sont une couche de confort qui a du sens à monétiser une fois
+qu'une personne gère plusieurs activités à la fois. Le dossier de
+financement est réservé au palier le plus élevé parce que c'est la seule
+fonctionnalité du module tournée vers un tiers externe (un banquier) plutôt
+que l'usage quotidien — une vraie raison de payer plus, pas une limite
+arbitraire.
+
+**Migration des abonnés existants** : comme pour Gestion, tout compte
+Mon Comptable déjà actif serait automatiquement rattaché au palier
+"Pro" (jamais Essentiel) pour ne perdre aucun accès qu'il utilise déjà —
+en particulier s'il suit déjà plus d'une activité.
+
+**Pas encore construit, et volontairement pas commencé avant validation** :
+schéma (ComptableSubscription n'a aujourd'hui aucune notion de palier —
+il faudrait une table de bouquets dédiée, sur le modèle de
+`SubscriptionPlan`), limite réelle sur le nombre d'activités actives,
+gating de l'historique/comparaison/rappels/export dossier de financement,
+et l'administration de ces bouquets depuis `/admin/tarifs`.
+
+**Question ouverte pour le propriétaire** : ces paliers, ces prix et ce
+découpage des fonctionnalités conviennent-ils, ou faut-il les ajuster
+avant que ce soit construit ?
 
 ## Espace Livreur — révision
 
