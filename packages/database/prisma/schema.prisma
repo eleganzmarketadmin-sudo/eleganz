@@ -1074,7 +1074,41 @@ model ComptableSubscription {
   renewsAt           DateTime?
   createdAt          DateTime @default(now())
 
+  // Bouquet tarifaire Mon Comptable (14 oct. 2026, proposition validée par
+  // le propriétaire) — distinct de `plan` ci-dessus, qui ne porte que la
+  // fréquence de facturation (mensuel/annuel), jamais le palier de
+  // fonctionnalités. Nullable pour la migration : un abonnement déjà actif
+  // avant ce champ est automatiquement rattaché au bouquet "Pro" (jamais
+  // "Essentiel") pour ne perdre aucun accès déjà utilisé — voir
+  // ComptablePlansService.rattacherAbonnesSansBouquet, même principe que
+  // SubscriptionPlansService côté ELEGANZ Gestion.
+  bouquetId String?
+  bouquet   ComptablePlan? @relation(fields: [bouquetId], references: [id])
+
   invoices ComptableInvoice[]
+}
+
+// Bouquets tarifaires Mon Comptable (14 oct. 2026, proposition validée par
+// le propriétaire — voir docs/PLAN_COMMERCIAL.md). Contrairement à
+// SubscriptionPlan (lié à une Shop), un bouquet Mon Comptable se rattache à
+// un ComptableSubscription (donc à un utilisateur, pas une boutique) — un
+// modèle séparé plutôt que de réutiliser SubscriptionPlan, dont les champs
+// (maxActiveProducts, commissionRate, relations à Shop) n'ont aucun sens ici.
+model ComptablePlan {
+  id            String   @id @default(uuid())
+  name          String
+  monthlyPrice  Decimal  @db.Decimal(12, 2)
+  yearlyPrice   Decimal  @db.Decimal(12, 2)
+  // Nombre d'activités suivies simultanément (archivées non comptées) ;
+  // null = illimité.
+  maxActivities Int?
+  // { historiqueIllimite, comparaisonPeriodes, rappelsAgenda,
+  // exportDossierFinancement } — toutes booléennes, lues par ComptableService
+  // et ComptableController, éditables depuis /admin/tarifs sans redéploiement.
+  featuresJson  Json
+  active        Boolean  @default(true)
+
+  subscriptions ComptableSubscription[]
 }
 
 model ComptableInvoice {
