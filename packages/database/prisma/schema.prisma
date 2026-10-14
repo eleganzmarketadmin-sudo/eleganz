@@ -1108,16 +1108,14 @@ model AiCreditTransaction {
   createdAt DateTime @default(now())
 }
 
-/**
- * Demande d'achat de crédits IA (14 oct. 2026, plan commercial — services à
- * la carte) : une boutique demande `quantity` crédits, une Invoice{kind:
- * "ai_credits"} est créée pour le montant correspondant (`quantity *
- * PlatformSettings.aiCreditUnitPrice` au moment de la demande, jamais
- * recalculé ensuite), et les crédits ne sont accordés au portefeuille
- * qu'une fois cette facture marquée payée par un administrateur — même
- * principe manuel que les autres cycles de facturation du projet, pas de
- * crédit automatique avant paiement confirmé.
- */
+// Demande d'achat de crédits IA (14 oct. 2026, plan commercial — services à
+// la carte) : une boutique demande `quantity` crédits, une Invoice{kind:
+// "ai_credits"} est créée pour le montant correspondant (`quantity *
+// PlatformSettings.aiCreditUnitPrice` au moment de la demande, jamais
+// recalculé ensuite), et les crédits ne sont accordés au portefeuille
+// qu'une fois cette facture marquée payée par un administrateur — même
+// principe manuel que les autres cycles de facturation du projet, pas de
+// crédit automatique avant paiement confirmé.
 model AiCreditTopUp {
   id        String          @id @default(uuid())
   walletId  String
