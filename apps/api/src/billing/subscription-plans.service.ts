@@ -96,11 +96,11 @@ export class SubscriptionPlansService implements OnModuleInit {
 
   /**
    * S'exécute à chaque démarrage de l'API, mais n'a d'effet qu'une seule
-   * fois en pratique (même garde que AccountingSeedService : vérifie avant
-   * de créer, jamais de doublon). Ordre : créer les bouquets manquants,
-   * PUIS rattacher les boutiques sans bouquet Gestion à "Pro" par défaut
-   * (décision du plan commercial : aucune boutique déjà active ne perd un
-   * accès qu'elle utilisait déjà).
+   * fois par bouquet en pratique (même garde que AccountingSeedService :
+   * vérifie avant de créer, jamais de doublon). Ordre : créer les bouquets
+   * manquants, PUIS rattacher les boutiques sans bouquet Gestion à "Pro" par
+   * défaut (décision du plan commercial : aucune boutique déjà active ne
+   * perd un accès qu'elle utilisait déjà).
    */
   async onModuleInit() {
     try {
@@ -111,14 +111,26 @@ export class SubscriptionPlansService implements OnModuleInit {
     }
   }
 
+  /**
+   * Incident du 14 oct. 2026 : la garde initiale testait « un bouquet
+   * Gestion quelconque existe-t-il déjà ? » — un bouquet de test "Essentiel"
+   * créé manuellement avant ce chantier a donc fait sauter tout le seed en
+   * silence, et Starter/Pro/Premium n'ont jamais été créés en production.
+   * Garde corrigée : par NOM de bouquet, un par un — un bouquet existant
+   * (quel que soit son nom) n'empêche plus la création des trois bouquets
+   * officiels du plan commercial, et aucun bouquet déjà modifié par
+   * l'administrateur n'est jamais réécrit (vérifié avant de créer, jamais
+   * de `upsert` qui écraserait un prix déjà ajusté depuis /admin/tarifs).
+   */
   private async seedBouquetsGestionDeDepart() {
-    const dejaPresent = await this.prisma.subscriptionPlan.findFirst({
-      where: { category: PlanCategory.GESTION },
-      select: { id: true },
-    });
-    if (dejaPresent) return;
-
+    let nombreCrees = 0;
     for (const bouquet of BOUQUETS_GESTION_DE_DEPART) {
+      const dejaPresent = await this.prisma.subscriptionPlan.findFirst({
+        where: { category: PlanCategory.GESTION, name: bouquet.name },
+        select: { id: true },
+      });
+      if (dejaPresent) continue;
+
       await this.prisma.subscriptionPlan.create({
         data: {
           category: PlanCategory.GESTION,
@@ -129,8 +141,11 @@ export class SubscriptionPlansService implements OnModuleInit {
           featuresJson: bouquet.featuresJson as Prisma.InputJsonValue,
         },
       });
+      nombreCrees++;
     }
-    this.logger.log(`${BOUQUETS_GESTION_DE_DEPART.length} bouquets Gestion de départ créés.`);
+    if (nombreCrees > 0) {
+      this.logger.log(`${nombreCrees} bouquet(s) Gestion de départ créé(s).`);
+    }
   }
 
   private async rattacherBoutiquesSansBouquet() {
