@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Param, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ReportsService } from "./reports.service";
 import { renderReleveActivitePdf } from "./report-pdf-renderer";
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
 import { StaffRole } from "@eleganz/database";
+import { PrismaService } from "../prisma/prisma.service";
 
 /**
  * Relevés d'activité périodiques pour le vendeur lui-même (demande du
@@ -17,7 +18,10 @@ import { StaffRole } from "@eleganz/database";
 @UseGuards(JwtAuthGuard, ShopMembershipGuard)
 @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get("releve")
   async releve(
@@ -26,6 +30,26 @@ export class ReportsController {
     @Res() res: Response,
   ) {
     const params = parseReleveQuery(query);
+
+    // Réservé au bouquet "exportExcelPdf" (14 oct. 2026, plan commercial) —
+    // seulement les formats fichier : la vue à l'écran (format JSON, par
+    // défaut) reste ouverte à tous, ce n'est que l'extraction qui est
+    // premium. Vérification faite ici (pas via @RequiresGestionFeature, qui
+    // s'applique à toute la route) car la même route sert les deux usages
+    // selon ?format=.
+    if (params.format === "xlsx" || params.format === "pdf") {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
+      });
+      const features = (shop?.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
+      if (features.exportExcelPdf !== true) {
+        throw new ForbiddenException(
+          `L'export Excel/PDF n'est pas inclus dans le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez à un bouquet supérieur depuis le Centre de pilotage pour y accéder.`,
+        );
+      }
+    }
+
     const releve = await this.reportsService.genererReleve({ ...params, shopId });
 
     if (params.format === "xlsx") {

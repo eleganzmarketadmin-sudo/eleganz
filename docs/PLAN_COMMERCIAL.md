@@ -62,9 +62,12 @@ redéploiement** (prix, frais d'ouverture, limites, fonctionnalités) :
 | Variantes de produits (taille/couleur)* | — | ✓ | ✓ |
 | Export Excel/PDF* | — | ✓ | ✓ |
 
-\* Déclarées dans `featuresJson` et réglables depuis `/admin/tarifs`, mais
-**pas encore reliées à une restriction d'accès côté API** (voir
-"à construire").
+\* Déclarées dans `featuresJson`, réglables depuis `/admin/tarifs`, et
+réellement appliquées : `variantesProduits` bloque la création de variantes
+en lot (`POST .../variants/bulk`, pas la variante simple requise pour
+vendre — voir le commentaire dans `catalog.controller.ts`) ;
+`exportExcelPdf` bloque l'export Excel du catalogue et l'export
+Excel/PDF des relevés d'activité.
 
 Toute boutique déjà active avant ce chantier a été rattachée automatiquement
 au bouquet **Pro** (jamais Starter) pour ne perdre aucun accès qu'elle
@@ -145,8 +148,6 @@ supprimé (geste destructif non demandé) — à retirer manuellement depuis
 - Commission sur les transactions ELEGANZ Market (`ShopOrder.commissionAmount`).
 - Monétisation des crédits IA, SMS/WhatsApp premium.
 - Option de commission pour les livreurs (plutôt qu'abonnement fixe).
-- Restriction d'accès réelle pour `variantesProduits` et `exportExcelPdf`
-  (déclarées et réglables, pas encore appliquées à une route).
 - Planificateur automatique du cycle de facturation mensuelle des boutiques
   (déclenchement manuel par l'admin, comme pour les livreurs et Mon
   Comptable — limite déjà documentée pour ces deux modules).
@@ -155,7 +156,5 @@ supprimé (geste destructif non demandé) — à retirer manuellement depuis
 
 Prochaine étape suggérée au propriétaire, par ordre de valeur/effort : (1)
 commission ELEGANZ Market, car c'est le second levier de revenu explicitement
-demandé et le champ existe déjà dans le schéma ; (2) câbler
-`variantesProduits`/`exportExcelPdf` à une restriction réelle, pour que le
-tableau de `/admin/tarifs` ne contienne plus de case « pas encore
-restreinte » ; (3) option de commission livreur.
+demandé et le champ existe déjà dans le schéma ; (2) services à la carte
+(crédits IA, SMS/WhatsApp) ; (3) option de commission livreur.

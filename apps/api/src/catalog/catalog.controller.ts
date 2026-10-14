@@ -9,6 +9,7 @@ import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
+import { RequiresGestionFeature } from "../shops/gestion-feature.decorator";
 import { StaffRole } from "@eleganz/database";
 
 // Ce contrôleur est la vue "gestion" du catalogue (staff de la boutique
@@ -64,10 +65,17 @@ export class CatalogController {
   /**
    * Création en lot (demande du 12 oct. 2026) : une variante par combinaison
    * taille × couleur sélectionnée dans les listes déroulantes de la
-   * boutique, plutôt qu'une saisie manuelle répétée.
+   * boutique, plutôt qu'une saisie manuelle répétée. Réservée au bouquet
+   * "variantesProduits" (14 oct. 2026, plan commercial) — contrairement à
+   * `addVariant` juste au-dessus, qui lui reste ouvert à tous les bouquets :
+   * un produit n'a ni prix ni stock sans au moins une variante (schema.prisma,
+   * `Product` n'a pas ces champs), donc bloquer la création de variante "simple"
+   * casserait la vente pour le bouquet Starter plutôt que de restreindre une
+   * fonctionnalité premium.
    */
   @Post(":productId/variants/bulk")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  @RequiresGestionFeature("variantesProduits")
   addVariantsBulk(
     @Param("shopId") shopId: string,
     @Param("productId") productId: string,

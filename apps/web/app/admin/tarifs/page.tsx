@@ -37,13 +37,11 @@ function texteToFeatures(texte: string): Record<string, unknown> {
 
 /**
  * Fonctionnalités ELEGANZ Gestion lues par ShopMembershipGuard
- * (@RequiresGestionFeature) et ShopsService.inviteStaff (14 oct. 2026, plan
- * commercial) — jamais une liste décorative : cocher/décocher ici change
- * réellement ce qu'une boutique de ce bouquet peut faire, sans redéploiement.
- * `variantesProduits` et `exportExcelPdf` sont déclarées et modifiables ici
- * mais pas encore câblées à une restriction d'accès côté API (voir
- * docs/PLAN_COMMERCIAL.md, "à construire") — les cocher prépare le terrain
- * sans encore rien bloquer.
+ * (@RequiresGestionFeature), ShopsService.inviteStaff, CatalogController
+ * (variantesProduits) et ReportsController/ProductImportController
+ * (exportExcelPdf) — 14 oct. 2026, plan commercial. Jamais une liste
+ * décorative : cocher/décocher ici change réellement ce qu'une boutique de
+ * ce bouquet peut faire, sans redéploiement.
  */
 const FONCTIONNALITES_GESTION: { cle: string; label: string }[] = [
   { cle: "financeAvancee", label: "Finance avancée (journal, grand livre, balance, états financiers, simulation fiscale, analytique)" },
@@ -51,8 +49,8 @@ const FONCTIONNALITES_GESTION: { cle: string; label: string }[] = [
   { cle: "cloture", label: "Clôture comptable mensuelle" },
   { cle: "tresorerie", label: "Relevé de trésorerie" },
   { cle: "comptableExterne", label: "Invitation d'un comptable externe" },
-  { cle: "variantesProduits", label: "Variantes de produits (taille/couleur) — pas encore restreint côté API" },
-  { cle: "exportExcelPdf", label: "Export Excel / PDF — pas encore restreint côté API" },
+  { cle: "variantesProduits", label: "Création de variantes en lot (plusieurs tailles/couleurs à la fois)" },
+  { cle: "exportExcelPdf", label: "Export Excel / PDF (catalogue et relevés d'activité)" },
 ];
 
 function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
