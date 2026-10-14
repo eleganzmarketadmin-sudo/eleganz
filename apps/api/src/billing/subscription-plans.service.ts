@@ -22,7 +22,21 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
   openingFee: number;
   monthlyPrice: number;
   maxActiveProducts: number | null;
-  featuresJson: Record<string, boolean>;
+  // `maxEquipe` est numérique (ou `null` = illimité) ; toutes les autres clés
+  // sont des booléens — voir ShopsService.inviteStaff/ShopMembershipGuard,
+  // qui lisent ce même featuresJson. Un index signature séparé (plutôt que
+  // Record<string, boolean>) est nécessaire car il ne peut pas y avoir deux
+  // types différents pour des clés d'un même objet avec Record<string, X>.
+  featuresJson: {
+    financeAvancee: boolean;
+    immobilisations: boolean;
+    cloture: boolean;
+    tresorerie: boolean;
+    comptableExterne: boolean;
+    variantesProduits: boolean;
+    exportExcelPdf: boolean;
+    maxEquipe: number | null;
+  };
 }> = [
   {
     name: "Starter",
