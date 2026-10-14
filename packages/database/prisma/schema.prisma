@@ -753,6 +753,11 @@ model SubscriptionPlan {
   id             String       @id @default(uuid())
   category       PlanCategory
   name           String
+  // Frais unique à la souscription (14 oct. 2026, plan commercial) — avant
+  // ce champ, BillingService.processTrialExpirations facturait 100 $ à
+  // toute boutique, quel que soit son bouquet. Par défaut 0 pour ne rien
+  // changer au comportement des bouquets déjà créés avant ce champ.
+  openingFee     Decimal      @default(0) @db.Decimal(12, 2)
   monthlyPrice   Decimal      @db.Decimal(12, 2)
   maxActiveProducts Int?
   featuresJson   Json         // liste des fonctionnalités incluses, éditable en admin
