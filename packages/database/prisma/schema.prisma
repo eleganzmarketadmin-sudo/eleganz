@@ -76,6 +76,23 @@ model PlatformSettings {
   // jamais une valeur de départ inventée.
   marketplaceCommissionRateDefault Decimal? @db.Decimal(5, 2)
 
+  // Services à la carte (14 oct. 2026, plan commercial) — tarification
+  // configurable depuis le Centre de pilotage, sans redéploiement.
+  // Crédits IA : prix USD d'un crédit, utilisé pour calculer le montant de
+  // la facture à l'achat (voir AiCreditTopUp) ; nul tant que l'admin n'a
+  // rien fixé, la demande d'achat reste alors indisponible. Le coût en
+  // crédits de chaque service IA reste fixé service par service
+  // (`AiService.creditCost`), jamais ici.
+  aiCreditUnitPrice Decimal? @db.Decimal(10, 4)
+
+  // SMS/WhatsApp premium : pour l'instant un simple interrupteur + tarif
+  // affichés dans le Centre de pilotage, PAS une fonctionnalité branchée —
+  // aucun compte Twilio/WhatsApp Business n'existe (voir docs/PROJECT_STATUS.md,
+  // "Pas encore commencé"). Permet à l'admin de préparer/afficher le prix dès
+  // maintenant sans attendre l'intégration technique.
+  smsWhatsappPremiumEnabled    Boolean  @default(false)
+  smsWhatsappPremiumMonthlyFee Decimal? @db.Decimal(10, 2)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -809,6 +826,8 @@ model Invoice {
   status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
   kind      String   // "opening_fee" | "subscription" | "ai_credits" | ...
   createdAt DateTime @default(now())
+
+  aiCreditTopUp AiCreditTopUp?
 }
 
 model DriverInvoice {
@@ -1077,6 +1096,7 @@ model AiCreditWallet {
   balance   Int     @default(0)
 
   transactions AiCreditTransaction[]
+  topUps       AiCreditTopUp[]
 }
 
 model AiCreditTransaction {
@@ -1084,8 +1104,28 @@ model AiCreditTransaction {
   walletId  String
   wallet    AiCreditWallet @relation(fields: [walletId], references: [id])
   delta     Int // négatif = consommation, positif = achat/remboursement
-  service   String // "image_optimization" | "ad_generation" | "video_generation" | ...
+  service   String // "image_optimization" | "ad_generation" | "video_generation" | "top_up" | ...
   createdAt DateTime @default(now())
+}
+
+/**
+ * Demande d'achat de crédits IA (14 oct. 2026, plan commercial — services à
+ * la carte) : une boutique demande `quantity` crédits, une Invoice{kind:
+ * "ai_credits"} est créée pour le montant correspondant (`quantity *
+ * PlatformSettings.aiCreditUnitPrice` au moment de la demande, jamais
+ * recalculé ensuite), et les crédits ne sont accordés au portefeuille
+ * qu'une fois cette facture marquée payée par un administrateur — même
+ * principe manuel que les autres cycles de facturation du projet, pas de
+ * crédit automatique avant paiement confirmé.
+ */
+model AiCreditTopUp {
+  id        String          @id @default(uuid())
+  walletId  String
+  wallet    AiCreditWallet  @relation(fields: [walletId], references: [id])
+  quantity  Int
+  invoiceId String          @unique
+  invoice   Invoice         @relation(fields: [invoiceId], references: [id])
+  createdAt DateTime        @default(now())
 }
 
 model AiService {
