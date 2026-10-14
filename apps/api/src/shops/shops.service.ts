@@ -124,7 +124,7 @@ export class ShopsService {
       where: { id: shopId },
       select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
     });
-    const features = (boutique.gestionBouquet?.featuresJson as Record<string, unknown> | undefined) ?? {};
+    const features = (boutique.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
 
     if (dto.role === StaffRole.EXTERNAL_ACCOUNTANT && features.comptableExterne !== true) {
       throw new ConflictException(

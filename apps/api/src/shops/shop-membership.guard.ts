@@ -87,7 +87,7 @@ export class ShopMembershipGuard implements CanActivate {
         where: { id: shopId },
         select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
       });
-      const features = (shop?.gestionBouquet?.featuresJson as Record<string, unknown> | undefined) ?? {};
+      const features = (shop?.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
       if (features[requiredFeature] !== true) {
         throw new ForbiddenException(
           `Cette fonctionnalité n'est pas incluse dans le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez à un bouquet supérieur depuis le Centre de pilotage pour y accéder.`,
