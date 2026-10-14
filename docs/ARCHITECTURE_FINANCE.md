@@ -750,6 +750,63 @@ différée ailleurs, reste différée) ; pas de compte de caisse
 supplémentaire pour une devise tierce ; pas de rapprochement avec un solde
 bancaire réel (aucune intégration bancaire n'existe dans l'application).
 
+## 8decies. Normalisation des tables Invoice (13 oct. 2026, Phase 10 — analyse, décision : ne pas fusionner)
+
+Chantier choisi par le propriétaire parmi les points différés. La demande
+était d'évaluer `Invoice`, `DriverInvoice` et `ComptableInvoice` (jugées
+« dupliquées ») et soit les normaliser, soit documenter pourquoi les garder
+séparées.
+
+### 8decies.1. Analyse
+
+Les trois modèles ont exactement la même forme (`amount`, `dueAt`, `paidAt`,
+`status` texte libre, `kind` texte libre, `createdAt`) et ne diffèrent que
+par leur clé étrangère cible :
+
+- `Invoice.shopId` → `Shop` (factures plateforme d'une boutique : frais
+  d'ouverture, abonnement, crédits IA…) ;
+- `DriverInvoice.driverId` → `Driver` (factures plateforme d'un livreur) ;
+- `ComptableInvoice.subscriptionId` → `ComptableSubscription` (factures
+  d'abonnement Mon Comptable).
+
+Aucune requête existante ne lit ces trois tables ensemble (pas de « toutes
+les factures de la plateforme, boutique et livreur confondus » dans le
+code actuel) — la seule logique qui les traite de façon unifiée est déjà
+`AccountingService.postPlatformInvoicePaid(invoice, source)`, qui prend un
+paramètre `source: "invoice" | "driverInvoice" | "comptableInvoice"` et
+construit `sourceId: \`${source}:${invoice.id}\`` précisément *parce que*
+ce sont des tables séparées — cette désambiguïsation serait toujours
+nécessaire après une fusion (sous forme d'un `targetType`), pour la même
+raison et sans bénéfice supplémentaire.
+
+### 8decies.2. Décision : garder les trois tables séparées
+
+Une fusion en une table polymorphique unique (`targetType` + `targetId`)
+a été écartée, pour les raisons suivantes :
+
+- **Coût élevé, bénéfice nul mesuré.** La fusion toucherait le schéma, les
+  trois services de facturation (`billing.service.ts`,
+  `driver-billing.service.ts`, `comptable-billing.service.ts`) et la
+  logique de comptabilisation déjà posée et vérifiée en production
+  (Phases 2 à 9) — sans qu'aucun besoin fonctionnel actuel (filtrage,
+  reporting consolidé, écran commun) ne la justifie.
+- **Perte de garanties au niveau base de données.** Une clé étrangère
+  Prisma typée (`shopId → Shop`, `driverId → Driver`,
+  `subscriptionId → ComptableSubscription`) est vérifiée par la base ;
+  un couple `targetType`/`targetId` générique ne l'est plus — il faudrait
+  réimplémenter en code applicatif une garantie que le schéma actuel
+  offre gratuitement.
+- **Risque documenté par la tâche elle-même** : « Refactor risqué touchant
+  plusieurs modules — avancer avec prudence » ; la prudence qui s'impose
+  ici est de ne pas toucher un système qui fonctionne et qui est déjà
+  testé en production pour un gain purement esthétique.
+
+Si un besoin réel apparaît plus tard (par exemple un tableau de bord
+listant toutes les factures de tous types), la bonne solution sera une vue
+de lecture agrégée (requête `UNION` ou endpoint qui interroge les trois
+tables et fusionne les résultats en mémoire), pas une fusion de schéma —
+cette option reste ouverte sans aucune migration destructrice.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après
