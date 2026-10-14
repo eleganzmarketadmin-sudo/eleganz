@@ -16,6 +16,7 @@ import { TresorerieComptesService } from "./tresorerie-comptes.service";
 import { TresorerieComptesController } from "./tresorerie-comptes.controller";
 import { StockValorisationService } from "./stock-valorisation.service";
 import { StockValorisationController } from "./stock-valorisation.controller";
+import { DossierValidationService } from "./dossier-validation.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -37,6 +38,7 @@ import { StockValorisationController } from "./stock-valorisation.controller";
     FiscalSimulationService,
     TresorerieComptesService,
     StockValorisationService,
+    DossierValidationService,
   ],
   controllers: [
     FinanceController,

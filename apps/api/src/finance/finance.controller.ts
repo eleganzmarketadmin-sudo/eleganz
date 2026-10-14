@@ -1,9 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { FinanceService } from "./finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
+import { DossierValidationService } from "./dossier-validation.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -30,6 +32,7 @@ export class FinanceController {
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
     private readonly fiscalSimulation: FiscalSimulationService,
+    private readonly dossierValidation: DossierValidationService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -107,6 +110,28 @@ export class FinanceController {
   compteDeResultatNormalise(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+  }
+
+  // Dossier de validation externe SYSCOHADA (chantier réactivé, phase 7 —
+  // 14 oct. 2026) — classeur Excel multi-feuilles (plan comptable, journal,
+  // balance, bilan et compte de résultat normalisés + présentation/
+  // méthodologie/limites) destiné à un expert-comptable habilité. Période
+  // par défaut : depuis le 1er janvier de l'année en cours (un exercice
+  // entier, pas seulement le mois en cours comme `periode()` ci-dessus).
+  @Get("dossier-validation")
+  @RequiresGestionFeature("comptabiliteSyscohada")
+  async dossierValidationExterne(
+    @Param("shopId") shopId: string,
+    @Res() res: Response,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    const toDate = to ? new Date(to) : new Date();
+    const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), 0, 1);
+    const { buffer, nomFichier } = await this.dossierValidation.genererClasseur(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${nomFichier}"`);
+    return res.send(buffer);
   }
 
   // Assistant de clôture (docs/ARCHITECTURE_FINANCE.md §8quinquies) —

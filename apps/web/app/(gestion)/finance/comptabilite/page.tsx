@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { telechargerFichier } from "../../../lib/telecharger-fichier";
 import styles from "../page.module.css";
 
 // Moteur de comptabilité en partie double (13 oct. 2026, Phase 2) — voir
@@ -142,6 +143,38 @@ function ComptabiliteContenu() {
   const [compteResultatNormalise, setCompteResultatNormalise] = useState<CompteDeResultatNormalise | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [exportEnCours, setExportEnCours] = useState(false);
+
+  async function telechargerDossierValidation() {
+    if (!currentShop) return;
+    setExportEnCours(true);
+    setErreur(null);
+    try {
+      // Dossier de validation externe SYSCOHADA (chantier réactivé, phase 7
+      // — 14 oct. 2026) : par défaut, l'exercice en cours (du 1er janvier à
+      // aujourd'hui) côté serveur ; sur la vue Bilan(-normalisé), on reprend
+      // la date choisie comme borne de fin.
+      const params = new URLSearchParams();
+      if (vue === "bilan" || vue === "bilan-normalise") {
+        const asOfExclusif = new Date(asOf);
+        asOfExclusif.setDate(asOfExclusif.getDate() + 1);
+        params.set("to", asOfExclusif.toISOString().slice(0, 10));
+      } else {
+        params.set("from", from);
+        const toExclusif = new Date(to);
+        toExclusif.setDate(toExclusif.getDate() + 1);
+        params.set("to", toExclusif.toISOString().slice(0, 10));
+      }
+      await telechargerFichier(
+        `/shops/${currentShop.id}/finance/dossier-validation?${params.toString()}`,
+        "dossier-validation-syscohada.xlsx",
+      );
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Le dossier n'a pas pu être généré.");
+    } finally {
+      setExportEnCours(false);
+    }
+  }
 
   useEffect(() => {
     if (!currentShop) return;
@@ -261,6 +294,20 @@ function ComptabiliteContenu() {
           </div>
         )}
       </div>
+
+      {(vue === "bilan-normalise" || vue === "compte-resultat-normalise") && (
+        <div style={{ marginBottom: "16px" }}>
+          <button onClick={telechargerDossierValidation} disabled={exportEnCours}>
+            {exportEnCours ? "Génération…" : "Télécharger le dossier de validation externe (Excel)"}
+          </button>
+          <p style={{ color: "#888", fontSize: "0.75rem", marginTop: "6px" }}>
+            Classeur complet (plan comptable, journal, balance, bilan et
+            compte de résultat normalisés) destiné à un expert-comptable
+            habilité — couvre, par défaut, l&apos;exercice en cours jusqu&apos;à
+            la date affichée ci-dessus.
+          </p>
+        </div>
+      )}
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (

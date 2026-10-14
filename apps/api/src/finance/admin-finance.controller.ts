@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { AdminFinanceService } from "./admin-finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
+import { DossierValidationService } from "./dossier-validation.service";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -29,6 +31,7 @@ export class AdminFinanceController {
     private readonly fiscalRulesService: FiscalRulesService,
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
+    private readonly dossierValidation: DossierValidationService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -100,6 +103,25 @@ export class AdminFinanceController {
     requireAdmin(user);
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
+
+  // Dossier de validation externe SYSCOHADA — ELEGANZ elle-même (chantier
+  // réactivé, phase 7, 14 oct. 2026). Même classeur multi-feuilles que côté
+  // boutique, scope PLATFORM, réservé à l'administration.
+  @Get("dossier-validation")
+  async dossierValidationExterne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    requireAdmin(user);
+    const toDate = to ? new Date(to) : new Date();
+    const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), 0, 1);
+    const { buffer, nomFichier } = await this.dossierValidation.genererClasseur(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${nomFichier}"`);
+    return res.send(buffer);
   }
 
   @Get("analytique")

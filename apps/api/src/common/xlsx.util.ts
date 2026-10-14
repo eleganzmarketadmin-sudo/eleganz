@@ -29,6 +29,44 @@ export function construireClasseurExcel(
 }
 
 /**
+ * Construit un classeur Excel à PLUSIEURS feuilles (ex. dossier de validation
+ * externe SYSCOHADA, chantier réactivé phase 7 — 14 oct. 2026) — même logique
+ * de largeur de colonne que `construireClasseurExcel` ci-dessus, appliquée
+ * feuille par feuille. Noms de feuille tronqués à 31 caractères (limite du
+ * format .xlsx) et dédupliqués si besoin, pour éviter une erreur silencieuse
+ * de la librairie en cas de collision.
+ */
+export function construireClasseurExcelMultiFeuilles(
+  feuilles: { nom: string; entetes: string[]; lignes: (string | number | null | undefined)[][] }[],
+): Buffer {
+  const classeur = XLSX.utils.book_new();
+  const nomsUtilises = new Set<string>();
+
+  for (const { nom, entetes, lignes } of feuilles) {
+    let nomFinal = nom.slice(0, 31);
+    let suffixe = 2;
+    while (nomsUtilises.has(nomFinal)) {
+      nomFinal = `${nom.slice(0, 28)} ${suffixe}`;
+      suffixe++;
+    }
+    nomsUtilises.add(nomFinal);
+
+    const feuille = XLSX.utils.aoa_to_sheet([entetes, ...lignes.map((l) => l.map((v) => v ?? ""))]);
+    const largeurs = entetes.map((entete, i) => {
+      const maxContenu = lignes.reduce((max, ligne) => {
+        const texte = String(ligne[i] ?? "");
+        return Math.max(max, texte.length);
+      }, entete.length);
+      return { wch: Math.min(60, Math.max(10, maxContenu + 2)) };
+    });
+    feuille["!cols"] = largeurs;
+    XLSX.utils.book_append_sheet(classeur, feuille, nomFinal);
+  }
+
+  return XLSX.write(classeur, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
+/**
  * Lit un classeur Excel envoyé par l'utilisateur et renvoie les lignes de la
  * première feuille sous forme de tableaux de chaînes, la ligne d'en-tête
  * (index 0) incluse. Les lignes entièrement vides sont filtrées.
