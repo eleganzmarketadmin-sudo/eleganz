@@ -40,14 +40,22 @@ export class StockValorisationService {
     const montant = Math.round(dto.quantity * dto.coutUnitaire * 100) / 100;
 
     // CUMP = (ancienne valeur de stock + valeur entrante) / (ancienne qté +
-    // qté entrante). `coutMoyenPondere` reste `null` tant qu'aucune
-    // réception n'a eu lieu : jamais une valeur inventée pour un stock déjà
-    // en cours avant ce chantier.
+    // qté entrante) — MAIS seulement quand l'ancien CUMP est déjà connu.
+    // Quand `coutMoyenPondere` est `null` (aucune réception valorisée
+    // encore pour cette variante), la quantité déjà en stock n'a tout
+    // simplement pas de coût connu : la traiter comme un coût de 0 (comme
+    // le ferait la formule ci-dessous sans cette garde) diluerait le CUMP
+    // vers le bas de façon fausse, pas "prudente". Le choix assumé ici est
+    // d'adopter le coût de CETTE réception comme CUMP de départ pour toute
+    // la quantité désormais en stock — pas une moyenne avec un coût inventé
+    // à 0, et pas non plus un blocage qui empêcherait de valoriser un stock
+    // préexistant (14 oct. 2026, chantier SYSCOHADA phase 4).
     const ancienneQte = variant.stockQty;
-    const ancienCump = variant.coutMoyenPondere ? Number(variant.coutMoyenPondere) : 0;
-    const ancienneValeur = ancienneQte * ancienCump;
     const nouvelleQte = ancienneQte + dto.quantity;
-    const nouveauCump = nouvelleQte > 0 ? (ancienneValeur + montant) / nouvelleQte : dto.coutUnitaire;
+    const nouveauCump =
+      variant.coutMoyenPondere != null
+        ? (ancienneQte * Number(variant.coutMoyenPondere) + montant) / nouvelleQte
+        : dto.coutUnitaire;
 
     const reception = await this.prisma.$transaction(async (tx) => {
       const reception = await tx.receptionStock.create({
