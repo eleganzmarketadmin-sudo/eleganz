@@ -54,6 +54,15 @@ function aujourdhui(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+interface CompteTresorerie {
+  id: string;
+  type: "BANQUE" | "MOBILE_MONEY";
+  label: string;
+  numero: string | null;
+  devise: string;
+  account: { code: string; label: string };
+}
+
 function TresorerieContenu() {
   const { currentShop } = useShop();
   const [from, setFrom] = useState(debutMois());
@@ -62,6 +71,36 @@ function TresorerieContenu() {
   const [taux, setTaux] = useState<TauxChange | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  const [comptes, setComptes] = useState<CompteTresorerie[]>([]);
+  const [nouveauType, setNouveauType] = useState<"BANQUE" | "MOBILE_MONEY">("BANQUE");
+  const [nouveauLabel, setNouveauLabel] = useState("");
+  const [nouveauNumero, setNouveauNumero] = useState("");
+
+  function rechargerComptes() {
+    if (!currentShop) return;
+    api
+      .get<CompteTresorerie[]>(`/shops/${currentShop.id}/tresorerie/comptes`)
+      .then(setComptes)
+      .catch(() => setComptes([]));
+  }
+
+  useEffect(() => {
+    rechargerComptes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentShop]);
+
+  async function ajouterCompte() {
+    if (!currentShop || !nouveauLabel.trim()) return;
+    await api.post(`/shops/${currentShop.id}/tresorerie/comptes`, {
+      type: nouveauType,
+      label: nouveauLabel.trim(),
+      numero: nouveauNumero.trim() || undefined,
+    });
+    setNouveauLabel("");
+    setNouveauNumero("");
+    rechargerComptes();
+  }
 
   useEffect(() => {
     api.get<TauxChange>("/platform-settings/exchange-rate", false).then(setTaux).catch(() => setTaux(null));
@@ -97,6 +136,43 @@ function TresorerieContenu() {
         L&apos;équivalent total en USD est indicatif, calculé au taux de
         change système du jour — jamais figé par transaction à cette phase.
       </p>
+
+      <div style={{ border: "1px solid var(--color-bordure, #333)", borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
+        <strong style={{ fontSize: "0.9rem" }}>Comptes banque / mobile money</strong>
+        <p style={{ fontSize: "0.8rem", color: "#888", margin: "6px 0 12px" }}>
+          Chaque compte ajouté ici obtient son propre sous-compte comptable
+          (visible ci-dessous dans le relevé) — distinct des deux caisses.
+        </p>
+        {comptes.length > 0 && (
+          <ul style={{ margin: "0 0 12px", paddingLeft: "18px", fontSize: "0.875rem" }}>
+            {comptes.map((c) => (
+              <li key={c.id}>
+                {c.label} {c.numero ? `(${c.numero})` : ""} — {c.type === "BANQUE" ? "Banque" : "Mobile money"}, compte{" "}
+                {c.account.code}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <select value={nouveauType} onChange={(e) => setNouveauType(e.target.value as "BANQUE" | "MOBILE_MONEY")}>
+            <option value="BANQUE">Banque</option>
+            <option value="MOBILE_MONEY">Mobile money</option>
+          </select>
+          <input
+            placeholder="Nom (ex. Equity BCDC, Orange Money)"
+            value={nouveauLabel}
+            onChange={(e) => setNouveauLabel(e.target.value)}
+          />
+          <input
+            placeholder="Numéro (optionnel)"
+            value={nouveauNumero}
+            onChange={(e) => setNouveauNumero(e.target.value)}
+          />
+          <button onClick={ajouterCompte} disabled={!nouveauLabel.trim()}>
+            Ajouter ce compte
+          </button>
+        </div>
+      </div>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>

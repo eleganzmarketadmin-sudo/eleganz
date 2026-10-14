@@ -291,8 +291,19 @@ export class AccountingQueryService {
    * pas configuré.
    */
   async releveTresorerie(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
+    // Depuis le 14 oct. 2026 (chantier SYSCOHADA, phase 2) : inclut aussi les
+    // sous-comptes banque (521-xx) et mobile money (532-xx) créés par
+    // TresorerieComptesService, en plus des deux caisses historiques — un
+    // compte de ce type n'apparaît ici que s'il existe réellement, jamais une
+    // ligne vide ajoutée "pour faire complet".
     const comptesCaisse = await this.prisma.account.findMany({
-      where: { scope, shopId, code: { in: ["5711", "5712"] }, active: true },
+      where: {
+        scope,
+        shopId,
+        active: true,
+        OR: [{ code: { in: ["5711", "5712"] } }, { code: { startsWith: "521" } }, { code: { startsWith: "532" } }],
+      },
+      orderBy: { code: "asc" },
     });
 
     const comptes = [];

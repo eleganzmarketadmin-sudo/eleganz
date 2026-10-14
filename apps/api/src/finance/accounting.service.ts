@@ -208,6 +208,52 @@ export class AccountingService {
     });
   }
 
+  /**
+   * Mouvement manuel de trésorerie (dépôt, retrait, virement, frais
+   * bancaires...) sur un TresorerieCompte — chantier SYSCOHADA, phase 2
+   * (14 oct. 2026). `compteAccountCode` est le sous-compte dédié déjà créé
+   * par TresorerieComptesService (ex. "521-01"), jamais un compte générique
+   * partagé entre plusieurs comptes réels. `sourceId` est fourni par
+   * l'appelant (id du Rapprochement ou uuid généré) pour que la contrainte
+   * d'unicité protège contre un double envoi du même formulaire.
+   */
+  async postMouvementTresorerie(params: {
+    scope: FiscalRuleScope;
+    shopId: string | null;
+    compteAccountCode: string;
+    contrepartieAccountCode: string;
+    montant: number;
+    sens: "ENTREE" | "SORTIE";
+    label: string;
+    date: Date;
+    sourceId: string;
+  }) {
+    if (params.scope === FiscalRuleScope.SHOP && params.shopId) {
+      await this.seed.ensureShopChartOfAccounts(params.shopId);
+    } else {
+      await this.seed.ensurePlatformChartOfAccounts();
+    }
+    const ligneCompte =
+      params.sens === "ENTREE"
+        ? { accountCode: params.compteAccountCode, debit: params.montant }
+        : { accountCode: params.compteAccountCode, credit: params.montant };
+    const ligneContrepartie =
+      params.sens === "ENTREE"
+        ? { accountCode: params.contrepartieAccountCode, credit: params.montant }
+        : { accountCode: params.contrepartieAccountCode, debit: params.montant };
+
+    await this.enregistrer({
+      scope: params.scope,
+      shopId: params.shopId,
+      journalCode: "TR",
+      entryDate: params.date,
+      label: params.label,
+      sourceType: JournalEntrySource.TRESORERIE_MOUVEMENT,
+      sourceId: params.sourceId,
+      lignes: [ligneCompte, ligneContrepartie],
+    });
+  }
+
   private async enregistrer(params: {
     scope: FiscalRuleScope;
     shopId: string | null;
