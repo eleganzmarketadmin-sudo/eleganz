@@ -33,6 +33,50 @@ const COMPTES_BOUTIQUE: SeedAccount[] = [
   { code: "2441", label: "Matériel et mobilier de bureau", normalSide: AccountNormalSide.DEBIT },
   { code: "2841", label: "Amortissements du matériel et mobilier", normalSide: AccountNormalSide.CREDIT },
   { code: "681", label: "Dotations aux amortissements", normalSide: AccountNormalSide.DEBIT },
+
+  // Comptes ajoutés le 14 oct. 2026 — module additionnel "Comptabilité
+  // SYSCOHADA" (docs/PLAN_COMMERCIAL.md, chantier 1 réactivé, voir Doc
+  // "Finance & Comptabilité SYSCOHADA — Audit & plan d'intégration", tab E).
+  // Purement additif : ne remplace ni ne renumérote aucun compte existant.
+  // Classe 1 — Ressources durables.
+  { code: "101", label: "Capital social", normalSide: AccountNormalSide.CREDIT },
+  { code: "106", label: "Réserves", normalSide: AccountNormalSide.CREDIT },
+  { code: "110", label: "Report à nouveau", normalSide: AccountNormalSide.CREDIT },
+  { code: "120", label: "Résultat net de l'exercice", normalSide: AccountNormalSide.CREDIT },
+  { code: "162", label: "Emprunts auprès des établissements de crédit", normalSide: AccountNormalSide.CREDIT },
+  { code: "191", label: "Provisions pour risques", normalSide: AccountNormalSide.CREDIT },
+  // Classe 2 — complément immobilisations.
+  { code: "211", label: "Immobilisations incorporelles (logiciels)", normalSide: AccountNormalSide.DEBIT },
+  { code: "2181", label: "Agencements et installations", normalSide: AccountNormalSide.DEBIT },
+  { code: "2811", label: "Amortissements des immobilisations incorporelles", normalSide: AccountNormalSide.CREDIT },
+  { code: "2818", label: "Amortissements des agencements et installations", normalSide: AccountNormalSide.CREDIT },
+  // Classe 3 — Stocks (nouveau, lié au chantier CMV/valorisation).
+  { code: "311", label: "Marchandises", normalSide: AccountNormalSide.DEBIT },
+  { code: "603", label: "Variation de stocks de marchandises", normalSide: AccountNormalSide.DEBIT },
+  // Classe 4 — complément tiers.
+  { code: "409", label: "Fournisseurs débiteurs (avances et acomptes versés)", normalSide: AccountNormalSide.DEBIT },
+  { code: "419", label: "Clients créditeurs (avances et acomptes reçus)", normalSide: AccountNormalSide.CREDIT },
+  { code: "421", label: "Personnel — rémunérations dues", normalSide: AccountNormalSide.CREDIT },
+  { code: "431", label: "Sécurité sociale", normalSide: AccountNormalSide.CREDIT },
+  { code: "441", label: "État — impôts sur les bénéfices", normalSide: AccountNormalSide.CREDIT },
+  { code: "443", label: "État — TVA facturée (collectée)", normalSide: AccountNormalSide.CREDIT },
+  { code: "445", label: "État — TVA récupérable (déductible)", normalSide: AccountNormalSide.DEBIT },
+  { code: "447", label: "État — autres impôts et taxes", normalSide: AccountNormalSide.CREDIT },
+  // Classe 5 — complément trésorerie (lié au chantier trésorerie multi-comptes).
+  { code: "521", label: "Banques", normalSide: AccountNormalSide.DEBIT },
+  { code: "532", label: "Mobile money", normalSide: AccountNormalSide.DEBIT },
+  // Classe 6 — complément charges.
+  { code: "605", label: "Autres achats", normalSide: AccountNormalSide.DEBIT },
+  { code: "622", label: "Locations", normalSide: AccountNormalSide.DEBIT },
+  { code: "624", label: "Entretien et réparations", normalSide: AccountNormalSide.DEBIT },
+  { code: "628", label: "Divers — services extérieurs", normalSide: AccountNormalSide.DEBIT },
+  { code: "664", label: "Charges sociales", normalSide: AccountNormalSide.DEBIT },
+  // Classe 7 — complément produits.
+  { code: "706", label: "Produits accessoires", normalSide: AccountNormalSide.CREDIT },
+  { code: "758", label: "Produits divers", normalSide: AccountNormalSide.CREDIT },
+  // Classe 8 — HAO (hors activités ordinaires).
+  { code: "831", label: "Charges HAO", normalSide: AccountNormalSide.DEBIT },
+  { code: "841", label: "Produits HAO", normalSide: AccountNormalSide.CREDIT },
 ];
 
 const COMPTES_ELEGANZ: SeedAccount[] = [
@@ -40,6 +84,37 @@ const COMPTES_ELEGANZ: SeedAccount[] = [
   { code: "5712", label: "Caisse / trésorerie ELEGANZ CDF", normalSide: AccountNormalSide.DEBIT },
   { code: "411", label: "Boutiques — sommes dues à ELEGANZ", normalSide: AccountNormalSide.DEBIT },
   { code: "706", label: "Produits des abonnements et services", normalSide: AccountNormalSide.CREDIT },
+
+  // Comptes ajoutés le 14 oct. 2026 — mêmes principes que COMPTES_BOUTIQUE
+  // ci-dessus, sans classe 3 (pas de stock de marchandises côté plateforme).
+  { code: "101", label: "Capital social ELEGANZ", normalSide: AccountNormalSide.CREDIT },
+  { code: "106", label: "Réserves", normalSide: AccountNormalSide.CREDIT },
+  { code: "110", label: "Report à nouveau", normalSide: AccountNormalSide.CREDIT },
+  { code: "120", label: "Résultat net de l'exercice", normalSide: AccountNormalSide.CREDIT },
+  { code: "162", label: "Emprunts auprès des établissements de crédit", normalSide: AccountNormalSide.CREDIT },
+  { code: "191", label: "Provisions pour risques", normalSide: AccountNormalSide.CREDIT },
+  { code: "211", label: "Immobilisations incorporelles (logiciels)", normalSide: AccountNormalSide.DEBIT },
+  { code: "2181", label: "Agencements et installations", normalSide: AccountNormalSide.DEBIT },
+  { code: "2811", label: "Amortissements des immobilisations incorporelles", normalSide: AccountNormalSide.CREDIT },
+  { code: "2818", label: "Amortissements des agencements et installations", normalSide: AccountNormalSide.CREDIT },
+  { code: "409", label: "Fournisseurs débiteurs (avances et acomptes versés)", normalSide: AccountNormalSide.DEBIT },
+  { code: "419", label: "Boutiques créditrices (avances et acomptes reçus)", normalSide: AccountNormalSide.CREDIT },
+  { code: "421", label: "Personnel — rémunérations dues", normalSide: AccountNormalSide.CREDIT },
+  { code: "431", label: "Sécurité sociale", normalSide: AccountNormalSide.CREDIT },
+  { code: "441", label: "État — impôts sur les bénéfices", normalSide: AccountNormalSide.CREDIT },
+  { code: "443", label: "État — TVA facturée (collectée)", normalSide: AccountNormalSide.CREDIT },
+  { code: "445", label: "État — TVA récupérable (déductible)", normalSide: AccountNormalSide.DEBIT },
+  { code: "447", label: "État — autres impôts et taxes", normalSide: AccountNormalSide.CREDIT },
+  { code: "521", label: "Banques", normalSide: AccountNormalSide.DEBIT },
+  { code: "532", label: "Mobile money", normalSide: AccountNormalSide.DEBIT },
+  { code: "605", label: "Autres achats", normalSide: AccountNormalSide.DEBIT },
+  { code: "622", label: "Locations", normalSide: AccountNormalSide.DEBIT },
+  { code: "624", label: "Entretien et réparations", normalSide: AccountNormalSide.DEBIT },
+  { code: "628", label: "Divers — services extérieurs", normalSide: AccountNormalSide.DEBIT },
+  { code: "664", label: "Charges sociales", normalSide: AccountNormalSide.DEBIT },
+  { code: "758", label: "Produits divers", normalSide: AccountNormalSide.CREDIT },
+  { code: "831", label: "Charges HAO", normalSide: AccountNormalSide.DEBIT },
+  { code: "841", label: "Produits HAO", normalSide: AccountNormalSide.CREDIT },
 ];
 
 const JOURNAUX = [

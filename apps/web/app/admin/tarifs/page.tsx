@@ -52,6 +52,7 @@ const FONCTIONNALITES_GESTION: { cle: string; label: string }[] = [
   { cle: "comptableExterne", label: "Invitation d'un comptable externe" },
   { cle: "variantesProduits", label: "Création de variantes en lot (plusieurs tailles/couleurs à la fois)" },
   { cle: "exportExcelPdf", label: "Export Excel / PDF (catalogue et relevés d'activité)" },
+  { cle: "comptabiliteSyscohada", label: "Comptabilité SYSCOHADA complète (plan comptable intégral, états financiers normalisés)" },
 ];
 
 function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {

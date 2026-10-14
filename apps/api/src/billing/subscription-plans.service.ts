@@ -22,6 +22,12 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
   openingFee: number;
   monthlyPrice: number;
   maxActiveProducts: number | null;
+  // Bouquet désactivé à la création (visible seulement en admin via
+  // `listAll()`, jamais dans `list()` côté public) — utilisé pour "Ultime"
+  // le 14 oct. 2026 : créé déjà, mais son prix réel reste à fixer depuis
+  // /admin/tarifs avant toute activation (voir Doc SYSCOHADA, tab E).
+  // Omis (donc `true`) pour les bouquets déjà vendus.
+  active?: boolean;
   // `maxEquipe` est numérique (ou `null` = illimité) ; toutes les autres clés
   // sont des booléens — voir ShopsService.inviteStaff/ShopMembershipGuard,
   // qui lisent ce même featuresJson. Un index signature séparé (plutôt que
@@ -35,6 +41,10 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
     comptableExterne: boolean;
     variantesProduits: boolean;
     exportExcelPdf: boolean;
+    // Ajouté le 14 oct. 2026 — module additionnel "Comptabilité SYSCOHADA"
+    // (plan comptable complet, états normalisés). Voir Doc "Finance &
+    // Comptabilité SYSCOHADA — Audit & plan d'intégration", tab E.
+    comptabiliteSyscohada: boolean;
     maxEquipe: number | null;
   };
 }> = [
@@ -51,6 +61,7 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       comptableExterne: false,
       variantesProduits: false,
       exportExcelPdf: false,
+      comptabiliteSyscohada: false,
       maxEquipe: 2,
     },
   },
@@ -67,6 +78,7 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       comptableExterne: false,
       variantesProduits: true,
       exportExcelPdf: true,
+      comptabiliteSyscohada: false,
       maxEquipe: 10,
     },
   },
@@ -83,6 +95,33 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       comptableExterne: true,
       variantesProduits: true,
       exportExcelPdf: true,
+      // Gagne le module SYSCOHADA (décision du 14 oct. 2026) — voir aussi
+      // ensureComptabiliteSyscohadaSurPremiumExistant() ci-dessous pour le
+      // bouquet Premium déjà créé en production avant ce chantier.
+      comptabiliteSyscohada: true,
+      maxEquipe: null,
+    },
+  },
+  {
+    name: "Ultime",
+    // Valeur de départ neutre = même prix que Premium, volontairement non
+    // ajustée par moi (décision du 14 oct. 2026 : le prix se fixe depuis le
+    // centre de pilotage, jamais codé en dur par ce chantier). Le bouquet
+    // est créé INACTIF : invisible côté public tant que l'administrateur ne
+    // l'a pas révisé et activé depuis /admin/tarifs.
+    openingFee: 100,
+    monthlyPrice: 45,
+    maxActiveProducts: null,
+    active: false,
+    featuresJson: {
+      financeAvancee: true,
+      immobilisations: true,
+      cloture: true,
+      tresorerie: true,
+      comptableExterne: true,
+      variantesProduits: true,
+      exportExcelPdf: true,
+      comptabiliteSyscohada: true,
       maxEquipe: null,
     },
   },
@@ -106,6 +145,7 @@ export class SubscriptionPlansService implements OnModuleInit {
     try {
       await this.seedBouquetsGestionDeDepart();
       await this.rattacherBoutiquesSansBouquet();
+      await this.ensureComptabiliteSyscohadaSurPremiumExistant();
     } catch (err) {
       this.logger.error("Échec du seed des bouquets Gestion au démarrage", err);
     }
@@ -138,6 +178,7 @@ export class SubscriptionPlansService implements OnModuleInit {
           openingFee: bouquet.openingFee,
           monthlyPrice: bouquet.monthlyPrice,
           maxActiveProducts: bouquet.maxActiveProducts,
+          active: bouquet.active ?? true,
           featuresJson: bouquet.featuresJson as Prisma.InputJsonValue,
         },
       });
@@ -146,6 +187,33 @@ export class SubscriptionPlansService implements OnModuleInit {
     if (nombreCrees > 0) {
       this.logger.log(`${nombreCrees} bouquet(s) Gestion de départ créé(s).`);
     }
+  }
+
+  /**
+   * Le bouquet "Premium" existe déjà en production depuis avant ce
+   * chantier (14 oct. 2026) : le seed ci-dessus ne le recréera jamais et ne
+   * touchera donc pas son `featuresJson`. Cette fusion CIBLÉE n'ajoute que
+   * la clé `comptabiliteSyscohada` si elle est absente — jamais un
+   * remplacement du featuresJson entier, pour ne pas écraser un prix ou une
+   * fonctionnalité déjà ajustée par l'administrateur depuis /admin/tarifs.
+   * Ne touche aucun autre bouquet : Starter/Pro n'ont jamais eu cette
+   * fonctionnalité et "Ultime" naît déjà avec elle.
+   */
+  private async ensureComptabiliteSyscohadaSurPremiumExistant() {
+    const premium = await this.prisma.subscriptionPlan.findFirst({
+      where: { category: PlanCategory.GESTION, name: "Premium" },
+    });
+    if (!premium) return;
+    const features = (premium.featuresJson ?? {}) as Record<string, unknown>;
+    if (features.comptabiliteSyscohada === true) return;
+
+    await this.prisma.subscriptionPlan.update({
+      where: { id: premium.id },
+      data: {
+        featuresJson: { ...features, comptabiliteSyscohada: true } as Prisma.InputJsonValue,
+      },
+    });
+    this.logger.log("Fonctionnalité comptabiliteSyscohada ajoutée au bouquet Premium existant.");
   }
 
   private async rattacherBoutiquesSansBouquet() {
