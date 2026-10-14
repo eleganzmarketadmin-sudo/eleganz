@@ -213,6 +213,173 @@ export class AccountingQueryService {
   }
 
   /**
+   * Bilan SYSCOHADA normalisé (chantier SYSCOHADA, phase 6 — 14 oct. 2026) —
+   * regroupe les comptes existants dans les rubriques du bilan système
+   * normal (actif immobilisé / circulant / trésorerie ; capitaux propres /
+   * dettes financières / passif circulant), plutôt que la liste plate déjà
+   * produite par `bilan()` ci-dessus (conservée inchangée, toujours utilisée
+   * ailleurs). Chaque rubrique n'affiche que les comptes qui existent
+   * réellement pour ce scope — jamais une ligne à 0 ajoutée "pour faire
+   * complet". Reste un état de PILOTAGE, pas un document certifié : voir le
+   * bandeau affiché par l'écran qui l'utilise.
+   */
+  async bilanNormalise(scope: FiscalRuleScope, shopId: string | null, asOf: Date) {
+    const ligne = async (code: string, label: string) => ({
+      code,
+      label,
+      montant: await this.soldeCompte(scope, shopId, code, { lt: asOf }),
+    });
+    const netImmo = async (codeActif: string, codeAmort: string, label: string) => {
+      const brut = await this.soldeCompte(scope, shopId, codeActif, { lt: asOf });
+      const amort = await this.soldeCompte(scope, shopId, codeAmort, { lt: asOf });
+      return { code: codeActif, label, montant: brut - amort };
+    };
+    const nonVide = (lignes: { montant: number }[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
+
+    const actifImmobilise = nonVide([
+      await netImmo("211", "2811", "Immobilisations incorporelles (net)"),
+      await netImmo("2441", "2841", "Matériel et mobilier de bureau (net)"),
+      await netImmo("2181", "2818", "Agencements et installations (net)"),
+    ]);
+    const actifCirculant = nonVide([
+      await ligne("311", "Marchandises (stock)"),
+      await ligne("411", "Clients (dont créances Marketplace)"),
+      await ligne("409", "Fournisseurs débiteurs (avances versées)"),
+      await ligne("445", "État — TVA récupérable"),
+    ]);
+    const tresorerieActif = nonVide(
+      await Promise.all(
+        (
+          await this.prisma.account.findMany({
+            where: {
+              scope,
+              shopId,
+              active: true,
+              OR: [{ code: { in: ["5711", "5712"] } }, { code: { startsWith: "521" } }, { code: { startsWith: "532" } }],
+            },
+          })
+        ).map((c) => ligne(c.code, c.label)),
+      ),
+    );
+
+    const capitauxPropres = nonVide([
+      await ligne("101", "Capital social"),
+      await ligne("106", "Réserves"),
+      await ligne("110", "Report à nouveau"),
+      { code: "RESULT", label: "Résultat net de l'exercice", montant: await this.resultatNetCumule(scope, shopId, asOf) },
+    ]);
+    const dettesFinancieres = nonVide([await ligne("162", "Emprunts auprès des établissements de crédit")]);
+    const passifCirculant = nonVide([
+      await ligne("401", "Fournisseurs"),
+      await ligne("419", "Clients créditeurs (avances reçues)"),
+      await ligne("421", "Personnel — rémunérations dues"),
+      await ligne("431", "Sécurité sociale"),
+      await ligne("441", "État — impôts sur les bénéfices"),
+      await ligne("443", "État — TVA facturée"),
+      await ligne("447", "État — autres impôts et taxes"),
+    ]);
+
+    const totalActif =
+      actifImmobilise.reduce((s, l) => s + l.montant, 0) +
+      actifCirculant.reduce((s, l) => s + l.montant, 0) +
+      tresorerieActif.reduce((s, l) => s + l.montant, 0);
+    const totalPassif =
+      capitauxPropres.reduce((s, l) => s + l.montant, 0) +
+      dettesFinancieres.reduce((s, l) => s + l.montant, 0) +
+      passifCirculant.reduce((s, l) => s + l.montant, 0);
+
+    return {
+      asOf: asOf.toISOString(),
+      actif: { immobilise: actifImmobilise, circulant: actifCirculant, tresorerie: tresorerieActif },
+      passif: { capitauxPropres, dettesFinancieres, circulant: passifCirculant },
+      totalActif: Math.round(totalActif * 100) / 100,
+      totalPassif: Math.round(totalPassif * 100) / 100,
+      equilibre: Math.abs(totalActif - totalPassif) < 0.01,
+    };
+  }
+
+  private async resultatNetCumule(scope: FiscalRuleScope, shopId: string | null, asOf: Date): Promise<number> {
+    const comptes = await this.prisma.account.findMany({
+      where: { scope, shopId, active: true, OR: [{ code: { startsWith: "6" } }, { code: { startsWith: "7" } }] },
+    });
+    const agg = await this.agregerParCompte(comptes.map((c) => c.id), { lt: asOf });
+    let resultatNet = 0;
+    for (const compte of comptes) {
+      const { debit, credit } = agg.get(compte.id) ?? { debit: 0, credit: 0 };
+      resultatNet += compte.code.startsWith("7") ? credit - debit : -(debit - credit);
+    }
+    return resultatNet;
+  }
+
+  /**
+   * Compte de résultat SYSCOHADA normalisé (chantier SYSCOHADA, phase 6) —
+   * regroupe charges et produits par rubrique réglementaire (exploitation /
+   * financier / HAO) et calcule les soldes intermédiaires de gestion
+   * (résultat d'exploitation, résultat financier, résultat des activités
+   * ordinaires, résultat HAO). N'inclut PAS de ligne "impôt sur les
+   * bénéfices" : aucun compte de charge d'impôt sur le résultat n'est seedé
+   * à ce jour (voir docs) — le résultat net ci-dessous est donc explicitement
+   * "avant impôt sur les bénéfices", jamais présenté comme un résultat net
+   * fiscal final.
+   */
+  async compteDeResultatNormalise(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
+    const montantCharge = async (code: string) => -(await this.soldeCompte(scope, shopId, code, { gte: from, lt: to }));
+    const montantProduit = async (code: string) => await this.soldeCompte(scope, shopId, code, { gte: from, lt: to });
+    const nonVide = (lignes: { montant: number }[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
+    const l = (code: string, label: string, montant: number) => ({ code, label, montant });
+
+    const produitsExploitation = nonVide([
+      l("701", "Ventes de marchandises (caisse)", await montantProduit("701")),
+      l("7012", "Ventes Marketplace", await montantProduit("7012")),
+      l("706", "Produits accessoires", await montantProduit("706")),
+      l("758", "Produits divers", await montantProduit("758")),
+    ]);
+    const chargesExploitation = nonVide([
+      l("601", "Achats de marchandises", await montantCharge("601")),
+      l("605", "Autres achats", await montantCharge("605")),
+      l("603", "Variation de stocks (CMV)", await montantCharge("603")),
+      l("6220", "Charges de fonctionnement", await montantCharge("6220")),
+      l("6221", "Charges administratives", await montantCharge("6221")),
+      l("6222", "Charges commerciales", await montantCharge("6222")),
+      l("622", "Locations", await montantCharge("622")),
+      l("624", "Entretien et réparations", await montantCharge("624")),
+      l("628", "Divers — services extérieurs", await montantCharge("628")),
+      l("661", "Charges de personnel", await montantCharge("661")),
+      l("664", "Charges sociales", await montantCharge("664")),
+      l("641", "Impôts et taxes", await montantCharge("641")),
+      l("681", "Dotations aux amortissements", await montantCharge("681")),
+    ]);
+    const produitsFinanciers = nonVide([]);
+    const chargesFinancieres = nonVide([l("671", "Charges financières", await montantCharge("671"))]);
+    const produitsHAO = nonVide([l("841", "Produits HAO", await montantProduit("841"))]);
+    const chargesHAO = nonVide([l("831", "Charges HAO", await montantCharge("831"))]);
+
+    const totalProduitsExploitation = produitsExploitation.reduce((s, x) => s + x.montant, 0);
+    const totalChargesExploitation = chargesExploitation.reduce((s, x) => s + x.montant, 0);
+    const resultatExploitation = totalProduitsExploitation - totalChargesExploitation;
+
+    const totalProduitsFinanciers = produitsFinanciers.reduce((s, x) => s + x.montant, 0);
+    const totalChargesFinancieres = chargesFinancieres.reduce((s, x) => s + x.montant, 0);
+    const resultatFinancier = totalProduitsFinanciers - totalChargesFinancieres;
+
+    const resultatActivitesOrdinaires = resultatExploitation + resultatFinancier;
+
+    const totalProduitsHAO = produitsHAO.reduce((s, x) => s + x.montant, 0);
+    const totalChargesHAO = chargesHAO.reduce((s, x) => s + x.montant, 0);
+    const resultatHAO = totalProduitsHAO - totalChargesHAO;
+
+    return {
+      periode: { from: from.toISOString(), to: to.toISOString() },
+      exploitation: { produits: produitsExploitation, charges: chargesExploitation, resultat: resultatExploitation },
+      financier: { produits: produitsFinanciers, charges: chargesFinancieres, resultat: resultatFinancier },
+      resultatActivitesOrdinaires,
+      hao: { produits: produitsHAO, charges: chargesHAO, resultat: resultatHAO },
+      resultatNetAvantImpot: resultatActivitesOrdinaires + resultatHAO,
+      statut: "Résultat avant impôt sur les bénéfices — aucun compte de charge d'impôt sur le résultat n'est encore tenu.",
+    };
+  }
+
+  /**
    * Solde d'un seul compte (signé selon son `normalSide`), sur une période ou
    * cumulé depuis l'origine (`{lt: asOf}`) — brique commune à `bilan` et à
    * toute lecture ponctuelle d'un compte (ex. tableau de bord boutique) qui

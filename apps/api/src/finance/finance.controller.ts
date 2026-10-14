@@ -88,6 +88,27 @@ export class FinanceController {
     return this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, asOf ? new Date(asOf) : new Date());
   }
 
+  // États normalisés SYSCOHADA (chantier réactivé, phase 6 — 14 oct. 2026) :
+  // regroupement réglementaire par rubrique (actif immobilisé/circulant/
+  // trésorerie, capitaux propres/dettes financières/passif circulant ; pour
+  // le compte de résultat, exploitation/financier/HAO avec soldes de
+  // gestion intermédiaires). Toujours "avant impôt sur les bénéfices" (aucun
+  // compte de charge d'impôt n'est encore alimenté) et toujours une
+  // estimation de pilotage à faire valider par un expert-comptable externe —
+  // jamais une auto-certification.
+  @Get("bilan-normalise")
+  @RequiresGestionFeature("comptabiliteSyscohada")
+  bilanNormalise(@Param("shopId") shopId: string, @Query("asOf") asOf?: string) {
+    return this.accountingQuery.bilanNormalise(FiscalRuleScope.SHOP, shopId, asOf ? new Date(asOf) : new Date());
+  }
+
+  @Get("compte-resultat-normalise")
+  @RequiresGestionFeature("comptabiliteSyscohada")
+  compteDeResultatNormalise(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
+  }
+
   // Assistant de clôture (docs/ARCHITECTURE_FINANCE.md §8quinquies) —
   // verrouille un mois (plus aucune écriture acceptée) et fige un résumé.
   @Get("clotures")

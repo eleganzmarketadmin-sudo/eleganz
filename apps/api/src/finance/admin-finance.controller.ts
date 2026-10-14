@@ -83,6 +83,25 @@ export class AdminFinanceController {
     return this.accountingQuery.bilan(FiscalRuleScope.PLATFORM, null, asOf ? new Date(asOf) : new Date());
   }
 
+  // États normalisés SYSCOHADA — ELEGANZ elle-même (chantier réactivé,
+  // phase 6, 14 oct. 2026) : la comptabilité de la plateforme est tenue
+  // jusqu'au sens SYSCOHADA/OHADA (obligatoire ici, jamais une option —
+  // voir prompt du 14 oct. 2026 point 2). Mêmes réserves que côté boutique :
+  // "avant impôt sur les bénéfices", estimation de pilotage à faire valider
+  // par un expert-comptable externe.
+  @Get("bilan-normalise")
+  bilanNormalise(@CurrentUser() user: AuthenticatedUser, @Query("asOf") asOf?: string) {
+    requireAdmin(user);
+    return this.accountingQuery.bilanNormalise(FiscalRuleScope.PLATFORM, null, asOf ? new Date(asOf) : new Date());
+  }
+
+  @Get("compte-resultat-normalise")
+  compteDeResultatNormalise(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
+
   @Get("analytique")
   analytique(@CurrentUser() user: AuthenticatedUser, @Query("mois") mois?: string) {
     requireAdmin(user);
