@@ -807,6 +807,46 @@ de lecture agrégée (requête `UNION` ou endpoint qui interroge les trois
 tables et fusionne les résultats en mémoire), pas une fusion de schéma —
 cette option reste ouverte sans aucune migration destructrice.
 
+## 8undecies. Rapprochement Mon Comptable / Finance & Comptabilité (13 oct. 2026)
+
+Chantier à décision potentiellement irréversible (fusion complète) —
+confirmation demandée au propriétaire avant d'avancer. Réponse reçue :
+amélioration additive et réversible seulement, pas de fusion.
+
+### 8undecies.1. Pourquoi les deux modules restent séparés
+
+- **Mon Comptable** (`apps/web/app/comptable/*`) : carnet indépendant,
+  utilisable par tout compte ELEGANZ authentifié sans créer de boutique —
+  pensé pour un indépendant ou une petite activité informelle.
+- **Finance & Comptabilité** (`apps/web/app/(gestion)/finance/*`) : toujours
+  lié à une boutique Gestion existante, avec le moteur de comptabilité en
+  partie double (§8bis et suivants) posé sur les opérations réelles de
+  cette boutique (caisse, achats, Marketplace).
+
+Il n'existe aucun chevauchement de données entre les deux (modèles Prisma
+distincts, aucune clé étrangère commune) — les fusionner impliquerait de
+décider pour l'utilisateur que son carnet personnel et sa comptabilité de
+boutique sont la même chose, ce qui n'est vrai que pour certains
+indépendants et faux pour toute boutique avec plusieurs membres d'équipe.
+
+### 8undecies.2. Ce qui a été ajouté (réversible)
+
+- Mon Comptable affichait déjà, en bas de son accueil, un lien
+  « Découvrir Gestion » vers `/inscription` pour l'utilisateur qui voudrait
+  passer à une vraie boutique (suivi de stock, équipe) — conservé tel quel.
+- Ajout du lien inverse : le tableau de bord Finance & Comptabilité
+  (`apps/web/app/(gestion)/finance/page.tsx`) affiche désormais un encart
+  « Besoin d'un carnet personnel, sans boutique ? » pointant vers
+  `/comptable`, pour l'utilisateur qui chercherait par erreur à suivre des
+  finances personnelles dans l'espace d'une boutique.
+- Terminologie : les deux modules utilisent déjà des noms distincts et
+  cohérents (« ELEGANZ Mon Comptable » vs « Finance & Comptabilité ») sans
+  chevauchement à corriger.
+
+Aucune donnée déplacée, aucune migration, aucun lien irréversible créé —
+les deux modules restent deux produits séparés, simplement découvrables
+l'un depuis l'autre.
+
 ## 8. Plan de tests (sous-ensemble réellement exécuté à cette phase)
 
 Documenté avec résultats réels dans `docs/PROJECT_STATUS.md` après

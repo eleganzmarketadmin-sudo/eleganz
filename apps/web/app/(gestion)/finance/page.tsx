@@ -92,6 +92,19 @@ function FinanceDashboardContent() {
           </div>
         </>
       )}
+
+      <div style={{ border: "1px dashed var(--color-bordure, #333)", borderRadius: "8px", padding: "14px 16px", marginTop: "12px" }}>
+        <strong style={{ fontSize: "0.9rem" }}>Besoin d&apos;un carnet personnel, sans boutique ?</strong>
+        <p style={{ marginTop: "6px", fontSize: "0.85rem", color: "#888" }}>
+          Finance &amp; Comptabilité est toujours lié à cette boutique. Pour un
+          suivi indépendant (vos propres ventes, dépenses, dettes et créances,
+          sans créer de boutique), utilisez{" "}
+          <a href="/comptable" target="_blank" rel="noreferrer">
+            ELEGANZ Mon Comptable
+          </a>{" "}
+          — un carnet séparé, pas un substitut à cet écran.
+        </p>
+      </div>
     </div>
   );
 }
