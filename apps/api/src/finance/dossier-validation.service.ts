@@ -137,7 +137,7 @@ export class DossierValidationService {
         ["Juridiction fiscale", identite?.fiscalJurisdiction || "Non saisie"],
         ["Régime fiscal", identite?.fiscalRegime || "Non saisi"],
         ["Exercice fiscal", identite?.fiscalExercice || "Non saisi"],
-        ["Assujetti à la TVA", identite?.fiscalVatRegistered == null ? "Non précisé" : identite.fiscalVatRegistered ? "Oui" : "Non"],
+        ["Assujetti à la TVA", identite?.fiscalVatRegistered == null ? "Non précisé" : identite?.fiscalVatRegistered ? "Oui" : "Non"],
       );
     } else {
       lignes.push(["Identité fiscale", "Non saisie dans l'application à ce jour (aucun champ dédié à l'identité fiscale de la plateforme elle-même)."]);
