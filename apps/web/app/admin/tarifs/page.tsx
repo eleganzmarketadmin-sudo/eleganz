@@ -9,6 +9,7 @@ interface Plan {
   id: string;
   category: "MARKETPLACE" | "GESTION";
   name: string;
+  openingFee: string;
   monthlyPrice: string;
   maxActiveProducts: number | null;
   active: boolean;
@@ -34,10 +35,39 @@ function texteToFeatures(texte: string): Record<string, unknown> {
   return features;
 }
 
+/**
+ * Fonctionnalités ELEGANZ Gestion lues par ShopMembershipGuard
+ * (@RequiresGestionFeature) et ShopsService.inviteStaff (14 oct. 2026, plan
+ * commercial) — jamais une liste décorative : cocher/décocher ici change
+ * réellement ce qu'une boutique de ce bouquet peut faire, sans redéploiement.
+ * `variantesProduits` et `exportExcelPdf` sont déclarées et modifiables ici
+ * mais pas encore câblées à une restriction d'accès côté API (voir
+ * docs/PLAN_COMMERCIAL.md, "à construire") — les cocher prépare le terrain
+ * sans encore rien bloquer.
+ */
+const FONCTIONNALITES_GESTION: { cle: string; label: string }[] = [
+  { cle: "financeAvancee", label: "Finance avancée (journal, grand livre, balance, états financiers, simulation fiscale, analytique)" },
+  { cle: "immobilisations", label: "Immobilisations et amortissements" },
+  { cle: "cloture", label: "Clôture comptable mensuelle" },
+  { cle: "tresorerie", label: "Relevé de trésorerie" },
+  { cle: "comptableExterne", label: "Invitation d'un comptable externe" },
+  { cle: "variantesProduits", label: "Variantes de produits (taille/couleur) — pas encore restreint côté API" },
+  { cle: "exportExcelPdf", label: "Export Excel / PDF — pas encore restreint côté API" },
+];
+
 function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
+  const estGestion = plan.category === "GESTION";
+  const [ouvertureFee, setOuvertureFee] = useState(plan.openingFee);
   const [prix, setPrix] = useState(plan.monthlyPrice);
   const [maxProduits, setMaxProduits] = useState(plan.maxActiveProducts?.toString() ?? "");
   const [features, setFeatures] = useState(featuresToTexte(plan.featuresJson));
+  const [coches, setCoches] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(FONCTIONNALITES_GESTION.map(({ cle }) => [cle, plan.featuresJson[cle] === true])),
+  );
+  const maxEquipeInitial = plan.featuresJson.maxEquipe;
+  const [maxEquipe, setMaxEquipe] = useState(
+    typeof maxEquipeInitial === "number" ? String(maxEquipeInitial) : "",
+  );
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -45,10 +75,17 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
     setEnCours(true);
     setErreur(null);
     try {
+      const featuresAEnvoyer = estGestion
+        ? {
+            ...Object.fromEntries(FONCTIONNALITES_GESTION.map(({ cle }) => [cle, coches[cle] === true])),
+            maxEquipe: maxEquipe ? Number(maxEquipe) : null,
+          }
+        : texteToFeatures(features);
       await api.patch(`/admin/billing/plans/${plan.id}`, {
+        openingFee: Number(ouvertureFee || 0),
         monthlyPrice: Number(prix),
         maxActiveProducts: maxProduits ? Number(maxProduits) : null,
-        features: texteToFeatures(features),
+        features: featuresAEnvoyer,
       });
       onChange();
     } catch (err) {
@@ -80,6 +117,10 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
+          <span>Frais d&apos;ouverture (USD, une fois à la souscription)</span>
+          <input value={ouvertureFee} onChange={(e) => setOuvertureFee(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
           <span>Prix mensuel (USD)</span>
           <input value={prix} onChange={(e) => setPrix(e.target.value)} />
         </label>
@@ -91,11 +132,34 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
             onChange={(e) => setMaxProduits(e.target.value)}
           />
         </label>
-        <label className={styles.champLarge}>
-          <span>Fonctionnalités incluses (ex. "livraison, analytics: avancé")</span>
-          <input value={features} onChange={(e) => setFeatures(e.target.value)} />
-        </label>
+        {estGestion && (
+          <label className={styles.champ}>
+            <span>Taille d&apos;équipe max. (hors propriétaire)</span>
+            <input placeholder="Illimité" value={maxEquipe} onChange={(e) => setMaxEquipe(e.target.value)} />
+          </label>
+        )}
+        {!estGestion && (
+          <label className={styles.champLarge}>
+            <span>Fonctionnalités incluses (ex. &quot;livraison, analytics: avancé&quot;)</span>
+            <input value={features} onChange={(e) => setFeatures(e.target.value)} />
+          </label>
+        )}
       </div>
+      {estGestion && (
+        <div className={styles.planChamps} style={{ flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Fonctionnalités incluses dans ce bouquet</span>
+          {FONCTIONNALITES_GESTION.map(({ cle, label }) => (
+            <label key={cle} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
+              <input
+                type="checkbox"
+                checked={coches[cle] === true}
+                onChange={(e) => setCoches((c) => ({ ...c, [cle]: e.target.checked }))}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
           Enregistrer
@@ -112,6 +176,7 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
   const [ouvert, setOuvert] = useState(false);
   const [category, setCategory] = useState<"GESTION" | "MARKETPLACE">("GESTION");
   const [name, setName] = useState("");
+  const [ouvertureFee, setOuvertureFee] = useState("");
   const [prix, setPrix] = useState("");
   const [maxProduits, setMaxProduits] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -125,10 +190,12 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
       await api.post("/admin/billing/plans", {
         category,
         name,
+        openingFee: ouvertureFee ? Number(ouvertureFee) : undefined,
         monthlyPrice: Number(prix),
         maxActiveProducts: maxProduits ? Number(maxProduits) : undefined,
       });
       setName("");
+      setOuvertureFee("");
       setPrix("");
       setMaxProduits("");
       setOuvert(false);
@@ -157,6 +224,11 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
       </select>
       <input placeholder="Nom du bouquet" value={name} onChange={(e) => setName(e.target.value)} required />
       <input
+        placeholder="Frais d'ouverture (USD, vide = 0)"
+        value={ouvertureFee}
+        onChange={(e) => setOuvertureFee(e.target.value)}
+      />
+      <input
         placeholder="Prix mensuel (USD)"
         value={prix}
         onChange={(e) => setPrix(e.target.value)}
@@ -173,6 +245,10 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
       <button type="button" className={styles.boutonBasculer} onClick={() => setOuvert(false)}>
         Annuler
       </button>
+      <p style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)", flexBasis: "100%" }}>
+        Les fonctionnalités détaillées (Finance avancée, immobilisations, taille d&apos;équipe…) se
+        règlent juste après la création, sur la fiche du bouquet ci-dessus.
+      </p>
     </form>
   );
 }
@@ -420,6 +496,70 @@ function TarifsComptableSection() {
   );
 }
 
+/**
+ * Cycle de facturation des boutiques ELEGANZ Gestion (14 oct. 2026, plan
+ * commercial) — jusqu'ici seul le frais d'ouverture (une fois) était
+ * facturé ; ceci ajoute la facture mensuelle récurrente au tarif du bouquet
+ * Gestion de chaque boutique active. Même déclenchement manuel que
+ * livreurs/Mon Comptable, tant qu'aucun planificateur n'est en place.
+ */
+function TarifsBoutiquesSection() {
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function declencher(action: string, chemin: string) {
+    setActionEnCours(action);
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultat = await api.post<{ action: string }[]>(chemin, {});
+      setMessage(`${action} : ${resultat.length} boutique(s) concernée(s).`);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setActionEnCours(null);
+    }
+  }
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>Facturation des boutiques (bouquets Gestion)</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Frais d&apos;ouverture à la fin de la période gratuite (selon le bouquet de chaque boutique),
+        puis abonnement mensuel récurrent une fois la boutique active.
+      </p>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Vérification des gratuités échues", "/admin/billing/run-trial-check")}
+        >
+          Vérifier les gratuités échues
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Facturation mensuelle", "/admin/billing/run-monthly-billing")}
+        >
+          Lancer la facturation mensuelle
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Suspension des impayés", "/admin/billing/run-suspension-check")}
+        >
+          Suspendre les boutiques en impayé
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface TauxChangeHistorique {
   id: string;
   cdfPerUsd: string;
@@ -577,6 +717,9 @@ function TarifsContent() {
       ))}
 
       <FormulaireNouveauPlan onCree={recharger} />
+
+      <h2 className={styles.sectionTitre}>Facturation des boutiques</h2>
+      <TarifsBoutiquesSection />
 
       <h2 className={styles.sectionTitre}>Tarifs livreurs</h2>
       <TarifsLivreursSection />
