@@ -401,6 +401,219 @@ function TarifsLivreursSection() {
   );
 }
 
+interface ComptablePlan {
+  id: string;
+  name: string;
+  monthlyPrice: string;
+  yearlyPrice: string;
+  maxActivities: number | null;
+  active: boolean;
+  featuresJson: Record<string, unknown>;
+}
+
+/**
+ * Fonctionnalités des bouquets Mon Comptable (14 oct. 2026, proposition
+ * validée par le propriétaire) — lues par ComptableService
+ * (dashboardComparaison, dashboardHistorique, agenda) et ComptableController
+ * (export/dossier-financement). Jamais une liste décorative, comme pour
+ * FONCTIONNALITES_GESTION ci-dessus.
+ */
+const FONCTIONNALITES_COMPTABLE: { cle: string; label: string }[] = [
+  { cle: "historiqueIllimite", label: "Historique du tableau de bord illimité (sinon plafonné à 60 jours)" },
+  { cle: "comparaisonPeriodes", label: "Comparaison entre activités" },
+  { cle: "rappelsAgenda", label: "Vue agenda complète (les rappels prioritaires restent toujours visibles)" },
+  { cle: "exportDossierFinancement", label: "Export du dossier de financement bancaire" },
+];
+
+function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; onChange: () => void }) {
+  const [mensuel, setMensuel] = useState(bouquet.monthlyPrice);
+  const [annuel, setAnnuel] = useState(bouquet.yearlyPrice);
+  const [maxActivites, setMaxActivites] = useState(bouquet.maxActivities?.toString() ?? "");
+  const [coches, setCoches] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, bouquet.featuresJson[cle] === true])),
+  );
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.patch(`/admin/comptable/plans/${bouquet.id}`, {
+        monthlyPrice: Number(mensuel),
+        yearlyPrice: Number(annuel),
+        maxActivities: maxActivites ? Number(maxActivites) : null,
+        features: Object.fromEntries(FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, coches[cle] === true])),
+      });
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function basculerActif() {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.patch(`/admin/comptable/plans/${bouquet.id}`, { active: !bouquet.active });
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div className={`${styles.plan} ${!bouquet.active ? styles.planInactif : ""}`}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>{bouquet.name}</span>
+        <span className={styles.planStatut}>{bouquet.active ? "Actif" : "Désactivé"}</span>
+      </div>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>Abonnement mensuel (USD)</span>
+          <input value={mensuel} onChange={(e) => setMensuel(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Abonnement annuel (USD)</span>
+          <input value={annuel} onChange={(e) => setAnnuel(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>Activités suivies simultanément max.</span>
+          <input placeholder="Illimité" value={maxActivites} onChange={(e) => setMaxActivites(e.target.value)} />
+        </label>
+      </div>
+      <div className={styles.planChamps} style={{ flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Fonctionnalités incluses dans ce bouquet</span>
+        {FONCTIONNALITES_COMPTABLE.map(({ cle, label }) => (
+          <label key={cle} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
+            <input
+              type="checkbox"
+              checked={coches[cle] === true}
+              onChange={(e) => setCoches((c) => ({ ...c, [cle]: e.target.checked }))}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          Enregistrer
+        </button>
+        <button className={styles.boutonBasculer} disabled={enCours} onClick={basculerActif}>
+          {bouquet.active ? "Désactiver" : "Réactiver"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [nom, setNom] = useState("");
+  const [mensuel, setMensuel] = useState("");
+  const [annuel, setAnnuel] = useState("");
+  const [maxActivites, setMaxActivites] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function creer(e: React.FormEvent) {
+    e.preventDefault();
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.post("/admin/comptable/plans", {
+        name: nom,
+        monthlyPrice: Number(mensuel),
+        yearlyPrice: Number(annuel),
+        maxActivities: maxActivites ? Number(maxActivites) : undefined,
+      });
+      setNom("");
+      setMensuel("");
+      setAnnuel("");
+      setMaxActivites("");
+      setOuvert(false);
+      onCree();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  if (!ouvert) {
+    return (
+      <button className={styles.boutonNouveau} onClick={() => setOuvert(true)}>
+        + Nouveau bouquet Mon Comptable
+      </button>
+    );
+  }
+
+  return (
+    <form className={styles.nouveauPlan} onSubmit={creer}>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      <input placeholder="Nom du bouquet" value={nom} onChange={(e) => setNom(e.target.value)} required />
+      <input placeholder="Abonnement mensuel (USD)" value={mensuel} onChange={(e) => setMensuel(e.target.value)} required />
+      <input placeholder="Abonnement annuel (USD)" value={annuel} onChange={(e) => setAnnuel(e.target.value)} required />
+      <input
+        placeholder="Activités max. (vide = illimité)"
+        value={maxActivites}
+        onChange={(e) => setMaxActivites(e.target.value)}
+      />
+      <button className={styles.boutonEnregistrer} type="submit" disabled={enCours}>
+        Créer
+      </button>
+      <button type="button" className={styles.boutonBasculer} onClick={() => setOuvert(false)}>
+        Annuler
+      </button>
+      <p style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)", flexBasis: "100%" }}>
+        Les fonctionnalités détaillées se règlent juste après la création, sur la fiche du bouquet
+        ci-dessus.
+      </p>
+    </form>
+  );
+}
+
+/**
+ * Bouquets ELEGANZ Mon Comptable (14 oct. 2026, proposition validée par le
+ * propriétaire — voir docs/PLAN_COMMERCIAL.md) : "Essentiel" reprend l'offre
+ * actuelle à l'identique (jamais modifiée automatiquement), "Pro" et
+ * "Premium" ajoutent de la valeur nouvelle. Entièrement gérable ici, sans
+ * redéploiement — prix, limite d'activités, fonctionnalités.
+ */
+function BouquetsComptableSection() {
+  const [bouquets, setBouquets] = useState<ComptablePlan[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<ComptablePlan[]>("/admin/comptable/plans")
+      .then(setBouquets)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, []);
+
+  if (chargement) return <p>Chargement des bouquets Mon Comptable…</p>;
+
+  return (
+    <div>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {bouquets.length === 0 && <p className={styles.messageVide}>Aucun bouquet Mon Comptable.</p>}
+      {bouquets.map((b) => (
+        <LigneBouquetComptable key={b.id} bouquet={b} onChange={recharger} />
+      ))}
+      <FormulaireNouveauBouquetComptable onCree={recharger} />
+    </div>
+  );
+}
+
 /**
  * Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) —
  * même découpage que TarifsLivreursSection : 6 mois gratuits dès la
@@ -470,14 +683,20 @@ function TarifsComptableSection() {
       <div className={styles.planEntete}>
         <span className={styles.planNom}>Tarification d&apos;ELEGANZ Mon Comptable</span>
       </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Depuis l&apos;introduction des bouquets ci-dessous, le prix facturé est celui du bouquet choisi
+        par l&apos;abonné ; les tarifs ici ne servent plus que de filet de sécurité pour un abonnement
+        qui se retrouverait sans bouquet rattaché. Le nombre de mois de gratuité reste global, pour
+        tous les bouquets.
+      </p>
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Abonnement mensuel (USD)</span>
+          <span>Abonnement mensuel de secours (USD)</span>
           <input value={mensuel} onChange={(e) => setMensuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Abonnement annuel (USD)</span>
+          <span>Abonnement annuel de secours (USD)</span>
           <input value={annuel} onChange={(e) => setAnnuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
@@ -1081,6 +1300,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>Tarifs Mon Comptable</h2>
       <TarifsComptableSection />
+
+      <h2 className={styles.sectionTitre}>Bouquets ELEGANZ Mon Comptable</h2>
+      <BouquetsComptableSection />
 
       <h2 className={styles.sectionTitre}>Taux de change</h2>
       <TauxChangeSection />

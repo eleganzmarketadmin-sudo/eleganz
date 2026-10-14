@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   ComptableFlowCategory,
@@ -32,7 +32,44 @@ export class ComptableService {
 
   // --- Activités -----------------------------------------------------
 
+  /**
+   * Bouquet + fonctionnalités de l'abonnement Mon Comptable de cet
+   * utilisateur (14 oct. 2026, proposition validée par le propriétaire —
+   * voir docs/PLAN_COMMERCIAL.md) — jamais de bouquet inventé : un
+   * utilisateur sans abonnement (premier accès) ou sans bouquet rattaché
+   * (ne devrait plus arriver depuis ComptablePlansService.onModuleInit) voit
+   * toutes les fonctionnalités premium fermées plutôt qu'ouvertes par défaut.
+   */
+  // Non privée : ComptableController en a besoin pour gater l'export du
+  // dossier de financement (même raison que le gating inline de
+  // ReportsController côté ELEGANZ Gestion — une seule route sert un format
+  // ouvert et un format premium selon le paramètre).
+  async getBouquetEtFonctionnalites(userId: string) {
+    // getOrCreateSubscription (jamais une lecture directe) : un utilisateur
+    // qui n'a encore jamais touché l'abonnement doit quand même démarrer
+    // rattaché à "Essentiel", jamais se retrouver sans bouquet — ce qui
+    // lèverait silencieusement toutes les limites ci-dessous.
+    await this.getOrCreateSubscription(userId);
+    const subscription = await this.prisma.comptableSubscription.findUnique({
+      where: { userId },
+      include: { bouquet: true },
+    });
+    const bouquet = subscription?.bouquet ?? null;
+    const features = (bouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
+    return { bouquet, features };
+  }
+
   async createActivity(userId: string, dto: CreateActivityDto) {
+    const { bouquet } = await this.getBouquetEtFonctionnalites(userId);
+    const maxActivities = bouquet?.maxActivities;
+    if (typeof maxActivities === "number") {
+      const nombreActuel = await this.prisma.comptableActivity.count({ where: { userId, archived: false } });
+      if (nombreActuel >= maxActivities) {
+        throw new ConflictException(
+          `Le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable est limité à ${maxActivities} activité(s) suivie(s) simultanément. Passez à un bouquet supérieur pour en suivre davantage.`,
+        );
+      }
+    }
     return this.prisma.comptableActivity.create({
       data: { userId, name: dto.name, category: dto.category },
     });
@@ -434,9 +471,14 @@ export class ComptableService {
    * montants à zéro, ce qui est la vérité (pas d'opération ce jour-là).
    */
   async dashboardHistorique(userId: string, jours = 14) {
+    const { features } = await this.getBouquetEtFonctionnalites(userId);
+    // Essentiel reste plafonné à l'historique court déjà en place (60 jours
+    // — proche des "3 derniers mois" annoncés dans la proposition) ; les
+    // bouquets avec `historiqueIllimite` peuvent demander jusqu'à 2 ans.
+    const plafond = features.historiqueIllimite === true ? 730 : 60;
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
     const activityIds = activites.map((a) => a.id);
-    const nbJours = Math.min(Math.max(jours, 7), 60);
+    const nbJours = Math.min(Math.max(jours, 7), plafond);
     const debut = new Date();
     debut.setHours(0, 0, 0, 0);
     debut.setDate(debut.getDate() - (nbJours - 1));
@@ -473,6 +515,12 @@ export class ComptableService {
    * garde sa propre ligne.
    */
   async dashboardComparaison(userId: string) {
+    const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
+    if (features.comparaisonPeriodes !== true) {
+      throw new ForbiddenException(
+        `La comparaison entre activités n'est pas incluse dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Passez à un bouquet supérieur pour y accéder.`,
+      );
+    }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
     const debutMois = new Date();
     debutMois.setDate(1);
@@ -589,6 +637,12 @@ export class ComptableService {
    * calendrier côté écran sans multiplier les appels.
    */
   async agenda(userId: string) {
+    const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
+    if (features.rappelsAgenda !== true) {
+      throw new ForbiddenException(
+        `L'agenda n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Les rappels prioritaires de la page d'accueil restent disponibles ; passez à un bouquet supérieur pour accéder à la vue agenda complète.`,
+      );
+    }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
     const activityIds = activites.map((a) => a.id);
     const maintenant = new Date();
@@ -664,13 +718,50 @@ export class ComptableService {
 
   /** Activation effective = premier appel authentifié à l'espace Mon Comptable (prompt §14). */
   async getOrCreateSubscription(userId: string) {
-    const existant = await this.prisma.comptableSubscription.findUnique({ where: { userId } });
+    const existant = await this.prisma.comptableSubscription.findUnique({
+      where: { userId },
+      include: { bouquet: true },
+    });
     if (existant) return existant;
-    return this.prisma.comptableSubscription.create({ data: { userId } });
+    // Un NOUVEL abonnement démarre sur "Essentiel" (jamais un accès plus
+    // large par défaut) — seuls les abonnements déjà actifs AVANT
+    // l'introduction des bouquets ont été rattachés à "Pro" en une fois
+    // (ComptablePlansService.rattacherAbonnesSansBouquet, migration unique).
+    const bouquetDeDepart = await this.prisma.comptablePlan.findFirst({
+      where: { name: "Essentiel" },
+      select: { id: true },
+    });
+    return this.prisma.comptableSubscription.create({
+      data: { userId, bouquetId: bouquetDeDepart?.id },
+      include: { bouquet: true },
+    });
   }
 
   async choosePlan(userId: string, plan: "MONTHLY" | "YEARLY") {
     const subscription = await this.getOrCreateSubscription(userId);
     return this.prisma.comptableSubscription.update({ where: { id: subscription.id }, data: { plan } });
+  }
+
+  /**
+   * Changement de bouquet choisi par l'utilisateur lui-même (prompt
+   * implicite : le propriétaire veut que ce soit "gérable totalement au
+   * niveau du centre de pilotage", mais le CHOIX du bouquet reste celui de
+   * l'abonné — même logique que Gestion, où c'est l'admin qui définit les
+   * bouquets mais jamais qui choisit à la place d'une boutique). Aucune
+   * vérification de paiement ici : le changement de palier prend effet
+   * immédiatement, la facturation suit au prochain cycle (même principe que
+   * le reste du module, cycle manuel).
+   */
+  async choisirBouquet(userId: string, bouquetId: string) {
+    const bouquet = await this.prisma.comptablePlan.findUnique({ where: { id: bouquetId } });
+    if (!bouquet || !bouquet.active) {
+      throw new NotFoundException("Bouquet introuvable ou désactivé.");
+    }
+    const subscription = await this.getOrCreateSubscription(userId);
+    return this.prisma.comptableSubscription.update({
+      where: { id: subscription.id },
+      data: { bouquetId },
+      include: { bouquet: true },
+    });
   }
 }

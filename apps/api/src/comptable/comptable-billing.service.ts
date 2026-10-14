@@ -26,6 +26,7 @@ export class ComptableBillingService {
     const now = new Date();
     const candidates = await this.prisma.comptableSubscription.findMany({
       where: { billingStatus: ComptableBillingStatus.FREE_PERIOD },
+      include: { bouquet: true },
     });
 
     const results: { subscriptionId: string; action: string }[] = [];
@@ -36,7 +37,13 @@ export class ComptableBillingService {
 
       if (now >= trialEndsAt) {
         const plan = sub.plan ?? "MONTHLY";
-        const amount = plan === "YEARLY" ? settings.comptableYearlyFee : settings.comptableMonthlyFee;
+        // Prix du bouquet (14 oct. 2026, proposition validée) si rattaché,
+        // sinon le tarif plat historique en filet de sécurité — même
+        // principe que FRAIS_OUVERTURE_SECOURS côté ELEGANZ Gestion.
+        const amount =
+          plan === "YEARLY"
+            ? (sub.bouquet?.yearlyPrice ?? settings.comptableYearlyFee)
+            : (sub.bouquet?.monthlyPrice ?? settings.comptableMonthlyFee);
         await this.prisma.$transaction([
           this.prisma.comptableSubscription.update({
             where: { id: sub.id },
@@ -64,12 +71,16 @@ export class ComptableBillingService {
     const now = new Date();
     const actifs = await this.prisma.comptableSubscription.findMany({
       where: { billingStatus: ComptableBillingStatus.ACTIVE, renewsAt: { lte: now } },
+      include: { bouquet: true },
     });
 
     const results: { subscriptionId: string; action: string }[] = [];
     for (const sub of actifs) {
       const plan = sub.plan ?? "MONTHLY";
-      const amount = plan === "YEARLY" ? settings.comptableYearlyFee : settings.comptableMonthlyFee;
+      const amount =
+        plan === "YEARLY"
+          ? (sub.bouquet?.yearlyPrice ?? settings.comptableYearlyFee)
+          : (sub.bouquet?.monthlyPrice ?? settings.comptableMonthlyFee);
       await this.prisma.comptableInvoice.create({
         data: {
           subscriptionId: sub.id,

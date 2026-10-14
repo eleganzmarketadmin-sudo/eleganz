@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { ComptableService } from "./comptable.service";
 import { ComptableExportService } from "./comptable-export.service";
@@ -201,6 +201,14 @@ export class ComptableController {
     return this.comptableService.choosePlan(user.id, dto.plan);
   }
 
+  // Changement de bouquet (Essentiel/Pro/Premium) par l'abonné lui-même
+  // (14 oct. 2026, proposition validée par le propriétaire) — distinct de
+  // /subscription/plan ci-dessus, qui ne choisit que mensuel/annuel.
+  @Post("subscription/bouquet")
+  choisirBouquet(@CurrentUser() user: AuthenticatedUser, @Body("bouquetId") bouquetId: string) {
+    return this.comptableService.choisirBouquet(user.id, bouquetId);
+  }
+
   /**
    * Synthèse périodique exportable (prompt §10.5) — JSON par défaut, ou
    * PDF/Excel via ?format=. Jamais présentée comme un état financier
@@ -243,6 +251,12 @@ export class ComptableController {
    */
   @Get("export/dossier-financement")
   async exportDossierFinancement(@CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
+    const { bouquet, features } = await this.comptableService.getBouquetEtFonctionnalites(user.id);
+    if (features.exportDossierFinancement !== true) {
+      throw new ForbiddenException(
+        `Le dossier de financement n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Passez au bouquet Premium pour y accéder.`,
+      );
+    }
     const dossier = await this.comptableExportService.dossierFinancement(user.id);
     const doc = renderDossierFinancementPdf(dossier);
     res.setHeader("Content-Type", "application/pdf");
