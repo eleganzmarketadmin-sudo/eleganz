@@ -46,4 +46,11 @@ export class PublicPlatformFeaturesController {
   exchangeRate() {
     return this.adminSettingsService.publicExchangeRate();
   }
+
+  // Tarification des services à la carte (14 oct. 2026, plan commercial) —
+  // voir AdminSettingsService.publicAlaCartePricing.
+  @Get("a-la-carte-pricing")
+  alaCartePricing() {
+    return this.adminSettingsService.publicAlaCartePricing();
+  }
 }

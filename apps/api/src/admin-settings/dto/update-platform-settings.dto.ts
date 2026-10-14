@@ -98,4 +98,20 @@ export class UpdatePlatformSettingsDto {
   @IsNumber()
   @Min(0)
   marketplaceCommissionRateDefault?: number;
+
+  // Services à la carte (14 oct. 2026, plan commercial) — voir
+  // AiCreditsModule et schema.prisma pour le détail de chaque champ.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  aiCreditUnitPrice?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  smsWhatsappPremiumEnabled?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  smsWhatsappPremiumMonthlyFee?: number;
 }

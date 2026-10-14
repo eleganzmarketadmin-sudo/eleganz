@@ -45,6 +45,13 @@ export class AdminSettingsService {
         ...(dto.marketplaceCommissionRateDefault !== undefined && {
           marketplaceCommissionRateDefault: dto.marketplaceCommissionRateDefault,
         }),
+        ...(dto.aiCreditUnitPrice !== undefined && { aiCreditUnitPrice: dto.aiCreditUnitPrice }),
+        ...(dto.smsWhatsappPremiumEnabled !== undefined && {
+          smsWhatsappPremiumEnabled: dto.smsWhatsappPremiumEnabled,
+        }),
+        ...(dto.smsWhatsappPremiumMonthlyFee !== undefined && {
+          smsWhatsappPremiumMonthlyFee: dto.smsWhatsappPremiumMonthlyFee,
+        }),
       },
     });
   }
@@ -154,6 +161,23 @@ export class AdminSettingsService {
     return {
       cdfPerUsd: settings.cdfPerUsd,
       updatedAt: settings.exchangeRateUpdatedAt,
+    };
+  }
+
+  /**
+   * Lecture publique de la tarification des services à la carte (14 oct.
+   * 2026, plan commercial) — sans authentification, pour qu'une boutique
+   * puisse voir le prix avant de demander un achat de crédits IA, et le
+   * statut/tarif du SMS/WhatsApp premium (affichage uniquement, voir le
+   * commentaire sur `smsWhatsappPremiumEnabled` dans schema.prisma : aucune
+   * fonctionnalité réelle n'y est encore branchée).
+   */
+  async publicAlaCartePricing() {
+    const settings = await this.get();
+    return {
+      aiCreditUnitPrice: settings.aiCreditUnitPrice,
+      smsWhatsappPremiumEnabled: settings.smsWhatsappPremiumEnabled,
+      smsWhatsappPremiumMonthlyFee: settings.smsWhatsappPremiumMonthlyFee,
     };
   }
 }

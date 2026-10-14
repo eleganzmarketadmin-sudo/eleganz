@@ -760,6 +760,280 @@ function TauxChangeSection() {
   );
 }
 
+interface AiService {
+  id: string;
+  name: string;
+  description: string | null;
+  creditCost: number;
+  active: boolean;
+  provider: string | null;
+}
+
+interface AiCreditTopUpAdmin {
+  id: string;
+  quantity: number;
+  createdAt: string;
+  invoice: { id: string; amount: string; status: string; dueAt: string };
+  wallet: { shopId: string; shop: { name: string } };
+}
+
+/**
+ * Services à la carte (14 oct. 2026, plan commercial) — crédits IA et
+ * SMS/WhatsApp premium. Le SMS/WhatsApp premium n'est qu'un
+ * interrupteur + tarif affichés ici : aucune fonctionnalité réelle n'y est
+ * encore branchée (pas de compte Twilio/WhatsApp Business), voir le
+ * commentaire sur PlatformSettings.smsWhatsappPremiumEnabled dans
+ * schema.prisma.
+ */
+function TarifsServicesALaCarteSection() {
+  const [prixCredit, setPrixCredit] = useState("");
+  const [smsActif, setSmsActif] = useState(false);
+  const [smsTarif, setSmsTarif] = useState("");
+  const [chargementTarifs, setChargementTarifs] = useState(true);
+  const [enCoursTarifs, setEnCoursTarifs] = useState(false);
+
+  const [services, setServices] = useState<AiService[]>([]);
+  const [chargementServices, setChargementServices] = useState(true);
+  const [nomService, setNomService] = useState("");
+  const [coutService, setCoutService] = useState("");
+  const [enCoursService, setEnCoursService] = useState(false);
+
+  const [topUps, setTopUps] = useState<AiCreditTopUpAdmin[]>([]);
+  const [chargementTopUps, setChargementTopUps] = useState(true);
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function rechargerTarifs() {
+    api
+      .get<{
+        aiCreditUnitPrice: string | null;
+        smsWhatsappPremiumEnabled: boolean;
+        smsWhatsappPremiumMonthlyFee: string | null;
+      }>("/admin/platform-settings")
+      .then((s) => {
+        setPrixCredit(s.aiCreditUnitPrice ?? "");
+        setSmsActif(s.smsWhatsappPremiumEnabled);
+        setSmsTarif(s.smsWhatsappPremiumMonthlyFee ?? "");
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargementTarifs(false));
+  }
+
+  function rechargerServices() {
+    api
+      .get<AiService[]>("/admin/ai-credits/services")
+      .then(setServices)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargementServices(false));
+  }
+
+  function rechargerTopUps() {
+    api
+      .get<AiCreditTopUpAdmin[]>("/admin/ai-credits/top-ups")
+      .then(setTopUps)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .finally(() => setChargementTopUps(false));
+  }
+
+  useEffect(() => {
+    rechargerTarifs();
+    rechargerServices();
+    rechargerTopUps();
+  }, []);
+
+  async function enregistrerTarifs() {
+    setEnCoursTarifs(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        aiCreditUnitPrice: prixCredit ? Number(prixCredit) : null,
+        smsWhatsappPremiumEnabled: smsActif,
+        smsWhatsappPremiumMonthlyFee: smsTarif ? Number(smsTarif) : null,
+      });
+      setMessage("Tarifs des services à la carte enregistrés.");
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCoursTarifs(false);
+    }
+  }
+
+  async function creerService(e: React.FormEvent) {
+    e.preventDefault();
+    setEnCoursService(true);
+    setErreur(null);
+    try {
+      await api.post("/admin/ai-credits/services", {
+        name: nomService,
+        creditCost: Number(coutService),
+      });
+      setNomService("");
+      setCoutService("");
+      rechargerServices();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+    } finally {
+      setEnCoursService(false);
+    }
+  }
+
+  async function basculerServiceActif(service: AiService) {
+    setErreur(null);
+    try {
+      await api.patch(`/admin/ai-credits/services/${service.id}`, { active: !service.active });
+      rechargerServices();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    }
+  }
+
+  async function marquerPaye(invoiceId: string) {
+    setActionEnCours(invoiceId);
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultat = await api.post<{ balanceGranted: number }>(
+        `/admin/ai-credits/top-ups/${invoiceId}/mark-paid`,
+        {},
+      );
+      setMessage(`Facture marquée payée — ${resultat.balanceGranted} crédit(s) accordé(s).`);
+      rechargerTopUps();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+    } finally {
+      setActionEnCours(null);
+    }
+  }
+
+  const topUpsEnAttente = topUps.filter((t) => t.invoice.status === "PENDING");
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>Crédits IA</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Une boutique demande un certain nombre de crédits ; la facture correspondante (au prix unitaire
+        ci-dessous, figé au moment de la demande) doit être marquée payée ici pour que les crédits soient
+        accordés — jamais automatiquement. Le coût en crédits de chaque service IA se règle dans le
+        catalogue ci-dessous.
+      </p>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {!chargementTarifs && (
+        <div className={styles.planChamps}>
+          <label className={styles.champ}>
+            <span>Prix d&apos;un crédit (USD, vide = achat indisponible)</span>
+            <input placeholder="ex. 0.10" value={prixCredit} onChange={(e) => setPrixCredit(e.target.value)} />
+          </label>
+        </div>
+      )}
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCoursTarifs} onClick={enregistrerTarifs}>
+          Enregistrer le prix du crédit
+        </button>
+      </div>
+
+      <div style={{ padding: "8px 16px" }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Catalogue des services IA</span>
+        {chargementServices ? (
+          <p style={{ fontSize: "0.875rem" }}>Chargement…</p>
+        ) : (
+          <>
+            {services.length === 0 && <p className={styles.messageVide}>Aucun service IA configuré.</p>}
+            {services.map((service) => (
+              <div
+                key={service.id}
+                style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.875rem", padding: "4px 0" }}
+              >
+                <span style={{ flex: 1 }}>
+                  {service.name} — {service.creditCost} crédit(s)
+                  {!service.active && " (désactivé)"}
+                </span>
+                <button className={styles.boutonBasculer} onClick={() => basculerServiceActif(service)}>
+                  {service.active ? "Désactiver" : "Réactiver"}
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+        <form onSubmit={creerService} className={styles.nouveauPlan} style={{ marginTop: 8 }}>
+          <input
+            placeholder="Nom du service (ex. Génération de visuel publicitaire)"
+            value={nomService}
+            onChange={(e) => setNomService(e.target.value)}
+            required
+          />
+          <input
+            placeholder="Coût en crédits"
+            value={coutService}
+            onChange={(e) => setCoutService(e.target.value)}
+            required
+          />
+          <button className={styles.boutonEnregistrer} type="submit" disabled={enCoursService}>
+            Ajouter un service
+          </button>
+        </form>
+      </div>
+
+      <div style={{ padding: "8px 16px" }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+          Demandes d&apos;achat de crédits en attente de paiement
+        </span>
+        {chargementTopUps ? (
+          <p style={{ fontSize: "0.875rem" }}>Chargement…</p>
+        ) : topUpsEnAttente.length === 0 ? (
+          <p className={styles.messageVide}>Aucune demande en attente.</p>
+        ) : (
+          topUpsEnAttente.map((t) => (
+            <div
+              key={t.id}
+              style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.875rem", padding: "4px 0" }}
+            >
+              <span style={{ flex: 1 }}>
+                {t.wallet.shop.name} — {t.quantity} crédit(s), {t.invoice.amount} $
+              </span>
+              <button
+                className={styles.boutonEnregistrer}
+                disabled={actionEnCours !== null}
+                onClick={() => marquerPaye(t.invoice.id)}
+              >
+                Marquer payée
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className={styles.planEntete} style={{ borderTop: "1px solid var(--color-bordure)" }}>
+        <span className={styles.planNom}>SMS / WhatsApp premium</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Préparation du tarif uniquement — aucun envoi réel n&apos;est encore branché (aucun compte
+        Twilio/WhatsApp Business configuré). Permet d&apos;afficher le prix dès maintenant.
+      </p>
+      <div className={styles.planChamps}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
+          <input type="checkbox" checked={smsActif} onChange={(e) => setSmsActif(e.target.checked)} />
+          Afficher l&apos;offre SMS/WhatsApp premium
+        </label>
+        <label className={styles.champ}>
+          <span>Tarif mensuel (USD)</span>
+          <input placeholder="ex. 10" value={smsTarif} onChange={(e) => setSmsTarif(e.target.value)} />
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCoursTarifs} onClick={enregistrerTarifs}>
+          Enregistrer le tarif SMS/WhatsApp
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TarifsContent() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -810,6 +1084,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>Taux de change</h2>
       <TauxChangeSection />
+
+      <h2 className={styles.sectionTitre}>Services à la carte</h2>
+      <TarifsServicesALaCarteSection />
     </div>
   );
 }
