@@ -284,6 +284,7 @@ model Shop {
   assets         Asset[]
   accountingClosures AccountingClosure[]
   comptesTresorerie TresorerieCompte[]
+  relances       Relance[]
 }
 
 model ShopStaff {
@@ -478,6 +479,7 @@ model Supplier {
   balanceOwed Decimal @default(0) @db.Decimal(12, 2) // dettes fournisseur
 
   purchases Purchase[]
+  relances  Relance[]
 }
 
 model Purchase {
@@ -493,6 +495,65 @@ model Purchase {
   onCredit   Boolean  @default(false)
   receivedAt DateTime?
   createdAt  DateTime @default(now())
+
+  // Ajouté le 14 oct. 2026 — chantier SYSCOHADA, phase 3 (créances &
+  // dettes). `null` pour tout l'historique déjà enregistré : aucune
+  // échéance n'est inventée rétroactivement.
+  dueDate    DateTime?
+  reglements ReglementFournisseur[]
+}
+
+// Règlements et relances (créances & dettes) — 14 oct. 2026, chantier
+// SYSCOHADA phase 3. Le "lettrage" ici est volontairement simple : un
+// règlement référence explicitement l'achat ou le client concerné (saisie
+// par l'utilisateur), ce n'est jamais un algorithme de rapprochement
+// automatique entre plusieurs pièces — à ne pas présenter comme tel.
+model ReglementFournisseur {
+  id         String   @id @default(uuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  amount     Decimal  @db.Decimal(12, 2)
+  paidAt     DateTime
+  method     String?
+  createdAt  DateTime @default(now())
+
+  @@index([purchaseId])
+}
+
+model ReglementClient {
+  id         String       @id @default(uuid())
+  customerId String
+  customer   ShopCustomer @relation(fields: [customerId], references: [id])
+  amount     Decimal      @db.Decimal(12, 2)
+  paidAt     DateTime
+  method     String?
+  createdAt  DateTime     @default(now())
+
+  @@index([customerId])
+}
+
+enum RelanceDirection {
+  CLIENT
+  FOURNISSEUR
+}
+
+// Relance = un rappel JOURNALISÉ par l'utilisateur (pas d'envoi réel de
+// SMS/email à cette phase — ce serait présenter comme construit un canal de
+// notification qui n'existe pas).
+model Relance {
+  id         String           @id @default(uuid())
+  shopId     String
+  shop       Shop             @relation(fields: [shopId], references: [id])
+  direction  RelanceDirection
+  customerId String?
+  customer   ShopCustomer?    @relation(fields: [customerId], references: [id])
+  supplierId String?
+  supplier   Supplier?        @relation(fields: [supplierId], references: [id])
+  message    String
+  envoyeeAt  DateTime         @default(now())
+  createdBy  String?
+
+  @@index([shopId])
 }
 
 model Expense {
@@ -517,7 +578,9 @@ model ShopCustomer {
   phone       String?
   creditBalance Decimal @default(0) @db.Decimal(12, 2) // créances dues par ce client
 
-  sales PosSale[]
+  sales      PosSale[]
+  reglements ReglementClient[]
+  relances   Relance[]
 }
 
 // ---------------------------------------------------------------------------
