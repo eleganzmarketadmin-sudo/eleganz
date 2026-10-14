@@ -12,6 +12,7 @@ interface Plan {
   openingFee: string;
   monthlyPrice: string;
   maxActiveProducts: number | null;
+  commissionRate: string | null;
   active: boolean;
   featuresJson: Record<string, unknown>;
 }
@@ -58,6 +59,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
   const [ouvertureFee, setOuvertureFee] = useState(plan.openingFee);
   const [prix, setPrix] = useState(plan.monthlyPrice);
   const [maxProduits, setMaxProduits] = useState(plan.maxActiveProducts?.toString() ?? "");
+  const [commission, setCommission] = useState(plan.commissionRate ?? "");
   const [features, setFeatures] = useState(featuresToTexte(plan.featuresJson));
   const [coches, setCoches] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(FONCTIONNALITES_GESTION.map(({ cle }) => [cle, plan.featuresJson[cle] === true])),
@@ -83,6 +85,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
         openingFee: Number(ouvertureFee || 0),
         monthlyPrice: Number(prix),
         maxActiveProducts: maxProduits ? Number(maxProduits) : null,
+        commissionRate: estGestion ? undefined : commission ? Number(commission) : null,
         features: featuresAEnvoyer,
       });
       onChange();
@@ -137,6 +140,16 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
           </label>
         )}
         {!estGestion && (
+          <label className={styles.champ}>
+            <span>Commission sur les ventes (%, vide = taux par défaut de la plateforme)</span>
+            <input
+              placeholder="ex. 5"
+              value={commission}
+              onChange={(e) => setCommission(e.target.value)}
+            />
+          </label>
+        )}
+        {!estGestion && (
           <label className={styles.champLarge}>
             <span>Fonctionnalités incluses (ex. &quot;livraison, analytics: avancé&quot;)</span>
             <input value={features} onChange={(e) => setFeatures(e.target.value)} />
@@ -177,6 +190,7 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
   const [ouvertureFee, setOuvertureFee] = useState("");
   const [prix, setPrix] = useState("");
   const [maxProduits, setMaxProduits] = useState("");
+  const [commission, setCommission] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -191,11 +205,13 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
         openingFee: ouvertureFee ? Number(ouvertureFee) : undefined,
         monthlyPrice: Number(prix),
         maxActiveProducts: maxProduits ? Number(maxProduits) : undefined,
+        commissionRate: category === "MARKETPLACE" && commission ? Number(commission) : undefined,
       });
       setName("");
       setOuvertureFee("");
       setPrix("");
       setMaxProduits("");
+      setCommission("");
       setOuvert(false);
       onCree();
     } catch (err) {
@@ -237,6 +253,13 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
         value={maxProduits}
         onChange={(e) => setMaxProduits(e.target.value)}
       />
+      {category === "MARKETPLACE" && (
+        <input
+          placeholder="Commission sur les ventes (%, vide = taux par défaut)"
+          value={commission}
+          onChange={(e) => setCommission(e.target.value)}
+        />
+      )}
       <button className={styles.boutonEnregistrer} type="submit" disabled={enCours}>
         Créer
       </button>
@@ -505,6 +528,33 @@ function TarifsBoutiquesSection() {
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [tauxDefaut, setTauxDefaut] = useState("");
+  const [chargementTaux, setChargementTaux] = useState(true);
+  const [enCoursTaux, setEnCoursTaux] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ marketplaceCommissionRateDefault: string | null }>("/admin/platform-settings")
+      .then((s) => setTauxDefaut(s.marketplaceCommissionRateDefault ?? ""))
+      .catch(() => {})
+      .finally(() => setChargementTaux(false));
+  }, []);
+
+  async function enregistrerTauxDefaut() {
+    setEnCoursTaux(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        marketplaceCommissionRateDefault: tauxDefaut ? Number(tauxDefaut) : null,
+      });
+      setMessage("Taux de commission par défaut enregistré.");
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+    } finally {
+      setEnCoursTaux(false);
+    }
+  }
 
   async function declencher(action: string, chemin: string) {
     setActionEnCours(action);
@@ -552,6 +602,39 @@ function TarifsBoutiquesSection() {
           onClick={() => declencher("Suspension des impayés", "/admin/billing/run-suspension-check")}
         >
           Suspendre les boutiques en impayé
+        </button>
+      </div>
+
+      <div className={styles.planEntete} style={{ borderTop: "1px solid var(--color-bordure)" }}>
+        <span className={styles.planNom}>Commission ELEGANZ Market</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        Taux global appliqué aux ventes des boutiques Marketplace dont le bouquet ne fixe pas son
+        propre taux (modifiable par bouquet ci-dessus). Calculée à la création de chaque commande,
+        facturée séparément sur les commandes terminées non encore facturées.
+      </p>
+      {!chargementTaux && (
+        <div className={styles.planChamps}>
+          <label className={styles.champ}>
+            <span>Taux de commission par défaut (%, vide = aucune commission)</span>
+            <input
+              placeholder="ex. 5"
+              value={tauxDefaut}
+              onChange={(e) => setTauxDefaut(e.target.value)}
+            />
+          </label>
+        </div>
+      )}
+      <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
+        <button className={styles.boutonEnregistrer} disabled={enCoursTaux} onClick={enregistrerTauxDefaut}>
+          Enregistrer le taux par défaut
+        </button>
+        <button
+          className={styles.boutonBasculer}
+          disabled={actionEnCours !== null}
+          onClick={() => declencher("Facturation des commissions", "/admin/billing/run-commission-billing")}
+        >
+          Lancer la facturation des commissions
         </button>
       </div>
     </div>

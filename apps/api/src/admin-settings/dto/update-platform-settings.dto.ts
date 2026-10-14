@@ -90,4 +90,12 @@ export class UpdatePlatformSettingsDto {
   @IsInt()
   @Min(0)
   comptableFreeMonths?: number;
+
+  // Taux de commission (%) par défaut sur les transactions ELEGANZ Market
+  // (14 oct. 2026, plan commercial) — utilisé quand le bouquet Marketplace
+  // de la boutique n'en fixe pas un lui-même.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  marketplaceCommissionRateDefault?: number;
 }

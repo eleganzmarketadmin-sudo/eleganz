@@ -83,6 +83,30 @@ export class OrdersService {
         .flat()
         .reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
 
+      // Commission ELEGANZ Market (14 oct. 2026, plan commercial) : taux du
+      // bouquet Marketplace de la boutique, sinon le taux par défaut de la
+      // plateforme, sinon 0 — jamais une valeur inventée. Calculée une fois
+      // ici (pas recalculée a posteriori) pour que le taux facturé soit celui
+      // en vigueur au moment de la vente, même si l'admin le change ensuite —
+      // même principe que le taux de change (docs/PROJECT_STATUS.md).
+      const shopIds = [...byShop.keys()];
+      const [shopsAvecBouquet, platformSettings] = await Promise.all([
+        tx.shop.findMany({
+          where: { id: { in: shopIds } },
+          select: { id: true, marketplaceBouquet: { select: { commissionRate: true } } },
+        }),
+        tx.platformSettings.findUnique({
+          where: { id: "platform" },
+          select: { marketplaceCommissionRateDefault: true },
+        }),
+      ]);
+      const tauxParBoutique = new Map(
+        shopsAvecBouquet.map((s) => [
+          s.id,
+          Number(s.marketplaceBouquet?.commissionRate ?? platformSettings?.marketplaceCommissionRateDefault ?? 0),
+        ]),
+      );
+
       const order = await tx.order.create({
         data: {
           buyerId,
@@ -95,11 +119,16 @@ export class OrdersService {
           deliveryRepere: dto.deliveryRepere,
           deliveryNote: dto.deliveryNote,
           shopOrders: {
-            create: [...byShop.entries()].map(([shopId, items]) => ({
-              shopId,
-              subtotal: items.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0),
-              lines: { create: items },
-            })),
+            create: [...byShop.entries()].map(([shopId, items]) => {
+              const subtotal = items.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+              const taux = tauxParBoutique.get(shopId) ?? 0;
+              return {
+                shopId,
+                subtotal,
+                commissionAmount: Math.round(subtotal * (taux / 100) * 100) / 100,
+                lines: { create: items },
+              };
+            }),
           },
         },
         include: { shopOrders: { include: { lines: true } } },

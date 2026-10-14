@@ -50,6 +50,13 @@ export class BillingController {
     return this.billingService.runMonthlyBilling();
   }
 
+  @Post("admin/billing/run-commission-billing")
+  @UseGuards(JwtAuthGuard)
+  runCommissionBilling(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.billingService.runCommissionBilling();
+  }
+
   @Post("admin/billing/run-suspension-check")
   @UseGuards(JwtAuthGuard)
   runSuspensionCheck(@CurrentUser() user: AuthenticatedUser, @Body("graceDays") graceDays?: number) {

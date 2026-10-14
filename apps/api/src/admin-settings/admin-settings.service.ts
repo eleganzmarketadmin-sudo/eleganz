@@ -42,6 +42,9 @@ export class AdminSettingsService {
         ...(dto.comptableMonthlyFee !== undefined && { comptableMonthlyFee: dto.comptableMonthlyFee }),
         ...(dto.comptableYearlyFee !== undefined && { comptableYearlyFee: dto.comptableYearlyFee }),
         ...(dto.comptableFreeMonths !== undefined && { comptableFreeMonths: dto.comptableFreeMonths }),
+        ...(dto.marketplaceCommissionRateDefault !== undefined && {
+          marketplaceCommissionRateDefault: dto.marketplaceCommissionRateDefault,
+        }),
       },
     });
   }

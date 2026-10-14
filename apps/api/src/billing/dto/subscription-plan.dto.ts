@@ -25,6 +25,13 @@ export class CreateSubscriptionPlanDto {
   @Min(0)
   maxActiveProducts?: number;
 
+  // Taux de commission (%) sur les transactions ELEGANZ Market, pour un
+  // bouquet MARKETPLACE (14 oct. 2026, plan commercial).
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  commissionRate?: number;
+
   // Liste libre de fonctionnalités incluses — administrable sans migration
   // de base de données (prompt §40 : administration sans programmation).
   @IsOptional()
@@ -46,6 +53,11 @@ export class UpdateSubscriptionPlanDto {
   @IsInt()
   @Min(0)
   maxActiveProducts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  commissionRate?: number;
 
   @IsOptional()
   @IsBoolean()

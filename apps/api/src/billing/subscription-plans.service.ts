@@ -177,6 +177,7 @@ export class SubscriptionPlansService implements OnModuleInit {
         monthlyPrice: dto.monthlyPrice,
         openingFee: dto.openingFee ?? 0,
         maxActiveProducts: dto.maxActiveProducts,
+        commissionRate: dto.commissionRate,
         featuresJson: (dto.features ?? {}) as Prisma.InputJsonValue,
       },
     });
@@ -208,6 +209,7 @@ export class SubscriptionPlansService implements OnModuleInit {
         monthlyPrice: dto.monthlyPrice,
         openingFee: dto.openingFee,
         maxActiveProducts: dto.maxActiveProducts,
+        commissionRate: dto.commissionRate,
         active: dto.active,
         featuresJson: dto.features as Prisma.InputJsonValue | undefined,
       },

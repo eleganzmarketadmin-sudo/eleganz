@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { ShopStatus } from "@eleganz/database";
+import { OrderStatus, ShopStatus } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
 
 // Frais d'ouverture appliqué à une boutique sans bouquet Gestion rattaché —
@@ -103,6 +103,52 @@ export class BillingService {
         },
       });
       results.push({ shopId: shop.id, action: "invoice_created" });
+    }
+    return results;
+  }
+
+  /**
+   * Facture de commission ELEGANZ Market (14 oct. 2026, plan commercial) —
+   * agrège, boutique par boutique, la commission des sous-commandes
+   * complètement terminées (`CLOSED`, c'est-à-dire reçues et confirmées par
+   * l'acheteur, jamais une commande encore en cours ou litigieuse) pas
+   * encore facturées (`commissionInvoicedAt IS NULL`), génère une facture
+   * `kind: "commission"` si le total est positif, puis marque ces
+   * sous-commandes comme facturées pour ne jamais les compter deux fois.
+   * Déclenchement manuel, comme le reste du cycle de facturation du projet.
+   */
+  async runCommissionBilling() {
+    const now = new Date();
+    const sousCommandesAFacturer = await this.prisma.shopOrder.findMany({
+      where: { status: OrderStatus.CLOSED, commissionInvoicedAt: null, commissionAmount: { gt: 0 } },
+      select: { id: true, shopId: true, commissionAmount: true },
+    });
+
+    const parBoutique = new Map<string, { ids: string[]; total: number }>();
+    for (const so of sousCommandesAFacturer) {
+      const entree = parBoutique.get(so.shopId) ?? { ids: [], total: 0 };
+      entree.ids.push(so.id);
+      entree.total += Number(so.commissionAmount);
+      parBoutique.set(so.shopId, entree);
+    }
+
+    const results: { shopId: string; action: string }[] = [];
+    for (const [shopId, { ids, total }] of parBoutique) {
+      await this.prisma.$transaction([
+        this.prisma.invoice.create({
+          data: {
+            shopId,
+            amount: Math.round(total * 100) / 100,
+            dueAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+            kind: "commission",
+          },
+        }),
+        this.prisma.shopOrder.updateMany({
+          where: { id: { in: ids } },
+          data: { commissionInvoicedAt: now },
+        }),
+      ]);
+      results.push({ shopId, action: "invoice_created" });
     }
     return results;
   }
