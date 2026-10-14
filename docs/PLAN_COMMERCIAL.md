@@ -26,11 +26,10 @@ rien.
 Trois leviers de revenus, cumulables :
 1. **Abonnement par bouquet** — mensuel, par boutique, selon le palier
    ELEGANZ Gestion choisi (ci-dessous).
-2. **Commission future sur les transactions** — ELEGANZ Market (marketplace)
-   et, plus tard, d'autres services, prélevée sur les transactions plutôt
-   que seulement via un abonnement fixe. **Pas encore construite** (le
-   champ `ShopOrder.commissionAmount` existe dans le schéma mais n'est
-   calculé nulle part dans l'API — voir "à construire" ci-dessous).
+2. **Commission sur les transactions** — ELEGANZ Market (marketplace), et,
+   plus tard, d'autres services, prélevée sur les transactions plutôt que
+   seulement via un abonnement fixe. **Construite et déployée** (calculée à
+   la création de chaque commande, facturée séparément — voir ci-dessous).
 3. **Services à la carte**, au-delà de l'abonnement mensuel, présentés en
    interne comme de la « location et hébergement » : crédits IA
    (`AiCreditWallet`/`AiCreditTransaction`, modèle existant mais non
@@ -73,14 +72,27 @@ Toute boutique déjà active avant ce chantier a été rattachée automatiquemen
 au bouquet **Pro** (jamais Starter) pour ne perdre aucun accès qu'elle
 utilisait déjà.
 
-## ELEGANZ Market — commission future sur les transactions
+## ELEGANZ Market — commission sur les transactions
 
-Pas encore construite. Le champ `ShopOrder.commissionAmount` existe dans le
-schéma, prêt à être rempli, mais aucun calcul ni aucune facturation ne s'y
-rattache aujourd'hui. Prochaine étape suggérée : taux de commission
-configurable depuis `/admin/tarifs` (par défaut ou par bouquet Marketplace),
-calculé à la validation de la commande, agrégé dans un relevé périodique
-comme les abonnements boutique.
+**Construite et déployée (14 oct. 2026).** Taux de commission (%) réglable
+depuis `/admin/tarifs`, soit par bouquet Marketplace (`SubscriptionPlan.
+commissionRate`), soit globalement en filet de sécurité
+(`PlatformSettings.marketplaceCommissionRateDefault`) — ordre de priorité :
+taux du bouquet de la boutique, sinon taux global, sinon 0.
+
+Calcul : à la création de chaque commande (`OrdersService.createOrder`),
+une fois par sous-commande boutique (`ShopOrder.commissionAmount`), au taux
+en vigueur à cet instant — jamais recalculé ensuite, même principe que le
+taux de change CDF/USD (snapshot au moment de la transaction).
+
+Facturation : déclenchement manuel depuis `/admin/tarifs`
+(`POST /admin/billing/run-commission-billing`, bouton « Lancer la
+facturation des commissions ») — agrège les `ShopOrder` au statut `CLOSED`
+non encore facturées en une `Invoice{kind:"commission"}` par boutique, et
+marque `ShopOrder.commissionInvoicedAt` dans la même transaction pour
+exclure ces sous-commandes d'un prochain cycle (pas de double facturation).
+Même logique manuelle que les autres cycles de facturation du projet
+(aucun planificateur automatique nulle part).
 
 ## ELEGANZ Mon Comptable — révision
 
@@ -134,6 +146,14 @@ ce travail, et volontairement laissées ainsi :
   champ texte libre, conservé pour les bouquets Marketplace) ; section
   « Facturation des boutiques » (vérifier les gratuités échues, lancer la
   facturation mensuelle, suspendre les impayés).
+- Gating réel de `variantesProduits` (création de variantes en lot
+  uniquement — jamais la variante simple requise pour vendre) et
+  `exportExcelPdf` (export Excel du catalogue + export Excel/PDF des
+  relevés d'activité), vérifié en production.
+- Commission ELEGANZ Market : calcul par sous-commande à la création,
+  taux par bouquet Marketplace ou taux global par défaut, facturation
+  manuelle agrégée par boutique (`run-commission-billing`), champs admin
+  dans `/admin/tarifs` (par bouquet et taux par défaut global).
 
 **Incident corrigé en cours de route** : un bouquet de test "Essentiel"
 (catégorie GESTION) existait déjà en base avant ce chantier ; la première
@@ -145,16 +165,14 @@ supprimé (geste destructif non demandé) — à retirer manuellement depuis
 `/admin/tarifs` si souhaité.
 
 **Délibérément pas construit** (prochain lot, hors scope de ce chantier) :
-- Commission sur les transactions ELEGANZ Market (`ShopOrder.commissionAmount`).
 - Monétisation des crédits IA, SMS/WhatsApp premium.
 - Option de commission pour les livreurs (plutôt qu'abonnement fixe).
-- Planificateur automatique du cycle de facturation mensuelle des boutiques
-  (déclenchement manuel par l'admin, comme pour les livreurs et Mon
-  Comptable — limite déjà documentée pour ces deux modules).
+- Planificateur automatique des cycles de facturation (boutiques, livreurs,
+  Mon Comptable, commissions) — déclenchement manuel par l'admin partout,
+  limite déjà documentée.
 
 ## Recommandation
 
 Prochaine étape suggérée au propriétaire, par ordre de valeur/effort : (1)
-commission ELEGANZ Market, car c'est le second levier de revenu explicitement
-demandé et le champ existe déjà dans le schéma ; (2) services à la carte
-(crédits IA, SMS/WhatsApp) ; (3) option de commission livreur.
+services à la carte (crédits IA, SMS/WhatsApp) ; (2) option de commission
+livreur.
