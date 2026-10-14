@@ -323,7 +323,14 @@ export class AccountingQueryService {
    * fiscal final.
    */
   async compteDeResultatNormalise(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
-    const montantCharge = async (code: string) => -(await this.soldeCompte(scope, shopId, code, { gte: from, lt: to }));
+    // `soldeCompte` renvoie déjà un montant positif pour un compte de charge
+    // (normalSide DEBIT, debit-credit) — même convention que l'ancien
+    // `compteDeResultat()` ci-dessus, où les lignes de charges sont
+    // affichées positives et `resultatNet = produits - charges`. Négliger ce
+    // point ici (bug corrigé avant tout déploiement, 14 oct. 2026) aurait
+    // transformé chaque soustraction de charge en addition et inversé le
+    // signe du résultat.
+    const montantCharge = async (code: string) => await this.soldeCompte(scope, shopId, code, { gte: from, lt: to });
     const montantProduit = async (code: string) => await this.soldeCompte(scope, shopId, code, { gte: from, lt: to });
     const nonVide = (lignes: { montant: number }[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
     const l = (code: string, label: string, montant: number) => ({ code, label, montant });
