@@ -69,6 +69,13 @@ model PlatformSettings {
   cdfPerUsd             Decimal?  @db.Decimal(14, 4)
   exchangeRateUpdatedAt DateTime?
 
+  // Taux de commission (%) par défaut sur les transactions ELEGANZ Market,
+  // utilisé quand le bouquet Marketplace de la boutique n'en définit pas un
+  // lui-même (14 oct. 2026, plan commercial). Nullable : tant qu'il est
+  // vide et qu'aucun bouquet ne le fixe non plus, la commission reste à 0 —
+  // jamais une valeur de départ inventée.
+  marketplaceCommissionRateDefault Decimal? @db.Decimal(5, 2)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -552,7 +559,13 @@ model ShopOrder {
   shop      Shop        @relation(fields: [shopId], references: [id])
   status    OrderStatus @default(CREATED)
   subtotal  Decimal     @db.Decimal(12, 2)
+  // Calculée à la création (OrdersService.createOrder) à partir du taux de
+  // commission du bouquet Marketplace de la boutique, ou du taux par défaut
+  // de la plateforme (14 oct. 2026, plan commercial). `commissionInvoicedAt`
+  // marque qu'elle a déjà été incluse dans une facture de commission
+  // (BillingService.runCommissionBilling) — évite de la facturer deux fois.
   commissionAmount Decimal @default(0) @db.Decimal(12, 2)
+  commissionInvoicedAt DateTime?
   // Réseau de livreurs plateforme (Driver) — fermé au grand public depuis le
   // 13 oct. 2026, conservé tel quel pour une réouverture future. Les
   // nouvelles affectations passent par shopDriverId ci-dessous.
@@ -760,6 +773,13 @@ model SubscriptionPlan {
   openingFee     Decimal      @default(0) @db.Decimal(12, 2)
   monthlyPrice   Decimal      @db.Decimal(12, 2)
   maxActiveProducts Int?
+  // Taux de commission (%) sur les transactions ELEGANZ Market, pour un
+  // bouquet MARKETPLACE (14 oct. 2026, plan commercial — second levier de
+  // revenu demandé par le propriétaire, au-delà de l'abonnement mensuel).
+  // Nullable : quand absent, OrdersService retombe sur
+  // PlatformSettings.marketplaceCommissionRateDefault, puis sur 0 si ce
+  // dernier est lui aussi absent — jamais un taux inventé.
+  commissionRate Decimal?     @db.Decimal(5, 2)
   featuresJson   Json         // liste des fonctionnalités incluses, éditable en admin
   active         Boolean      @default(true)
 
