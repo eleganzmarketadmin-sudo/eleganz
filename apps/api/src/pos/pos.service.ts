@@ -33,6 +33,7 @@ export class PosService {
     dto: CreateSaleDto & { cashierId: string; clientOperationId?: string },
     options: { allowNegativeStock?: boolean } = {},
   ) {
+    let cmvTotal = 0;
     const sale = await this.prisma.$transaction(async (tx) => {
       let total = 0;
       const discrepancyByLineIndex = new Set<number>();
@@ -56,12 +57,23 @@ export class PosService {
             data: { stockQty: { decrement: line.quantity } },
           });
 
+          // Valorisation CUMP de la sortie (chantier SYSCOHADA phase 4b, 14
+          // oct. 2026) — `coutUnitaire`/`valeur` restent `null` tant que la
+          // variante n'a jamais reçu de réception valorisée (voir
+          // StockValorisationService) : jamais un coût inventé. `cmvTotal`
+          // n'accumule que les lignes dont le coût est réellement connu.
+          const cumpConnu = variant.coutMoyenPondere != null;
+          const valeurSortie = cumpConnu ? Math.round(line.quantity * Number(variant.coutMoyenPondere) * 100) / 100 : null;
+          if (valeurSortie !== null) cmvTotal += valeurSortie;
+
           await tx.stockMovement.create({
             data: {
               shopId,
               variantId: line.variantId,
               type: StockMovementType.POS_SALE_OUT,
               quantity: -line.quantity,
+              coutUnitaire: cumpConnu ? variant.coutMoyenPondere : undefined,
+              valeur: valeurSortie !== null ? -valeurSortie : undefined,
             },
           });
         }
@@ -132,6 +144,15 @@ export class PosService {
     await this.accounting.postPosSale(sale).catch((err) => {
       this.logger.error(`Comptabilisation de la vente ${sale.id} échouée`, err);
     });
+
+    // Écriture CMV séparée (chantier SYSCOHADA phase 4b) — seulement si au
+    // moins une ligne avait un CUMP connu ; une erreur ici ne doit jamais
+    // non plus annuler la vente déjà encaissée (même garde que ci-dessus).
+    if (cmvTotal > 0) {
+      await this.accounting.postSortieStockVente(sale, cmvTotal).catch((err) => {
+        this.logger.error(`Comptabilisation du CMV de la vente ${sale.id} échouée`, err);
+      });
+    }
 
     return sale;
   }

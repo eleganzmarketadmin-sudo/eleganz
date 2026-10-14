@@ -236,6 +236,32 @@ export class AccountingService {
   }
 
   /**
+   * Coût des marchandises vendues (CMV), chantier SYSCOHADA phase 4b — 14
+   * oct. 2026. Écriture SÉPARÉE de `postPosSale` pour la même vente
+   * (sourceType `COGS_VENTE` plutôt que `POS_SALE`, même sourceId=sale.id) :
+   * une sortie de stock valorisée au CUMP (debit 603, credit 311),
+   * distincte de l'écriture caisse/ventes. N'est appelée que lorsque
+   * `montant` > 0 (lignes dont le CUMP est connu) — jamais pour une vente
+   * dont aucune ligne n'a de coût connu.
+   */
+  async postSortieStockVente(sale: { id: string; shopId: string }, montant: number) {
+    await this.seed.ensureShopChartOfAccounts(sale.shopId);
+    await this.enregistrer({
+      scope: FiscalRuleScope.SHOP,
+      shopId: sale.shopId,
+      journalCode: "OD",
+      entryDate: new Date(),
+      label: `Coût des marchandises vendues — vente ${sale.id.slice(0, 8)}`,
+      sourceType: JournalEntrySource.COGS_VENTE,
+      sourceId: sale.id,
+      lignes: [
+        { accountCode: "603", debit: montant },
+        { accountCode: "311", credit: montant },
+      ],
+    });
+  }
+
+  /**
    * Mouvement manuel de trésorerie (dépôt, retrait, virement, frais
    * bancaires...) sur un TresorerieCompte — chantier SYSCOHADA, phase 2
    * (14 oct. 2026). `compteAccountCode` est le sous-compte dédié déjà créé
