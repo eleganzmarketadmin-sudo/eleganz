@@ -19,13 +19,15 @@ interface Dashboard {
   encaissementsConfirmes: number;
   achats: number;
   charges: { total: number; parDevise: Record<string, number> };
+  amortissements: number;
   margeBrute: number | null;
   margeFiable: boolean;
   resultatEstime: number;
   dettesFournisseurs: number;
-  creancesClients: number;
+  creditClientAccorde: number;
+  creancesMarketplace411: number;
   commissionMarketplace: number;
-  statut: { resultat: string; commission: string; dettesFournisseurs: string };
+  statut: { resultat: string; commission: string; dettesFournisseurs: string; creancesMarketplace411: string };
 }
 
 function formatMontant(n: number): string {
@@ -80,6 +82,7 @@ function FinanceDashboardContent() {
             <Carte titre="Encaissements confirmés" valeur={`${formatMontant(data.encaissementsConfirmes)} $`} />
             <Carte titre="Achats" valeur={`${formatMontant(data.achats)} $`} />
             <Carte titre="Charges" valeur={`${formatMontant(data.charges.total)} $`} />
+            <Carte titre="Amortissements" valeur={`${formatMontant(data.amortissements)} $`} detail="Dotations aux amortissements comptabilisées sur la période (compte 681)." />
             <Carte
               titre="Marge brute"
               valeur={data.margeFiable && data.margeBrute != null ? `${formatMontant(data.margeBrute)} $` : "—"}
@@ -87,7 +90,8 @@ function FinanceDashboardContent() {
             />
             <Carte titre="Résultat estimé" valeur={`${formatMontant(data.resultatEstime)} $`} detail={data.statut.resultat} />
             <Carte titre="Dettes fournisseurs" valeur={`${formatMontant(data.dettesFournisseurs)} $`} detail={data.statut.dettesFournisseurs} />
-            <Carte titre="Créances clients" valeur={`${formatMontant(data.creancesClients)} $`} />
+            <Carte titre="Crédit client accordé" valeur={`${formatMontant(data.creditClientAccorde)} $`} detail="Ventes à crédit accordées aux clients — distinct de la créance Marketplace ci-dessous." />
+            <Carte titre="Créances Marketplace (411)" valeur={`${formatMontant(data.creancesMarketplace411)} $`} detail={data.statut.creancesMarketplace411} />
             <Carte titre="Commission Marketplace" valeur={`${formatMontant(data.commissionMarketplace)} $`} detail={data.statut.commission} />
           </div>
         </>

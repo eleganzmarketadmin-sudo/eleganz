@@ -212,6 +212,27 @@ export class AccountingQueryService {
     };
   }
 
+  /**
+   * Solde d'un seul compte (signé selon son `normalSide`), sur une période ou
+   * cumulé depuis l'origine (`{lt: asOf}`) — brique commune à `bilan` et à
+   * toute lecture ponctuelle d'un compte (ex. tableau de bord boutique) qui
+   * n'a pas besoin d'un relevé complet. Retourne 0 si le compte n'existe pas
+   * encore (plan comptable seedé à la première écriture de la boutique, voir
+   * AccountingSeedService).
+   */
+  async soldeCompte(
+    scope: FiscalRuleScope,
+    shopId: string | null,
+    code: string,
+    periode: { lt: Date } | { gte: Date; lt: Date },
+  ): Promise<number> {
+    const compte = await this.prisma.account.findFirst({ where: { scope, shopId, code } });
+    if (!compte) return 0;
+    const agg = await this.agregerParCompte([compte.id], periode);
+    const { debit, credit } = agg.get(compte.id) ?? { debit: 0, credit: 0 };
+    return compte.normalSide === "DEBIT" ? debit - credit : credit - debit;
+  }
+
   private async agregerParCompte(
     accountIds: string[],
     periode: { lt: Date } | { gte: Date; lt: Date },

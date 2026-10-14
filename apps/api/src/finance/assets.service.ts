@@ -93,10 +93,19 @@ export class AssetsService {
         resultats.push({ assetId: actif.id, label: actif.label, montant, statut: "deja_comptabilise" });
         continue;
       }
+      // L'écriture comptable est posée AVANT la ligne de déduplication
+      // (pas l'inverse) : si postAssetDepreciation échoue (période clôturée,
+      // ou toute autre erreur), aucune ligne AssetDepreciation n'est créée et
+      // un nouvel essai reste possible. L'ordre inverse (corrigé le 14 oct.
+      // 2026) laissait une ligne de déduplication orpheline après un échec —
+      // un nouvel essai répondait alors "deja_comptabilise" sans qu'aucune
+      // écriture de journal n'ait jamais existé, perdant la dotation du mois
+      // de façon permanente et silencieuse (reproduit en conditions réelles,
+      // voir docs/PLAN_COMMERCIAL.md).
+      await this.accounting.postAssetDepreciation(shopId, actif, debut, montant);
       await this.prisma.assetDepreciation.create({
         data: { assetId: actif.id, periodDate: debut, amount: montant },
       });
-      await this.accounting.postAssetDepreciation(shopId, actif, debut, montant);
       resultats.push({ assetId: actif.id, label: actif.label, montant, statut: "comptabilise" });
     }
     return resultats;

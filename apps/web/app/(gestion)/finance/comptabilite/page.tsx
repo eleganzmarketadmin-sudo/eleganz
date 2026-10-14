@@ -303,6 +303,11 @@ function GrandLivreTable({ data }: { data: GrandLivre | null }) {
         </tbody>
       </table>
       <p style={{ marginTop: "12px", fontWeight: 600 }}>Solde final : {f(data.soldeFinal)} $</p>
+      <p style={{ marginTop: "4px", fontSize: "0.75rem", color: "#888" }}>
+        Convention : un solde cumulé négatif sur un compte à solde créditeur
+        normal (ventes, produits) est correct — il indique l&apos;ampleur du
+        crédit accumulé, pas une anomalie.
+      </p>
     </>
   );
 }
@@ -421,6 +426,11 @@ function BilanTable({ data }: { data: Bilan | null }) {
           Anomalie : le total actif ne correspond pas au total passif sur ce bilan — à signaler, ne pas ignorer.
         </div>
       )}
+      <p style={{ fontSize: "0.75rem", color: "#888", marginBottom: "8px" }}>
+        Convention : des totaux négatifs ici signifient une perte cumulée
+        depuis l&apos;origine — le bilan reste équilibré (actif = passif),
+        seul le signe du résultat change.
+      </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
         <div>
           <h3>Actif</h3>
