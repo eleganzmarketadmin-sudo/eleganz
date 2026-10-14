@@ -4,7 +4,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
-import { ShopStatus, StaffRole } from "@eleganz/database";
+import { PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
   return name
@@ -23,6 +23,17 @@ export class ShopsService {
     const baseSlug = slugify(dto.name);
     const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
 
+    // Bouquet Gestion par défaut à la création (14 oct. 2026, plan
+    // commercial) : la boutique démarre sur le bouquet le moins cher
+    // (Starter) — elle peut en changer plus tard depuis /admin/boutiques.
+    // `undefined` plutôt qu'une erreur si aucun bouquet n'existe encore
+    // (ex. tout premier démarrage avant que le seed n'ait tourné).
+    const bouquetDeDepart = await this.prisma.subscriptionPlan.findFirst({
+      where: { category: PlanCategory.GESTION, active: true },
+      orderBy: { monthlyPrice: "asc" },
+      select: { id: true },
+    });
+
     // Décision #3 : période gratuite par défaut 3 mois, démarrée à la création
     // (« l'entrée en relation »), mais modifiable ensuite depuis l'admin.
     const shop = await this.prisma.shop.create({
@@ -35,6 +46,7 @@ export class ShopsService {
         freeTrialStartedAt: new Date(),
         freeTrialDurationDays: 90,
         openingFeeWaived: true,
+        gestionBouquetId: bouquetDeDepart?.id,
         staff: {
           create: {
             userId: ownerId,
@@ -101,8 +113,37 @@ export class ShopsService {
    * boutique (prompt §10 : propriétaire, gérant, caissier, magasinier,
    * responsable commercial, comptable). Chaque journal de caisse / audit
    * s'appuie ensuite sur ShopStaff.role pour savoir qui a fait quoi.
+   *
+   * Deux limites viennent du bouquet Gestion de la boutique (14 oct. 2026,
+   * plan commercial, `SubscriptionPlan.featuresJson`) : la taille maximale
+   * de l'équipe (`maxEquipe`, `null` = illimité) et l'accès au rôle
+   * Comptable externe (`comptableExterne`, réservé au bouquet Premium).
    */
   async inviteStaff(shopId: string, dto: InviteStaffDto) {
+    const boutique = await this.prisma.shop.findUniqueOrThrow({
+      where: { id: shopId },
+      select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
+    });
+    const features = (boutique.gestionBouquet?.featuresJson as Record<string, unknown> | undefined) ?? {};
+
+    if (dto.role === StaffRole.EXTERNAL_ACCOUNTANT && features.comptableExterne !== true) {
+      throw new ConflictException(
+        `L'invitation d'un comptable externe n'est pas incluse dans le bouquet ${boutique.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez au bouquet Premium depuis le Centre de pilotage pour l'activer.`,
+      );
+    }
+
+    const maxEquipe = features.maxEquipe;
+    if (typeof maxEquipe === "number") {
+      const effectifActuel = await this.prisma.shopStaff.count({
+        where: { shopId, active: true, role: { not: StaffRole.OWNER } },
+      });
+      if (effectifActuel >= maxEquipe) {
+        throw new ConflictException(
+          `Le bouquet ${boutique.gestionBouquet?.name ?? "actuel"} de cette boutique est limité à ${maxEquipe} membre(s) d'équipe (hors propriétaire). Passez à un bouquet supérieur depuis le Centre de pilotage pour en ajouter.`,
+        );
+      }
+    }
+
     const estEmail = dto.identifier.includes("@");
     const utilisateur = await this.prisma.user.findFirst({
       where: estEmail ? { email: dto.identifier } : { phone: dto.identifier },

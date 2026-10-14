@@ -3,6 +3,13 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ShopStatus } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
 
+// Frais d'ouverture appliqué à une boutique sans bouquet Gestion rattaché —
+// ne devrait plus jamais arriver en pratique depuis que
+// SubscriptionPlansService rattache automatiquement toute boutique au
+// bouquet "Pro" par défaut (voir son onModuleInit), mais gardé comme filet
+// de sécurité plutôt que de faire planter la facturation.
+const FRAIS_OUVERTURE_SECOURS = 100;
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
@@ -17,6 +24,13 @@ export class BillingService {
    * FREE_PERIOD à PAYMENT_DUE et génère la facture correspondante
    * (décision #3 : durée configurable par boutique, décompte à partir de
    * `freeTrialStartedAt`, jamais depuis une date fixe globale).
+   *
+   * Le montant de la facture d'ouverture vient désormais du bouquet Gestion
+   * choisi par la boutique (`SubscriptionPlan.openingFee`, 14 oct. 2026,
+   * plan commercial) au lieu d'être fixe pour toutes — voir
+   * FRAIS_OUVERTURE_SECOURS pour le filet de sécurité si aucun bouquet
+   * n'est rattaché.
+   *
    * TODO : brancher sur un planificateur réel (ex. @nestjs/schedule + cron
    * quotidien) une fois en production — pour l'instant déclenché manuellement
    * par un administrateur via POST /admin/billing/run-trial-check.
@@ -25,6 +39,7 @@ export class BillingService {
     const now = new Date();
     const candidates = await this.prisma.shop.findMany({
       where: { status: ShopStatus.FREE_PERIOD, openingFeeWaived: true },
+      include: { gestionBouquet: { select: { openingFee: true } } },
     });
 
     const results: { shopId: string; action: string }[] = [];
@@ -35,6 +50,7 @@ export class BillingService {
       trialEndsAt.setDate(trialEndsAt.getDate() + shop.freeTrialDurationDays);
 
       if (now >= trialEndsAt) {
+        const montant = shop.gestionBouquet?.openingFee ?? FRAIS_OUVERTURE_SECOURS;
         await this.prisma.$transaction([
           this.prisma.shop.update({
             where: { id: shop.id },
@@ -43,7 +59,7 @@ export class BillingService {
           this.prisma.invoice.create({
             data: {
               shopId: shop.id,
-              amount: 100, // frais d'ouverture indicatif — voir DECISIONS.md, à administrer réellement via SubscriptionPlan
+              amount: montant,
               dueAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
               kind: "opening_fee",
             },
@@ -53,6 +69,41 @@ export class BillingService {
       }
     }
 
+    return results;
+  }
+
+  /**
+   * Facture mensuelle pour les boutiques déjà ACTIVE, au tarif de leur
+   * bouquet Gestion (`SubscriptionPlan.monthlyPrice`) — jusqu'ici, aucune
+   * facture récurrente n'était générée pour une boutique une fois le frais
+   * d'ouverture payé (contrairement aux livreurs et à Mon Comptable, qui
+   * ont chacun leur cycle mensuel depuis le départ). Déclenchement manuel,
+   * comme le reste du cycle de facturation sur ce projet — voir
+   * POST /admin/billing/run-monthly-billing.
+   */
+  async runMonthlyBilling() {
+    const now = new Date();
+    const boutiquesActives = await this.prisma.shop.findMany({
+      where: { status: ShopStatus.ACTIVE },
+      include: { gestionBouquet: { select: { monthlyPrice: true } } },
+    });
+
+    const results: { shopId: string; action: string }[] = [];
+    for (const shop of boutiquesActives) {
+      if (!shop.gestionBouquet) {
+        results.push({ shopId: shop.id, action: "skipped_no_bouquet" });
+        continue;
+      }
+      await this.prisma.invoice.create({
+        data: {
+          shopId: shop.id,
+          amount: shop.gestionBouquet.monthlyPrice,
+          dueAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+          kind: "subscription",
+        },
+      });
+      results.push({ shopId: shop.id, action: "invoice_created" });
+    }
     return results;
   }
 

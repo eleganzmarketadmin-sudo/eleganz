@@ -4,6 +4,7 @@ import { CreateAssetDto } from "./dto/asset.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
+import { RequiresGestionFeature } from "../shops/gestion-feature.decorator";
 import { StaffRole } from "@eleganz/database";
 
 /**
@@ -11,9 +12,13 @@ import { StaffRole } from "@eleganz/database";
  * §8quater. Lecture ouverte à tout membre actif de la boutique, écriture
  * (création, mise au rebut, comptabilisation des dotations) réservée à
  * OWNER/MANAGER/ACCOUNTANT, comme pour les charges et règles fiscales.
+ * Réservé au bouquet Premium depuis le plan commercial du 14 oct. 2026
+ * (voir docs/PLAN_COMMERCIAL.md) — décorateur de classe, donc toute route
+ * ajoutée plus tard sous ce contrôleur est automatiquement couverte.
  */
 @Controller("shops/:shopId/assets")
 @UseGuards(JwtAuthGuard, ShopMembershipGuard)
+@RequiresGestionFeature("immobilisations")
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 

@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { PrismaService } from "../prisma/prisma.service";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { SHOP_ROLES_KEY } from "./roles.decorator";
+import { GESTION_FEATURE_KEY } from "./gestion-feature.decorator";
 import { StaffRole } from "@eleganz/database";
 
 // Préfixes de routes Finance & Comptabilité — seuls accessibles, et
@@ -70,6 +71,28 @@ export class ShopMembershipGuard implements CanActivate {
       throw new ForbiddenException(
         `Cette action est réservée à : ${requiredRoles.join(", ")}.`,
       );
+    }
+
+    // Fonctionnalité réservée à certains bouquets Gestion (14 oct. 2026,
+    // plan commercial) — ex. @RequiresGestionFeature("immobilisations").
+    // Une seule requête supplémentaire, et seulement sur les routes qui
+    // portent le décorateur (jamais sur les routes déjà vérifiées par rôle
+    // seul, pour ne pas alourdir le reste de l'API).
+    const requiredFeature = this.reflector.getAllAndOverride<string | undefined>(GESTION_FEATURE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (requiredFeature) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
+      });
+      const features = (shop?.gestionBouquet?.featuresJson as Record<string, unknown> | undefined) ?? {};
+      if (features[requiredFeature] !== true) {
+        throw new ForbiddenException(
+          `Cette fonctionnalité n'est pas incluse dans le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez à un bouquet supérieur depuis le Centre de pilotage pour y accéder.`,
+        );
+      }
     }
 
     return true;

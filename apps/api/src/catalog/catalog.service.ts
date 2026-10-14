@@ -27,7 +27,29 @@ export class CatalogService {
     return this.storage.creerUrlUploadImage(shopId, productId, contentType);
   }
 
-  createProduct(shopId: string, dto: CreateProductDto) {
+  /**
+   * Limite de catalogue du bouquet ELEGANZ Gestion de la boutique (14 oct.
+   * 2026, plan commercial — docs/PLAN_COMMERCIAL.md). `Product` n'a pas de
+   * notion d'actif/archivé (seulement `isPublished`, qui ne concerne que la
+   * visibilité Marketplace), donc "produits actifs max" se traduit par un
+   * simple comptage de toutes les lignes `Product` de la boutique.
+   * `maxActiveProducts` à `null` = illimité (bouquet Premium).
+   */
+  async createProduct(shopId: string, dto: CreateProductDto) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { gestionBouquet: { select: { name: true, maxActiveProducts: true } } },
+    });
+    const maxProduits = shop?.gestionBouquet?.maxActiveProducts;
+    if (typeof maxProduits === "number") {
+      const nombreActuel = await this.prisma.product.count({ where: { shopId } });
+      if (nombreActuel >= maxProduits) {
+        throw new ConflictException(
+          `Le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique est limité à ${maxProduits} produit(s). Passez à un bouquet supérieur depuis le Centre de pilotage pour en ajouter.`,
+        );
+      }
+    }
+
     return this.prisma.product.create({
       data: {
         shopId,

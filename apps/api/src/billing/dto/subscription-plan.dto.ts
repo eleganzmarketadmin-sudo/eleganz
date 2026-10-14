@@ -12,6 +12,14 @@ export class CreateSubscriptionPlanDto {
   @Min(0)
   monthlyPrice!: number;
 
+  // Frais unique à la souscription — dépend désormais du bouquet choisi
+  // (14 oct. 2026, plan commercial), au lieu d'une valeur fixe pour toutes
+  // les boutiques.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  openingFee?: number;
+
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -28,6 +36,11 @@ export class UpdateSubscriptionPlanDto {
   @IsNumber()
   @Min(0)
   monthlyPrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  openingFee?: number;
 
   @IsOptional()
   @IsInt()

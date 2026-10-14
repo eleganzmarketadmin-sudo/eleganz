@@ -9,6 +9,7 @@ import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
+import { RequiresGestionFeature } from "../shops/gestion-feature.decorator";
 import { StaffRole, FiscalRuleScope } from "@eleganz/database";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -41,6 +42,7 @@ export class FinanceController {
   // §8bis) — lecture seule : les écritures sont générées automatiquement par
   // AccountingService à partir des opérations réelles, jamais saisies ici.
   @Get("journal")
+  @RequiresGestionFeature("financeAvancee")
   journal(
     @Param("shopId") shopId: string,
     @Query("from") from?: string,
@@ -52,6 +54,7 @@ export class FinanceController {
   }
 
   @Get("grand-livre")
+  @RequiresGestionFeature("financeAvancee")
   grandLivre(
     @Param("shopId") shopId: string,
     @Query("compte") compte: string,
@@ -63,6 +66,7 @@ export class FinanceController {
   }
 
   @Get("balance")
+  @RequiresGestionFeature("financeAvancee")
   balance(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.balance(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
@@ -72,12 +76,14 @@ export class FinanceController {
   // §8ter) — générés automatiquement à partir des mêmes écritures, jamais
   // un substitut à une liasse fiscale établie par un professionnel.
   @Get("compte-resultat")
+  @RequiresGestionFeature("financeAvancee")
   compteDeResultat(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.compteDeResultat(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
   }
 
   @Get("bilan")
+  @RequiresGestionFeature("financeAvancee")
   bilan(@Param("shopId") shopId: string, @Query("asOf") asOf?: string) {
     return this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, asOf ? new Date(asOf) : new Date());
   }
@@ -85,12 +91,14 @@ export class FinanceController {
   // Assistant de clôture (docs/ARCHITECTURE_FINANCE.md §8quinquies) —
   // verrouille un mois (plus aucune écriture acceptée) et fige un résumé.
   @Get("clotures")
+  @RequiresGestionFeature("cloture")
   listClotures(@Param("shopId") shopId: string) {
     return this.closureService.list(FiscalRuleScope.SHOP, shopId);
   }
 
   @Post("clotures")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("cloture")
   cloturerPeriode(
     @Param("shopId") shopId: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -101,6 +109,7 @@ export class FinanceController {
 
   @Delete("clotures/:periode")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("cloture")
   reouvrirPeriode(@Param("shopId") shopId: string, @Param("periode") periode: string) {
     return this.closureService.reopen(FiscalRuleScope.SHOP, shopId, periode);
   }
@@ -108,6 +117,7 @@ export class FinanceController {
   // Simulation fiscale (docs/ARCHITECTURE_FINANCE.md §8septies) — jamais
   // une déclaration officielle, toujours un ordre de grandeur.
   @Get("simulation-fiscale")
+  @RequiresGestionFeature("financeAvancee")
   simulationFiscale(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.fiscalSimulation.simulerShop(shopId, fromDate, toDate);
@@ -117,6 +127,7 @@ export class FinanceController {
   // évolution mensuelle réelle, projection calculée côté client (moyenne
   // mobile), toujours étiquetée comme estimation.
   @Get("analytique")
+  @RequiresGestionFeature("financeAvancee")
   analytique(@Param("shopId") shopId: string, @Query("mois") mois?: string) {
     const nombreMois = Math.min(Math.max(Number(mois) || 6, 1), 24);
     return this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, nombreMois);
@@ -125,6 +136,7 @@ export class FinanceController {
   // Relevé de trésorerie réel par devise (docs/ARCHITECTURE_FINANCE.md
   // §8nonies) — soldes et mouvements réels des comptes 5711/5712.
   @Get("tresorerie")
+  @RequiresGestionFeature("tresorerie")
   tresorerie(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.releveTresorerie(FiscalRuleScope.SHOP, shopId, fromDate, toDate);
