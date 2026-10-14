@@ -234,7 +234,16 @@ export class AccountingQueryService {
       const amort = await this.soldeCompte(scope, shopId, codeAmort, { lt: asOf });
       return { code: codeActif, label, montant: brut - amort };
     };
-    const nonVide = (lignes: { montant: number }[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
+    // Générique (<T extends {montant}>), pas `(lignes: {montant:number}[])` :
+    // avec un paramètre non générique, `.filter()` renvoie le type DÉCLARÉ du
+    // paramètre, pas le type réel des éléments passés — ici ça aurait
+    // silencieusement élargi chaque ligne à `{montant:number}` seul, perdant
+    // `code`/`label` du type statique inféré de cette méthode (le JSON à
+    // l'exécution reste correct, seul le type TypeScript se trompe). Bug
+    // trouvé en vérification avant déploiement de dossier-validation.service.ts
+    // (chantier SYSCOHADA phase 7, 14 oct. 2026), qui est le premier
+    // consommateur à dépendre statiquement de `code`/`label` ici.
+    const nonVide = <T extends { montant: number }>(lignes: T[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
 
     const actifImmobilise = nonVide([
       await netImmo("211", "2811", "Immobilisations incorporelles (net)"),
@@ -332,7 +341,9 @@ export class AccountingQueryService {
     // signe du résultat.
     const montantCharge = async (code: string) => await this.soldeCompte(scope, shopId, code, { gte: from, lt: to });
     const montantProduit = async (code: string) => await this.soldeCompte(scope, shopId, code, { gte: from, lt: to });
-    const nonVide = (lignes: { montant: number }[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
+    // Générique — même raison que dans bilanNormalise ci-dessus : préserve
+    // `code`/`label` dans le type statique inféré du résultat.
+    const nonVide = <T extends { montant: number }>(lignes: T[]) => lignes.filter((l) => Math.abs(l.montant) > 0.004);
     const l = (code: string, label: string, montant: number) => ({ code, label, montant });
 
     const produitsExploitation = nonVide([
@@ -356,7 +367,11 @@ export class AccountingQueryService {
       l("641", "Impôts et taxes", await montantCharge("641")),
       l("681", "Dotations aux amortissements", await montantCharge("681")),
     ]);
-    const produitsFinanciers = nonVide([]);
+    // Tableau vide explicitement typé — un littéral `[]` seul ferait inférer
+    // `T = never` au generic `nonVide` ci-dessus (aucun élément pour le
+    // déduire), ce qui aurait cassé la compilation sur `l.montant` dans le
+    // corps de `nonVide`. Ce compte n'est simplement pas encore seedé.
+    const produitsFinanciers = nonVide<ReturnType<typeof l>>([]);
     const chargesFinancieres = nonVide([l("671", "Charges financières", await montantCharge("671"))]);
     const produitsHAO = nonVide([l("841", "Produits HAO", await montantProduit("841"))]);
     const chargesHAO = nonVide([l("831", "Charges HAO", await montantCharge("831"))]);
