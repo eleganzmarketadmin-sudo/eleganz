@@ -16,6 +16,7 @@ const ONGLETS = [
   { href: "/finance/cloture", label: "Clôture" },
   { href: "/finance/analytique", label: "Analytique" },
   { href: "/finance/tresorerie", label: "Trésorerie" },
+  { href: "/finance/creances-dettes", label: "Créances & dettes" },
 ];
 
 export function FinanceSubNav() {
