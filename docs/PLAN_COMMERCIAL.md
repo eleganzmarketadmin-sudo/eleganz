@@ -95,15 +95,17 @@ exclure ces sous-commandes d'un prochain cycle (pas de double facturation).
 Même logique manuelle que les autres cycles de facturation du projet
 (aucun planificateur automatique nulle part).
 
-## ELEGANZ Mon Comptable — proposition de bouquets premium (PAS ENCORE APPROUVÉE)
+## ELEGANZ Mon Comptable — bouquets premium (APPROUVÉ, CONSTRUIT ET VÉRIFIÉ EN PRODUCTION)
 
-Demandé le 14 octobre 2026 ("prevoir egalement les proposition su eleganz
-mon comptable"). **Ceci est une proposition à valider par le propriétaire,
-pas un changement déjà construit** — même démarche que pour les bouquets
-ELEGANZ Gestion (document d'abord, code ensuite, seulement après accord),
-parce que Mon Comptable a déjà des abonnés payants réels sur l'offre
-actuelle et qu'un changement de grille tarifaire touche des comptes en
-production, pas seulement une valeur de configuration.
+Proposé le 14 octobre 2026 ("prevoir egalement les proposition su eleganz
+mon comptable"), **validé tel quel par le propriétaire le même jour**
+("Oui et gerable totalement au niveau du centre de pilotage"), puis
+construit et déployé en suivant la même discipline en deux temps que pour
+le reste du projet (commit schéma seul, vérifié déployé, PUIS commit
+code+UI, vérifié déployé) — parce que Mon Comptable a déjà des abonnés
+payants réels sur l'offre actuelle et qu'un changement de grille tarifaire
+touche des comptes en production, pas seulement une valeur de
+configuration.
 
 **Constat (lecture du code, pas d'hypothèse)** : contrairement à ELEGANZ
 Gestion, Mon Comptable n'a aujourd'hui **aucun levier de différenciation
@@ -147,20 +149,43 @@ que l'usage quotidien — une vraie raison de payer plus, pas une limite
 arbitraire.
 
 **Migration des abonnés existants** : comme pour Gestion, tout compte
-Mon Comptable déjà actif serait automatiquement rattaché au palier
-"Pro" (jamais Essentiel) pour ne perdre aucun accès qu'il utilise déjà —
-en particulier s'il suit déjà plus d'une activité.
+Mon Comptable déjà actif au moment du déploiement a été automatiquement
+rattaché au palier "Pro" (jamais Essentiel) par
+`ComptablePlansService.rattacherAbonnesSansBouquet()` (exécuté une fois au
+démarrage du service) pour ne perdre aucun accès déjà utilisé — en
+particulier s'il suivait déjà plus d'une activité. Tout nouvel abonnement
+créé après ce chantier démarre en revanche directement sur "Essentiel"
+(`getOrCreateSubscription` ne rattache plus jamais un nouveau compte à
+"Pro" par défaut).
 
-**Pas encore construit, et volontairement pas commencé avant validation** :
-schéma (ComptableSubscription n'a aujourd'hui aucune notion de palier —
-il faudrait une table de bouquets dédiée, sur le modèle de
-`SubscriptionPlan`), limite réelle sur le nombre d'activités actives,
-gating de l'historique/comparaison/rappels/export dossier de financement,
-et l'administration de ces bouquets depuis `/admin/tarifs`.
-
-**Question ouverte pour le propriétaire** : ces paliers, ces prix et ce
-découpage des fonctionnalités conviennent-ils, ou faut-il les ajuster
-avant que ce soit construit ?
+**Construit, déployé et vérifié en production (14 octobre 2026)** :
+- Schéma : nouveau modèle `ComptablePlan` (nom, prix mensuel/annuel,
+  `maxActivities` nullable = illimité, `featuresJson`, actif/inactif),
+  lié à `ComptableSubscription.bouquetId` (nullable, pour la migration).
+- Gating réel vérifié par appel API direct sur un compte de test, sur les
+  trois paliers : limite d'activités simultanées (409 au-delà de
+  `maxActivities` sur Essentiel, succès illimité sur Pro/Premium), agenda
+  complet (403 sur Essentiel, 200 sur Pro/Premium — les rappels prioritaires
+  de la page d'accueil restent eux toujours visibles, à dessein, car ils
+  portent des alertes de facturation critiques), comparaison entre
+  activités (403 sur Essentiel, 200 sur Pro/Premium), historique du
+  tableau de bord (plafonné à 60 jours sans le palier, 730 jours avec),
+  export du dossier de financement bancaire (403 sur Essentiel ET Pro,
+  200 PDF uniquement sur Premium).
+- Changement de bouquet en libre-service par l'abonné
+  (`POST comptable/subscription/bouquet`), vérifié également par appel API.
+- Facturation (`ComptableBillingService`) : le montant facturé à
+  l'expiration de l'essai gratuit et à chaque renouvellement provient du
+  prix du bouquet rattaché (`bouquet.monthlyPrice`/`yearlyPrice`), avec le
+  tarif plat global (`PlatformSettings.comptableMonthlyFee`/`comptableYearlyFee`)
+  gardé uniquement comme filet de sécurité si un abonnement se retrouvait
+  sans bouquet.
+- Section « Bouquets ELEGANZ Mon Comptable » dans `/admin/tarifs` :
+  entièrement gérable depuis le Centre de pilotage, aucune valeur figée
+  dans le code — prix, limite d'activités et chacune des quatre
+  fonctionnalités se règlent par bouquet, création de nouveaux bouquets,
+  activation/désactivation ; vérifiée visuellement dans le navigateur
+  (champs correctement pré-remplis avec les valeurs réelles).
 
 ## Espace Livreur — révision
 
@@ -240,6 +265,10 @@ ce travail, et volontairement laissées ainsi :
   (`AiCreditTopUp`), catalogue des services IA administrable (`AiService`),
   interrupteur + tarif SMS/WhatsApp premium (préparation de prix). Testé de
   bout en bout en production avec un compte boutique jetable.
+- Bouquets ELEGANZ Mon Comptable (Essentiel/Pro/Premium) : voir la section
+  dédiée ci-dessus — gating par palier testé de bout en bout en production
+  sur un compte jetable, migration automatique des abonnés existants vers
+  "Pro", section admin entièrement gérable depuis `/admin/tarifs`.
 
 **Incident corrigé en cours de route** : un bouquet de test "Essentiel"
 (catégorie GESTION) existait déjà en base avant ce chantier ; la première
