@@ -31,10 +31,11 @@ Trois leviers de revenus, cumulables :
    seulement via un abonnement fixe. **Construite et déployée** (calculée à
    la création de chaque commande, facturée séparément — voir ci-dessous).
 3. **Services à la carte**, au-delà de l'abonnement mensuel, présentés en
-   interne comme de la « location et hébergement » : crédits IA
-   (`AiCreditWallet`/`AiCreditTransaction`, modèle existant mais non
-   monétisé), SMS/WhatsApp premium, option commission pour les livreurs.
-   **Pas encore construits.**
+   interne comme de la « location et hébergement ». **Crédits IA :
+   construits et déployés** (14 oct. 2026) — voir ci-dessous. **SMS/WhatsApp
+   premium : tarif préparé, fonctionnalité pas branchée** (aucun compte
+   Twilio/WhatsApp Business). **Option de commission pour les livreurs : pas
+   construite.**
 
 Dans tous les cas, **la durée des périodes de gratuité reste réglable à
 volonté par l'administrateur**, boutique par boutique ou globalement
@@ -108,9 +109,27 @@ dans le brief du 14 octobre mais pas encore conçue.
 
 ## Services à la carte (au-delà de l'abonnement)
 
-Pas encore construits : crédits IA, SMS/WhatsApp premium. Le modèle de
-données des crédits IA existe déjà (`AiCreditWallet`/`AiCreditTransaction`)
-mais n'est monétisé nulle part.
+**Crédits IA — construits et déployés (14 oct. 2026).** Une boutique demande
+un nombre de crédits (`POST shops/:shopId/ai-credits/top-up`) ; le montant
+facturé est figé au prix unitaire en vigueur au moment de la demande
+(`PlatformSettings.aiCreditUnitPrice`, réglable depuis `/admin/tarifs`).
+Comme pour la commission, aucun crédit n'est accordé avant qu'un
+administrateur marque la facture payée
+(`POST admin/ai-credits/top-ups/:invoiceId/mark-paid`) — à ce moment précis,
+le portefeuille (`AiCreditWallet.balance`) est crédité et une
+`AiCreditTransaction{service:"top_up"}` historise l'opération. Le coût en
+crédits de chaque service IA (recherche par photo, génération de visuel,
+etc.) se règle service par service dans un catalogue admin
+(`AiService`, CRUD complet, actif/inactif) — jamais ici globalement. Testé
+de bout en bout en production (demande, facture, marquage payé, solde
+crédité, double-paiement refusé).
+
+**SMS/WhatsApp premium — tarif préparé, pas branché.** Un interrupteur et un
+tarif mensuel sont réglables depuis `/admin/tarifs`
+(`PlatformSettings.smsWhatsappPremiumEnabled`/`smsWhatsappPremiumMonthlyFee`),
+pour que l'admin puisse préparer/afficher le prix sans attendre
+l'intégration technique — mais aucun envoi réel n'y est encore rattaché
+(aucun compte Twilio/WhatsApp Business configuré).
 
 ## Règles de gratuité
 
@@ -154,6 +173,11 @@ ce travail, et volontairement laissées ainsi :
   taux par bouquet Marketplace ou taux global par défaut, facturation
   manuelle agrégée par boutique (`run-commission-billing`), champs admin
   dans `/admin/tarifs` (par bouquet et taux par défaut global).
+- Crédits IA : demande d'achat par la boutique au prix unitaire configuré,
+  octroi des crédits uniquement après marquage "payée" par un admin
+  (`AiCreditTopUp`), catalogue des services IA administrable (`AiService`),
+  interrupteur + tarif SMS/WhatsApp premium (préparation de prix). Testé de
+  bout en bout en production avec un compte boutique jetable.
 
 **Incident corrigé en cours de route** : un bouquet de test "Essentiel"
 (catégorie GESTION) existait déjà en base avant ce chantier ; la première
@@ -165,14 +189,17 @@ supprimé (geste destructif non demandé) — à retirer manuellement depuis
 `/admin/tarifs` si souhaité.
 
 **Délibérément pas construit** (prochain lot, hors scope de ce chantier) :
-- Monétisation des crédits IA, SMS/WhatsApp premium.
+- Envoi réel SMS/WhatsApp (aucun compte Twilio/WhatsApp Business) — seul le
+  tarif est préparé.
 - Option de commission pour les livreurs (plutôt qu'abonnement fixe).
 - Planificateur automatique des cycles de facturation (boutiques, livreurs,
-  Mon Comptable, commissions) — déclenchement manuel par l'admin partout,
-  limite déjà documentée.
+  Mon Comptable, commissions, crédits IA) — déclenchement manuel par
+  l'admin partout, limite déjà documentée.
 
 ## Recommandation
 
 Prochaine étape suggérée au propriétaire, par ordre de valeur/effort : (1)
-services à la carte (crédits IA, SMS/WhatsApp) ; (2) option de commission
-livreur.
+brancher un vrai fournisseur IA (image, génération) pour que les crédits IA
+aient une utilité réelle au-delà de la facturation ; (2) compte
+Twilio/WhatsApp Business pour activer le SMS/WhatsApp premium ; (3) option
+de commission livreur.
