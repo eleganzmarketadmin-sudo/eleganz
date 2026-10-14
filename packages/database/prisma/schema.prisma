@@ -1418,6 +1418,13 @@ enum JournalEntrySource {
   // (dépôt, retrait, virement, frais bancaires) — jamais un doublon d'une
   // écriture déjà posée par une autre règle (vente, achat, charge...).
   TRESORERIE_MOUVEMENT
+  // Ajouté le 14 oct. 2026 — chantier SYSCOHADA phase 4b (stock & CMV).
+  // Écriture SÉPARÉE de POS_SALE pour la même vente (même sourceId=sale.id,
+  // sourceType différent) : constate la sortie de stock au CUMP (603/311),
+  // distincte de l'écriture caisse/ventes déjà posée par postPosSale — une
+  // même sourceType+sourceId pour les deux aurait fait ignorer la seconde
+  // comme "déjà comptabilisée" via la contrainte d'unicité existante.
+  COGS_VENTE
 }
 
 model Journal {
