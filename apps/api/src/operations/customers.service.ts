@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateCustomerDto } from "./dto/customer.dto";
+import { CreateCustomerDto, RecordCreditPaymentDto } from "./dto/customer.dto";
 
 @Injectable()
 export class CustomersService {
@@ -28,14 +28,27 @@ export class CustomersService {
     });
   }
 
-  async recordPayment(customerId: string, amount: number) {
+  /**
+   * `dto.method`/`dto.paidAt` ajoutés le 14 oct. 2026 (créances & dettes) —
+   * enregistre un `ReglementClient` en plus de la décrémentation du solde
+   * cumulé, qui reste la seule source de vérité pour le solde affiché.
+   */
+  async recordPayment(customerId: string, dto: RecordCreditPaymentDto) {
     const customer = await this.prisma.shopCustomer.findUniqueOrThrow({ where: { id: customerId } });
-    if (amount > Number(customer.creditBalance)) {
+    if (dto.amount > Number(customer.creditBalance)) {
       throw new BadRequestException("Le paiement dépasse le solde dû par ce client.");
     }
+    await this.prisma.reglementClient.create({
+      data: {
+        customerId,
+        amount: dto.amount,
+        paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
+        method: dto.method,
+      },
+    });
     return this.prisma.shopCustomer.update({
       where: { id: customerId },
-      data: { creditBalance: { decrement: amount } },
+      data: { creditBalance: { decrement: dto.amount } },
     });
   }
 }

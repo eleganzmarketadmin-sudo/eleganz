@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { SuppliersService } from "./suppliers.service";
-import { CreateSupplierDto, RecordPurchaseDto } from "./dto/supplier.dto";
+import { CreateSupplierDto, RecordPurchaseDto, SettleDebtDto } from "./dto/supplier.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -33,7 +33,12 @@ export class SuppliersController {
   }
 
   @Post(":supplierId/settle")
-  settle(@Param("supplierId") supplierId: string, @Body("amount") amount: number) {
-    return this.suppliersService.settleDebt(supplierId, amount);
+  settle(@Param("supplierId") supplierId: string, @Body() dto: SettleDebtDto) {
+    return this.suppliersService.settleDebt(supplierId, dto);
+  }
+
+  @Get("echeancier")
+  echeancier(@Param("shopId") shopId: string) {
+    return this.suppliersService.echeancier(shopId);
   }
 }

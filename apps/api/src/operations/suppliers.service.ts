@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateSupplierDto, RecordPurchaseDto } from "./dto/supplier.dto";
+import { CreateSupplierDto, RecordPurchaseDto, SettleDebtDto } from "./dto/supplier.dto";
 import { AccountingService } from "../finance/accounting.service";
 
 @Injectable()
@@ -30,6 +30,7 @@ export class SuppliersService {
           // comptable) — voir docs/ARCHITECTURE_FINANCE.md §8bis.4.
           onCredit: !!dto.onCredit,
           receivedAt: dto.receivedAt ? new Date(dto.receivedAt) : undefined,
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         },
       });
 
@@ -51,10 +52,56 @@ export class SuppliersService {
     return purchase;
   }
 
-  async settleDebt(supplierId: string, amount: number) {
+  /**
+   * `dto.purchaseId` optionnel (14 oct. 2026, créances & dettes) : quand
+   * fourni, enregistre un `ReglementFournisseur` lié à cet achat précis
+   * (lettrage par saisie explicite) en plus de la décrémentation du solde
+   * cumulé — qui reste la seule source de vérité pour le solde affiché,
+   * comme avant ce chantier.
+   */
+  async settleDebt(supplierId: string, dto: SettleDebtDto) {
+    if (dto.purchaseId) {
+      await this.prisma.reglementFournisseur.create({
+        data: {
+          purchaseId: dto.purchaseId,
+          amount: dto.amount,
+          paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
+          method: dto.method,
+        },
+      });
+    }
     return this.prisma.supplier.update({
       where: { id: supplierId },
-      data: { balanceOwed: { decrement: amount } },
+      data: { balanceOwed: { decrement: dto.amount } },
+    });
+  }
+
+  /**
+   * Échéancier fournisseurs (14 oct. 2026) — achats à crédit avec une
+   * échéance saisie, triés par date d'échéance. `restant` = montant de
+   * l'achat moins la somme des règlements déjà lettrés sur cet achat ;
+   * reste positif tant que l'utilisateur n'a pas réglé via `purchaseId`
+   * (voir `settleDebt`) — un règlement global sans `purchaseId` ne réduit
+   * donc pas ce chiffre, pour ne pas prétendre un lettrage qui n'a pas eu
+   * lieu.
+   */
+  async echeancier(shopId: string) {
+    const achats = await this.prisma.purchase.findMany({
+      where: { supplier: { shopId }, onCredit: true, dueDate: { not: null } },
+      include: { supplier: true, reglements: true },
+      orderBy: { dueDate: "asc" },
+    });
+    return achats.map((a) => {
+      const regle = a.reglements.reduce((s, r) => s + Number(r.amount), 0);
+      return {
+        purchaseId: a.id,
+        fournisseur: a.supplier.name,
+        montant: Number(a.amount),
+        dueDate: a.dueDate,
+        regle,
+        restant: Math.round((Number(a.amount) - regle) * 100) / 100,
+        enRetard: a.dueDate ? a.dueDate < new Date() : false,
+      };
     });
   }
 }
