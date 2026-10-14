@@ -14,6 +14,8 @@ import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { TresorerieComptesService } from "./tresorerie-comptes.service";
 import { TresorerieComptesController } from "./tresorerie-comptes.controller";
+import { StockValorisationService } from "./stock-valorisation.service";
+import { StockValorisationController } from "./stock-valorisation.controller";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -34,8 +36,15 @@ import { TresorerieComptesController } from "./tresorerie-comptes.controller";
     ClosureService,
     FiscalSimulationService,
     TresorerieComptesService,
+    StockValorisationService,
   ],
-  controllers: [FinanceController, AdminFinanceController, AssetsController, TresorerieComptesController],
+  controllers: [
+    FinanceController,
+    AdminFinanceController,
+    AssetsController,
+    TresorerieComptesController,
+    StockValorisationController,
+  ],
   exports: [AccountingService],
 })
 export class FinanceModule {}

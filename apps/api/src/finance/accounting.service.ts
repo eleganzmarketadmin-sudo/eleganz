@@ -209,6 +209,33 @@ export class AccountingService {
   }
 
   /**
+   * Réception de stock valorisée (chantier SYSCOHADA, phase 4 — stock &
+   * CMV, 14 oct. 2026). Débite 311 (Marchandises) plutôt que 601 (Achats) :
+   * contrairement à `postPurchase`, cette écriture constate une entrée en
+   * stock valorisée au coût réel, pas une charge d'achat immédiate — la
+   * charge (603, variation de stock) n'est constatée qu'à la SORTIE
+   * (vente), pas encore câblée à cette phase (voir docs/PLAN_COMMERCIAL.md).
+   */
+  async postReceptionStock(reception: { id: string; shopId: string; montant: number; onCredit: boolean }) {
+    await this.seed.ensureShopChartOfAccounts(reception.shopId);
+    await this.enregistrer({
+      scope: FiscalRuleScope.SHOP,
+      shopId: reception.shopId,
+      journalCode: "AC",
+      entryDate: new Date(),
+      label: `Réception de stock ${reception.id.slice(0, 8)}`,
+      sourceType: JournalEntrySource.PURCHASE,
+      sourceId: `reception:${reception.id}`,
+      lignes: [
+        { accountCode: "311", debit: reception.montant },
+        reception.onCredit
+          ? { accountCode: "401", credit: reception.montant }
+          : { accountCode: compteCaisse("USD"), credit: reception.montant },
+      ],
+    });
+  }
+
+  /**
    * Mouvement manuel de trésorerie (dépôt, retrait, virement, frais
    * bancaires...) sur un TresorerieCompte — chantier SYSCOHADA, phase 2
    * (14 oct. 2026). `compteAccountCode` est le sous-compte dédié déjà créé
