@@ -93,6 +93,18 @@ model PlatformSettings {
   smsWhatsappPremiumEnabled    Boolean  @default(false)
   smsWhatsappPremiumMonthlyFee Decimal? @db.Decimal(10, 2)
 
+  // Canaux de notification (15 oct. 2026, demande UX point 7) — activables
+  // depuis le Centre de pilotage "au moment voulu" : l'in-app est le seul
+  // canal réellement câblé à ce jour (NotificationsService n'écrit jamais
+  // de ligne Notification pour un canal désactivé ici) ; email/SMS existent
+  // déjà comme interrupteurs pour que l'admin prépare l'activation future,
+  // mais n'ont aucun fournisseur d'envoi branché tant que ces canaux
+  // réclament un investissement non encore engagé (même logique que
+  // smsWhatsappPremiumEnabled ci-dessus).
+  notificationsInAppEnabled Boolean @default(true)
+  notificationsEmailEnabled Boolean @default(false)
+  notificationsSmsEnabled   Boolean @default(false)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -171,6 +183,11 @@ model User {
   reviews         Review[]
   comptableSubscription  ComptableSubscription?
   comptableActivities    ComptableActivity[]
+
+  // Notifications & messagerie (15 oct. 2026, fondations UX points 4 et 7)
+  notifications               Notification[]
+  conversationParticipations  ConversationParticipant[]
+  sentMessages                Message[]
 }
 
 model Address {
@@ -286,6 +303,7 @@ model Shop {
   comptesTresorerie TresorerieCompte[]
   relances       Relance[]
   receptionsStock ReceptionStock[]
+  conversations  Conversation[]
 }
 
 model ShopStaff {
@@ -1591,4 +1609,88 @@ model AccountingClosure {
   resultatNet Decimal  @db.Decimal(12, 2)
 
   @@unique([scope, shopId, periodDate])
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS & MESSAGERIE — fondations transverses (15 oct. 2026, demande
+// UX points 4 et 7). Portée volontairement minimale pour cette phase :
+// in-app uniquement (voir PlatformSettings.notifications*Enabled ci-dessus),
+// pas d'envoi temps réel (websocket) — la liste se rafraîchit par polling
+// côté client, comme le reste de la plateforme (aucune socket existante).
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  COMMANDE_RECUE // nouvelle sous-commande reçue par une boutique
+  NOUVEAU_MESSAGE // nouveau message dans une conversation
+  ECHEANCE_A_VENIR // relance avant échéance (chantier C, à venir)
+  ECHEANCE_DEPASSEE // relance après échéance (chantier C, à venir)
+  AUTRE
+}
+
+// Canal sur lequel CETTE notification a été (ou aurait dû être) envoyée —
+// permet de respecter l'interrupteur par canal de PlatformSettings même
+// si plusieurs canaux sont activés plus tard pour un même événement.
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String
+  // Chemin relatif cliquable dans l'app (ex. "/commandes/<id>") — jamais une
+  // URL absolue, pour rester indépendant du domaine (admin/gestion/market).
+  link      String?
+  channel   NotificationChannel @default(IN_APP)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+// Messagerie interne (point 4) — volontairement générique : une conversation
+// peut être liée à une boutique (support boutique <-> ELEGANZ, ou boutique
+// <-> acheteur plus tard) ou rester libre (shopId nul). Pas de notion de
+// "ticket" ou de statut à cette phase — seulement un fil de messages.
+model Conversation {
+  id        String   @id @default(uuid())
+  subject   String?
+  shopId    String?
+  shop      Shop?    @relation(fields: [shopId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  // Dernière lecture par CET utilisateur — sert à calculer le nombre de
+  // messages non lus sans table de lecture séparée par message.
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
 }
