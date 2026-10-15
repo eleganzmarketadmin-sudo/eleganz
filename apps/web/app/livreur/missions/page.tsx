@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LivreurShell } from "../LivreurShell";
 import { StatusTag } from "../../components/StatusTag";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface MissionLigne {
@@ -33,17 +34,17 @@ interface DriverProfile {
   verified: boolean;
 }
 
-const LABELS_STATUT: Record<string, string> = {
-  READY_FOR_PICKUP: "À enlever",
-  PICKED_UP: "Enlevée",
-  IN_TRANSIT: "En livraison",
-  DELIVERED_DECLARED: "Livraison déclarée",
-  RECEIVED_CONFIRMED: "Réception confirmée par l'acheteur",
-  CLOSED: "Terminée",
-  DISPUTED: "En litige",
-  CANCELLED: "Annulée",
-  REFUNDED: "Remboursée",
-  RETURN_REQUESTED: "Retour demandé",
+const CLES_STATUT: Record<string, string> = {
+  READY_FOR_PICKUP: "statut_preteEnlevement",
+  PICKED_UP: "statut_recupereeLivreur",
+  IN_TRANSIT: "statut_enLivraison",
+  DELIVERED_DECLARED: "statut_livraisonDeclaree",
+  RECEIVED_CONFIRMED: "gcmd_statutReceptionConfirmeeAcheteur",
+  CLOSED: "statut_terminee",
+  DISPUTED: "statut_enLitige",
+  CANCELLED: "statut_annulee",
+  REFUNDED: "statut_remboursee",
+  RETURN_REQUESTED: "statut_retourDemande",
 };
 
 const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"> = {
@@ -64,6 +65,7 @@ function versLienWhatsapp(numero: string): string {
 }
 
 function MissionsContent() {
+  const { t } = useLocale();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [profil, setProfil] = useState<DriverProfile | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -80,10 +82,11 @@ function MissionsContent() {
         setMissions(m);
         setProfil(p);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(recharger, []);
 
   async function confirmerEnlevement(missionId: string) {
@@ -93,7 +96,7 @@ function MissionsContent() {
       await api.post(`/delivery/my-deliveries/${missionId}/picked-up`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Confirmation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("livr_confirmationImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -108,53 +111,50 @@ function MissionsContent() {
       });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Confirmation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("livr_confirmationImpossible"));
     } finally {
       setEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement de vos missions…</p>;
+  if (chargement) return <p>{t("livr_chargementMissions")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Mes missions</h1>
+      <h1 className={styles.titre}>{t("livr_mesMissions")}</h1>
       <p className={styles.sousTitre}>
-        Les livraisons qui vous sont affectées, de l&apos;enlèvement chez le
-        vendeur jusqu&apos;à la remise au client.
+        {t("livr_sousTitreMissions")}
       </p>
 
       {profil && !profil.verified && (
         <p className={styles.avisNonVerifie}>
-          Votre compte n&apos;est pas encore vérifié par l&apos;administration
-          ELEGANZ. Vous ne recevrez de missions qu&apos;une fois la
-          vérification effectuée.
+          {t("livr_compteNonVerifie")}
         </p>
       )}
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       {missions.length === 0 ? (
-        <p className={styles.messageVide}>Aucune mission affectée pour l&apos;instant.</p>
+        <p className={styles.messageVide}>{t("livr_aucuneMission")}</p>
       ) : (
         missions.map((m) => (
           <div className={styles.mission} key={m.id}>
             <div className={styles.entete}>
-              <span>Mission #{m.id.slice(0, 8)} — {m.shop.name}</span>
+              <span>{t("livr_missionNumero")} {m.id.slice(0, 8)} — {m.shop.name}</span>
               <StatusTag
-                label={LABELS_STATUT[m.status] ?? m.status}
+                label={CLES_STATUT[m.status] ? t(CLES_STATUT[m.status]) : m.status}
                 humeur={HUMEUR_PAR_STATUT[m.status] ?? "neutre"}
               />
             </div>
             <div className={styles.blocAdresse}>
               <div>
-                <div className={styles.blocAdresseTitre}>Enlèvement</div>
+                <div className={styles.blocAdresseTitre}>{t("livr_enlevement")}</div>
                 <div>{m.shop.name}</div>
                 {m.shop.invoiceAddress && <div>{m.shop.invoiceAddress}</div>}
-                {m.shop.invoicePhone && <div>Tél. {m.shop.invoicePhone}</div>}
+                {m.shop.invoicePhone && <div>{t("livr_telAbrege")} {m.shop.invoicePhone}</div>}
               </div>
               <div>
-                <div className={styles.blocAdresseTitre}>Livraison</div>
+                <div className={styles.blocAdresseTitre}>{t("livr_livraison")}</div>
                 {(m.order.deliveryAvenue || m.order.deliveryQuartier || m.order.deliveryCommune) ? (
                   <div>
                     {[m.order.deliveryAvenue, m.order.deliveryQuartier, m.order.deliveryCommune]
@@ -162,10 +162,10 @@ function MissionsContent() {
                       .join(", ")}
                   </div>
                 ) : (
-                  <div>Adresse non précisée</div>
+                  <div>{t("livr_adresseNonPrecisee")}</div>
                 )}
-                {m.order.deliveryRepere && <div>Repère : {m.order.deliveryRepere}</div>}
-                {m.order.deliveryNote && <div>Note : {m.order.deliveryNote}</div>}
+                {m.order.deliveryRepere && <div>{t("livr_repere")} : {m.order.deliveryRepere}</div>}
+                {m.order.deliveryNote && <div>{t("livr_note")} : {m.order.deliveryNote}</div>}
                 {m.order.buyerWhatsapp && (
                   <a
                     className={styles.lienWhatsapp}
@@ -173,10 +173,10 @@ function MissionsContent() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    WhatsApp client : {m.order.buyerWhatsapp}
+                    {t("livr_whatsappClient")} : {m.order.buyerWhatsapp}
                   </a>
                 )}
-                {!m.order.buyerWhatsapp && m.order.buyerPhone && <div>Tél. client : {m.order.buyerPhone}</div>}
+                {!m.order.buyerWhatsapp && m.order.buyerPhone && <div>{t("livr_telClient")} : {m.order.buyerPhone}</div>}
               </div>
             </div>
             <div className={styles.corps}>
@@ -196,13 +196,13 @@ function MissionsContent() {
                   disabled={enCours === m.id}
                   onClick={() => confirmerEnlevement(m.id)}
                 >
-                  {enCours === m.id ? "…" : "Confirmer l'enlèvement"}
+                  {enCours === m.id ? "…" : t("livr_confirmerEnlevement")}
                 </button>
               )}
               {(m.status === "PICKED_UP" || m.status === "IN_TRANSIT") && (
                 <>
                   <div className={styles.champProof}>
-                    <label htmlFor={`proof-${m.id}`}>Code de remise (optionnel)</label>
+                    <label htmlFor={`proof-${m.id}`}>{t("livr_codeRemiseOptionnel")}</label>
                     <input
                       id={`proof-${m.id}`}
                       type="text"
@@ -217,7 +217,7 @@ function MissionsContent() {
                     disabled={enCours === m.id}
                     onClick={() => confirmerLivraison(m.id)}
                   >
-                    {enCours === m.id ? "…" : "Confirmer la livraison"}
+                    {enCours === m.id ? "…" : t("livr_confirmerLivraison")}
                   </button>
                 </>
               )}

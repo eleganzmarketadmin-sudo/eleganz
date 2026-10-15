@@ -10,13 +10,9 @@ import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
+import { useLocale } from "../lib/i18n/LocaleContext";
+import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./LivreurShell.module.css";
-
-const LIENS = [
-  { href: "/livreur/missions", label: "Mes missions" },
-  { href: "/livreur/messagerie", label: "Messagerie" },
-  { href: "/livreur/profil", label: "Mon profil" },
-];
 
 /**
  * Coquille de l'espace livreur (prompt §10) — même gabarit que GestionShell
@@ -28,6 +24,13 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const { t, reviewRecommended } = useLocale();
+
+  const LIENS = [
+    { href: "/livreur/missions", label: t("livr_mesMissions") },
+    { href: "/livreur/messagerie", label: t("nav_messagerie") },
+    { href: "/livreur/profil", label: t("livr_monProfil") },
+  ];
 
   useEffect(() => {
     if (!loading && !user) router.replace("/livreur/connexion");
@@ -38,7 +41,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
   if (user.role !== "DRIVER") {
     return (
       <div className={styles.contenu}>
-        <p>Ce compte n&apos;est pas un compte livreur ELEGANZ.</p>
+        <p>{t("livr_compteNonLivreur")}</p>
       </div>
     );
   }
@@ -48,11 +51,12 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
       <header className={styles.entete}>
         <span className={styles.marque}>
           <LogoMark size={28} />
-          ELEGANZ <span>Livreur</span>
+          ELEGANZ <span>{t("livr_titre")}</span>
         </span>
         <div className={styles.enteteActions}>
           <AccueilLien />
           <NotificationBell />
+          <LanguageSwitcher />
           <ThemeToggle clair />
           <button
             className={styles.deconnexion}
@@ -61,10 +65,13 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
               router.push("/livreur/connexion");
             }}
           >
-            Se déconnecter
+            {t("action_seDeconnecter")}
           </button>
         </div>
       </header>
+      {reviewRecommended && (
+        <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
+      )}
       <BandeMarque />
       <nav className={styles.nav}>
         {LIENS.map((lien) => (

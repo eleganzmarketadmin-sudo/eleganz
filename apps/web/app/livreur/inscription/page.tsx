@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface TarificationLivreur {
@@ -48,16 +49,15 @@ const VEHICULES: { valeur: string; label: string; documentsRequis: boolean }[] =
  * côté serveur (voir DeliveryService.registerDriver).
  */
 export default function InscriptionLivreurPage() {
+  const { t } = useLocale();
   return (
     <div style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
-      <h1 style={{ marginBottom: 16 }}>Inscription livreur temporairement fermée</h1>
+      <h1 style={{ marginBottom: 16 }}>{t("linscription_fermeeTitre")}</h1>
       <p style={{ color: "var(--color-texte-muted)", lineHeight: 1.6 }}>
-        Le réseau de livreurs ouvert à tout le monde n&apos;est pas encore disponible : chaque
-        boutique ELEGANZ gère pour l&apos;instant ses propres livreurs, sous sa propre
-        responsabilité. Cette fonctionnalité sera reconsidérée plus tard.
+        {t("linscription_fermeeTexte")}
       </p>
       <p style={{ marginTop: 24 }}>
-        <Link href="/">Retour à l&apos;accueil</Link>
+        <Link href="/">{t("linscription_retourAccueil")}</Link>
       </p>
     </div>
   );

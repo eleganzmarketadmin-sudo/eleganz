@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LivreurShell } from "../LivreurShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface DriverProfile {
@@ -13,14 +14,15 @@ interface DriverProfile {
   user: { fullName: string; email: string | null; phone: string | null };
 }
 
-const LABELS_FACTURATION: Record<string, string> = {
-  FREE_PERIOD: "Période gratuite en cours",
-  PAYMENT_DUE: "Paiement attendu",
-  ACTIVE: "Abonnement à jour",
-  SUSPENDED: "Suspendu pour impayé — contactez l'administration",
+const CLES_FACTURATION: Record<string, string> = {
+  FREE_PERIOD: "abo_statutPeriodeGratuite",
+  PAYMENT_DUE: "abo_statutPaiementAttendu",
+  ACTIVE: "abo_statutAJour",
+  SUSPENDED: "livr_statutSuspendu",
 };
 
 function ProfilContent() {
+  const { t } = useLocale();
   const [profil, setProfil] = useState<DriverProfile | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -29,43 +31,43 @@ function ProfilContent() {
     api
       .get<DriverProfile>("/delivery/me")
       .then(setProfil)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Mon profil livreur</h1>
+      <h1 className={styles.titre}>{t("livr_monProfilLivreur")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {profil && (
         <div className={styles.fiche}>
           <div className={styles.champ}>
-            <span className={styles.champLabel}>Nom</span>
+            <span className={styles.champLabel}>{t("activites_nom")}</span>
             <span>{profil.user.fullName}</span>
           </div>
           <div className={styles.champ}>
-            <span className={styles.champLabel}>Contact</span>
+            <span className={styles.champLabel}>{t("livr_contact")}</span>
             <span>{profil.user.email ?? profil.user.phone}</span>
           </div>
           <div className={styles.champ}>
-            <span className={styles.champLabel}>Zone</span>
-            <span>{profil.zone ?? "Non précisée"}</span>
+            <span className={styles.champLabel}>{t("livr_zone")}</span>
+            <span>{profil.zone ?? t("livr_zoneNonPrecisee")}</span>
           </div>
           <div className={styles.champ}>
-            <span className={styles.champLabel}>Vérification</span>
+            <span className={styles.champLabel}>{t("livr_verification")}</span>
             <span className={profil.verified ? styles.statutVerifie : styles.statutNonVerifie}>
               {profil.verified
-                ? "Vérifié — vous pouvez recevoir des missions"
-                : "En attente de vérification par l'administration"}
+                ? t("livr_verifiePeutRecevoirMissions")
+                : t("livr_enAttenteVerification")}
             </span>
           </div>
           {profil.verified && (
             <div className={styles.champ}>
-              <span className={styles.champLabel}>Abonnement</span>
+              <span className={styles.champLabel}>{t("abo_statut")}</span>
               <span className={profil.billingStatus === "SUSPENDED" ? styles.statutNonVerifie : styles.statutVerifie}>
-                {LABELS_FACTURATION[profil.billingStatus] ?? profil.billingStatus}
+                {CLES_FACTURATION[profil.billingStatus] ? t(CLES_FACTURATION[profil.billingStatus]) : profil.billingStatus}
               </span>
             </div>
           )}

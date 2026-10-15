@@ -45,6 +45,16 @@
   border-color: #fff;
 }
 
+.bandeauRevue {
+  background: #fff3cd;
+  color: #664d03;
+  font-size: 0.8125rem;
+  text-align: center;
+  padding: var(--espace-2) var(--espace-3);
+  margin: 0;
+  border-bottom: 1px solid #ffe69c;
+}
+
 .nav {
   display: flex;
   background: var(--color-surface);

@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 export default function ConnexionLivreurPage() {
   const { login } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [identifiant, setIdentifiant] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
@@ -23,7 +25,7 @@ export default function ConnexionLivreurPage() {
       await login(identifiant, motDePasse);
       router.push("/livreur/missions");
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Connexion impossible pour le moment.");
+      setErreur(err instanceof ApiError ? err.message : t("lconnexion_erreur"));
     } finally {
       setEnCours(false);
     }
@@ -32,15 +34,15 @@ export default function ConnexionLivreurPage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.panneauMarque}>
-        <h1>ELEGANZ Livreur</h1>
-        <p>Vos missions de livraison, de l&apos;enlèvement à la remise au client.</p>
+        <h1>{t("lconnexion_titreMarque")}</h1>
+        <p>{t("lconnexion_texteMarque")}</p>
       </div>
       <div className={styles.panneauForm}>
         <form className={styles.form} onSubmit={soumettre}>
-          <h2 style={{ marginBottom: "24px" }}>Connexion</h2>
+          <h2 style={{ marginBottom: "24px" }}>{t("lconnexion_titre")}</h2>
           {erreur && <div className={styles.erreur}>{erreur}</div>}
           <div className={styles.champ}>
-            <label htmlFor="identifiant">Email ou numéro de téléphone</label>
+            <label htmlFor="identifiant">{t("compte_emailOuTelephone")}</label>
             <input
               id="identifiant"
               type="text"
@@ -51,7 +53,7 @@ export default function ConnexionLivreurPage() {
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="motDePasse">Mot de passe</label>
+            <label htmlFor="motDePasse">{t("compte_motDePasse")}</label>
             <input
               id="motDePasse"
               type="password"
@@ -62,10 +64,10 @@ export default function ConnexionLivreurPage() {
             />
           </div>
           <button className={styles.bouton} type="submit" disabled={enCours}>
-            {enCours ? "Connexion…" : "Se connecter"}
+            {enCours ? t("lconnexion_enCours") : t("compte_seConnecter")}
           </button>
           <p style={{ marginTop: "16px", fontSize: "0.875rem" }}>
-            Pas encore de compte ? <Link href="/livreur/inscription">Devenir livreur</Link>
+            {t("lconnexion_pasDeCompte")} <Link href="/livreur/inscription">{t("lconnexion_devenirLivreur")}</Link>
           </p>
         </form>
       </div>
