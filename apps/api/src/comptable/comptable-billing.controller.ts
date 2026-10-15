@@ -12,7 +12,7 @@ function requireAdmin(user: AuthenticatedUser) {
 }
 
 /**
- * Facturation Mon Comptable (prompt du 13 oct. 2026, §14 et §19) — même
+ * Facturation Secourable (prompt du 13 oct. 2026, §14 et §19) — même
  * découpage que DriverBillingController : déclenchement manuel des
  * transitions de cycle, plus la vue agrégée pour le Centre de pilotage.
  */

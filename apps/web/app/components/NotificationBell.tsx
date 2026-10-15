@@ -32,7 +32,7 @@ const INTERVALLE_SONDAGE_MS = 30_000;
 // Chaque espace a sa propre page de messagerie (jeton séparé pour admin et
 // livreur — voir espaceAuth() dans api.ts), donc le lien "voir tout" du
 // panneau doit pointer vers celle de l'espace courant plutôt qu'une URL
-// fixe. Mon Comptable a aussi sa propre page (ses comptes n'ont pas
+// fixe. Secourable a aussi sa propre page (ses comptes n'ont pas
 // toujours de boutique, donc pas accès à /messagerie côté Gestion).
 function cheminMessagerie(pathname: string | null): string {
   if (pathname?.startsWith("/admin")) return "/admin/messagerie";
@@ -99,7 +99,7 @@ export function NotificationBell() {
     }
     if (n.link) {
       // Le lien stocké par l'API est générique ("/messagerie") car elle ne
-      // connaît pas l'espace (admin/livreur/Mon Comptable/Gestion) dans
+      // connaît pas l'espace (admin/livreur/Secourable/Gestion) dans
       // lequel le destinataire va le lire — on le fait pointer vers la
       // page de messagerie de l'espace courant plutôt que de suivre l'URL
       // telle quelle, qui n'existerait pas dans tous les espaces.

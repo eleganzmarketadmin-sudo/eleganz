@@ -54,7 +54,7 @@ model PlatformSettings {
   driverMonthlyFee   Decimal  @default(5)  @db.Decimal(12, 2)
   driverFreeMonths   Int      @default(8)
 
-  // Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) —
+  // Tarification d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14) —
   // 6 mois gratuits à compter de la première activation effective, puis
   // 1 $/mois ou 10 $/an, entièrement paramétrable depuis le Centre de
   // pilotage sans redéploiement.
@@ -1056,7 +1056,7 @@ model ComptableEntry {
   updatedAt   DateTime @updatedAt
 }
 
-// Marqueur d'idempotence pour la saisie différée hors-ligne de Mon Comptable
+// Marqueur d'idempotence pour la saisie différée hors-ligne de Secourable
 // (prompt du 13 oct. 2026, point 2 : "saisie différée synchronisée au retour
 // du réseau") — même principe que PosSale.clientOperationId, mais sous forme
 // de ligne séparée plutôt qu'un champ sur ComptableEntry, car une seule
@@ -1187,7 +1187,7 @@ enum ComptableBillingStatus {
   SUSPENDED
 }
 
-// Un seul abonnement Mon Comptable par compte ELEGANZ (prompt §3 : compte
+// Un seul abonnement Secourable par compte ELEGANZ (prompt §3 : compte
 // commun), partagé par toutes les activités de l'utilisateur — jamais un
 // abonnement par activité. `freeTrialStartedAt` n'est posé qu'à la première
 // activation effective (prompt §14), pas à la création du compte ELEGANZ.
@@ -1202,7 +1202,7 @@ model ComptableSubscription {
   renewsAt           DateTime?
   createdAt          DateTime @default(now())
 
-  // Bouquet tarifaire Mon Comptable (14 oct. 2026, proposition validée par
+  // Bouquet tarifaire Secourable (14 oct. 2026, proposition validée par
   // le propriétaire) — distinct de `plan` ci-dessus, qui ne porte que la
   // fréquence de facturation (mensuel/annuel), jamais le palier de
   // fonctionnalités. Nullable pour la migration : un abonnement déjà actif
@@ -1216,9 +1216,9 @@ model ComptableSubscription {
   invoices ComptableInvoice[]
 }
 
-// Bouquets tarifaires Mon Comptable (14 oct. 2026, proposition validée par
+// Bouquets tarifaires Secourable (14 oct. 2026, proposition validée par
 // le propriétaire — voir docs/PLAN_COMMERCIAL.md). Contrairement à
-// SubscriptionPlan (lié à une Shop), un bouquet Mon Comptable se rattache à
+// SubscriptionPlan (lié à une Shop), un bouquet Secourable se rattache à
 // un ComptableSubscription (donc à un utilisateur, pas une boutique) — un
 // modèle séparé plutôt que de réutiliser SubscriptionPlan, dont les champs
 // (maxActiveProducts, commissionRate, relations à Shop) n'ont aucun sens ici.

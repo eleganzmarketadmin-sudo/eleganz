@@ -122,7 +122,7 @@ export class AdminSettingsService {
     };
   }
 
-  /** Lecture publique de la tarification Mon Comptable (prompt §14) — même logique que publicDriverPricing. */
+  /** Lecture publique de la tarification Secourable (prompt §14) — même logique que publicDriverPricing. */
   async publicComptablePricing() {
     const settings = await this.get();
     return {
@@ -162,7 +162,7 @@ export class AdminSettingsService {
 
   /**
    * Lecture publique du taux de change (prompt du 13 oct. 2026, point 5) —
-   * sans authentification, pour que Marketplace, Caisse et Mon Comptable
+   * sans authentification, pour que Marketplace, Caisse et Secourable
    * puissent tous afficher les équivalents de devise. `cdfPerUsd` est `null`
    * tant qu'aucun admin ne l'a configuré : l'appelant doit alors simplement
    * ne rien convertir, jamais supposer une valeur par défaut.

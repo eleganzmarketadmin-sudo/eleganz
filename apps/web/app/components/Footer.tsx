@@ -10,7 +10,7 @@ const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreu
   accueil: "Une maison, plusieurs pièces : la boutique, la vitrine et la route.",
   gestion: "La caisse et la boutique, tenues au carré.",
   admin: "La plateforme, supervisée en un coup d'œil.",
-  marketplace: "La mode congolaise, du tissu au client.",
+  marketplace: "Vendeurs et acheteurs congolais, une seule vitrine.",
   livreur: "De l'enlèvement à la remise, mission par mission.",
   comptable: "Mon carnet de gestion au quotidien.",
 };
@@ -85,7 +85,7 @@ export function Footer({
           <p className={styles.titreColonne}>À propos d&apos;ELEGANZ</p>
           <p className={styles.texteColonne}>
             Un écosystème congolais pour commerçants et indépendants : le carnet
-            de gestion Mon Comptable, la caisse et le stock de Gestion, et la
+            de gestion Secourable, la caisse et le stock de Gestion, et la
             marketplace Market pour vendre en ligne — trois outils, une seule
             maison.
           </p>
@@ -96,7 +96,7 @@ export function Footer({
           <Link href="/">Accueil</Link>
           <Link href="/marketplace">ELEGANZ Market</Link>
           <Link href="/connexion">ELEGANZ Gestion</Link>
-          <Link href="/comptable">ELEGANZ Mon Comptable</Link>
+          <Link href="/comptable">ELEGANZ Secourable</Link>
           <Link href="/admin/connexion">Centre de pilotage</Link>
           <Link href="/a-propos">À propos</Link>
         </nav>

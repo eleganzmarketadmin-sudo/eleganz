@@ -5,7 +5,7 @@ import { AdminSettingsService } from "../admin-settings/admin-settings.service";
 import { AccountingService } from "../finance/accounting.service";
 
 /**
- * Facturation d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) — même
+ * Facturation d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14) — même
  * découpage que DriverBillingService/BillingService : déclenchement manuel
  * des transitions de cycle tant qu'aucun planificateur n'est en place.
  * `freeTrialStartedAt` est posé dès la création de l'abonnement (= première
@@ -137,7 +137,7 @@ export class ComptableBillingService {
     ]);
 
     await this.accounting.postPlatformInvoicePaid(resultats[0], "comptableInvoice").catch((err) => {
-      this.logger.error(`Comptabilisation de la facture Mon Comptable ${invoiceId} échouée`, err);
+      this.logger.error(`Comptabilisation de la facture Secourable ${invoiceId} échouée`, err);
     });
 
     return resultats;

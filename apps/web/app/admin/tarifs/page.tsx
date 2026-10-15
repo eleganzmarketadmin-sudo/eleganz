@@ -413,7 +413,7 @@ interface ComptablePlan {
 }
 
 /**
- * Fonctionnalités des bouquets Mon Comptable (14 oct. 2026, proposition
+ * Fonctionnalités des bouquets Secourable (14 oct. 2026, proposition
  * validée par le propriétaire) — lues par ComptableService
  * (dashboardComparaison, dashboardHistorique, agenda) et ComptableController
  * (export/dossier-financement). Jamais une liste décorative, comme pour
@@ -549,7 +549,7 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
   if (!ouvert) {
     return (
       <button className={styles.boutonNouveau} onClick={() => setOuvert(true)}>
-        + Nouveau bouquet Mon Comptable
+        + Nouveau bouquet Secourable
       </button>
     );
   }
@@ -580,7 +580,7 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
 }
 
 /**
- * Bouquets ELEGANZ Mon Comptable (14 oct. 2026, proposition validée par le
+ * Bouquets ELEGANZ Secourable (14 oct. 2026, proposition validée par le
  * propriétaire — voir docs/PLAN_COMMERCIAL.md) : "Essentiel" reprend l'offre
  * actuelle à l'identique (jamais modifiée automatiquement), "Pro" et
  * "Premium" ajoutent de la valeur nouvelle. Entièrement gérable ici, sans
@@ -601,12 +601,12 @@ function BouquetsComptableSection() {
 
   useEffect(recharger, []);
 
-  if (chargement) return <p>Chargement des bouquets Mon Comptable…</p>;
+  if (chargement) return <p>Chargement des bouquets Secourable…</p>;
 
   return (
     <div>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
-      {bouquets.length === 0 && <p className={styles.messageVide}>Aucun bouquet Mon Comptable.</p>}
+      {bouquets.length === 0 && <p className={styles.messageVide}>Aucun bouquet Secourable.</p>}
       {bouquets.map((b) => (
         <LigneBouquetComptable key={b.id} bouquet={b} onChange={recharger} />
       ))}
@@ -616,7 +616,7 @@ function BouquetsComptableSection() {
 }
 
 /**
- * Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14) —
+ * Tarification d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14) —
  * même découpage que TarifsLivreursSection : 6 mois gratuits dès la
  * première activation, puis une formule mensuelle ou annuelle, 100 %
  * paramétrables ici.
@@ -655,7 +655,7 @@ function TarifsComptableSection() {
         comptableYearlyFee: Number(annuel),
         comptableFreeMonths: Number(moisGratuits),
       });
-      setMessage("Tarifs Mon Comptable enregistrés.");
+      setMessage("Tarifs Secourable enregistrés.");
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
     } finally {
@@ -677,12 +677,12 @@ function TarifsComptableSection() {
     }
   }
 
-  if (chargement) return <p>Chargement des tarifs Mon Comptable…</p>;
+  if (chargement) return <p>Chargement des tarifs Secourable…</p>;
 
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Tarification d&apos;ELEGANZ Mon Comptable</span>
+        <span className={styles.planNom}>Tarification d&apos;ELEGANZ Secourable</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
         Depuis l&apos;introduction des bouquets ci-dessous, le prix facturé est celui du bouquet choisi
@@ -742,7 +742,7 @@ function TarifsComptableSection() {
  * commercial) — jusqu'ici seul le frais d'ouverture (une fois) était
  * facturé ; ceci ajoute la facture mensuelle récurrente au tarif du bouquet
  * Gestion de chaque boutique active. Même déclenchement manuel que
- * livreurs/Mon Comptable, tant qu'aucun planificateur n'est en place.
+ * livreurs/Secourable, tant qu'aucun planificateur n'est en place.
  */
 function TarifsBoutiquesSection() {
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
@@ -931,7 +931,7 @@ function TauxChangeSection() {
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
         Un seul taux pour toute la plateforme — utilisé pour afficher un équivalent de devise partout
-        où c&apos;est utile (Marketplace, Caisse, Mon Comptable). Les boutiques peuvent vous demander une
+        où c&apos;est utile (Marketplace, Caisse, Secourable). Les boutiques peuvent vous demander une
         mise à jour en cas d&apos;oubli ou de retard, mais ne le modifient pas elles-mêmes.
       </p>
       {tauxActuel ? (
@@ -1299,10 +1299,10 @@ function TarifsContent() {
       <h2 className={styles.sectionTitre}>Tarifs livreurs</h2>
       <TarifsLivreursSection />
 
-      <h2 className={styles.sectionTitre}>Tarifs Mon Comptable</h2>
+      <h2 className={styles.sectionTitre}>Tarifs Secourable</h2>
       <TarifsComptableSection />
 
-      <h2 className={styles.sectionTitre}>Bouquets ELEGANZ Mon Comptable</h2>
+      <h2 className={styles.sectionTitre}>Bouquets ELEGANZ Secourable</h2>
       <BouquetsComptableSection />
 
       <h2 className={styles.sectionTitre}>Taux de change</h2>

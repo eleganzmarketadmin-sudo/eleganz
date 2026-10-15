@@ -8,7 +8,7 @@
  */
 
 // "POS_SALE" : vente Caisse (shopId requis, voir (gestion)/caisse/page.tsx).
-// "COMPTABLE_QUICK_ENTRY" : saisie rapide Mon Comptable (prompt du 13 oct.
+// "COMPTABLE_QUICK_ENTRY" : saisie rapide Secourable (prompt du 13 oct.
 // 2026, point 2 — "saisie différée synchronisée au retour du réseau" ; pas
 // de shopId, l'activité est dans le payload et le compte authentifié suffit
 // à la retrouver côté serveur, voir comptable/activites/[id]/page.tsx).

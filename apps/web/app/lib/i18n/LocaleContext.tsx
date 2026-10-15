@@ -23,7 +23,7 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 /**
  * Choix de langue pour toute la plateforme (prompt §21 + réponse du
  * propriétaire du 13 oct. 2026 ; généralisé à Admin/Gestion/Marketplace le
- * 15 oct. 2026 — n'était auparavant monté que dans Mon Comptable) —
+ * 15 oct. 2026 — n'était auparavant monté que dans Secourable) —
  * maintenant monté une seule fois à la racine (`app/layout.tsx`), mémorisé
  * par navigateur comme le thème clair/sombre (ThemeToggle.tsx), jamais
  * envoyé au serveur : ce n'est pas une donnée métier et ça évite de

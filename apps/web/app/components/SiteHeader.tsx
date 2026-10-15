@@ -12,7 +12,7 @@ const LIENS = [
   { href: "/", label: "Accueil" },
   { href: "/connexion", label: "Gestion" },
   { href: "/marketplace", label: "Market" },
-  { href: "/comptable", label: "Mon Comptable" },
+  { href: "/comptable", label: "Secourable" },
   { href: "/a-propos", label: "À propos" },
 ];
 

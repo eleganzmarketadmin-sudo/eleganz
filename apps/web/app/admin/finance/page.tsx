@@ -109,7 +109,7 @@ function FinanceAdminContenu() {
                 <td style={{ textAlign: "right" }}>{f(data.parSource.fraisLivreur.encaisse)} $</td>
               </tr>
               <tr>
-                <td>Abonnements Mon Comptable</td>
+                <td>Abonnements Secourable</td>
                 <td style={{ textAlign: "right" }}>{f(data.parSource.abonnementsComptable.facture)} $</td>
                 <td style={{ textAlign: "right" }}>{f(data.parSource.abonnementsComptable.encaisse)} $</td>
               </tr>

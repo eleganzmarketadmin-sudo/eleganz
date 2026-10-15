@@ -51,7 +51,7 @@ export default function HomePage() {
           <div className={`${styles.carte} ${styles.comptable}`}>
             <h3>Vous tenez une activité, sans boutique ni catalogue ?</h3>
             <p>
-              <strong>ELEGANZ Mon Comptable</strong> — ventes et dépenses par devise, dettes et
+              <strong>ELEGANZ Secourable</strong> — ventes et dépenses par devise, dettes et
               créances, loyers, versements des travailleurs, agenda des échéances et synthèses
               exportables. Six mois gratuits, puis 1 $ par mois.
             </p>
@@ -75,9 +75,9 @@ export default function HomePage() {
           <div className={`${styles.carte} ${styles.marketplace}`}>
             <h3>Vous cherchez à acheter ou vendre en ligne ?</h3>
             <p>
-              <strong className="titre-vitrine">ELEGANZ Market</strong> — la vitrine qui réunit les
-              boutiques de mode et de luxe congolaises : recherche, commande et livraison suivie à
-              Kinshasa.
+              <strong className="titre-vitrine">ELEGANZ Market</strong> — la vitrine qui réunit
+              vendeurs et acheteurs congolais, tous secteurs confondus : recherche, commande et
+              livraison suivie à Kinshasa.
             </p>
             <Link className={styles.lienCarte} href="/marketplace">
               Parcourir la vitrine

@@ -15,7 +15,7 @@ function formaterDateHeure(iso: string): string {
 }
 
 /**
- * Synthèse périodique Mon Comptable (prompt §10.5) — même convention de
+ * Synthèse périodique Secourable (prompt §10.5) — même convention de
  * "code de vérification" que les relevés boutique (reports.service.ts) :
  * un repère de cohérence calculé côté serveur, pas une certification
  * comptable/fiscale au sens légal.
@@ -25,7 +25,7 @@ export function renderSynthesePdf(synthese: SynthesePeriode): PDFKit.PDFDocument
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
-  doc.font("Helvetica-Bold").fontSize(14).text("Synthèse Mon Comptable", { align: "center" });
+  doc.font("Helvetica-Bold").fontSize(14).text("Synthèse ELEGANZ Secourable", { align: "center" });
   doc.font("Helvetica").fontSize(9).fillColor("#333");
   doc.text(
     `Période du ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(synthese.from))} au ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(synthese.to))}`,
@@ -82,7 +82,7 @@ export function renderSynthesePdf(synthese: SynthesePeriode): PDFKit.PDFDocument
   doc.text(`Généré le ${formaterDateHeure(synthese.genereLe)} — ${synthese.nombreOperations} opération(s) incluse(s).`);
   doc.text(`Code de vérification : ${synthese.codeVerification}`);
   doc.text(
-    "Ce document est calculé à partir de vos saisies déclaratives dans ELEGANZ Mon Comptable. Il ne constitue pas un état financier certifié ni un relevé bancaire officiel.",
+    "Ce document est calculé à partir de vos saisies déclaratives dans ELEGANZ Secourable. Il ne constitue pas un état financier certifié ni un relevé bancaire officiel.",
   );
   doc.fillColor("#000");
 
@@ -109,7 +109,7 @@ export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier préparatoire — demande de financement", { align: "center" });
-  doc.font("Helvetica").fontSize(10).fillColor("#333").text("ELEGANZ Mon Comptable", { align: "center" });
+  doc.font("Helvetica").fontSize(10).fillColor("#333").text("ELEGANZ Secourable", { align: "center" });
   doc.fillColor("#000");
   doc.moveDown(0.6);
 
@@ -119,7 +119,7 @@ export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit
   doc.fillColor("#664d03").font("Helvetica-Bold").fontSize(9);
   doc.text(
     "Ce document n'est PAS un état financier certifié ni une attestation comptable ou fiscale officielle. " +
-      "Il rassemble, à titre préparatoire, les données que vous avez vous-même déclarées dans ELEGANZ Mon Comptable, " +
+      "Il rassemble, à titre préparatoire, les données que vous avez vous-même déclarées dans ELEGANZ Secourable, " +
       "pour appuyer une démarche de financement.",
     margeGauche + 10,
     yBandeau + 7,
@@ -207,7 +207,7 @@ export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit
 
   doc.moveDown(1);
   doc.font("Helvetica").fontSize(7.5).fillColor("#555");
-  doc.text(`Généré le ${formaterDateHeure(dossier.genereLe)} à partir des données déclarées dans ELEGANZ Mon Comptable.`);
+  doc.text(`Généré le ${formaterDateHeure(dossier.genereLe)} à partir des données déclarées dans ELEGANZ Secourable.`);
   doc.text(`Code de vérification : ${dossier.codeVerification}`);
   doc.text(
     "Rappel : ce dossier ne remplace pas un état financier certifié, un audit comptable ou une attestation fiscale.",

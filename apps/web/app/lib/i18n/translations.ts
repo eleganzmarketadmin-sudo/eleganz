@@ -1,5 +1,5 @@
 /**
- * Traductions de l'interface Mon Comptable (prompt du 13 oct. 2026, §21 et
+ * Traductions de l'interface ELEGANZ Secourable (prompt du 13 oct. 2026, §21 et
  * réponse du propriétaire du 13 oct. 2026) — PORTÉE VOLONTAIREMENT LIMITÉE :
  * seuls les menus, titres, boutons et libellés de champs sont traduits,
  * jamais les données saisies par l'utilisateur (noms d'activités,
@@ -72,7 +72,7 @@ const fr: Dictionnaire = {
   langue_label: "Langue",
   langue_reviewNotice:
     "Traduction automatique pour cette langue — en cours de vérification par un locuteur natif. Certains termes peuvent être imprécis.",
-  titre_accueil: "Mon Comptable",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Mon carnet de gestion au quotidien.",
   titre_activites: "Mes activités",
   titre_chiffres: "Mon activité en chiffres",
@@ -116,7 +116,7 @@ const fr: Dictionnaire = {
   chiffres_comparaison: "Comparaison par activité",
   dossierFinancement_telecharger: "Télécharger le dossier (PDF)",
   dossierFinancement_avertissement:
-    "Ce document n'est pas une attestation financière certifiée. Il résume vos chiffres déclarés dans Mon Comptable.",
+    "Ce document n'est pas une attestation financière certifiée. Il résume vos chiffres déclarés dans ELEGANZ Secourable.",
   horsLigne_enAttente: "saisie(s) en attente de synchronisation",
   periode_aujourdhui: "Aujourd'hui",
   periode_semaine: "Cette semaine",
@@ -206,7 +206,7 @@ const en: Dictionnaire = {
   langue_label: "Language",
   langue_reviewNotice:
     "Machine-assisted translation for this language — under review by a native speaker. Some terms may be imprecise.",
-  titre_accueil: "My Accountant",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Your day-to-day bookkeeping notebook.",
   titre_activites: "My activities",
   titre_chiffres: "My activity in numbers",
@@ -336,7 +336,7 @@ const es: Dictionnaire = {
   langue_label: "Idioma",
   langue_reviewNotice:
     "Traducción asistida por máquina para este idioma, en revisión por un hablante nativo. Algunos términos pueden ser imprecisos.",
-  titre_accueil: "Mi Contador",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Tu cuaderno de gestión diaria.",
   titre_activites: "Mis actividades",
   titre_chiffres: "Mi actividad en cifras",
@@ -438,7 +438,7 @@ const ar: Dictionnaire = {
   commun_au: "إلى",
   langue_label: "اللغة",
   langue_reviewNotice: "ترجمة آلية لهذه اللغة، قيد المراجعة من قبل متحدث أصلي. قد تكون بعض المصطلحات غير دقيقة.",
-  titre_accueil: "محاسبي",
+  titre_accueil: "Secourable",
   soustitre_accueil: "دفتر إدارتك اليومي.",
   titre_activites: "أنشطتي",
   titre_chiffres: "نشاطي بالأرقام",
@@ -540,7 +540,7 @@ const pt: Dictionnaire = {
   langue_label: "Idioma",
   langue_reviewNotice:
     "Tradução assistida por máquina para este idioma, em revisão por um falante nativo. Alguns termos podem ser imprecisos.",
-  titre_accueil: "Meu Contador",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Seu caderno de gestão do dia a dia.",
   titre_activites: "Minhas atividades",
   titre_chiffres: "Minha atividade em números",
@@ -642,7 +642,7 @@ const sw: Dictionnaire = {
   commun_au: "Hadi",
   langue_label: "Lugha",
   langue_reviewNotice: "Tafsiri ya kiotomatiki kwa lugha hii — inakaguliwa na mzawa wa lugha. Maneno mengine yanaweza kuwa si sahihi kabisa.",
-  titre_accueil: "Mhasibu Wangu",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Kitabu changu cha usimamizi wa kila siku.",
   titre_activites: "Shughuli zangu",
   titre_chiffres: "Shughuli yangu kwa namba",
@@ -742,7 +742,7 @@ const ln: Dictionnaire = {
   commun_total: "Motango mobimba",
   commun_solde: "Oyo etikali",
   langue_label: "Monoko",
-  titre_accueil: "Comptable na ngai",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Buku na ngai ya kotambwisa mombongo mokolo na mokolo.",
   titre_activites: "Misala na ngai",
   titre_chiffres: "Misala na ngai na mituya",
@@ -781,7 +781,7 @@ const kg: Dictionnaire = {
   commun_total: "Yonso kumosi",
   commun_solde: "Mbongo yina sala",
   langue_label: "Ndinga",
-  titre_accueil: "Nkalaki ya mama",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Kahya ya mavanga ma lumbu ke lumbu.",
   titre_activites: "Mavanga mama",
   titre_chiffres: "Mavanga mama mu bitini",
@@ -820,7 +820,7 @@ const lu: Dictionnaire = {
   commun_total: "Yonso pamue",
   commun_solde: "Tshisala",
   langue_label: "Muakulu",
-  titre_accueil: "Comptable wanyi",
+  titre_accueil: "Secourable",
   soustitre_accueil: "Mukanda wanyi wa kulombola bibi bia dituku ne dituku.",
   titre_activites: "Midimu yanyi",
   titre_chiffres: "Midimu yanyi mu nombre",

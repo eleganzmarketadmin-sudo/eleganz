@@ -34,7 +34,7 @@ function DossierContenu() {
       <div className={styles.avertissement}>
         Ce dossier n&apos;est <strong>pas</strong> un état financier certifié ni une attestation
         comptable ou fiscale officielle. Il rassemble, à titre préparatoire, les données que vous avez
-        vous-même déclarées dans Mon Comptable, pour appuyer votre démarche auprès d&apos;une institution
+        vous-même déclarées dans Secourable, pour appuyer votre démarche auprès d&apos;une institution
         de financement.
       </div>
 

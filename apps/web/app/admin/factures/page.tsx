@@ -200,8 +200,8 @@ function FacturesContent() {
         <div>
           <p className={styles.verifLabel}>Échéancier (relances dettes/créances/loyers/versements)</p>
           <p className={styles.verifDescription}>
-            Notifie (cloche + messagerie) les acteurs concernés (Gestion, Mon Comptable) pour toute
-            échéance non réglée à J-3, le jour même, ou en retard — dettes et créances Mon Comptable,
+            Notifie (cloche + messagerie) les acteurs concernés (Gestion, Secourable) pour toute
+            échéance non réglée à J-3, le jour même, ou en retard — dettes et créances Secourable,
             loyers, versements de travailleurs, et dettes fournisseur côté Gestion.
           </p>
         </div>
@@ -292,9 +292,9 @@ function FacturesContent() {
           ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures Mon Comptable — en attente de paiement</h2>
+      <h2 className={styles.sectionTitre}>Factures Secourable — en attente de paiement</h2>
       {facturesComptable.filter((f) => f.status === "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune facture Mon Comptable en attente.</p>
+        <p className={styles.messageVide}>Aucune facture Secourable en attente.</p>
       ) : (
         facturesComptable
           .filter((f) => f.status === "PENDING")
@@ -317,9 +317,9 @@ function FacturesContent() {
           ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures Mon Comptable — historique</h2>
+      <h2 className={styles.sectionTitre}>Factures Secourable — historique</h2>
       {facturesComptable.filter((f) => f.status !== "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune autre facture Mon Comptable.</p>
+        <p className={styles.messageVide}>Aucune autre facture Secourable.</p>
       ) : (
         facturesComptable
           .filter((f) => f.status !== "PENDING")

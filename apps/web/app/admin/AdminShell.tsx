@@ -9,6 +9,7 @@ import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
+import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./AdminShell.module.css";
@@ -58,6 +59,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>Centre de pilotage</span>
         </span>
         <div className={styles.enteteActions}>
+          <AccueilLien />
           <NotificationBell />
           <LanguageSwitcher />
           <ThemeToggle clair />

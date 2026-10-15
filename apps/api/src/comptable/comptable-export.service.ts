@@ -135,7 +135,7 @@ export class ComptableExportService {
       synthese.totalVentesCdf - synthese.totalDepensesCdf,
       synthese.totalVentesUsd - synthese.totalDepensesUsd,
     ]);
-    return construireClasseurExcel("Synthèse Mon Comptable", entetes, lignes);
+    return construireClasseurExcel("Synthèse ELEGANZ Secourable", entetes, lignes);
   }
 
   /**

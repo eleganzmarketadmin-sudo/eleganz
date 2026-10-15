@@ -23,7 +23,7 @@ const LABELS_STATUT: Record<string, string> = {
 };
 
 /**
- * Rubrique « Mon Comptable » du Centre de pilotage (prompt du
+ * Rubrique « Secourable » du Centre de pilotage (prompt du
  * 13 oct. 2026, §19) — données agrégées uniquement, jamais le détail
  * financier privé d'un utilisateur (ventes, dettes, loyers...) : le module
  * reste strictement confidentiel (prompt §18), seuls les comptages et
@@ -67,7 +67,7 @@ function ComptableAdminContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Mon Comptable</h1>
+      <h1 className={styles.titre}>Secourable</h1>
       {message && <p className={styles.message}>{message}</p>}
 
       <div className={styles.grille}>

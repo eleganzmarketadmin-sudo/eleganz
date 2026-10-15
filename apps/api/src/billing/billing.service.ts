@@ -76,7 +76,7 @@ export class BillingService {
    * Facture mensuelle pour les boutiques déjà ACTIVE, au tarif de leur
    * bouquet Gestion (`SubscriptionPlan.monthlyPrice`) — jusqu'ici, aucune
    * facture récurrente n'était générée pour une boutique une fois le frais
-   * d'ouverture payé (contrairement aux livreurs et à Mon Comptable, qui
+   * d'ouverture payé (contrairement aux livreurs et à Secourable, qui
    * ont chacun leur cycle mensuel depuis le départ). Déclenchement manuel,
    * comme le reste du cycle de facturation sur ce projet — voir
    * POST /admin/billing/run-monthly-billing.

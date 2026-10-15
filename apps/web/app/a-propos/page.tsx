@@ -32,7 +32,7 @@ export default function AProposPage() {
 
       <section className={styles.modules}>
         <div className={`${styles.carte} ${styles.comptable}`}>
-          <h2>ELEGANZ Mon Comptable</h2>
+          <h2>ELEGANZ Secourable</h2>
           <p>
             Un carnet de gestion quotidien pour toute activité — commerce,
             location, service, véhicule — sans boutique ni catalogue à créer.
@@ -60,10 +60,9 @@ export default function AProposPage() {
         <div className={`${styles.carte} ${styles.marketplace}`}>
           <h2 className="titre-vitrine">ELEGANZ Market</h2>
           <p>
-            Porter la couleur : la vitrine qui réunit les boutiques ELEGANZ
-            dans un même marché en ligne. Recherche, fiche produit, panier,
-            commande, suivi de livraison et avis clients, pour acheter
-            congolais sans sortir de chez soi.
+            La vitrine qui réunit vendeurs et acheteurs congolais dans un même marché en ligne,
+            tous secteurs confondus. Recherche, fiche produit, panier, commande, suivi de livraison
+            et avis clients, pour acheter congolais sans sortir de chez soi.
           </p>
           <Link href="/marketplace">Parcourir la vitrine</Link>
         </div>

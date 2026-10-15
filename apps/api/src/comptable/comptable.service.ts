@@ -19,7 +19,7 @@ import {
 } from "./dto/comptable.dto";
 
 /**
- * ELEGANZ Mon Comptable — carnet de gestion quotidienne (prompt du
+ * ELEGANZ Secourable — carnet de gestion quotidienne (prompt du
  * 13 oct. 2026). Toute vérification de propriété se fait en comparant
  * `userId` au compte authentifié, jamais à un identifiant pris dans l'URL
  * (même principe que le reste de la plateforme) : un utilisateur ne peut
@@ -33,7 +33,7 @@ export class ComptableService {
   // --- Activités -----------------------------------------------------
 
   /**
-   * Bouquet + fonctionnalités de l'abonnement Mon Comptable de cet
+   * Bouquet + fonctionnalités de l'abonnement Secourable de cet
    * utilisateur (14 oct. 2026, proposition validée par le propriétaire —
    * voir docs/PLAN_COMMERCIAL.md) — jamais de bouquet inventé : un
    * utilisateur sans abonnement (premier accès) ou sans bouquet rattaché
@@ -66,7 +66,7 @@ export class ComptableService {
       const nombreActuel = await this.prisma.comptableActivity.count({ where: { userId, archived: false } });
       if (nombreActuel >= maxActivities) {
         throw new ConflictException(
-          `Le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable est limité à ${maxActivities} activité(s) suivie(s) simultanément. Passez à un bouquet supérieur pour en suivre davantage.`,
+          `Le bouquet ${bouquet?.name ?? "actuel"} de Secourable est limité à ${maxActivities} activité(s) suivie(s) simultanément. Passez à un bouquet supérieur pour en suivre davantage.`,
         );
       }
     }
@@ -518,7 +518,7 @@ export class ComptableService {
     const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
     if (features.comparaisonPeriodes !== true) {
       throw new ForbiddenException(
-        `La comparaison entre activités n'est pas incluse dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Passez à un bouquet supérieur pour y accéder.`,
+        `La comparaison entre activités n'est pas incluse dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Passez à un bouquet supérieur pour y accéder.`,
       );
     }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
@@ -623,7 +623,7 @@ export class ComptableService {
     if (subscription.billingStatus === "FREE_PERIOD") {
       infos.push({ label: "Période gratuite en cours", detail: "Voir l'abonnement" });
     } else if (subscription.billingStatus === "PAYMENT_DUE") {
-      urgents.push({ label: "Abonnement à régulariser", detail: "Mon Comptable", refType: "subscription", refId: subscription.id });
+      urgents.push({ label: "Abonnement à régulariser", detail: "ELEGANZ Secourable", refType: "subscription", refId: subscription.id });
     }
 
     return { urgents, aVenir, infos };
@@ -640,7 +640,7 @@ export class ComptableService {
     const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
     if (features.rappelsAgenda !== true) {
       throw new ForbiddenException(
-        `L'agenda n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Les rappels prioritaires de la page d'accueil restent disponibles ; passez à un bouquet supérieur pour accéder à la vue agenda complète.`,
+        `L'agenda n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Les rappels prioritaires de la page d'accueil restent disponibles ; passez à un bouquet supérieur pour accéder à la vue agenda complète.`,
       );
     }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
@@ -714,9 +714,9 @@ export class ComptableService {
     return evenements;
   }
 
-  // --- Abonnement Mon Comptable -------------------------------------------
+  // --- Abonnement Secourable -------------------------------------------
 
-  /** Activation effective = premier appel authentifié à l'espace Mon Comptable (prompt §14). */
+  /** Activation effective = premier appel authentifié à l'espace Secourable (prompt §14). */
   async getOrCreateSubscription(userId: string) {
     const existant = await this.prisma.comptableSubscription.findUnique({
       where: { userId },

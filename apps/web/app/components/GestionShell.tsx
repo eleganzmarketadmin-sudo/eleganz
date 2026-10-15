@@ -10,6 +10,7 @@ import { LogoMark, BandeMarque } from "./Logo";
 import { Footer } from "./Footer";
 import { NotificationBell } from "./NotificationBell";
 import { ChatWidget } from "./ChatWidget";
+import { AccueilLien } from "./AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./GestionShell.module.css";
@@ -57,6 +58,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className={styles.droite}>
+          <AccueilLien />
           {nombreEnAttente > 0 && (
             <button
               onClick={synchroniser}

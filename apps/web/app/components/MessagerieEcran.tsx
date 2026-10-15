@@ -31,7 +31,7 @@ function nomAutrePartie(conv: Conversation, monId: string): string {
 
 /**
  * Centre de messagerie interne (demande UX du 15 oct. 2026, point 4) —
- * composant partagé par tous les espaces (admin, Gestion, Mon Comptable,
+ * composant partagé par tous les espaces (admin, Gestion, Secourable,
  * Marketplace, Livreur) : seule la coquille qui l'entoure change, pas la
  * logique. Fondation volontairement simple : pas encore d'annuaire de
  * contacts (le champ "destinataire" ci-dessous attend un identifiant de

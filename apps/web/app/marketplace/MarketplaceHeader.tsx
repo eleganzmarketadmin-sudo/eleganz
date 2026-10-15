@@ -6,6 +6,7 @@ import { useCart } from "../lib/cart-context";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { NotificationBell } from "../components/NotificationBell";
+import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./MarketplaceHeader.module.css";
@@ -24,6 +25,7 @@ export function MarketplaceHeader() {
           ELEGANZ <span className={styles.nomModule}>Market</span>
         </Link>
         <nav className={styles.liens}>
+          <AccueilLien />
           <LanguageSwitcher />
           <ThemeToggle clair />
           <Link href="/marketplace/panier" className={styles.panier}>

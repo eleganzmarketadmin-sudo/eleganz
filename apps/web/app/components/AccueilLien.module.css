@@ -1,0 +1,18 @@
+.lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  opacity: 0.85;
+  font-weight: 500;
+  font-size: 0.9rem;
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.lien:hover {
+  opacity: 1;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+}

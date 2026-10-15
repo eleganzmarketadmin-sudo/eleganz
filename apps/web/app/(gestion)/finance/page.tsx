@@ -104,7 +104,7 @@ function FinanceDashboardContent() {
           suivi indépendant (vos propres ventes, dépenses, dettes et créances,
           sans créer de boutique), utilisez{" "}
           <a href="/comptable" target="_blank" rel="noreferrer">
-            ELEGANZ Mon Comptable
+            ELEGANZ Secourable
           </a>{" "}
           — un carnet séparé, pas un substitut à cet écran.
         </p>

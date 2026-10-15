@@ -4,7 +4,7 @@ import { Prisma } from "@eleganz/database";
 import { CreateComptablePlanDto, UpdateComptablePlanDto } from "./dto/comptable-plan.dto";
 
 /**
- * Bouquets ELEGANZ Mon Comptable (14 oct. 2026, proposition soumise au
+ * Bouquets ELEGANZ Secourable (14 oct. 2026, proposition soumise au
  * propriétaire puis validée — voir docs/PLAN_COMMERCIAL.md). Trois paliers :
  * "Essentiel" reprend EXACTEMENT l'offre actuelle (1 $/mois, 10 $/an,
  * 1 activité) pour ne rien changer aux abonnés déjà sur cette offre — voir
@@ -76,7 +76,7 @@ export class ComptablePlansService implements OnModuleInit {
       await this.seedBouquetsDeDepart();
       await this.rattacherAbonnesSansBouquet();
     } catch (err) {
-      this.logger.error("Échec du seed des bouquets Mon Comptable au démarrage", err);
+      this.logger.error("Échec du seed des bouquets Secourable au démarrage", err);
     }
   }
 
@@ -105,7 +105,7 @@ export class ComptablePlansService implements OnModuleInit {
       nombreCrees++;
     }
     if (nombreCrees > 0) {
-      this.logger.log(`${nombreCrees} bouquet(s) Mon Comptable de départ créé(s).`);
+      this.logger.log(`${nombreCrees} bouquet(s) Secourable de départ créé(s).`);
     }
   }
 
@@ -121,7 +121,7 @@ export class ComptablePlansService implements OnModuleInit {
       data: { bouquetId: bouquetParDefaut.id },
     });
     if (resultat.count > 0) {
-      this.logger.log(`${resultat.count} abonnement(s) Mon Comptable existant(s) rattaché(s) au bouquet Pro par défaut.`);
+      this.logger.log(`${resultat.count} abonnement(s) Secourable existant(s) rattaché(s) au bouquet Pro par défaut.`);
     }
   }
 

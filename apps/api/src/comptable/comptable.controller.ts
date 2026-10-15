@@ -22,7 +22,7 @@ import {
 } from "./dto/comptable.dto";
 
 /**
- * ELEGANZ Mon Comptable (prompt du 13 oct. 2026) — toutes les routes
+ * ELEGANZ Secourable (prompt du 13 oct. 2026) — toutes les routes
  * n'exigent qu'un compte ELEGANZ authentifié, quel que soit son rôle
  * (BUYER, SHOP_OWNER...) : le module est utilisable sans boutique ni
  * catalogue (prompt §1), le compte ELEGANZ commun suffit (prompt §3).
@@ -254,7 +254,7 @@ export class ComptableController {
     const { bouquet, features } = await this.comptableService.getBouquetEtFonctionnalites(user.id);
     if (features.exportDossierFinancement !== true) {
       throw new ForbiddenException(
-        `Le dossier de financement n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon Comptable. Passez au bouquet Premium pour y accéder.`,
+        `Le dossier de financement n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Passez au bouquet Premium pour y accéder.`,
       );
     }
     const dossier = await this.comptableExportService.dossierFinancement(user.id);

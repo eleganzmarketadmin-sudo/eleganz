@@ -74,7 +74,7 @@ export class MessagingService {
     });
 
     // Lien générique : ce service ne sait pas dans quel espace (admin,
-    // Gestion, Mon Comptable, livreur...) le destinataire va le lire —
+    // Gestion, Secourable, livreur...) le destinataire va le lire —
     // chaque espace a sa propre page de messagerie (voir NotificationBell
     // côté web, qui résout "/messagerie" vers la bonne URL selon l'espace
     // courant). Pas encore de lien profond vers une conversation précise.

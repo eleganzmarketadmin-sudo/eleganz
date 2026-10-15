@@ -57,9 +57,8 @@ export default function MarketplacePage() {
       <div className={styles.entete}>
         <h1>ELEGANZ Market</h1>
         <p>
-          Porter la couleur : la marketplace qui réunit les boutiques de mode
-          et de luxe congolaises dans une seule vitrine — recherche, fiche
-          produit, commande et livraison suivie à Kinshasa.
+          La marketplace qui réunit vendeurs et acheteurs congolais dans une seule vitrine, tous
+          secteurs confondus — recherche, fiche produit, commande et livraison suivie à Kinshasa.
         </p>
       </div>
 

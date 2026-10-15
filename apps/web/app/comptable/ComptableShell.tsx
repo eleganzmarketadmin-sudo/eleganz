@@ -9,17 +9,18 @@ import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
+import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
 import styles from "./ComptableShell.module.css";
 
 /**
- * Coquille d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §3) — espace
+ * Coquille d'ELEGANZ Secourable (prompt du 13 oct. 2026, §3) — espace
  * fonctionnellement autonome (pas de boutique requise), mais partage le
  * compte ELEGANZ commun : contrairement à l'espace livreur ou admin, aucune
  * clé de jeton séparée, aucun rôle imposé — n'importe quel compte ELEGANZ
- * authentifié peut utiliser Mon Comptable (voir espaceAuth() dans api.ts,
+ * authentifié peut utiliser Secourable (voir espaceAuth() dans api.ts,
  * qui range tout ce qui n'est pas /admin ou /livreur dans le même espace
  * "défaut" que la Marketplace et Gestion).
  *
@@ -72,6 +73,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>{t("titre_accueil")}</span>
         </span>
         <div className={styles.enteteActions}>
+          <AccueilLien />
           {nombreEnAttente > 0 && (
             <button
               className={styles.pendingSync}

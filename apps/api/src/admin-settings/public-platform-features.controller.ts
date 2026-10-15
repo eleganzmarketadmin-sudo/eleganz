@@ -40,7 +40,7 @@ export class PublicPlatformFeaturesController {
   }
 
   // Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) —
-  // public, pour que Marketplace, Caisse et Mon Comptable affichent tous le
+  // public, pour que Marketplace, Caisse et Secourable affichent tous le
   // même équivalent sans être authentifiés en admin.
   @Get("exchange-rate")
   exchangeRate() {

@@ -75,7 +75,7 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   driverFreeMonths?: number;
 
-  // Tarification d'ELEGANZ Mon Comptable (prompt du 13 oct. 2026, §14).
+  // Tarification d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14).
   @IsOptional()
   @IsNumber()
   @Min(0)

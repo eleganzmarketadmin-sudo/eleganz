@@ -31,7 +31,7 @@ const LIBELLE_ETAT: Record<EtatEcheance, string> = {
  * que les acteurs (gestion, comptable) vont recevoir dans leur messagerie et
  * sous forme de notification."
  *
- * Couvre les échéances déjà suivies dans le moteur Mon Comptable
+ * Couvre les échéances déjà suivies dans le moteur Secourable
  * (ComptableDebt, ComptableRentPayment, ComptableWorkerRemittance) et côté
  * Gestion (achats fournisseur à crédit, `Purchase.onCredit`). Jamais une
  * échéance inventée : seules des lignes déjà saisies par l'utilisateur,

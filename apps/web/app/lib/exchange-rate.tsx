@@ -9,7 +9,7 @@ import { formatMoney } from "./money";
  * seul taux pour toute la plateforme, piloté depuis le Centre de pilotage
  * (voir apps/api/src/admin-settings). Lu ici via l'endpoint public
  * GET /platform-settings/exchange-rate, sans authentification, pour que
- * Marketplace, Caisse et Mon Comptable puissent tous l'utiliser.
+ * Marketplace, Caisse et Secourable puissent tous l'utiliser.
  *
  * Phase 1 seulement : conversion "au taux du jour", pour l'affichage.
  * Jamais figé sur une vente/opération déjà enregistrée dans cette passe

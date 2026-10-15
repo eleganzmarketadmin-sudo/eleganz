@@ -9,6 +9,7 @@ import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
+import { AccueilLien } from "../components/AccueilLien";
 import styles from "./LivreurShell.module.css";
 
 const LIENS = [
@@ -50,6 +51,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>Livreur</span>
         </span>
         <div className={styles.enteteActions}>
+          <AccueilLien />
           <NotificationBell />
           <ThemeToggle clair />
           <button
