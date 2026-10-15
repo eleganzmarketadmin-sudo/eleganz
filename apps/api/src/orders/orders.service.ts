@@ -1,8 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
-import { OrderStatus, StockMovementType } from "@eleganz/database";
+import { NotificationType, OrderStatus, StockMovementType } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
+import { NotificationsService } from "../notifications/notifications.service";
 
 // Transitions légales du statut d'une sous-commande (prompt §42). Toute
 // transition hors de cette carte est refusée — évite qu'un statut saute une
@@ -34,6 +35,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accounting: AccountingService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -43,7 +45,7 @@ export class OrdersService {
    * qu'une vente en caisse concurrente ne vende le même article.
    */
   async createOrder(buyerId: string, dto: CreateOrderDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
       const byShop = new Map<string, { variantId: string; quantity: number; unitPrice: number }[]>();
 
       for (const item of dto.items) {
@@ -143,6 +145,38 @@ export class OrdersService {
 
       return order;
     });
+
+    // Notification "commande reçue" (demande UX du 15 oct. 2026, point 7) —
+    // chaque boutique concernée par la commande (son propriétaire + son
+    // équipe active) est notifiée, sans bloquer la réponse à l'acheteur si
+    // la notification échoue.
+    this.notifierBoutiquesCommandeRecue(order.id, order.shopOrders.map((so) => so.shopId)).catch((err) => {
+      this.logger.error(`Notification "commande reçue" échouée pour la commande ${order.id}`, err);
+    });
+
+    return order;
+  }
+
+  private async notifierBoutiquesCommandeRecue(orderId: string, shopIds: string[]) {
+    const uniqueShopIds = [...new Set(shopIds)];
+    const shops = await this.prisma.shop.findMany({
+      where: { id: { in: uniqueShopIds } },
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
+        staff: { where: { active: true }, select: { userId: true } },
+      },
+    });
+    for (const shop of shops) {
+      const destinataires = [shop.ownerId, ...shop.staff.map((s) => s.userId)];
+      await this.notifications.notifierUtilisateurs(destinataires, {
+        type: NotificationType.COMMANDE_RECUE,
+        title: "Nouvelle commande reçue",
+        body: `${shop.name} a reçu une nouvelle commande.`,
+        link: `/gestion/commandes?orderId=${orderId}`,
+      });
+    }
   }
 
   listForBuyer(buyerId: string) {

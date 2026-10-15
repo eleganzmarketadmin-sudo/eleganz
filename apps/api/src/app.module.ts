@@ -23,6 +23,8 @@ import { SupervisionModule } from "./supervision/supervision.module";
 import { ComptableModule } from "./comptable/comptable.module";
 import { FinanceModule } from "./finance/finance.module";
 import { AiCreditsModule } from "./ai-credits/ai-credits.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { MessagingModule } from "./messaging/messaging.module";
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { AiCreditsModule } from "./ai-credits/ai-credits.module";
     ComptableModule,
     FinanceModule,
     AiCreditsModule,
+    NotificationsModule,
+    MessagingModule,
   ],
 })
 export class AppModule {}
