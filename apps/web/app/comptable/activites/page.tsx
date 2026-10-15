@@ -13,15 +13,15 @@ interface Activite {
   category: string;
 }
 
-const CATEGORIES: { valeur: string; label: string }[] = [
-  { valeur: "COMMERCE", label: "Commerce" },
-  { valeur: "LOCATION", label: "Location (maisons, appartements…)" },
-  { valeur: "VEHICULE", label: "Véhicule (taxi, transport…)" },
-  { valeur: "SERVICE", label: "Prestation de services" },
-  { valeur: "AUTRE", label: "Autre" },
+const CATEGORIES: { valeur: string; cle: string }[] = [
+  { valeur: "COMMERCE", cle: "activites_catCommerce" },
+  { valeur: "LOCATION", cle: "activites_catLocation" },
+  { valeur: "VEHICULE", cle: "activites_catVehicule" },
+  { valeur: "SERVICE", cle: "activites_catService" },
+  { valeur: "AUTRE", cle: "activites_catAutre" },
 ];
 
-const LABELS_CATEGORIE: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.valeur, c.label]));
+const CLES_CATEGORIE: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.valeur, c.cle]));
 
 function ActivitesContenu() {
   const { t } = useLocale();
@@ -36,7 +36,7 @@ function ActivitesContenu() {
     api
       .get<Activite[]>("/comptable/activities")
       .then(setActivites)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -52,7 +52,7 @@ function ActivitesContenu() {
       setNom("");
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("activites_creationImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -72,7 +72,7 @@ function ActivitesContenu() {
           activites.map((a) => (
             <Link className={styles.activite} href={`/comptable/activites/${a.id}`} key={a.id}>
               <span className={styles.activiteNom}>{a.name}</span>
-              <span className={styles.activiteCategorie}>{LABELS_CATEGORIE[a.category] ?? a.category}</span>
+              <span className={styles.activiteCategorie}>{CLES_CATEGORIE[a.category] ? t(CLES_CATEGORIE[a.category]) : a.category}</span>
             </Link>
           ))
         )}
@@ -82,7 +82,7 @@ function ActivitesContenu() {
         <label className={styles.champ}>
           <span>{t("activites_nom")}</span>
           <input
-            placeholder="Ex. Petit commerce, Maison Lemba…"
+            placeholder={t("activites_placeholderNom")}
             value={nom}
             onChange={(e) => setNom(e.target.value)}
             required
@@ -93,7 +93,7 @@ function ActivitesContenu() {
           <select value={categorie} onChange={(e) => setCategorie(e.target.value)}>
             {CATEGORIES.map((c) => (
               <option key={c.valeur} value={c.valeur}>
-                {c.label}
+                {t(c.cle)}
               </option>
             ))}
           </select>

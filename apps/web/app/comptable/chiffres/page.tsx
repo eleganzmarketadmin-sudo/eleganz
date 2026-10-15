@@ -124,7 +124,7 @@ function ChiffresContenu() {
         await ouvrirDocumentPdf(path);
       }
     } catch (err) {
-      setErreurExport(err instanceof Error ? err.message : "Export impossible.");
+      setErreurExport(err instanceof Error ? err.message : t("chiffres_exportImpossible"));
     } finally {
       setExportEnCours(null);
     }
@@ -141,9 +141,9 @@ function ChiffresContenu() {
         setHistorique(h);
         setComparaison(c);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
   if (chargement) return <p>{t("commun_chargement")}</p>;
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
@@ -153,7 +153,7 @@ function ChiffresContenu() {
     <div>
       <h1 className={styles.titre}>{t("titre_chiffres")}</h1>
       <p className={styles.sousTitre}>
-        Calculé à partir des {dashboard.activites} activité(s) enregistrée(s) — jamais une donnée inventée.
+        {t("chiffres_sousTitre").replace("{{nombre}}", String(dashboard.activites))}
       </p>
 
       <div className={styles.grillePeriodes}>
@@ -237,8 +237,7 @@ function ChiffresContenu() {
       </div>
 
       <p className={styles.note}>
-        Ces chiffres sont calculés à partir de vos saisies déclaratives. Ils ne constituent pas un état
-        financier certifié ni un relevé bancaire officiel.{" "}
+        {t("chiffres_noteDeclarative")}{" "}
         <Link href="/comptable/dossier-financement">{t("chiffres_dossierFinancement")}</Link>
       </p>
     </div>

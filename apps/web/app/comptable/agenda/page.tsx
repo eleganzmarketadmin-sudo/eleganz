@@ -53,9 +53,9 @@ function AgendaContenu() {
     api
       .get<Evenement[]>("/comptable/agenda")
       .then(setEvenements)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
   const parJour = useMemo(() => {
     const m = new Map<string, Evenement[]>();
@@ -81,7 +81,7 @@ function AgendaContenu() {
     <div>
       <h1 className={styles.titre}>{t("titre_agenda")}</h1>
       <p className={styles.sousTitre}>
-        Vos échéances réelles — dettes, créances, emprunts, loyers attendus et versements des travailleurs.
+        {t("agenda_sousTitre")}
       </p>
 
       <div className={styles.onglets}>
@@ -146,9 +146,9 @@ function AgendaContenu() {
           </div>
 
           <div className={styles.grilleCalendrier}>
-            {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((j) => (
+            {["agenda_lun", "agenda_mar", "agenda_mer", "agenda_jeu", "agenda_ven", "agenda_sam", "agenda_dim"].map((j) => (
               <div className={styles.enteteJourSemaine} key={j}>
-                {j}
+                {t(j)}
               </div>
             ))}
             {grille.map((date, i) => {

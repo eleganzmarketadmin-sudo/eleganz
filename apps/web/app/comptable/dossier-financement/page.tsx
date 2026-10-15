@@ -17,7 +17,7 @@ function DossierContenu() {
     try {
       await ouvrirDocumentPdf("/comptable/export/dossier-financement");
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Le dossier n'a pas pu être généré.");
+      setErreur(err instanceof Error ? err.message : t("cpt_dossierNonGenere"));
     } finally {
       setEnCours(false);
     }
@@ -27,32 +27,28 @@ function DossierContenu() {
     <div>
       <h1 className={styles.titre}>{t("titre_dossierFinancement")}</h1>
       <p className={styles.sousTitre}>
-        Un document prêt à joindre à une demande de crédit — historique sur 6 mois de vos activités,
-        dettes et créances en cours.
+        {t("dossier_sousTitre")}
       </p>
 
       <div className={styles.avertissement}>
-        Ce dossier n&apos;est <strong>pas</strong> un état financier certifié ni une attestation
-        comptable ou fiscale officielle. Il rassemble, à titre préparatoire, les données que vous avez
-        vous-même déclarées dans Secourable, pour appuyer votre démarche auprès d&apos;une institution
-        de financement.
+        {t("dossier_avertissementPre")} <strong>{t("dossier_avertissementPas")}</strong> {t("dossier_avertissementPost")}
       </div>
 
       <div className={styles.contenuDossier}>
-        <h2 className={styles.sectionTitre}>Ce que contient le dossier</h2>
+        <h2 className={styles.sectionTitre}>{t("dossier_contenuTitre")}</h2>
         <ul className={styles.liste}>
-          <li>La liste de vos activités déclarées et leur ancienneté</li>
-          <li>Un historique mensuel sur 6 mois (ventes, dépenses, résultat estimé par devise)</li>
-          <li>Vos dettes et emprunts en cours, avec solde restant</li>
-          <li>Vos créances en cours (montants que l&apos;on vous doit)</li>
-          <li>Un code de vérification et la date de génération</li>
+          <li>{t("dossier_listeActivites")}</li>
+          <li>{t("dossier_historiqueMensuel")}</li>
+          <li>{t("dossier_dettesEmprunts")}</li>
+          <li>{t("dossier_creancesEnCours")}</li>
+          <li>{t("dossier_codeVerification")}</li>
         </ul>
       </div>
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       <button className={styles.bouton} onClick={telecharger} disabled={enCours}>
-        {enCours ? "Génération…" : "Télécharger le dossier (PDF)"}
+        {enCours ? t("dossier_genererEnCours") : t("dossier_telechargerPdf")}
       </button>
     </div>
   );

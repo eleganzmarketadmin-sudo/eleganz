@@ -78,7 +78,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
             <button
               className={styles.pendingSync}
               onClick={synchroniser}
-              title="Cliquer pour tenter de synchroniser maintenant"
+              title={t("horsLigne_cliquerSynchroniser")}
             >
               {nombreEnAttente} {t("horsLigne_enAttente")}
             </button>

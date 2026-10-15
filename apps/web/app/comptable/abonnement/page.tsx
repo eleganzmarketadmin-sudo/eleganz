@@ -21,11 +21,11 @@ interface Tarification {
   comptableFreeMonths: number;
 }
 
-const LABELS_STATUT: Record<string, string> = {
-  FREE_PERIOD: "Période gratuite en cours",
-  PAYMENT_DUE: "Paiement attendu",
-  ACTIVE: "Abonnement à jour",
-  SUSPENDED: "Suspendu pour impayé",
+const CLES_STATUT: Record<string, string> = {
+  FREE_PERIOD: "abo_statutPeriodeGratuite",
+  PAYMENT_DUE: "abo_statutPaiementAttendu",
+  ACTIVE: "abo_statutAJour",
+  SUSPENDED: "abo_statutSuspendu",
 };
 
 function AbonnementContenu() {
@@ -41,11 +41,11 @@ function AbonnementContenu() {
       api.get<Subscription>("/comptable/subscription"),
       api.get<Tarification>("/platform-settings/comptable-pricing", false),
     ])
-      .then(([s, t]) => {
+      .then(([s, tp]) => {
         setSubscription(s);
-        setTarification(t);
+        setTarification(tp);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -58,7 +58,7 @@ function AbonnementContenu() {
       await api.post("/comptable/subscription/plan", { plan });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Choix impossible pour le moment.");
+      setErreur(err instanceof ApiError ? err.message : t("abo_choixImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -74,49 +74,49 @@ function AbonnementContenu() {
 
       <div className={styles.carte}>
         <div className={styles.ligne}>
-          <span>Statut</span>
-          <strong>{LABELS_STATUT[subscription.billingStatus]}</strong>
+          <span>{t("abo_statut")}</span>
+          <strong>{t(CLES_STATUT[subscription.billingStatus])}</strong>
         </div>
         <div className={styles.ligne}>
-          <span>Début de la période gratuite</span>
+          <span>{t("abo_debutPeriodeGratuite")}</span>
           <span>{formatDate(subscription.freeTrialStartedAt)}</span>
         </div>
         <div className={styles.ligne}>
-          <span>Durée de gratuité</span>
-          <span>{tarification.comptableFreeMonths} mois</span>
+          <span>{t("abo_dureeGratuite")}</span>
+          <span>{tarification.comptableFreeMonths} {t("imm_mois")}</span>
         </div>
         {subscription.renewsAt && (
           <div className={styles.ligne}>
-            <span>Prochain renouvellement</span>
+            <span>{t("abo_prochainRenouvellement")}</span>
             <span>{formatDate(subscription.renewsAt)}</span>
           </div>
         )}
         <div className={styles.ligne}>
-          <span>Formule choisie</span>
-          <span>{subscription.plan === "YEARLY" ? "Annuelle" : subscription.plan === "MONTHLY" ? "Mensuelle" : "Non choisie"}</span>
+          <span>{t("abo_formuleChoisie")}</span>
+          <span>{subscription.plan === "YEARLY" ? t("abo_annuelle") : subscription.plan === "MONTHLY" ? t("abo_mensuelle") : t("abo_nonChoisie")}</span>
         </div>
       </div>
 
-      <h2 style={{ marginBottom: "16px" }}>Choisir une formule après la période gratuite</h2>
+      <h2 style={{ marginBottom: "16px" }}>{t("abo_choisirFormule")}</h2>
       <div className={styles.plans}>
         <div className={`${styles.plan} ${subscription.plan === "MONTHLY" ? styles.planChoisi : ""}`}>
-          <div>Mensuelle</div>
-          <div className={styles.planPrix}>{tarification.comptableMonthlyFee} $ / mois</div>
+          <div>{t("abo_mensuelle")}</div>
+          <div className={styles.planPrix}>{tarification.comptableMonthlyFee} $ / {t("abo_mois")}</div>
           <button className={styles.bouton} disabled={enCours} onClick={() => choisir("MONTHLY")}>
-            {subscription.plan === "MONTHLY" ? "Formule actuelle" : "Choisir"}
+            {subscription.plan === "MONTHLY" ? t("abo_formuleActuelle") : t("abo_choisir")}
           </button>
         </div>
         <div className={`${styles.plan} ${subscription.plan === "YEARLY" ? styles.planChoisi : ""}`}>
-          <div>Annuelle</div>
-          <div className={styles.planPrix}>{tarification.comptableYearlyFee} $ / an</div>
+          <div>{t("abo_annuelle")}</div>
+          <div className={styles.planPrix}>{tarification.comptableYearlyFee} $ / {t("abo_an")}</div>
           <button className={styles.bouton} disabled={enCours} onClick={() => choisir("YEARLY")}>
-            {subscription.plan === "YEARLY" ? "Formule actuelle" : "Choisir"}
+            {subscription.plan === "YEARLY" ? t("abo_formuleActuelle") : t("abo_choisir")}
           </button>
         </div>
       </div>
 
       <p style={{ marginTop: "24px", color: "var(--color-texte-muted)", fontSize: "0.875rem" }}>
-        Vos données restent consultables et exportables même après l&apos;expiration de la période gratuite.
+        {t("abo_noteDonneesConsultables")}
       </p>
     </div>
   );

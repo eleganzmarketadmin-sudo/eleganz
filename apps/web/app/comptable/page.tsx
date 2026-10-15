@@ -102,9 +102,9 @@ function AccueilContenu() {
         setReminders(r);
         setSubscription(s);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
   if (chargement) return <p>{t("commun_chargement")}</p>;
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
@@ -136,10 +136,10 @@ function AccueilContenu() {
         >
           <span>
             {subscription.billingStatus === "FREE_PERIOD" &&
-              `Période gratuite en cours — environ ${joursGratuitRestants} jour(s) restant(s).`}
-            {subscription.billingStatus === "PAYMENT_DUE" && "Votre période gratuite est écoulée — un paiement est attendu."}
-            {subscription.billingStatus === "ACTIVE" && "Abonnement à jour."}
-            {subscription.billingStatus === "SUSPENDED" && "Abonnement suspendu pour impayé."}
+              t("accueil_periodeGratuiteRestante").replace("{{jours}}", String(joursGratuitRestants))}
+            {subscription.billingStatus === "PAYMENT_DUE" && t("accueil_periodeGratuiteEcoulee")}
+            {subscription.billingStatus === "ACTIVE" && t("accueil_abonnementAJour")}
+            {subscription.billingStatus === "SUSPENDED" && t("accueil_abonnementSuspendu")}
           </span>
           <Link href="/comptable/abonnement">{t("accueil_gererAbonnement")}</Link>
         </div>

@@ -62,7 +62,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           {nombreEnAttente > 0 && (
             <button
               onClick={synchroniser}
-              title="Cliquer pour tenter de synchroniser maintenant"
+              title={t("horsLigne_cliquerSynchroniser")}
               style={{
                 background: "var(--color-or)",
                 color: "var(--color-encre-fixe)",

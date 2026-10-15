@@ -8,6 +8,7 @@ import { api, ApiError } from "../../../lib/api";
 import { formatMoney, formatDate } from "../../../lib/money";
 import { ajouterOperation } from "../../../lib/offline-queue";
 import { useOfflineSync } from "../../../lib/offline-sync";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Activite {
@@ -85,17 +86,17 @@ interface VersementTravailleur {
   note: string | null;
 }
 
-const LABELS_TYPE_DETTE: Record<string, string> = {
-  DETTE: "Dette (je dois payer)",
-  CREANCE: "Créance (on me doit)",
-  EMPRUNT: "Emprunt",
+const CLES_TYPE_DETTE: Record<string, string> = {
+  DETTE: "acd_typeDette",
+  CREANCE: "acd_typeCreance",
+  EMPRUNT: "acd_typeEmprunt",
 };
 
-const LABELS_FREQUENCE: Record<string, string> = {
-  MENSUEL: "Mensuel",
-  TRIMESTRIEL: "Trimestriel",
-  ANNUEL: "Annuel",
-  PERSONNALISE: "Personnalisé",
+const CLES_FREQUENCE: Record<string, string> = {
+  MENSUEL: "acd_freqMensuel",
+  TRIMESTRIEL: "acd_freqTrimestriel",
+  ANNUEL: "acd_freqAnnuel",
+  PERSONNALISE: "acd_freqPersonnalise",
 };
 
 function aujourdHui(): string {
@@ -103,6 +104,7 @@ function aujourdHui(): string {
 }
 
 function ActiviteContenu({ activityId }: { activityId: string }) {
+  const { t } = useLocale();
   const { rafraichirCompteur, synchroniser } = useOfflineSync();
   const [activite, setActivite] = useState<Activite | null>(null);
   const [entrees, setEntrees] = useState<Entree[]>([]);
@@ -163,10 +165,11 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
         setBiens(listeBiens);
         setVersements(listeVersements);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(recharger, [activityId]);
 
   async function soumettreSaisieRapide(e: React.FormEvent) {
@@ -174,7 +177,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
     setErreur(null);
     setMessage(null);
     if (!ventesCdf && !ventesUsd && !depensesCdf && !depensesUsd) {
-      setErreur("Indiquez au moins un montant.");
+      setErreur(t("acd_indiquerMontant"));
       return;
     }
     setEnCours(true);
@@ -194,7 +197,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       setDepensesCdf("");
       setDepensesUsd("");
       setObservation("");
-      setMessage("Saisie enregistrée.");
+      setMessage(t("acd_saisieEnregistree"));
       recharger();
       return;
     } catch (err) {
@@ -222,15 +225,13 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           setDepensesCdf("");
           setDepensesUsd("");
           setObservation("");
-          setMessage("Saisie enregistrée hors-ligne — elle se synchronisera automatiquement dès le retour du réseau.");
+          setMessage(t("acd_saisieEnregistreeHorsLigne"));
           synchroniser();
         } catch {
-          setErreur(
-            "Pas de réseau et la saisie n'a pas pu être mise en attente localement — notez-la manuellement.",
-          );
+          setErreur(t("acd_pasDeReseauNiFileAttente"));
         }
       } else {
-        setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+        setErreur(err instanceof ApiError ? err.message : t("acd_enregistrementImpossible"));
       }
     } finally {
       setEnCours(false);
@@ -243,7 +244,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       await api.delete(`/comptable/entries/${id}`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Suppression impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("acd_suppressionImpossible"));
     }
   }
 
@@ -267,14 +268,14 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       setFormulaireDetteOuvert(false);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("activites_creationImpossible"));
     } finally {
       setEnCours(false);
     }
   }
 
   async function payerDette(detteId: string, solde: number) {
-    const texte = window.prompt(`Montant réglé (solde restant : ${solde})`);
+    const texte = window.prompt(t("acd_promptMontantRegle").replace("{{solde}}", String(solde)));
     if (!texte) return;
     const montant = Number(texte);
     if (!montant || montant <= 0) return;
@@ -283,7 +284,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       await api.post(`/comptable/debts/${detteId}/payments`, { amount: montant });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Paiement impossible à enregistrer.");
+      setErreur(err instanceof ApiError ? err.message : t("acd_paiementImpossible"));
     }
   }
 
@@ -311,20 +312,23 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       setFormulaireBienOuvert(false);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("activites_creationImpossible"));
     } finally {
       setEnCours(false);
     }
   }
 
   async function enregistrerLoyer(unit: BienLocatif) {
-    const periode = window.prompt("Période concernée (ex. Octobre 2026)", "");
+    const periode = window.prompt(t("acd_promptPeriodeConcernee"), "");
     if (!periode) return;
-    const recuTexte = window.prompt(`Montant reçu pour ce loyer (attendu : ${unit.rentAmount} ${unit.currency})`, unit.rentAmount);
+    const recuTexte = window.prompt(
+      t("acd_promptMontantRecu").replace("{{montant}}", String(unit.rentAmount)).replace("{{devise}}", unit.currency),
+      unit.rentAmount,
+    );
     if (recuTexte === null) return;
     const recu = Number(recuTexte);
     if (Number.isNaN(recu) || recu < 0) return;
-    const echeance = window.prompt("Date d'échéance (AAAA-MM-JJ)", aujourdHui());
+    const echeance = window.prompt(t("acd_promptDateEcheance"), aujourdHui());
     if (!echeance) return;
     setErreur(null);
     try {
@@ -336,14 +340,14 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("acd_enregistrementImpossible"));
     }
   }
 
   async function ajouterDepenseLocative(unit: BienLocatif) {
-    const categorie = window.prompt("Catégorie de dépense (entretien, réparation, eau, électricité…)", "");
+    const categorie = window.prompt(t("acd_promptCategorieDepense"), "");
     if (!categorie) return;
-    const montantTexte = window.prompt("Montant", "");
+    const montantTexte = window.prompt(t("cha_montant"), "");
     if (!montantTexte) return;
     const montant = Number(montantTexte);
     if (!montant || montant <= 0) return;
@@ -356,7 +360,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("acd_enregistrementImpossible"));
     }
   }
 
@@ -379,7 +383,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       setFormulaireVersementOuvert(false);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("activites_creationImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -391,28 +395,28 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
       await api.post(`/comptable/worker-remittances/${id}/settled`, {});
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Opération impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("acd_operationImpossible"));
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
-  if (!activite) return <p className={styles.erreur}>Activité introuvable.</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
+  if (!activite) return <p className={styles.erreur}>{t("acd_activiteIntrouvable")}</p>;
 
   return (
     <div>
-      <RetourLien href="/comptable" label="Retour aux activités" />
+      <RetourLien href="/comptable" label={t("acd_retourActivites")} />
       <h1 className={styles.titre}>{activite.name}</h1>
-      <p className={styles.sousTitre}>Carnet de gestion de cette activité.</p>
+      <p className={styles.sousTitre}>{t("acd_sousTitre")}</p>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {message && <p className={styles.message}>{message}</p>}
 
       <form className={styles.saisieRapide} onSubmit={soumettreSaisieRapide}>
         <label className={styles.champ}>
-          <span>Date</span>
+          <span>{t("commun_date")}</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Ventes du jour CDF</span>
+          <span>{t("acd_ventesJourCdf")}</span>
           <input
             type="number"
             min="0"
@@ -422,7 +426,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           />
         </label>
         <label className={styles.champ}>
-          <span>Ventes du jour USD</span>
+          <span>{t("acd_ventesJourUsd")}</span>
           <input
             type="number"
             min="0"
@@ -433,7 +437,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           />
         </label>
         <label className={styles.champ}>
-          <span>Dépenses CDF</span>
+          <span>{t("acd_depensesCdf")}</span>
           <input
             type="number"
             min="0"
@@ -443,7 +447,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           />
         </label>
         <label className={styles.champ}>
-          <span>Dépenses USD</span>
+          <span>{t("acd_depensesUsd")}</span>
           <input
             type="number"
             min="0"
@@ -454,11 +458,11 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           />
         </label>
         <label className={styles.champLarge}>
-          <span>Observation (facultative)</span>
+          <span>{t("acd_observationFacultative")}</span>
           <input value={observation} onChange={(e) => setObservation(e.target.value)} />
         </label>
         <button className={styles.bouton} type="submit" disabled={enCours}>
-          {enCours ? "Enregistrement…" : "Enregistrer"}
+          {enCours ? t("acd_enregistrementEnCours") : t("action_enregistrer")}
         </button>
       </form>
 
@@ -467,33 +471,33 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
           className={`${styles.onglet} ${onglet === "carnet" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("carnet")}
         >
-          Carnet
+          {t("acd_ongletCarnet")}
         </button>
         <button
           className={`${styles.onglet} ${onglet === "dettes" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("dettes")}
         >
-          Dettes, créances, emprunts
+          {t("acd_ongletDettes")}
         </button>
         <button
           className={`${styles.onglet} ${onglet === "locatif" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("locatif")}
         >
-          Locatif
+          {t("acd_ongletLocatif")}
         </button>
         <button
           className={`${styles.onglet} ${onglet === "travailleurs" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("travailleurs")}
         >
-          Travailleurs
+          {t("acd_ongletTravailleurs")}
         </button>
       </div>
 
       {onglet === "carnet" ? (
         <>
-          <h2 className={styles.sectionTitre}>Opérations récentes</h2>
+          <h2 className={styles.sectionTitre}>{t("acd_operationsRecentes")}</h2>
           {entrees.length === 0 ? (
-            <p className={styles.messageVide}>Aucune opération enregistrée pour l&apos;instant.</p>
+            <p className={styles.messageVide}>{t("acd_aucuneOperation")}</p>
           ) : (
             entrees.map((e) => (
               <div
@@ -507,7 +511,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                 <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <strong>{formatMoney(Number(e.amount), e.currency)}</strong>
                   <button className={styles.boutonSecondaire} onClick={() => supprimerEntree(e.id)}>
-                    Supprimer
+                    {t("action_supprimer")}
                   </button>
                 </span>
               </div>
@@ -516,27 +520,27 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
         </>
       ) : (
         <>
-          <h2 className={styles.sectionTitre}>Dettes, créances et emprunts</h2>
+          <h2 className={styles.sectionTitre}>{t("acd_dettesCreancesEmprunts")}</h2>
           {!formulaireDetteOuvert ? (
             <button className={styles.bouton} onClick={() => setFormulaireDetteOuvert(true)}>
-              + Nouvel enregistrement
+              + {t("acd_nouvelEnregistrement")}
             </button>
           ) : (
             <form className={styles.formulaireDette} onSubmit={creerDette} style={{ marginTop: "16px" }}>
               <label className={styles.champ}>
-                <span>Type</span>
+                <span>{t("acd_type")}</span>
                 <select value={typeDette} onChange={(e) => setTypeDette(e.target.value as typeof typeDette)}>
-                  <option value="DETTE">Dette (je dois payer)</option>
-                  <option value="CREANCE">Créance (on me doit)</option>
-                  <option value="EMPRUNT">Emprunt</option>
+                  <option value="DETTE">{t("acd_typeDette")}</option>
+                  <option value="CREANCE">{t("acd_typeCreance")}</option>
+                  <option value="EMPRUNT">{t("acd_typeEmprunt")}</option>
                 </select>
               </label>
               <label className={styles.champLarge}>
-                <span>Nom de la personne concernée</span>
+                <span>{t("acd_nomPersonneConcernee")}</span>
                 <input value={nomContrepartie} onChange={(e) => setNomContrepartie(e.target.value)} required />
               </label>
               <label className={styles.champ}>
-                <span>Montant</span>
+                <span>{t("cha_montant")}</span>
                 <input
                   type="number"
                   min="0.01"
@@ -547,32 +551,32 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                 />
               </label>
               <label className={styles.champ}>
-                <span>Devise</span>
+                <span>{t("cha_devise")}</span>
                 <select value={deviseDette} onChange={(e) => setDeviseDette(e.target.value as "CDF" | "USD")}>
                   <option value="USD">USD</option>
                   <option value="CDF">CDF</option>
                 </select>
               </label>
               <label className={styles.champ}>
-                <span>Échéance (facultative)</span>
+                <span>{t("acd_echeanceFacultative")}</span>
                 <input type="date" value={echeanceDette} onChange={(e) => setEcheanceDette(e.target.value)} />
               </label>
               <button className={styles.bouton} type="submit" disabled={enCours}>
-                Enregistrer
+                {t("action_enregistrer")}
               </button>
               <button
                 type="button"
                 className={styles.boutonSecondaire}
                 onClick={() => setFormulaireDetteOuvert(false)}
               >
-                Annuler
+                {t("action_annuler")}
               </button>
             </form>
           )}
 
           <div style={{ marginTop: "16px" }}>
             {dettes.length === 0 ? (
-              <p className={styles.messageVide}>Rien d&apos;enregistré pour l&apos;instant.</p>
+              <p className={styles.messageVide}>{t("acd_rienEnregistre")}</p>
             ) : (
               dettes.map((d) => (
                 <div
@@ -582,17 +586,17 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                   key={d.id}
                 >
                   <span>
-                    <strong>{LABELS_TYPE_DETTE[d.type]}</strong> — {d.counterpartyName}
-                    {d.dueDate && ` · échéance ${formatDate(d.dueDate)}`}
-                    {d.settled && " · soldé"}
+                    <strong>{t(CLES_TYPE_DETTE[d.type])}</strong> — {d.counterpartyName}
+                    {d.dueDate && ` · ${t("acd_echeanceAbrege")} ${formatDate(d.dueDate)}`}
+                    {d.settled && ` · ${t("acd_solde")}`}
                   </span>
                   <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <span>
-                      Solde : <strong>{formatMoney(d.solde, d.currency)}</strong> / {formatMoney(Number(d.amount), d.currency)}
+                      {t("cpt_colSolde")} : <strong>{formatMoney(d.solde, d.currency)}</strong> / {formatMoney(Number(d.amount), d.currency)}
                     </span>
                     {!d.settled && (
                       <button className={styles.boutonSecondaire} onClick={() => payerDette(d.id, d.solde)}>
-                        Enregistrer un règlement
+                        {t("acd_enregistrerReglement")}
                       </button>
                     )}
                   </span>
@@ -605,32 +609,32 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
 
       {onglet === "locatif" && (
         <>
-          <h2 className={styles.sectionTitre}>Biens locatifs</h2>
+          <h2 className={styles.sectionTitre}>{t("acd_biensLocatifs")}</h2>
           {!formulaireBienOuvert ? (
             <button className={styles.bouton} onClick={() => setFormulaireBienOuvert(true)}>
-              + Nouveau bien
+              + {t("acd_nouveauBien")}
             </button>
           ) : (
             <form className={styles.formulaireDette} onSubmit={creerBien} style={{ marginTop: "16px" }}>
               <label className={styles.champLarge}>
-                <span>Désignation</span>
+                <span>{t("acd_designation")}</span>
                 <input
-                  placeholder="Ex. Appartement 2, Lemba"
+                  placeholder={t("acd_placeholderDesignation")}
                   value={labelBien}
                   onChange={(e) => setLabelBien(e.target.value)}
                   required
                 />
               </label>
               <label className={styles.champLarge}>
-                <span>Lieu (facultatif)</span>
+                <span>{t("acd_lieuFacultatif")}</span>
                 <input value={lieuBien} onChange={(e) => setLieuBien(e.target.value)} />
               </label>
               <label className={styles.champLarge}>
-                <span>Locataire (facultatif)</span>
+                <span>{t("acd_locataireFacultatif")}</span>
                 <input value={locataireBien} onChange={(e) => setLocataireBien(e.target.value)} />
               </label>
               <label className={styles.champ}>
-                <span>Loyer</span>
+                <span>{t("acd_loyer")}</span>
                 <input
                   type="number"
                   min="0.01"
@@ -641,27 +645,27 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                 />
               </label>
               <label className={styles.champ}>
-                <span>Devise</span>
+                <span>{t("cha_devise")}</span>
                 <select value={deviseBien} onChange={(e) => setDeviseBien(e.target.value as "CDF" | "USD")}>
                   <option value="USD">USD</option>
                   <option value="CDF">CDF</option>
                 </select>
               </label>
               <label className={styles.champ}>
-                <span>Fréquence</span>
+                <span>{t("acd_frequence")}</span>
                 <select
                   value={frequenceBien}
                   onChange={(e) => setFrequenceBien(e.target.value as BienLocatif["frequency"])}
                 >
-                  {Object.entries(LABELS_FREQUENCE).map(([valeur, label]) => (
+                  {Object.entries(CLES_FREQUENCE).map(([valeur, cle]) => (
                     <option key={valeur} value={valeur}>
-                      {label}
+                      {t(cle)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className={styles.champ}>
-                <span>Garantie (facultative)</span>
+                <span>{t("acd_garantieFacultative")}</span>
                 <input
                   type="number"
                   min="0"
@@ -671,21 +675,21 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                 />
               </label>
               <button className={styles.bouton} type="submit" disabled={enCours}>
-                Enregistrer
+                {t("action_enregistrer")}
               </button>
               <button
                 type="button"
                 className={styles.boutonSecondaire}
                 onClick={() => setFormulaireBienOuvert(false)}
               >
-                Annuler
+                {t("action_annuler")}
               </button>
             </form>
           )}
 
           <div style={{ marginTop: "16px" }}>
             {biens.length === 0 ? (
-              <p className={styles.messageVide}>Aucun bien locatif enregistré pour l&apos;instant.</p>
+              <p className={styles.messageVide}>{t("acd_aucunBienLocatif")}</p>
             ) : (
               biens.map((b) => {
                 const totalRecu = b.payments.reduce((s, p) => s + Number(p.receivedAmount), 0);
@@ -695,24 +699,24 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                     <div className={styles.carteBienEntete}>
                       <strong>{b.label}</strong>
                       <span>
-                        {formatMoney(Number(b.rentAmount), b.currency)} / {LABELS_FREQUENCE[b.frequency].toLowerCase()}
+                        {formatMoney(Number(b.rentAmount), b.currency)} / {t(CLES_FREQUENCE[b.frequency]).toLowerCase()}
                       </span>
                     </div>
                     <p className={styles.carteBienDetail}>
-                      {b.tenantName ? `Locataire : ${b.tenantName}` : "Pas de locataire renseigné"}
+                      {b.tenantName ? `${t("acd_locataire")} : ${b.tenantName}` : t("acd_pasDeLocataire")}
                       {b.location ? ` · ${b.location}` : ""}
-                      {b.depositAmount ? ` · Garantie : ${formatMoney(Number(b.depositAmount), b.currency)}` : ""}
+                      {b.depositAmount ? ` · ${t("acd_garantie")} : ${formatMoney(Number(b.depositAmount), b.currency)}` : ""}
                     </p>
                     <p className={styles.carteBienDetail}>
-                      Reçu sur les 12 dernières périodes : <strong>{formatMoney(totalRecu, b.currency)}</strong> ·
-                      Dépenses récentes : <strong>{formatMoney(totalDepenses, b.currency)}</strong>
+                      {t("acd_recuDernieresPeriodes")} <strong>{formatMoney(totalRecu, b.currency)}</strong> ·{" "}
+                      {t("acd_depensesRecentes")} <strong>{formatMoney(totalDepenses, b.currency)}</strong>
                     </p>
                     <div className={styles.carteBienActions}>
                       <button className={styles.boutonSecondaire} onClick={() => enregistrerLoyer(b)}>
-                        Enregistrer un loyer
+                        {t("acd_enregistrerLoyer")}
                       </button>
                       <button className={styles.boutonSecondaire} onClick={() => ajouterDepenseLocative(b)}>
-                        Ajouter une dépense
+                        {t("acd_ajouterDepense")}
                       </button>
                     </div>
                     {b.payments.length > 0 && (
@@ -720,8 +724,8 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                         {b.payments.slice(0, 5).map((p) => (
                           <div className={styles.ligne} key={p.id}>
                             <span>
-                              {p.periodLabel} — échéance {formatDate(p.dueDate)}
-                              {p.paidAt ? " · réglé" : " · en attente"}
+                              {p.periodLabel} — {t("acd_echeanceAbrege")} {formatDate(p.dueDate)}
+                              {p.paidAt ? ` · ${t("acd_regle")}` : ` · ${t("acd_enAttente")}`}
                             </span>
                             <strong>
                               {formatMoney(Number(p.receivedAmount), b.currency)} / {formatMoney(Number(p.expectedAmount), b.currency)}
@@ -740,32 +744,31 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
 
       {onglet === "travailleurs" && (
         <>
-          <h2 className={styles.sectionTitre}>Versements des travailleurs</h2>
+          <h2 className={styles.sectionTitre}>{t("acd_versementsTravailleurs")}</h2>
           <p className={styles.sousTitre}>
-            Pour une activité confiée à quelqu&apos;un (chauffeur, gérant…) — ce que le travailleur vous remet, pas un
-            revenu de la caisse.
+            {t("acd_sousTitreVersements")}
           </p>
           {!formulaireVersementOuvert ? (
             <button className={styles.bouton} onClick={() => setFormulaireVersementOuvert(true)}>
-              + Nouveau versement
+              + {t("acd_nouveauVersement")}
             </button>
           ) : (
             <form className={styles.formulaireDette} onSubmit={creerVersement} style={{ marginTop: "16px" }}>
               <label className={styles.champLarge}>
-                <span>Nom du travailleur</span>
+                <span>{t("acd_nomTravailleur")}</span>
                 <input value={nomTravailleur} onChange={(e) => setNomTravailleur(e.target.value)} required />
               </label>
               <label className={styles.champ}>
-                <span>Période</span>
+                <span>{t("acd_periode")}</span>
                 <input
-                  placeholder="Ex. Semaine du 6 au 12 oct."
+                  placeholder={t("acd_placeholderPeriode")}
                   value={periodeVersement}
                   onChange={(e) => setPeriodeVersement(e.target.value)}
                   required
                 />
               </label>
               <label className={styles.champ}>
-                <span>Montant remis</span>
+                <span>{t("acd_montantRemis")}</span>
                 <input
                   type="number"
                   min="0"
@@ -776,40 +779,40 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
                 />
               </label>
               <label className={styles.champ}>
-                <span>Devise</span>
+                <span>{t("cha_devise")}</span>
                 <select value={deviseVersement} onChange={(e) => setDeviseVersement(e.target.value as "CDF" | "USD")}>
                   <option value="USD">USD</option>
                   <option value="CDF">CDF</option>
                 </select>
               </label>
               <button className={styles.bouton} type="submit" disabled={enCours}>
-                Enregistrer
+                {t("action_enregistrer")}
               </button>
               <button
                 type="button"
                 className={styles.boutonSecondaire}
                 onClick={() => setFormulaireVersementOuvert(false)}
               >
-                Annuler
+                {t("action_annuler")}
               </button>
             </form>
           )}
 
           <div style={{ marginTop: "16px" }}>
             {versements.length === 0 ? (
-              <p className={styles.messageVide}>Aucun versement enregistré pour l&apos;instant.</p>
+              <p className={styles.messageVide}>{t("acd_aucunVersement")}</p>
             ) : (
               versements.map((v) => (
                 <div className={`${styles.ligne} ${v.settledAt ? styles.ligneSoldee : ""}`} key={v.id}>
                   <span>
                     <strong>{v.workerName}</strong> — {v.periodLabel}
-                    {v.settledAt && " · soldé"}
+                    {v.settledAt && ` · ${t("acd_solde")}`}
                   </span>
                   <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <strong>{formatMoney(Number(v.paidAmount), v.currency)}</strong>
                     {!v.settledAt && (
                       <button className={styles.boutonSecondaire} onClick={() => soldeVersement(v.id)}>
-                        Marquer soldé
+                        {t("acd_marquerSolde")}
                       </button>
                     )}
                   </span>

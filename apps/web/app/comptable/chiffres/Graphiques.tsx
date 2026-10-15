@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatMoney } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./Graphiques.module.css";
 
 interface PointHistorique {
@@ -33,6 +34,7 @@ function formatDateCourte(iso: string): string {
  * légère exigée au tarif de 1 $/mois du module, prompt §19).
  */
 export function GraphiqueEvolution({ items, currency }: { items: PointHistorique[]; currency: "CDF" | "USD" }) {
+  const { t } = useLocale();
   const [survol, setSurvol] = useState<number | null>(null);
   const [vueTableau, setVueTableau] = useState(false);
 
@@ -58,18 +60,18 @@ export function GraphiqueEvolution({ items, currency }: { items: PointHistorique
   return (
     <div className={styles.carte}>
       <div className={styles.entete}>
-        <span className={styles.titreGraphique}>Évolution sur {items.length} jours — {currency}</span>
+        <span className={styles.titreGraphique}>{t("graph_evolutionSur").replace("{{jours}}", String(items.length))} — {currency}</span>
         <button className={styles.boutonBascule} onClick={() => setVueTableau((v) => !v)}>
-          {vueTableau ? "Voir le graphique" : "Voir en tableau"}
+          {vueTableau ? t("graph_voirGraphique") : t("graph_voirTableau")}
         </button>
       </div>
 
       <div className={styles.legende}>
         <span className={styles.legendeItem}>
-          <span className={styles.pastilleVentes} /> Ventes
+          <span className={styles.pastilleVentes} /> {t("chiffres_ventes")}
         </span>
         <span className={styles.legendeItem}>
-          <span className={styles.pastilleDepenses} /> Dépenses
+          <span className={styles.pastilleDepenses} /> {t("chiffres_depenses")}
         </span>
       </div>
 
@@ -77,9 +79,9 @@ export function GraphiqueEvolution({ items, currency }: { items: PointHistorique
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Ventes</th>
-              <th>Dépenses</th>
+              <th>{t("cha_colDate")}</th>
+              <th>{t("chiffres_ventes")}</th>
+              <th>{t("chiffres_depenses")}</th>
             </tr>
           </thead>
           <tbody>
@@ -97,7 +99,7 @@ export function GraphiqueEvolution({ items, currency }: { items: PointHistorique
           viewBox={`0 0 ${largeur} ${hauteur}`}
           className={styles.svg}
           role="img"
-          aria-label={`Évolution des ventes et dépenses en ${currency} sur ${items.length} jours`}
+          aria-label={t("graph_ariaEvolution").replace("{{devise}}", currency).replace("{{jours}}", String(items.length))}
         >
           <line x1={marge.gauche} y1={y(0)} x2={largeur - marge.droite} y2={y(0)} className={styles.axe} />
           <path d={chemin(cleVentes)} className={styles.ligneVentes} fill="none" />
@@ -134,7 +136,7 @@ export function GraphiqueEvolution({ items, currency }: { items: PointHistorique
                 {formatDateCourte(items[survol].date)}
               </text>
               <text x={0} y={18} textAnchor="middle" className={styles.infobulleTexte}>
-                V {formatMoney(items[survol][cleVentes], currency)} · D {formatMoney(items[survol][cleDepenses], currency)}
+                {t("graph_abrevVentes")} {formatMoney(items[survol][cleVentes], currency)} · {t("graph_abrevDepenses")} {formatMoney(items[survol][cleDepenses], currency)}
               </text>
             </g>
           )}
@@ -150,6 +152,7 @@ export function GraphiqueEvolution({ items, currency }: { items: PointHistorique
  * négatif), jamais de fusion entre activités (prompt §2).
  */
 export function GraphiqueComparaison({ items, currency }: { items: LigneComparaison[]; currency: "CDF" | "USD" }) {
+  const { t } = useLocale();
   const [vueTableau, setVueTableau] = useState(false);
   const cle = currency === "CDF" ? "resultatCdf" : "resultatUsd";
   const maxAbs = Math.max(...items.map((i) => Math.abs(i[cle])), 1);
@@ -159,9 +162,9 @@ export function GraphiqueComparaison({ items, currency }: { items: LigneComparai
   return (
     <div className={styles.carte}>
       <div className={styles.entete}>
-        <span className={styles.titreGraphique}>Comparaison par activité (mois en cours) — {currency}</span>
+        <span className={styles.titreGraphique}>{t("graph_comparaisonParActivite")} — {currency}</span>
         <button className={styles.boutonBascule} onClick={() => setVueTableau((v) => !v)}>
-          {vueTableau ? "Voir le graphique" : "Voir en tableau"}
+          {vueTableau ? t("graph_voirGraphique") : t("graph_voirTableau")}
         </button>
       </div>
 
@@ -169,8 +172,8 @@ export function GraphiqueComparaison({ items, currency }: { items: LigneComparai
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Activité</th>
-              <th>Résultat net</th>
+              <th>{t("graph_activite")}</th>
+              <th>{t("graph_resultatNet")}</th>
             </tr>
           </thead>
           <tbody>
