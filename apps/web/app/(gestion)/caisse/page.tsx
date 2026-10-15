@@ -9,6 +9,7 @@ import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { ajouterOperation } from "../../lib/offline-queue";
 import { useOfflineSync } from "../../lib/offline-sync";
 import { useExchangeRate } from "../../lib/exchange-rate";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -46,8 +47,8 @@ interface LigneTicket {
 }
 
 const MOYENS = [
-  { valeur: "CASH", label: "Espèces" },
-  { valeur: "MOBILE_MONEY", label: "Mobile money" },
+  { valeur: "CASH", cle: "caisse_moyenEspeces" },
+  { valeur: "MOBILE_MONEY", cle: "caisse_moyenMobileMoney" },
 ] as const;
 
 // Choix du format de document à l'encaissement (demande du 12 oct. 2026,
@@ -56,15 +57,16 @@ const MOYENS = [
 // la boutique a été confirmée par l'administration (voir
 // fiscalHomologationConfirmed, docs/COMPLIANCE_FACTURE_NORMALISEE.md) ; les
 // autres types restent toujours disponibles.
-const TYPES_DOCUMENT: { valeur: string; label: string; reserveHomologation?: boolean }[] = [
-  { valeur: "TICKET", label: "Ticket de caisse" },
-  { valeur: "RECEIPT", label: "Reçu" },
-  { valeur: "INVOICE_INTERNAL", label: "Facture interne" },
-  { valeur: "INVOICE_FISCAL", label: "Facture fiscale homologuée", reserveHomologation: true },
+const TYPES_DOCUMENT: { valeur: string; cle: string; reserveHomologation?: boolean }[] = [
+  { valeur: "TICKET", cle: "fact_typeTicket" },
+  { valeur: "RECEIPT", cle: "fact_typeRecu" },
+  { valeur: "INVOICE_INTERNAL", cle: "fact_typeFactureInterne" },
+  { valeur: "INVOICE_FISCAL", cle: "caisse_typeFactureFiscaleHomologuee", reserveHomologation: true },
 ];
 
 function CaisseContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const { rafraichirCompteur, synchroniser } = useOfflineSync();
   const { equivalent } = useExchangeRate();
   const [produits, setProduits] = useState<Product[]>([]);
@@ -93,7 +95,7 @@ function CaisseContent() {
         if (!annule) setProduits(data);
       })
       .catch((err) => {
-        if (!annule) setErreurChargement(err instanceof Error ? err.message : "Erreur.");
+        if (!annule) setErreurChargement(err instanceof Error ? err.message : t("cmd_erreurGenerique"));
       })
       .finally(() => {
         if (!annule) setChargement(false);
@@ -121,12 +123,12 @@ function CaisseContent() {
   }, [currentShop]);
 
   const typesDisponibles = useMemo(
-    () => TYPES_DOCUMENT.filter((t) => !t.reserveHomologation || homologationConfirmee),
+    () => TYPES_DOCUMENT.filter((td) => !td.reserveHomologation || homologationConfirmee),
     [homologationConfirmee],
   );
 
   useEffect(() => {
-    if (!typesDisponibles.some((t) => t.valeur === typeDocument)) {
+    if (!typesDisponibles.some((td) => td.valeur === typeDocument)) {
       setTypeDocument("TICKET");
     }
   }, [typesDisponibles, typeDocument]);
@@ -207,7 +209,7 @@ function CaisseContent() {
 
     try {
       const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, payload);
-      setConfirmation(`Vente enregistrée — ${formatMoney(total, devise)} encaissé.`);
+      setConfirmation(`${t("caisse_venteEnregistree")} ${formatMoney(total, devise)} ${t("caisse_encaisse")}`);
       setLignes([]);
       try {
         const document = await api.post<{ id: string }>(
@@ -240,17 +242,15 @@ function CaisseContent() {
           });
           await rafraichirCompteur();
           setConfirmation(
-            `Vente enregistrée hors-ligne — ${formatMoney(total, devise)}. Elle se synchronisera automatiquement dès le retour du réseau.`,
+            `${t("caisse_venteEnregistreeHorsLigne")} ${formatMoney(total, devise)}. ${t("caisse_synchroAutomatique")}`,
           );
           setLignes([]);
           synchroniser();
         } catch {
-          setErreurVente(
-            "Pas de réseau et la vente n'a pas pu être mise en attente localement — notez-la manuellement.",
-          );
+          setErreurVente(t("caisse_erreurHorsLigne"));
         }
       } else {
-        setErreurVente(err instanceof ApiError ? err.message : "La vente n'a pas pu être enregistrée.");
+        setErreurVente(err instanceof ApiError ? err.message : t("caisse_erreurEnregistrement"));
       }
     } finally {
       setEnCours(false);
@@ -265,18 +265,18 @@ function CaisseContent() {
         `/shops/${dernierTicket.shopId}/documents/${dernierTicket.documentId}/pdf`,
       );
     } catch {
-      setErreurVente("Le ticket n'a pas pu être ouvert pour impression.");
+      setErreurVente(t("caisse_erreurOuvertureTicket"));
     } finally {
       setImpressionEnCours(false);
     }
   }
 
-  if (chargement) return <p>Chargement du catalogue…</p>;
+  if (chargement) return <p>{t("caisse_chargementCatalogue")}</p>;
   if (erreurChargement) return <p className={styles.erreur}>{erreurChargement}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Caisse</h1>
+      <h1 className={styles.titre}>{t("nav_caisse")}</h1>
 
       <div className={styles.disposition}>
         {/* Panneau articles — plus large, avec son propre défilement : une
@@ -287,16 +287,14 @@ function CaisseContent() {
           <input
             className={styles.recherche}
             type="text"
-            placeholder="Chercher un article par nom, taille ou couleur…"
+            placeholder={t("caisse_placeholderRecherche")}
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
           />
 
           <div className={styles.zoneArticles}>
             {variantesVisibles.length === 0 ? (
-              <p className={styles.messageVide}>
-                Aucun article ne correspond. Ajoutez des produits depuis le catalogue.
-              </p>
+              <p className={styles.messageVide}>{t("caisse_aucunArticle")}</p>
             ) : (
               <div className={styles.grilleArticles}>
                 {variantesVisibles.map(({ produit, variante }) => (
@@ -310,7 +308,7 @@ function CaisseContent() {
                     <span className={styles.carteArticleDetail}>
                       {[variante.size, variante.color].filter(Boolean).join(" · ") || variante.sku}
                       {" — "}
-                      {variante.stockQty > 0 ? `${variante.stockQty} en stock` : "épuisé"}
+                      {variante.stockQty > 0 ? `${variante.stockQty} ${t("caisse_enStock")}` : t("caisse_epuise")}
                     </span>
                     <span className={styles.carteArticlePrix}>
                       {formatMoney(Number(variante.sellPrice), variante.currency)}
@@ -333,7 +331,7 @@ function CaisseContent() {
         <div className={styles.colonneTicket}>
           <div className={styles.ticket}>
             {lignes.length === 0 ? (
-              <p className={styles.messageVide}>Le ticket est vide. Touchez un article à côté.</p>
+              <p className={styles.messageVide}>{t("caisse_ticketVide")}</p>
             ) : (
               <div className={styles.ligneTicketListe}>
                 {lignes.map((ligne, i) => {
@@ -347,9 +345,9 @@ function CaisseContent() {
                         {prixModifie && (
                           <span
                             className={styles.pucePrixModifie}
-                            title={`Prix catalogue : ${formatMoney(ligne.prixCatalogue, ligne.currency)}`}
+                            title={`${t("caisse_prixCatalogue")} ${formatMoney(ligne.prixCatalogue, ligne.currency)}`}
                           >
-                            prix négocié
+                            {t("caisse_prixNegocie")}
                           </span>
                         )}
                       </span>
@@ -366,7 +364,7 @@ function CaisseContent() {
                         min={0}
                         step="0.01"
                         value={ligne.unitPrice}
-                        title="Prix unitaire pour cette vente (modifiable — ne change pas le catalogue)"
+                        title={t("caisse_titrePrixUnitaire")}
                         onChange={(e) => modifierPrix(i, Number(e.target.value))}
                       />
                       <span className={styles.ligneTicketMontant}>
@@ -375,14 +373,14 @@ function CaisseContent() {
                       <button
                         className={styles.ligneTicketSupprimer}
                         onClick={() => retirerLigne(i)}
-                        aria-label={`Retirer ${ligne.label}`}
+                        aria-label={`${t("caisse_retirer")} ${ligne.label}`}
                       >
                         ✕
                       </button>
                       {sousRevient && (
                         <div className={styles.averPrixBas}>
-                          ⚠ Prix sous le coût de revient ({formatMoney(ligne.prixRevient!, ligne.currency)}) —
-                          vérifiez avant d&apos;encaisser.
+                          ⚠ {t("caisse_prixSousRevient")} ({formatMoney(ligne.prixRevient!, ligne.currency)}) —{" "}
+                          {t("caisse_verifiezAvantEncaisser")}
                         </div>
                       )}
                     </div>
@@ -392,7 +390,7 @@ function CaisseContent() {
             )}
 
             <div className={styles.totalLigne}>
-              <span>Total</span>
+              <span>{t("panier_total")}</span>
               <span className="chiffre">
                 {formatMoney(total, devise)}
                 {equivalent(total, devise) && (
@@ -409,14 +407,14 @@ function CaisseContent() {
                     className={`${styles.moyenBouton} ${moyen === m.valeur ? styles.moyenBoutonActif : ""}`}
                     onClick={() => setMoyen(m.valeur)}
                   >
-                    {m.label}
+                    {t(m.cle)}
                   </button>
                 ))}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
                 <label htmlFor="typeDocument" style={{ fontSize: "0.85rem" }}>
-                  Document à imprimer
+                  {t("caisse_documentAImprimer")}
                 </label>
                 <select
                   id="typeDocument"
@@ -424,9 +422,9 @@ function CaisseContent() {
                   onChange={(e) => setTypeDocument(e.target.value)}
                   style={{ padding: "8px 10px", minHeight: 40 }}
                 >
-                  {typesDisponibles.map((t) => (
-                    <option key={t.valeur} value={t.valeur}>
-                      {t.label}
+                  {typesDisponibles.map((td) => (
+                    <option key={td.valeur} value={td.valeur}>
+                      {t(td.cle)}
                     </option>
                   ))}
                 </select>
@@ -452,7 +450,7 @@ function CaisseContent() {
                           font: "inherit",
                         }}
                       >
-                        Imprimer le ticket
+                        {t("caisse_imprimerTicket")}
                       </button>
                     </>
                   )}
@@ -467,7 +465,7 @@ function CaisseContent() {
               disabled={lignes.length === 0 || enCours}
               onClick={encaisser}
             >
-              {enCours ? "Enregistrement…" : `Enregistrer la vente — ${formatMoney(total, devise)}`}
+              {enCours ? t("caisse_enregistrementEnCours") : `${t("caisse_enregistrerVente")} — ${formatMoney(total, devise)}`}
             </button>
           </div>
         </div>
