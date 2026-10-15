@@ -38,6 +38,12 @@ model PlatformSettings {
   photoSearchEnabled Boolean @default(false)
   adStudioEnabled    Boolean @default(false)
 
+  // Chatbox native (demande UX du 15 oct. 2026, point 3) : bulle flottante
+  // visible dans les espaces authentifiés, qui ouvre le centre de
+  // messagerie. Interrupteur global pour pouvoir la désactiver depuis le
+  // Centre de pilotage sans redéploiement.
+  chatWidgetEnabled Boolean @default(true)
+
   // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
   // frais d'ouverture à la souscription + abonnement mensuel, tous deux
   // paramétrables depuis le Centre de pilotage, avec un nombre de mois de
