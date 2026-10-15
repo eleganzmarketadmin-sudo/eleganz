@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney, formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Facture {
@@ -42,14 +43,15 @@ interface FactureComptable {
   createdAt: string;
 }
 
-const LIBELLES_STATUT: Record<string, string> = {
-  PENDING: "En attente",
-  PAID: "Payée",
-  OVERDUE: "En retard",
-  WAIVED: "Dispensée",
+const CLES_STATUT: Record<string, string> = {
+  PENDING: "admfact_statutEnAttente",
+  PAID: "admfact_statutPayee",
+  OVERDUE: "admfact_statutEnRetard",
+  WAIVED: "admfact_statutDispensee",
 };
 
 function FacturesContent() {
+  const { t } = useLocale();
   const [factures, setFactures] = useState<Facture[]>([]);
   const [facturesLivreurs, setFacturesLivreurs] = useState<FactureLivreur[]>([]);
   const [facturesComptable, setFacturesComptable] = useState<FactureComptable[]>([]);
@@ -70,7 +72,7 @@ function FacturesContent() {
         setFacturesLivreurs(listeFacturesLivreurs);
         setFacturesComptable(listeFacturesComptable);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -83,7 +85,7 @@ function FacturesContent() {
       await api.post(`/admin/billing/invoices/${invoiceId}/mark-paid`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -96,7 +98,7 @@ function FacturesContent() {
       await api.post(`/admin/driver-billing/invoices/${invoiceId}/mark-paid`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -109,7 +111,7 @@ function FacturesContent() {
       await api.post(`/admin/comptable/invoices/${invoiceId}/mark-paid`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -126,11 +128,11 @@ function FacturesContent() {
       const total = resultats.dettes + resultats.loyers + resultats.versements + resultats.achatsFournisseur;
       setMessage(
         total === 0
-          ? "Aucune échéance à relancer pour l'instant."
-          : `${total} relance(s) envoyée(s) (dettes/créances : ${resultats.dettes}, loyers : ${resultats.loyers}, versements : ${resultats.versements}, fournisseurs : ${resultats.achatsFournisseur}).`,
+          ? t("admfact_messageAucuneEcheance")
+          : `${total}${t("admfact_relancesEnvoyeesSuffixDettesCreances")} ${resultats.dettes}${t("admfact_virgLoyers")} ${resultats.loyers}${t("admfact_virgVersements")} ${resultats.versements}${t("admfact_virgFournisseurs")} ${resultats.achatsFournisseur}).`,
       );
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Vérification impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admfact_verificationImpossible"));
     } finally {
       setVerificationEnCours(null);
     }
@@ -144,75 +146,67 @@ function FacturesContent() {
       const resultats = await api.post<{ shopId: string; action: string }[]>(`/admin/billing/${type}`);
       setMessage(
         resultats.length === 0
-          ? "Aucune boutique concernée pour l'instant."
-          : `${resultats.length} boutique(s) mise(s) à jour.`,
+          ? t("admfact_messageAucuneBoutiqueConcernee")
+          : `${resultats.length} ${t("admfact_messageBoutiquesMisesAJour")}`,
       );
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Vérification impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admfact_verificationImpossible"));
     } finally {
       setVerificationEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement des factures…</p>;
+  if (chargement) return <p>{t("admfact_chargementFactures")}</p>;
 
   const enAttente = factures.filter((f) => f.status === "PENDING");
   const autres = factures.filter((f) => f.status !== "PENDING");
 
   return (
     <div>
-      <h1 className={styles.titre}>Factures</h1>
+      <h1 className={styles.titre}>{t("admfact_titre")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {message && <p className={styles.message}>{message}</p>}
 
       <div className={styles.verifications}>
         <div>
-          <p className={styles.verifLabel}>Fin de période gratuite</p>
-          <p className={styles.verifDescription}>
-            Fait passer en paiement dû les boutiques dont la période gratuite est écoulée, et génère leur facture.
-          </p>
+          <p className={styles.verifLabel}>{t("admfact_verifFinPeriodeGratuiteLabel")}</p>
+          <p className={styles.verifDescription}>{t("admfact_verifFinPeriodeGratuiteDescription")}</p>
         </div>
         <button
           className={styles.boutonVerif}
           disabled={verificationEnCours !== null}
           onClick={() => lancerVerification("run-trial-check")}
         >
-          Vérifier maintenant
+          {t("admfact_verifierMaintenant")}
         </button>
       </div>
       <div className={styles.verifications}>
         <div>
-          <p className={styles.verifLabel}>Retards de paiement</p>
-          <p className={styles.verifDescription}>
-            Suspend les boutiques dont une facture est impayée depuis plus de 7 jours après son échéance.
-          </p>
+          <p className={styles.verifLabel}>{t("admfact_verifRetardsPaiementLabel")}</p>
+          <p className={styles.verifDescription}>{t("admfact_verifRetardsPaiementDescription")}</p>
         </div>
         <button
           className={styles.boutonVerif}
           disabled={verificationEnCours !== null}
           onClick={() => lancerVerification("run-suspension-check")}
         >
-          Vérifier maintenant
+          {t("admfact_verifierMaintenant")}
         </button>
       </div>
       <div className={styles.verifications}>
         <div>
-          <p className={styles.verifLabel}>Échéancier (relances dettes/créances/loyers/versements)</p>
-          <p className={styles.verifDescription}>
-            Notifie (cloche + messagerie) les acteurs concernés (Gestion, Secourable) pour toute
-            échéance non réglée à J-3, le jour même, ou en retard — dettes et créances Secourable,
-            loyers, versements de travailleurs, et dettes fournisseur côté Gestion.
-          </p>
+          <p className={styles.verifLabel}>{t("admfact_verifEcheancierLabel")}</p>
+          <p className={styles.verifDescription}>{t("admfact_verifEcheancierDescription")}</p>
         </div>
         <button className={styles.boutonVerif} disabled={verificationEnCours !== null} onClick={lancerEcheancier}>
-          Vérifier maintenant
+          {t("admfact_verifierMaintenant")}
         </button>
       </div>
 
-      <h2 className={styles.sectionTitre}>En attente de paiement</h2>
+      <h2 className={styles.sectionTitre}>{t("admfact_enAttentePaiement")}</h2>
       {enAttente.length === 0 ? (
-        <p className={styles.messageVide}>Aucune facture en attente.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneFactureEnAttente")}</p>
       ) : (
         enAttente.map((f) => (
           <div className={styles.facture} key={f.id}>
@@ -220,22 +214,22 @@ function FacturesContent() {
               <span className={styles.boutiqueNom}>{f.shop.name}</span>
               <span>{f.kind}</span>
               <span>{formatMoney(Number(f.amount))}</span>
-              <span>Échéance : {formatDate(f.dueAt)}</span>
+              <span>{t("crd_colEcheance")} : {formatDate(f.dueAt)}</span>
             </div>
             <button
               className={styles.boutonPayer}
               disabled={enCours === f.id}
               onClick={() => marquerPayee(f.id)}
             >
-              Marquer payée
+              {t("admfact_marquerPayee")}
             </button>
           </div>
         ))
       )}
 
-      <h2 className={styles.sectionTitre}>Historique</h2>
+      <h2 className={styles.sectionTitre}>{t("admfact_historique")}</h2>
       {autres.length === 0 ? (
-        <p className={styles.messageVide}>Aucune autre facture.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneAutreFacture")}</p>
       ) : (
         autres.map((f) => (
           <div className={styles.facture} key={f.id}>
@@ -243,15 +237,17 @@ function FacturesContent() {
               <span className={styles.boutiqueNom}>{f.shop.name}</span>
               <span>{f.kind}</span>
               <span>{formatMoney(Number(f.amount))}</span>
-              <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
+              <span className={styles.statutHistorique}>{CLES_STATUT[f.status] ? t(CLES_STATUT[f.status]) : f.status}</span>
             </div>
           </div>
         ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures livreurs — en attente de paiement</h2>
+      <h2 className={styles.sectionTitre}>
+        {t("admfact_facturesLivreurs")} — {t("admfact_enAttentePaiement")}
+      </h2>
       {facturesLivreurs.filter((f) => f.status === "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune facture livreur en attente.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneFactureLivreurEnAttente")}</p>
       ) : (
         facturesLivreurs
           .filter((f) => f.status === "PENDING")
@@ -259,24 +255,26 @@ function FacturesContent() {
             <div className={styles.facture} key={f.id}>
               <div className={styles.factureInfo}>
                 <span className={styles.boutiqueNom}>{f.driver.user.fullName}</span>
-                <span>{f.kind === "opening_fee" ? "Frais d'ouverture" : "Abonnement mensuel"}</span>
+                <span>{f.kind === "opening_fee" ? t("admfact_fraisOuverture") : t("admfact_abonnementMensuel")}</span>
                 <span>{formatMoney(Number(f.amount))}</span>
-                <span>Échéance : {formatDate(f.dueAt)}</span>
+                <span>{t("crd_colEcheance")} : {formatDate(f.dueAt)}</span>
               </div>
               <button
                 className={styles.boutonPayer}
                 disabled={enCours === f.id}
                 onClick={() => marquerPayeeLivreur(f.id)}
               >
-                Marquer payée
+                {t("admfact_marquerPayee")}
               </button>
             </div>
           ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures livreurs — historique</h2>
+      <h2 className={styles.sectionTitre}>
+        {t("admfact_facturesLivreurs")} — {t("admfact_historique")}
+      </h2>
       {facturesLivreurs.filter((f) => f.status !== "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune autre facture livreur.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneAutreFactureLivreur")}</p>
       ) : (
         facturesLivreurs
           .filter((f) => f.status !== "PENDING")
@@ -284,17 +282,19 @@ function FacturesContent() {
             <div className={styles.facture} key={f.id}>
               <div className={styles.factureInfo}>
                 <span className={styles.boutiqueNom}>{f.driver.user.fullName}</span>
-                <span>{f.kind === "opening_fee" ? "Frais d'ouverture" : "Abonnement mensuel"}</span>
+                <span>{f.kind === "opening_fee" ? t("admfact_fraisOuverture") : t("admfact_abonnementMensuel")}</span>
                 <span>{formatMoney(Number(f.amount))}</span>
-                <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
+                <span className={styles.statutHistorique}>{CLES_STATUT[f.status] ? t(CLES_STATUT[f.status]) : f.status}</span>
               </div>
             </div>
           ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures Secourable — en attente de paiement</h2>
+      <h2 className={styles.sectionTitre}>
+        {t("admfact_facturesSecourable")} — {t("admfact_enAttentePaiement")}
+      </h2>
       {facturesComptable.filter((f) => f.status === "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune facture Secourable en attente.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneFactureSecourableEnAttente")}</p>
       ) : (
         facturesComptable
           .filter((f) => f.status === "PENDING")
@@ -302,24 +302,26 @@ function FacturesContent() {
             <div className={styles.facture} key={f.id}>
               <div className={styles.factureInfo}>
                 <span className={styles.boutiqueNom}>{f.subscription.user.fullName}</span>
-                <span>{f.kind === "yearly" ? "Abonnement annuel" : "Abonnement mensuel"}</span>
+                <span>{f.kind === "yearly" ? t("admfact_abonnementAnnuel") : t("admfact_abonnementMensuel")}</span>
                 <span>{formatMoney(Number(f.amount))}</span>
-                <span>Échéance : {formatDate(f.dueAt)}</span>
+                <span>{t("crd_colEcheance")} : {formatDate(f.dueAt)}</span>
               </div>
               <button
                 className={styles.boutonPayer}
                 disabled={enCours === f.id}
                 onClick={() => marquerPayeeComptable(f.id)}
               >
-                Marquer payée
+                {t("admfact_marquerPayee")}
               </button>
             </div>
           ))
       )}
 
-      <h2 className={styles.sectionTitre}>Factures Secourable — historique</h2>
+      <h2 className={styles.sectionTitre}>
+        {t("admfact_facturesSecourable")} — {t("admfact_historique")}
+      </h2>
       {facturesComptable.filter((f) => f.status !== "PENDING").length === 0 ? (
-        <p className={styles.messageVide}>Aucune autre facture Secourable.</p>
+        <p className={styles.messageVide}>{t("admfact_aucuneAutreFactureSecourable")}</p>
       ) : (
         facturesComptable
           .filter((f) => f.status !== "PENDING")
@@ -327,9 +329,9 @@ function FacturesContent() {
             <div className={styles.facture} key={f.id}>
               <div className={styles.factureInfo}>
                 <span className={styles.boutiqueNom}>{f.subscription.user.fullName}</span>
-                <span>{f.kind === "yearly" ? "Abonnement annuel" : "Abonnement mensuel"}</span>
+                <span>{f.kind === "yearly" ? t("admfact_abonnementAnnuel") : t("admfact_abonnementMensuel")}</span>
                 <span>{formatMoney(Number(f.amount))}</span>
-                <span className={styles.statutHistorique}>{LIBELLES_STATUT[f.status] ?? f.status}</span>
+                <span className={styles.statutHistorique}>{CLES_STATUT[f.status] ? t(CLES_STATUT[f.status]) : f.status}</span>
               </div>
             </div>
           ))

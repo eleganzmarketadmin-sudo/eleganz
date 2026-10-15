@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface UtilisateurListe {
@@ -21,22 +22,23 @@ interface UtilisateurDetail extends UtilisateurListe {
   _count: { orders: number; reviews: number };
 }
 
-const LABELS_ROLE: Record<string, string> = {
-  BUYER: "Acheteur",
-  SHOP_OWNER: "Propriétaire de boutique",
-  SHOP_STAFF: "Staff de boutique",
-  DRIVER: "Livreur",
-  ADMIN_SUPER: "Super administrateur",
-  ADMIN_SALES: "Admin — Ventes",
-  ADMIN_FINANCE: "Admin — Finance",
-  ADMIN_OPS: "Admin — Opérations",
-  ADMIN_LOGISTICS: "Admin — Logistique",
-  ADMIN_MARKETING: "Admin — Marketing",
-  ADMIN_SUPPORT: "Admin — Support",
-  ADMIN_AUDITOR: "Admin — Audit",
+const CLES_ROLE: Record<string, string> = {
+  BUYER: "gcmd_acheteurFallback",
+  SHOP_OWNER: "admutil_roleProprietaireBoutique",
+  SHOP_STAFF: "admutil_roleStaffBoutique",
+  DRIVER: "livr_titre",
+  ADMIN_SUPER: "admutil_roleAdminSuper",
+  ADMIN_SALES: "admutil_roleAdminVentes",
+  ADMIN_FINANCE: "admutil_roleAdminFinance",
+  ADMIN_OPS: "admutil_roleAdminOperations",
+  ADMIN_LOGISTICS: "admutil_roleAdminLogistique",
+  ADMIN_MARKETING: "admutil_roleAdminMarketing",
+  ADMIN_SUPPORT: "admutil_roleAdminSupport",
+  ADMIN_AUDITOR: "admutil_roleAdminAudit",
 };
 
 function UtilisateursContent() {
+  const { t } = useLocale();
   const [recherche, setRecherche] = useState("");
   const [resultats, setResultats] = useState<UtilisateurListe[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -54,7 +56,7 @@ function UtilisateursContent() {
     api
       .get<UtilisateurListe[]>(`/admin/users${recherche ? `?q=${encodeURIComponent(recherche)}` : ""}`)
       .then(setResultats)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -69,7 +71,7 @@ function UtilisateursContent() {
       const detail = await api.get<UtilisateurDetail>(`/admin/users/${userId}`);
       setSelectionne(detail);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible de charger ce compte.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_impossibleChargerCompte"));
     } finally {
       setChargementDetail(false);
     }
@@ -86,11 +88,11 @@ function UtilisateursContent() {
         nouveauMotDePasse ? { newPassword: nouveauMotDePasse } : {},
       );
       setMotDePasseGenere(
-        resultat.motDePasseTemporaire ?? "Mot de passe mis à jour avec la valeur fournie.",
+        resultat.motDePasseTemporaire ?? t("admutil_motDePasseMisAJour"),
       );
       setNouveauMotDePasse("");
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Réinitialisation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_reinitialisationImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -106,7 +108,7 @@ function UtilisateursContent() {
       setSelectionne({ ...selectionne, isSuspended: utilisateur.isSuspended });
       rechercher();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -114,11 +116,8 @@ function UtilisateursContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Utilisateurs</h1>
-      <p className={styles.sousTitre}>
-        Retrouvez un compte (acheteur, vendeur ou staff) pour réinitialiser son mot de passe,
-        consulter sa situation ou bloquer sa connexion en cas de souci.
-      </p>
+      <h1 className={styles.titre}>{t("admutil_titre")}</h1>
+      <p className={styles.sousTitre}>{t("admutil_sousTitre")}</p>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       <form
@@ -129,21 +128,21 @@ function UtilisateursContent() {
         }}
       >
         <input
-          placeholder="Nom, email ou téléphone…"
+          placeholder={t("admutil_placeholderRecherche")}
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
         <button type="submit" className={styles.boutonRechercher}>
-          Rechercher
+          {t("admutil_rechercher")}
         </button>
       </form>
 
       <div className={styles.disposition}>
         <div className={styles.liste}>
           {chargement ? (
-            <p>Chargement…</p>
+            <p>{t("commun_chargement")}</p>
           ) : resultats.length === 0 ? (
-            <p className={styles.messageVide}>Aucun compte ne correspond.</p>
+            <p className={styles.messageVide}>{t("admutil_aucunCompte")}</p>
           ) : (
             resultats.map((u) => (
               <button
@@ -153,8 +152,8 @@ function UtilisateursContent() {
               >
                 <span className={styles.nom}>{u.fullName}</span>
                 <span className={styles.contact}>{u.email ?? u.phone ?? "—"}</span>
-                <span className={styles.role}>{LABELS_ROLE[u.role] ?? u.role}</span>
-                {u.isSuspended && <span className={styles.badgeSuspendu}>Suspendu</span>}
+                <span className={styles.role}>{t(CLES_ROLE[u.role]) ?? u.role}</span>
+                {u.isSuspended && <span className={styles.badgeSuspendu}>{t("admutil_suspendu")}</span>}
               </button>
             ))
           )}
@@ -162,9 +161,9 @@ function UtilisateursContent() {
 
         <div className={styles.panneauDetail}>
           {chargementDetail ? (
-            <p>Chargement du compte…</p>
+            <p>{t("admutil_chargementCompte")}</p>
           ) : !selectionne ? (
-            <p className={styles.messageVide}>Sélectionnez un compte dans la liste.</p>
+            <p className={styles.messageVide}>{t("admutil_selectionnerCompte")}</p>
           ) : (
             <>
               <h2 className={styles.nomDetail}>{selectionne.fullName}</h2>
@@ -172,13 +171,15 @@ function UtilisateursContent() {
                 {selectionne.email ?? "—"} · {selectionne.phone ?? "—"}
               </p>
               <p className={styles.roleDetail}>
-                {LABELS_ROLE[selectionne.role] ?? selectionne.role}
-                {selectionne.isSuspended && <span className={styles.badgeSuspendu}> — Suspendu</span>}
+                {CLES_ROLE[selectionne.role] ? t(CLES_ROLE[selectionne.role]) : selectionne.role}
+                {selectionne.isSuspended && (
+                  <span className={styles.badgeSuspendu}> — {t("admutil_suspendu")}</span>
+                )}
               </p>
 
               {selectionne.ownedShops.length > 0 && (
                 <div className={styles.blocInfo}>
-                  <strong>Boutiques possédées</strong>
+                  <strong>{t("admutil_boutiquesPossedees")}</strong>
                   <ul>
                     {selectionne.ownedShops.map((s) => (
                       <li key={s.id}>
@@ -190,7 +191,7 @@ function UtilisateursContent() {
               )}
               {selectionne.shopMemberships.length > 0 && (
                 <div className={styles.blocInfo}>
-                  <strong>Membre de l&apos;équipe de</strong>
+                  <strong>{t("admutil_membreEquipeDe")}</strong>
                   <ul>
                     {selectionne.shopMemberships.map((m, i) => (
                       <li key={i}>
@@ -201,23 +202,20 @@ function UtilisateursContent() {
                 </div>
               )}
               <div className={styles.blocInfo}>
-                <strong>Activité</strong>
+                <strong>{t("admutil_activite")}</strong>
                 <p>
-                  {selectionne._count.orders} commande(s) Marketplace · {selectionne._count.reviews}{" "}
-                  avis déposé(s)
+                  {selectionne._count.orders} {t("admutil_commandesMarketplace")} ·{" "}
+                  {selectionne._count.reviews} {t("admutil_avisDeposes")}
                 </p>
               </div>
 
               <div className={styles.section}>
-                <strong>Réinitialiser le mot de passe</strong>
-                <p className={styles.note}>
-                  Laissez vide pour générer un mot de passe temporaire à communiquer vous-même à la
-                  personne, ou saisissez-en un précis.
-                </p>
+                <strong>{t("admutil_reinitialiserMotDePasse")}</strong>
+                <p className={styles.note}>{t("admutil_noteReinitialisation")}</p>
                 <div className={styles.ligneAction}>
                   <input
                     type="text"
-                    placeholder="Nouveau mot de passe (optionnel)"
+                    placeholder={t("admutil_placeholderNouveauMotDePasse")}
                     value={nouveauMotDePasse}
                     onChange={(e) => setNouveauMotDePasse(e.target.value)}
                   />
@@ -226,23 +224,23 @@ function UtilisateursContent() {
                     onClick={reinitialiserMotDePasse}
                     disabled={enCours === "reset"}
                   >
-                    {enCours === "reset" ? "…" : "Réinitialiser"}
+                    {enCours === "reset" ? "…" : t("admutil_reinitialiser")}
                   </button>
                 </div>
                 {motDePasseGenere && (
                   <p className={styles.motDePasseResultat}>
-                    Nouveau mot de passe : <code>{motDePasseGenere}</code> — communiquez-le à la
-                    personne maintenant, il ne sera plus affiché ensuite.
+                    {t("admutil_nouveauMotDePasseLabel")} <code>{motDePasseGenere}</code>{" "}
+                    {t("admutil_noteCommuniquerMotDePasse")}
                   </p>
                 )}
               </div>
 
               <div className={styles.section}>
-                <strong>Accès au compte</strong>
+                <strong>{t("admutil_accesCompte")}</strong>
                 <p className={styles.note}>
                   {selectionne.isSuspended
-                    ? "La connexion de ce compte est actuellement bloquée."
-                    : "Bloque la connexion sans supprimer aucune donnée — utile en cas de litige ou d'abus signalé."}
+                    ? t("admutil_connexionBloquee")
+                    : t("admutil_descriptionSuspension")}
                 </p>
                 <button
                   className={selectionne.isSuspended ? styles.boutonReactiver : styles.boutonSuspendre}
@@ -252,8 +250,8 @@ function UtilisateursContent() {
                   {enCours === "suspension"
                     ? "…"
                     : selectionne.isSuspended
-                      ? "Réactiver le compte"
-                      : "Suspendre le compte"}
+                      ? t("admutil_reactiverCompte")
+                      : t("admutil_suspendreCompte")}
                 </button>
               </div>
             </>

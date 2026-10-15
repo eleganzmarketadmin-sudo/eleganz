@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./EvolutionChart.module.css";
 
 interface EvolutionChartProps {
@@ -38,6 +39,7 @@ export function EvolutionChart({
   formater = (n) => n.toLocaleString("fr-FR"),
   style = "ligne",
 }: EvolutionChartProps) {
+  const { t } = useLocale();
   const svgRef = useRef<SVGSVGElement>(null);
   const [survol, setSurvol] = useState<number | null>(null);
 
@@ -93,7 +95,10 @@ export function EvolutionChart({
           onMouseMove={surMouvement}
           onMouseLeave={() => setSurvol(null)}
           role="img"
-          aria-label={`${titre} : ${formater(total)} sur la période, ${valeurs.length} jours`}
+          aria-label={t("admgraph_ariaResume")
+            .replace("{{titre}}", titre)
+            .replace("{{total}}", formater(total))
+            .replace("{{jours}}", String(valeurs.length))}
         >
           {[0, 0.5, 1].map((frac) => {
             const y = MARGE_HAUT + (HAUTEUR - MARGE_HAUT - MARGE_BAS) * frac;

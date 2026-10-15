@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Litige {
@@ -15,6 +16,7 @@ interface Litige {
 }
 
 function LitigesContent() {
+  const { t } = useLocale();
   const [litiges, setLitiges] = useState<Litige[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -25,7 +27,7 @@ function LitigesContent() {
     api
       .get<Litige[]>("/admin/disputes")
       .then(setLitiges)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -39,21 +41,21 @@ function LitigesContent() {
       await api.patch(`/admin/disputes/${disputeId}/resolve`, { resolution });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Résolution impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admlitiges_resolutionImpossible"));
     } finally {
       setEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Litiges ouverts</h1>
+      <h1 className={styles.titre}>{t("admlitiges_titre")}</h1>
       {erreur && <p>{erreur}</p>}
 
       {litiges.length === 0 ? (
-        <p className={styles.messageVide}>Aucun litige ouvert pour l&apos;instant.</p>
+        <p className={styles.messageVide}>{t("admlitiges_aucunLitigeOuvert")}</p>
       ) : (
         litiges.map((l) => (
           <div className={styles.litige} key={l.id}>
@@ -64,7 +66,7 @@ function LitigesContent() {
             <p className={styles.motif}>{l.reason}</p>
             <div className={styles.resolution}>
               <input
-                placeholder="Décision (ex. remboursement intégral, article renvoyé)"
+                placeholder={t("admlitiges_placeholderDecision")}
                 value={resolutions[l.id] ?? ""}
                 onChange={(e) => setResolutions((prev) => ({ ...prev, [l.id]: e.target.value }))}
               />
@@ -73,7 +75,7 @@ function LitigesContent() {
                 disabled={enCours === l.id || !resolutions[l.id]}
                 onClick={() => resoudre(l.id)}
               >
-                Résoudre
+                {t("admlitiges_resoudre")}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface CelluleReleve {
@@ -36,11 +37,11 @@ interface BoutiqueOption {
   name: string;
 }
 
-const GRANULARITES = [
-  { valeur: "JOUR", label: "Journalier" },
-  { valeur: "SEMAINE", label: "Hebdomadaire" },
-  { valeur: "MOIS", label: "Mensuel" },
-  { valeur: "ANNEE", label: "Annuel" },
+const CLES_GRANULARITES = [
+  { valeur: "JOUR", labelCle: "rel_granulariteJour" },
+  { valeur: "SEMAINE", labelCle: "rel_granulariteSemaine" },
+  { valeur: "MOIS", labelCle: "rel_granulariteMois" },
+  { valeur: "ANNEE", labelCle: "rel_granulariteAnnee" },
 ];
 
 function formaterCellule(c: CelluleReleve): string {
@@ -57,6 +58,7 @@ function ilYA(jours: number): string {
 }
 
 function AdminRelevesContent() {
+  const { t } = useLocale();
   const [boutiques, setBoutiques] = useState<BoutiqueOption[]>([]);
   const [shopId, setShopId] = useState(""); // "" = plateforme entière
   const [from, setFrom] = useState(ilYA(30));
@@ -78,11 +80,11 @@ function AdminRelevesContent() {
   }, []);
 
   const regroupements = [
-    { valeur: "", label: "Aucun (totaux seulement)" },
-    { valeur: "PRODUIT", label: "Par produit" },
-    { valeur: "CATEGORIE", label: "Par catégorie" },
-    { valeur: "MOYEN_PAIEMENT", label: "Par moyen de paiement" },
-    ...(shopId ? [] : [{ valeur: "BOUTIQUE", label: "Par boutique" }]),
+    { valeur: "", labelCle: "rel_regroupementAucun" },
+    { valeur: "PRODUIT", labelCle: "rel_regroupementProduit" },
+    { valeur: "CATEGORIE", labelCle: "rel_regroupementCategorie" },
+    { valeur: "MOYEN_PAIEMENT", labelCle: "rel_regroupementMoyenPaiement" },
+    ...(shopId ? [] : [{ valeur: "BOUTIQUE", labelCle: "admreleve_regroupementBoutique" }]),
   ];
 
   function construireQuery() {
@@ -103,7 +105,7 @@ function AdminRelevesContent() {
       const data = await api.get<ReleveActivite>(`/admin/reports/releve?${construireQuery().toString()}`);
       setReleve(data);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Le relevé n'a pas pu être généré.");
+      setErreur(err instanceof ApiError ? err.message : t("rel_erreurGeneration"));
     } finally {
       setChargement(false);
     }
@@ -122,7 +124,7 @@ function AdminRelevesContent() {
         await ouvrirDocumentPdf(path);
       }
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Export impossible.");
+      setErreur(err instanceof Error ? err.message : t("fact_exportImpossible"));
     } finally {
       setExportEnCours(null);
     }
@@ -130,18 +132,14 @@ function AdminRelevesContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Relevés d&apos;activité</h1>
-      <p className={styles.sousTitre}>
-        Relevé certifié par la plateforme pour une boutique précise, ou pour l&apos;ensemble de la
-        plateforme (regroupement par boutique disponible dans ce cas) — pour vos propres analyses
-        ou pour répondre à la demande d&apos;un vendeur.
-      </p>
+      <h1 className={styles.titre}>{t("nav_releves")}</h1>
+      <p className={styles.sousTitre}>{t("admreleve_sousTitre")}</p>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>
-          <label htmlFor="shopId">Boutique</label>
+          <label htmlFor="shopId">{t("admreleve_labelBoutique")}</label>
           <select id="shopId" value={shopId} onChange={(e) => setShopId(e.target.value)}>
-            <option value="">Toutes boutiques (plateforme entière)</option>
+            <option value="">{t("admreleve_toutesBoutiques")}</option>
             {boutiques.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -150,25 +148,25 @@ function AdminRelevesContent() {
           </select>
         </div>
         <div className={styles.champ}>
-          <label htmlFor="from">Du</label>
+          <label htmlFor="from">{t("rel_du")}</label>
           <input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="to">Au</label>
+          <label htmlFor="to">{t("rel_au")}</label>
           <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="granularite">Fréquence</label>
+          <label htmlFor="granularite">{t("rel_frequence")}</label>
           <select id="granularite" value={granularite} onChange={(e) => setGranularite(e.target.value)}>
-            {GRANULARITES.map((g) => (
+            {CLES_GRANULARITES.map((g) => (
               <option key={g.valeur} value={g.valeur}>
-                {g.label}
+                {t(g.labelCle)}
               </option>
             ))}
           </select>
         </div>
         <div className={styles.champ}>
-          <label htmlFor="regroupement">Regroupement</label>
+          <label htmlFor="regroupement">{t("rel_regroupement")}</label>
           <select
             id="regroupement"
             value={regroupement}
@@ -176,13 +174,13 @@ function AdminRelevesContent() {
           >
             {regroupements.map((r) => (
               <option key={r.valeur} value={r.valeur}>
-                {r.label}
+                {t(r.labelCle)}
               </option>
             ))}
           </select>
         </div>
         <button className={styles.bouton} onClick={genererApercu} disabled={chargement}>
-          {chargement ? "Génération…" : "Afficher l'aperçu"}
+          {chargement ? t("rel_generationEnCours") : t("rel_afficherApercu")}
         </button>
       </div>
 
@@ -192,10 +190,10 @@ function AdminRelevesContent() {
         <>
           <div className={styles.actionsExport}>
             <button className={styles.boutonSecondaire} onClick={() => exporter("xlsx")} disabled={exportEnCours !== null}>
-              {exportEnCours === "xlsx" ? "…" : "Exporter en Excel"}
+              {exportEnCours === "xlsx" ? "…" : t("action_exporterExcel")}
             </button>
             <button className={styles.boutonSecondaire} onClick={() => exporter("pdf")} disabled={exportEnCours !== null}>
-              {exportEnCours === "pdf" ? "…" : "Exporter en PDF"}
+              {exportEnCours === "pdf" ? "…" : t("rel_exporterPdf")}
             </button>
           </div>
 
@@ -203,13 +201,13 @@ function AdminRelevesContent() {
             <table className={styles.tableau}>
               <thead>
                 <tr>
-                  <th>{regroupement ? regroupements.find((r) => r.valeur === regroupement)?.label : "Total"}</th>
+                  <th>{regroupement ? t(regroupements.find((r) => r.valeur === regroupement)?.labelCle ?? "rel_regroupementAucun") : t("panier_total")}</th>
                   {releve.periodes.map((p) => (
                     <th key={p.cle} className={styles.colChiffre}>
                       {p.label}
                     </th>
                   ))}
-                  <th className={styles.colChiffre}>Total</th>
+                  <th className={styles.colChiffre}>{t("panier_total")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -227,7 +225,7 @@ function AdminRelevesContent() {
                   </tr>
                 ))}
                 <tr className={styles.ligneTotal}>
-                  <td>TOTAL GÉNÉRAL</td>
+                  <td>{t("rel_totalGeneral")}</td>
                   {releve.periodes.map((p) => (
                     <td key={p.cle} className={styles.colChiffre}>
                       {formaterCellule(releve.totauxParPeriode[p.cle])}
@@ -240,12 +238,12 @@ function AdminRelevesContent() {
           </div>
 
           <p className={styles.certification}>
-            Généré le{" "}
+            {t("admreleve_genereLe")}{" "}
             {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(
               new Date(releve.genereLe),
             )}
-            . Code de vérification : <strong>{releve.codeCertification}</strong> —{" "}
-            {releve.totalGeneral.ventesCount} vente(s)/commande(s) incluse(s).
+            . {t("rel_codeVerification")} <strong>{releve.codeCertification}</strong> —{" "}
+            {releve.totalGeneral.ventesCount} {t("rel_venteCommandeIncluse")}
           </p>
         </>
       )}

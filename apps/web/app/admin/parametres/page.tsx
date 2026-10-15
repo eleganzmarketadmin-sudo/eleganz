@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface PlatformSettings {
@@ -22,18 +23,16 @@ interface PlatformSettings {
   chatWidgetEnabled?: boolean;
 }
 
-const FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; label: string; description: string }[] = [
+const CLES_FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; labelCle: string; descriptionCle: string }[] = [
   {
     cle: "photoSearchEnabled",
-    label: "Recherche par photo (Marketplace)",
-    description:
-      "Un acheteur prend un vêtement en photo et retrouve des articles similaires. Nécessite un fournisseur d'embeddings d'image (Google Vision, Replicate…) — pas encore branché.",
+    labelCle: "admparam_iaPhotoLabel",
+    descriptionCle: "admparam_iaPhotoDescription",
   },
   {
     cle: "adStudioEnabled",
-    label: "Studio publicitaire IA (Gestion)",
-    description:
-      "Génère des visuels/vidéos publicitaires pour un produit. Nécessite un générateur d'image/vidéo (DALL·E, Stability, Replicate…) — pas encore branché.",
+    labelCle: "admparam_iaStudioLabel",
+    descriptionCle: "admparam_iaStudioDescription",
   },
 ];
 
@@ -47,43 +46,41 @@ type ChampTexte = Exclude<
   | "chatWidgetEnabled"
 >;
 
-const CANAUX_NOTIFICATION: {
+const CLES_CANAUX_NOTIFICATION: {
   cle: "notificationsInAppEnabled" | "notificationsEmailEnabled" | "notificationsSmsEnabled";
-  label: string;
-  description: string;
+  labelCle: string;
+  descriptionCle: string;
 }[] = [
   {
     cle: "notificationsInAppEnabled",
-    label: "Notifications dans la plateforme",
-    description:
-      "Cloche 🔔 et centre de messagerie pour tous les acteurs (vendeurs, comptables, livreurs, acheteurs) : nouvelle commande, nouveau message, échéances. Activé par défaut.",
+    labelCle: "admparam_canalInAppLabel",
+    descriptionCle: "admparam_canalInAppDescription",
   },
   {
     cle: "notificationsEmailEnabled",
-    label: "Notifications par e-mail",
-    description:
-      "Prévu mais sans effet tant qu'aucun fournisseur d'envoi d'e-mails n'est branché (ex. SendGrid, Mailgun) — l'activer ici ne fait rien de plus aujourd'hui, par choix explicite plutôt que d'écrire une notification qui ne serait jamais envoyée.",
+    labelCle: "admparam_canalEmailLabel",
+    descriptionCle: "admparam_canalEmailDescription",
   },
   {
     cle: "notificationsSmsEnabled",
-    label: "Notifications par SMS",
-    description:
-      "Même principe que l'e-mail : prévu, pas encore branché à un fournisseur SMS. Voir aussi les crédits SMS/WhatsApp premium (section services à la carte).",
+    labelCle: "admparam_canalSmsLabel",
+    descriptionCle: "admparam_canalSmsDescription",
   },
 ];
 
-const CHAMPS: { cle: ChampTexte; label: string; placeholder: string }[] = [
-  { cle: "address", label: "Adresse", placeholder: "Ex. 12 Avenue du Commerce, Gombe, Kinshasa" },
-  { cle: "website", label: "Site web", placeholder: "https://eleganz-production.up.railway.app" },
-  { cle: "supportEmail", label: "Email clientèle", placeholder: "support@eleganz.cd" },
-  { cle: "supportPhone", label: "Numéro de contact", placeholder: "+243 81 234 5678" },
-  { cle: "whatsappLink", label: "Lien WhatsApp", placeholder: "https://wa.me/243812345678" },
-  { cle: "telegramLink", label: "Lien Telegram", placeholder: "https://t.me/eleganz" },
-  { cle: "tiktokUrl", label: "TikTok", placeholder: "https://tiktok.com/@eleganz" },
-  { cle: "instagramUrl", label: "Instagram", placeholder: "https://instagram.com/eleganz" },
+const CLES_CHAMPS: { cle: ChampTexte; labelCle: string; placeholder: string }[] = [
+  { cle: "address", labelCle: "param_labelAdresse", placeholder: "Ex. 12 Avenue du Commerce, Gombe, Kinshasa" },
+  { cle: "website", labelCle: "admparam_labelSiteWeb", placeholder: "https://eleganz-production.up.railway.app" },
+  { cle: "supportEmail", labelCle: "admparam_labelEmailClientele", placeholder: "support@eleganz.cd" },
+  { cle: "supportPhone", labelCle: "admparam_labelNumeroContact", placeholder: "+243 81 234 5678" },
+  { cle: "whatsappLink", labelCle: "admparam_labelLienWhatsapp", placeholder: "https://wa.me/243812345678" },
+  { cle: "telegramLink", labelCle: "admparam_labelLienTelegram", placeholder: "https://t.me/eleganz" },
+  { cle: "tiktokUrl", labelCle: "admparam_labelTiktok", placeholder: "https://tiktok.com/@eleganz" },
+  { cle: "instagramUrl", labelCle: "admparam_labelInstagram", placeholder: "https://instagram.com/eleganz" },
 ];
 
 function ParametresContent() {
+  const { t } = useLocale();
   const [valeurs, setValeurs] = useState<PlatformSettings>({});
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -94,9 +91,9 @@ function ParametresContent() {
     api
       .get<PlatformSettings>("/admin/platform-settings")
       .then(setValeurs)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault();
@@ -106,33 +103,28 @@ function ParametresContent() {
     try {
       const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", valeurs);
       setValeurs(resultat);
-      setConfirmation(
-        "Coordonnées enregistrées — elles apparaîtront sur la signature de tous les documents imprimés.",
-      );
+      setConfirmation(t("admparam_confirmationEnregistrement"));
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
     } finally {
       setEnregistrement(false);
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Paramètres plateforme</h1>
-      <p className={styles.sousTitre}>
-        Ces coordonnées officielles d&apos;ELEGANZ apparaissent dans la signature de bas de page de
-        tous les documents imprimés (tickets, factures, bons de livraison) de toutes les boutiques.
-      </p>
+      <h1 className={styles.titre}>{t("admparam_titre")}</h1>
+      <p className={styles.sousTitre}>{t("admparam_sousTitre")}</p>
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {confirmation && <p className={styles.confirmation}>{confirmation}</p>}
 
       <form className={styles.formulaire} onSubmit={enregistrer}>
-        {CHAMPS.map((champ) => (
+        {CLES_CHAMPS.map((champ) => (
           <div className={styles.champ} key={champ.cle}>
-            <label htmlFor={champ.cle}>{champ.label}</label>
+            <label htmlFor={champ.cle}>{t(champ.labelCle)}</label>
             <input
               id={champ.cle}
               value={valeurs[champ.cle] ?? ""}
@@ -142,17 +134,12 @@ function ParametresContent() {
           </div>
         ))}
         <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrement}>
-          {enregistrement ? "Enregistrement…" : "Enregistrer"}
+          {enregistrement ? t("admparam_enregistrementEnCours") : t("action_enregistrer")}
         </button>
       </form>
 
-      <h2 className={styles.titreSection}>Chatbox</h2>
-      <p className={styles.sousTitre}>
-        Bulle de discussion flottante, visible dans tous les espaces authentifiés (vendeurs,
-        comptables, livreurs, acheteurs, équipe admin), qui ouvre le centre de messagerie en un clic.
-        Désactivez-la ici si vous préférez que les échanges passent uniquement par la page
-        « Messagerie » du menu.
-      </p>
+      <h2 className={styles.titreSection}>{t("admparam_titreChatbox")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_chatboxSousTitre")}</p>
       <div className={styles.listeBascules}>
         <label className={styles.bascule}>
           <input
@@ -167,24 +154,21 @@ function ParametresContent() {
                 });
                 setValeurs(resultat);
               } catch (err) {
-                setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+                setErreur(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
               }
             }}
           />
           <div>
-            <div className={styles.basculeLabel}>Afficher la bulle de chat</div>
-            <div className={styles.basculeDescription}>Activée par défaut.</div>
+            <div className={styles.basculeLabel}>{t("admparam_afficherBulleChat")}</div>
+            <div className={styles.basculeDescription}>{t("admparam_activeeParDefaut")}</div>
           </div>
         </label>
       </div>
 
-      <h2 className={styles.titreSection}>Notifications</h2>
-      <p className={styles.sousTitre}>
-        Choisissez quels canaux de notification sont actifs sur la plateforme. Ce réglage s&apos;applique
-        immédiatement à tous les comptes (vendeurs, comptables, livreurs, acheteurs, équipe admin).
-      </p>
+      <h2 className={styles.titreSection}>{t("nav_notifications")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_notificationsSousTitre")}</p>
       <div className={styles.listeBascules}>
-        {CANAUX_NOTIFICATION.map((canal) => (
+        {CLES_CANAUX_NOTIFICATION.map((canal) => (
           <label className={styles.bascule} key={canal.cle}>
             <input
               type="checkbox"
@@ -198,27 +182,22 @@ function ParametresContent() {
                   });
                   setValeurs(resultat);
                 } catch (err) {
-                  setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+                  setErreur(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
                 }
               }}
             />
             <div>
-              <div className={styles.basculeLabel}>{canal.label}</div>
-              <div className={styles.basculeDescription}>{canal.description}</div>
+              <div className={styles.basculeLabel}>{t(canal.labelCle)}</div>
+              <div className={styles.basculeDescription}>{t(canal.descriptionCle)}</div>
             </div>
           </label>
         ))}
       </div>
 
-      <h2 className={styles.titreSection}>Fonctionnalités IA prévues</h2>
-      <p className={styles.sousTitre}>
-        Ces fonctionnalités existent déjà comme points d&apos;entrée dans les écrans (visibles mais
-        désactivés, « Bientôt disponible »). Les activer ici ne les rend pas fonctionnelles tant
-        qu&apos;un fournisseur n&apos;est pas choisi et payé — c&apos;est une préparation pour le jour où
-        vous déciderez d&apos;investir dedans, en fonction des recettes et de la croissance.
-      </p>
+      <h2 className={styles.titreSection}>{t("admparam_titreFonctionnalitesIA")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_iaSousTitre")}</p>
       <div className={styles.listeBascules}>
-        {FONCTIONNALITES_IA.map((f) => (
+        {CLES_FONCTIONNALITES_IA.map((f) => (
           <label className={styles.bascule} key={f.cle}>
             <input
               type="checkbox"
@@ -232,13 +211,13 @@ function ParametresContent() {
                   });
                   setValeurs(resultat);
                 } catch (err) {
-                  setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+                  setErreur(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
                 }
               }}
             />
             <div>
-              <div className={styles.basculeLabel}>{f.label}</div>
-              <div className={styles.basculeDescription}>{f.description}</div>
+              <div className={styles.basculeLabel}>{t(f.labelCle)}</div>
+              <div className={styles.basculeDescription}>{t(f.descriptionCle)}</div>
             </div>
           </label>
         ))}

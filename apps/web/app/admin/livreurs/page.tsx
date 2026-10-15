@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Livreur {
@@ -40,18 +41,18 @@ interface ComportementLivreur {
   delaiMoyenLivraisonHeures: number | null;
 }
 
-const LABELS_VEHICULE: Record<string, string> = {
-  PIED: "À pied",
-  VELO: "Vélo",
-  MOTO: "Moto",
-  VOITURE: "Voiture",
+const CLES_VEHICULE: Record<string, string> = {
+  PIED: "gliv_vehiculeAPied",
+  VELO: "gliv_vehiculeVelo",
+  MOTO: "gliv_vehiculeMoto",
+  VOITURE: "gliv_vehiculeVoiture",
 };
 
-const LABELS_FACTURATION: Record<string, string> = {
-  FREE_PERIOD: "Période gratuite",
-  PAYMENT_DUE: "Paiement attendu",
-  ACTIVE: "Abonnement à jour",
-  SUSPENDED: "Suspendu (impayé)",
+const CLES_FACTURATION: Record<string, string> = {
+  FREE_PERIOD: "abo_statutPeriodeGratuite",
+  PAYMENT_DUE: "abo_statutPaiementAttendu",
+  ACTIVE: "abo_statutAJour",
+  SUSPENDED: "livr_statutSuspendu",
 };
 
 /**
@@ -64,6 +65,7 @@ const LABELS_FACTURATION: Record<string, string> = {
  * toute affectation de mission à un livreur non vérifié.
  */
 function LivreursContent() {
+  const { t } = useLocale();
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
   const [stats, setStats] = useState<Record<string, ComportementLivreur>>({});
   const [chargement, setChargement] = useState(true);
@@ -81,7 +83,7 @@ function LivreursContent() {
         setStats(Object.fromEntries(listeStats.map((s) => [s.livreurId, s])));
         setNotes(Object.fromEntries(listeLivreurs.map((l) => [l.id, l.adminNote ?? ""])));
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -94,7 +96,7 @@ function LivreursContent() {
       await api.post(`/delivery/drivers/${driverId}/verify`, { verified });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admlivr_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -107,21 +109,21 @@ function LivreursContent() {
       await api.post(`/delivery/drivers/${driverId}/note`, { adminNote: notes[driverId] ?? "" });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement de la note impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admlivr_enregistrementNoteImpossible"));
     } finally {
       setEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement des livreurs…</p>;
+  if (chargement) return <p>{t("gliv_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Livreurs</h1>
+      <h1 className={styles.titre}>{t("nav_livreurs")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       {livreurs.length === 0 ? (
-        <p className={styles.messageVide}>Aucun livreur inscrit pour l&apos;instant.</p>
+        <p className={styles.messageVide}>{t("gliv_aucunLivreur")}</p>
       ) : (
         livreurs.map((l) => {
           const s = stats[l.id];
@@ -131,85 +133,102 @@ function LivreursContent() {
                 <div>
                   <span className={styles.nom}>{l.user.fullName}</span>
                   <span className={`${styles.statut} ${!l.verified ? styles.statutSuspendu : ""}`}>
-                    {l.verified ? "Vérifié" : "Non vérifié"}
+                    {l.verified ? t("admlivr_verifie") : t("admlivr_nonVerifie")}
                   </span>
                   <span className={`${styles.statut} ${l.billingStatus === "SUSPENDED" ? styles.statutSuspendu : ""}`}>
-                    {LABELS_FACTURATION[l.billingStatus] ?? l.billingStatus}
+                    {CLES_FACTURATION[l.billingStatus] ? t(CLES_FACTURATION[l.billingStatus]) : l.billingStatus}
                   </span>
                 </div>
-                <span className={styles.date}>Inscrit le {formatDate(l.user.createdAt)}</span>
+                <span className={styles.date}>
+                  {t("admlivr_inscritLe")} {formatDate(l.user.createdAt)}
+                </span>
               </div>
               <div className={styles.corps}>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Compte</span>
+                  <span className={styles.champLabel}>{t("cpt_compte")}</span>
                   <span>{l.user.email ?? l.user.phone}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Téléphone livraison</span>
-                  <span>{l.phone ?? "Non renseigné"}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelTelephoneLivraison")}</span>
+                  <span>{l.phone ?? t("admlivr_nonRenseigne")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>WhatsApp</span>
-                  <span>{l.whatsapp ?? "Non renseigné"}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelWhatsapp")}</span>
+                  <span>{l.whatsapp ?? t("admlivr_nonRenseigne")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Adresse</span>
-                  <span>{l.address ?? "Non renseignée"}</span>
+                  <span className={styles.champLabel}>{t("param_labelAdresse")}</span>
+                  <span>{l.address ?? t("admlivr_nonRenseignee")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Zone</span>
-                  <span>{l.zone ?? "Non précisée"}</span>
+                  <span className={styles.champLabel}>{t("livr_zone")}</span>
+                  <span>{l.zone ?? t("livr_zoneNonPrecisee")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Véhicule</span>
-                  <span>{l.vehicleType ? LABELS_VEHICULE[l.vehicleType] ?? l.vehicleType : "Non renseigné"}</span>
+                  <span className={styles.champLabel}>{t("gliv_labelVehicule")}</span>
+                  <span>{l.vehicleType ? (CLES_VEHICULE[l.vehicleType] ? t(CLES_VEHICULE[l.vehicleType]) : l.vehicleType) : t("admlivr_nonRenseigne")}</span>
                 </div>
                 {l.vehiclePlate && (
                   <div className={styles.champInfo}>
-                    <span className={styles.champLabel}>Plaque</span>
+                    <span className={styles.champLabel}>{t("admlivr_labelPlaque")}</span>
                     <span>{l.vehiclePlate}</span>
                   </div>
                 )}
                 {l.licenseNumber && (
                   <div className={styles.champInfo}>
-                    <span className={styles.champLabel}>Permis de conduire</span>
+                    <span className={styles.champLabel}>{t("admlivr_labelPermisConduire")}</span>
                     <span>{l.licenseNumber}</span>
                   </div>
                 )}
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Pièce d&apos;identité</span>
-                  <span>{l.idDocumentNumber ?? "Non renseignée"}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelPieceIdentite")}</span>
+                  <span>{l.idDocumentNumber ?? t("admlivr_nonRenseignee")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Livraisons</span>
-                  <span>{l._count.deliveries} au total{s ? ` · ${s.livrees} livrées · ${s.tauxLitigePct}% de litige` : ""}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelLivraisons")}</span>
+                  <span>
+                    {t("admlivr_livraisonsTotal").replace("{{total}}", String(l._count.deliveries))}
+                    {s
+                      ? t("admlivr_livraisonsDetail")
+                          .replace("{{livrees}}", String(s.livrees))
+                          .replace("{{taux}}", String(s.tauxLitigePct))
+                      : ""}
+                  </span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>En cours actuellement</span>
-                  <span>{s ? `${s.enCoursActuellement} mission(s) en route` : "Aucune donnée"}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelEnCoursActuellement")}</span>
+                  <span>
+                    {s
+                      ? t("admlivr_missionEnRoute").replace("{{n}}", String(s.enCoursActuellement))
+                      : t("cpt_aucuneDonnee")}
+                  </span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Ce mois-ci</span>
-                  <span>{s ? `${s.livraisonsCeMois} livraison(s) affectée(s)` : "Aucune donnée"}</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelCeMoisCi")}</span>
+                  <span>
+                    {s
+                      ? t("admlivr_livraisonsAffectees").replace("{{n}}", String(s.livraisonsCeMois))
+                      : t("cpt_aucuneDonnee")}
+                  </span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Délai moyen de livraison</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelDelaiMoyen")}</span>
                   <span>
                     {s?.delaiMoyenLivraisonHeures != null
-                      ? `${s.delaiMoyenLivraisonHeures} h (enlèvement → livraison déclarée)`
-                      : "Pas encore mesurable"}
+                      ? t("admlivr_delaiHeures").replace("{{n}}", String(s.delaiMoyenLivraisonHeures))
+                      : t("admlivr_pasEncoreMesurable")}
                   </span>
                 </div>
               </div>
               <div className={styles.corps} style={{ paddingTop: 0 }}>
                 <div className={styles.champInfo} style={{ gridColumn: "1 / -1" }}>
-                  <span className={styles.champLabel}>Note d&apos;instruction (interne, jamais visible du livreur)</span>
+                  <span className={styles.champLabel}>{t("admlivr_labelNoteInstruction")}</span>
                   <textarea
                     value={notes[l.id] ?? ""}
                     onChange={(e) => setNotes((v) => ({ ...v, [l.id]: e.target.value }))}
                     rows={2}
                     style={{ width: "100%", boxSizing: "border-box", padding: "8px", border: "1px solid var(--color-border)", fontFamily: "inherit" }}
-                    placeholder="Ex. pièce d'identité illisible, à redemander"
+                    placeholder={t("admlivr_placeholderNote")}
                   />
                   <button
                     className={styles.boutonReactiver}
@@ -217,7 +236,7 @@ function LivreursContent() {
                     disabled={enCours === l.id}
                     onClick={() => enregistrerNote(l.id)}
                   >
-                    Enregistrer la note
+                    {t("admlivr_enregistrerNote")}
                   </button>
                 </div>
               </div>
@@ -228,7 +247,7 @@ function LivreursContent() {
                     disabled={enCours === l.id}
                     onClick={() => basculerVerification(l.id, false)}
                   >
-                    Retirer la vérification
+                    {t("admlivr_retirerVerification")}
                   </button>
                 ) : (
                   <button
@@ -236,7 +255,7 @@ function LivreursContent() {
                     disabled={enCours === l.id}
                     onClick={() => basculerVerification(l.id, true)}
                   >
-                    Vérifier ce livreur
+                    {t("admlivr_verifierCeLivreur")}
                   </button>
                 )}
               </div>

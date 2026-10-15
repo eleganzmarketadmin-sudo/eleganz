@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Plan {
@@ -44,18 +45,19 @@ function texteToFeatures(texte: string): Record<string, unknown> {
  * décorative : cocher/décocher ici change réellement ce qu'une boutique de
  * ce bouquet peut faire, sans redéploiement.
  */
-const FONCTIONNALITES_GESTION: { cle: string; label: string }[] = [
-  { cle: "financeAvancee", label: "Finance avancée (journal, grand livre, balance, états financiers, simulation fiscale, analytique)" },
-  { cle: "immobilisations", label: "Immobilisations et amortissements" },
-  { cle: "cloture", label: "Clôture comptable mensuelle" },
-  { cle: "tresorerie", label: "Relevé de trésorerie" },
-  { cle: "comptableExterne", label: "Invitation d'un comptable externe" },
-  { cle: "variantesProduits", label: "Création de variantes en lot (plusieurs tailles/couleurs à la fois)" },
-  { cle: "exportExcelPdf", label: "Export Excel / PDF (catalogue et relevés d'activité)" },
-  { cle: "comptabiliteSyscohada", label: "Comptabilité SYSCOHADA complète (plan comptable intégral, états financiers normalisés)" },
+const CLES_FONCTIONNALITES_GESTION: { cle: string; cleTrad: string }[] = [
+  { cle: "financeAvancee", cleTrad: "admtarifs_gestion_financeAvancee" },
+  { cle: "immobilisations", cleTrad: "admtarifs_gestion_immobilisations" },
+  { cle: "cloture", cleTrad: "admtarifs_gestion_cloture" },
+  { cle: "tresorerie", cleTrad: "admtarifs_gestion_tresorerie" },
+  { cle: "comptableExterne", cleTrad: "admtarifs_gestion_comptableExterne" },
+  { cle: "variantesProduits", cleTrad: "admtarifs_gestion_variantesProduits" },
+  { cle: "exportExcelPdf", cleTrad: "admtarifs_gestion_exportExcelPdf" },
+  { cle: "comptabiliteSyscohada", cleTrad: "admtarifs_gestion_comptabiliteSyscohada" },
 ];
 
 function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
+  const { t } = useLocale();
   const estGestion = plan.category === "GESTION";
   const [ouvertureFee, setOuvertureFee] = useState(plan.openingFee);
   const [prix, setPrix] = useState(plan.monthlyPrice);
@@ -63,7 +65,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
   const [commission, setCommission] = useState(plan.commissionRate ?? "");
   const [features, setFeatures] = useState(featuresToTexte(plan.featuresJson));
   const [coches, setCoches] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(FONCTIONNALITES_GESTION.map(({ cle }) => [cle, plan.featuresJson[cle] === true])),
+    Object.fromEntries(CLES_FONCTIONNALITES_GESTION.map(({ cle }) => [cle, plan.featuresJson[cle] === true])),
   );
   const maxEquipeInitial = plan.featuresJson.maxEquipe;
   const [maxEquipe, setMaxEquipe] = useState(
@@ -78,7 +80,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
     try {
       const featuresAEnvoyer = estGestion
         ? {
-            ...Object.fromEntries(FONCTIONNALITES_GESTION.map(({ cle }) => [cle, coches[cle] === true])),
+            ...Object.fromEntries(CLES_FONCTIONNALITES_GESTION.map(({ cle }) => [cle, coches[cle] === true])),
             maxEquipe: maxEquipe ? Number(maxEquipe) : null,
           }
         : texteToFeatures(features);
@@ -91,7 +93,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
       });
       onChange();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -104,7 +106,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
       await api.patch(`/admin/billing/plans/${plan.id}`, { active: !plan.active });
       onChange();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -114,35 +116,35 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
     <div className={`${styles.plan} ${!plan.active ? styles.planInactif : ""}`}>
       <div className={styles.planEntete}>
         <span className={styles.planNom}>{plan.name}</span>
-        <span className={styles.planStatut}>{plan.active ? "Actif" : "Désactivé"}</span>
+        <span className={styles.planStatut}>{plan.active ? t("eq_statutActif") : t("eq_statutDesactive")}</span>
       </div>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Frais d&apos;ouverture (USD, une fois à la souscription)</span>
+          <span>{t("admtarifs_fraisOuverture")}</span>
           <input value={ouvertureFee} onChange={(e) => setOuvertureFee(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Prix mensuel (USD)</span>
+          <span>{t("admtarifs_prixMensuel")}</span>
           <input value={prix} onChange={(e) => setPrix(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Articles actifs max.</span>
+          <span>{t("admtarifs_articlesActifsMax")}</span>
           <input
-            placeholder="Illimité"
+            placeholder={t("admtarifs_illimite")}
             value={maxProduits}
             onChange={(e) => setMaxProduits(e.target.value)}
           />
         </label>
         {estGestion && (
           <label className={styles.champ}>
-            <span>Taille d&apos;équipe max. (hors propriétaire)</span>
-            <input placeholder="Illimité" value={maxEquipe} onChange={(e) => setMaxEquipe(e.target.value)} />
+            <span>{t("admtarifs_tailleEquipeMax")}</span>
+            <input placeholder={t("admtarifs_illimite")} value={maxEquipe} onChange={(e) => setMaxEquipe(e.target.value)} />
           </label>
         )}
         {!estGestion && (
           <label className={styles.champ}>
-            <span>Commission sur les ventes (%, vide = taux par défaut de la plateforme)</span>
+            <span>{t("admtarifs_commissionVentes")}</span>
             <input
               placeholder="ex. 5"
               value={commission}
@@ -152,32 +154,32 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
         )}
         {!estGestion && (
           <label className={styles.champLarge}>
-            <span>Fonctionnalités incluses (ex. &quot;livraison, analytics: avancé&quot;)</span>
+            <span>{t("admtarifs_fonctionnalitesIncluses")}</span>
             <input value={features} onChange={(e) => setFeatures(e.target.value)} />
           </label>
         )}
       </div>
       {estGestion && (
         <div className={styles.planChamps} style={{ flexDirection: "column", gap: 8 }}>
-          <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Fonctionnalités incluses dans ce bouquet</span>
-          {FONCTIONNALITES_GESTION.map(({ cle, label }) => (
+          <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>{t("admtarifs_fonctionnalitesInclusesBouquet")}</span>
+          {CLES_FONCTIONNALITES_GESTION.map(({ cle, cleTrad }) => (
             <label key={cle} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
               <input
                 type="checkbox"
                 checked={coches[cle] === true}
                 onChange={(e) => setCoches((c) => ({ ...c, [cle]: e.target.checked }))}
               />
-              {label}
+              {t(cleTrad)}
             </label>
           ))}
         </div>
       )}
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
-          Enregistrer
+          {t("action_enregistrer")}
         </button>
         <button className={styles.boutonBasculer} disabled={enCours} onClick={basculerActif}>
-          {plan.active ? "Désactiver" : "Réactiver"}
+          {plan.active ? t("gliv_desactiver") : t("gliv_reactiver")}
         </button>
       </div>
     </div>
@@ -185,6 +187,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
 }
 
 function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
+  const { t } = useLocale();
   const [ouvert, setOuvert] = useState(false);
   const [category, setCategory] = useState<"GESTION" | "MARKETPLACE">("GESTION");
   const [name, setName] = useState("");
@@ -216,7 +219,7 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
       setOuvert(false);
       onCree();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_creationImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -225,7 +228,7 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
   if (!ouvert) {
     return (
       <button className={styles.boutonNouveau} onClick={() => setOuvert(true)}>
-        + Nouveau bouquet
+        {t("admtarifs_nouveauBouquet")}
       </button>
     );
   }
@@ -234,42 +237,41 @@ function FormulaireNouveauPlan({ onCree }: { onCree: () => void }) {
     <form className={styles.nouveauPlan} onSubmit={creer}>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       <select value={category} onChange={(e) => setCategory(e.target.value as "GESTION" | "MARKETPLACE")}>
-        <option value="GESTION">Gestion</option>
-        <option value="MARKETPLACE">Marketplace</option>
+        <option value="GESTION">{t("admtarifs_gestion")}</option>
+        <option value="MARKETPLACE">{t("admtarifs_marketplace")}</option>
       </select>
-      <input placeholder="Nom du bouquet" value={name} onChange={(e) => setName(e.target.value)} required />
+      <input placeholder={t("admtarifs_nomBouquet")} value={name} onChange={(e) => setName(e.target.value)} required />
       <input
-        placeholder="Frais d'ouverture (USD, vide = 0)"
+        placeholder={t("admtarifs_fraisOuvertureViderZero")}
         value={ouvertureFee}
         onChange={(e) => setOuvertureFee(e.target.value)}
       />
       <input
-        placeholder="Prix mensuel (USD)"
+        placeholder={t("admtarifs_prixMensuel")}
         value={prix}
         onChange={(e) => setPrix(e.target.value)}
         required
       />
       <input
-        placeholder="Articles actifs max. (vide = illimité)"
+        placeholder={t("admtarifs_articlesActifsMaxVideIllimite")}
         value={maxProduits}
         onChange={(e) => setMaxProduits(e.target.value)}
       />
       {category === "MARKETPLACE" && (
         <input
-          placeholder="Commission sur les ventes (%, vide = taux par défaut)"
+          placeholder={t("admtarifs_commissionVentesTauxDefaut")}
           value={commission}
           onChange={(e) => setCommission(e.target.value)}
         />
       )}
       <button className={styles.boutonEnregistrer} type="submit" disabled={enCours}>
-        Créer
+        {t("action_creer")}
       </button>
       <button type="button" className={styles.boutonBasculer} onClick={() => setOuvert(false)}>
-        Annuler
+        {t("action_annuler")}
       </button>
       <p style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)", flexBasis: "100%" }}>
-        Les fonctionnalités détaillées (Finance avancée, immobilisations, taille d&apos;équipe…) se
-        règlent juste après la création, sur la fiche du bouquet ci-dessus.
+        {t("admtarifs_noteFonctionnalitesApresCreation")}
       </p>
     </form>
   );
@@ -293,6 +295,7 @@ interface PlatformSettings {
  * tant qu'aucun planificateur n'est en place (voir DriverBillingService).
  */
 function TarifsLivreursSection() {
+  const { t } = useLocale();
   const [ouvertureFee, setOuvertureFee] = useState("");
   const [mensuelFee, setMensuelFee] = useState("");
   const [moisGratuits, setMoisGratuits] = useState("");
@@ -310,7 +313,7 @@ function TarifsLivreursSection() {
         setMensuelFee(s.driverMonthlyFee);
         setMoisGratuits(String(s.driverFreeMonths));
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -326,76 +329,82 @@ function TarifsLivreursSection() {
         driverMonthlyFee: Number(mensuelFee),
         driverFreeMonths: Number(moisGratuits),
       });
-      setMessage("Tarifs livreurs enregistrés.");
+      setMessage(t("admtarifs_livreur_tarifsEnregistres"));
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
   }
 
-  async function declencher(action: string, chemin: string) {
-    setActionEnCours(action);
+  async function declencher(libelleAction: string, chemin: string) {
+    setActionEnCours(libelleAction);
     setErreur(null);
     setMessage(null);
     try {
       const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${action} : ${resultat.length} livreur(s) concerné(s).`);
+      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_livreur_concerne")}`);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setActionEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement des tarifs livreurs…</p>;
+  if (chargement) return <p>{t("admtarifs_livreur_chargementTarifs")}</p>;
 
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Tarification de l&apos;espace livreur</span>
+        <span className={styles.planNom}>{t("admtarifs_livreur_titreSection")}</span>
       </div>
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Frais d&apos;ouverture (USD, à la souscription)</span>
+          <span>{t("admtarifs_fraisOuvertureSouscription")}</span>
           <input value={ouvertureFee} onChange={(e) => setOuvertureFee(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Abonnement mensuel (USD)</span>
+          <span>{t("admtarifs_abonnementMensuel")}</span>
           <input value={mensuelFee} onChange={(e) => setMensuelFee(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Mois de gratuité après validation du dossier</span>
+          <span>{t("admtarifs_livreur_moisGratuiteValidation")}</span>
           <input value={moisGratuits} onChange={(e) => setMoisGratuits(e.target.value)} />
         </label>
       </div>
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
-          Enregistrer les tarifs
+          {t("admtarifs_enregistrerLesTarifs")}
         </button>
       </div>
       <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Vérification des gratuités échues", "/admin/driver-billing/run-trial-check")}
+          onClick={() =>
+            declencher(t("admtarifs_verificationGratuitesEchues"), "/admin/driver-billing/run-trial-check")
+          }
         >
-          Vérifier les gratuités échues
+          {t("admtarifs_verificationGratuitesEchues")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Facturation mensuelle", "/admin/driver-billing/run-monthly-billing")}
+          onClick={() =>
+            declencher(t("admtarifs_facturationMensuelle"), "/admin/driver-billing/run-monthly-billing")
+          }
         >
-          Lancer la facturation mensuelle
+          {t("admtarifs_lancerFacturationMensuelle")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Suspension des impayés", "/admin/driver-billing/run-suspension-check")}
+          onClick={() =>
+            declencher(t("admtarifs_suspensionImpayes"), "/admin/driver-billing/run-suspension-check")
+          }
         >
-          Suspendre les livreurs en impayé
+          {t("admtarifs_livreur_suspendreImpaye")}
         </button>
       </div>
     </div>
@@ -419,19 +428,20 @@ interface ComptablePlan {
  * (export/dossier-financement). Jamais une liste décorative, comme pour
  * FONCTIONNALITES_GESTION ci-dessus.
  */
-const FONCTIONNALITES_COMPTABLE: { cle: string; label: string }[] = [
-  { cle: "historiqueIllimite", label: "Historique du tableau de bord illimité (sinon plafonné à 60 jours)" },
-  { cle: "comparaisonPeriodes", label: "Comparaison entre activités" },
-  { cle: "rappelsAgenda", label: "Vue agenda complète (les rappels prioritaires restent toujours visibles)" },
-  { cle: "exportDossierFinancement", label: "Export du dossier de financement bancaire" },
+const CLES_FONCTIONNALITES_COMPTABLE: { cle: string; cleTrad: string }[] = [
+  { cle: "historiqueIllimite", cleTrad: "admtarifs_cpt_historiqueIllimite" },
+  { cle: "comparaisonPeriodes", cleTrad: "admtarifs_cpt_comparaisonPeriodes" },
+  { cle: "rappelsAgenda", cleTrad: "admtarifs_cpt_rappelsAgenda" },
+  { cle: "exportDossierFinancement", cleTrad: "admtarifs_cpt_exportDossierFinancement" },
 ];
 
 function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; onChange: () => void }) {
+  const { t } = useLocale();
   const [mensuel, setMensuel] = useState(bouquet.monthlyPrice);
   const [annuel, setAnnuel] = useState(bouquet.yearlyPrice);
   const [maxActivites, setMaxActivites] = useState(bouquet.maxActivities?.toString() ?? "");
   const [coches, setCoches] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, bouquet.featuresJson[cle] === true])),
+    Object.fromEntries(CLES_FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, bouquet.featuresJson[cle] === true])),
   );
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -444,11 +454,11 @@ function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; 
         monthlyPrice: Number(mensuel),
         yearlyPrice: Number(annuel),
         maxActivities: maxActivites ? Number(maxActivites) : null,
-        features: Object.fromEntries(FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, coches[cle] === true])),
+        features: Object.fromEntries(CLES_FONCTIONNALITES_COMPTABLE.map(({ cle }) => [cle, coches[cle] === true])),
       });
       onChange();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -461,7 +471,7 @@ function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; 
       await api.patch(`/admin/comptable/plans/${bouquet.id}`, { active: !bouquet.active });
       onChange();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -471,42 +481,42 @@ function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; 
     <div className={`${styles.plan} ${!bouquet.active ? styles.planInactif : ""}`}>
       <div className={styles.planEntete}>
         <span className={styles.planNom}>{bouquet.name}</span>
-        <span className={styles.planStatut}>{bouquet.active ? "Actif" : "Désactivé"}</span>
+        <span className={styles.planStatut}>{bouquet.active ? t("eq_statutActif") : t("eq_statutDesactive")}</span>
       </div>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Abonnement mensuel (USD)</span>
+          <span>{t("admtarifs_abonnementMensuel")}</span>
           <input value={mensuel} onChange={(e) => setMensuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Abonnement annuel (USD)</span>
+          <span>{t("admtarifs_abonnementAnnuel")}</span>
           <input value={annuel} onChange={(e) => setAnnuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Activités suivies simultanément max.</span>
-          <input placeholder="Illimité" value={maxActivites} onChange={(e) => setMaxActivites(e.target.value)} />
+          <span>{t("admtarifs_cpt_activitesSimultaneesMax")}</span>
+          <input placeholder={t("admtarifs_illimite")} value={maxActivites} onChange={(e) => setMaxActivites(e.target.value)} />
         </label>
       </div>
       <div className={styles.planChamps} style={{ flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Fonctionnalités incluses dans ce bouquet</span>
-        {FONCTIONNALITES_COMPTABLE.map(({ cle, label }) => (
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>{t("admtarifs_fonctionnalitesInclusesBouquet")}</span>
+        {CLES_FONCTIONNALITES_COMPTABLE.map(({ cle, cleTrad }) => (
           <label key={cle} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
             <input
               type="checkbox"
               checked={coches[cle] === true}
               onChange={(e) => setCoches((c) => ({ ...c, [cle]: e.target.checked }))}
             />
-            {label}
+            {t(cleTrad)}
           </label>
         ))}
       </div>
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
-          Enregistrer
+          {t("action_enregistrer")}
         </button>
         <button className={styles.boutonBasculer} disabled={enCours} onClick={basculerActif}>
-          {bouquet.active ? "Désactiver" : "Réactiver"}
+          {bouquet.active ? t("gliv_desactiver") : t("gliv_reactiver")}
         </button>
       </div>
     </div>
@@ -514,6 +524,7 @@ function LigneBouquetComptable({ bouquet, onChange }: { bouquet: ComptablePlan; 
 }
 
 function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
+  const { t } = useLocale();
   const [ouvert, setOuvert] = useState(false);
   const [nom, setNom] = useState("");
   const [mensuel, setMensuel] = useState("");
@@ -540,7 +551,7 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
       setOuvert(false);
       onCree();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_creationImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -549,7 +560,7 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
   if (!ouvert) {
     return (
       <button className={styles.boutonNouveau} onClick={() => setOuvert(true)}>
-        + Nouveau bouquet Secourable
+        {t("admtarifs_cpt_nouveauBouquet")}
       </button>
     );
   }
@@ -557,23 +568,22 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
   return (
     <form className={styles.nouveauPlan} onSubmit={creer}>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
-      <input placeholder="Nom du bouquet" value={nom} onChange={(e) => setNom(e.target.value)} required />
-      <input placeholder="Abonnement mensuel (USD)" value={mensuel} onChange={(e) => setMensuel(e.target.value)} required />
-      <input placeholder="Abonnement annuel (USD)" value={annuel} onChange={(e) => setAnnuel(e.target.value)} required />
+      <input placeholder={t("admtarifs_nomBouquet")} value={nom} onChange={(e) => setNom(e.target.value)} required />
+      <input placeholder={t("admtarifs_abonnementMensuel")} value={mensuel} onChange={(e) => setMensuel(e.target.value)} required />
+      <input placeholder={t("admtarifs_abonnementAnnuel")} value={annuel} onChange={(e) => setAnnuel(e.target.value)} required />
       <input
-        placeholder="Activités max. (vide = illimité)"
+        placeholder={t("admtarifs_activitesMaxVideIllimite")}
         value={maxActivites}
         onChange={(e) => setMaxActivites(e.target.value)}
       />
       <button className={styles.boutonEnregistrer} type="submit" disabled={enCours}>
-        Créer
+        {t("action_creer")}
       </button>
       <button type="button" className={styles.boutonBasculer} onClick={() => setOuvert(false)}>
-        Annuler
+        {t("action_annuler")}
       </button>
       <p style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)", flexBasis: "100%" }}>
-        Les fonctionnalités détaillées se règlent juste après la création, sur la fiche du bouquet
-        ci-dessus.
+        {t("admtarifs_noteFonctionnalitesApresCreationCourt")}
       </p>
     </form>
   );
@@ -587,6 +597,7 @@ function FormulaireNouveauBouquetComptable({ onCree }: { onCree: () => void }) {
  * redéploiement — prix, limite d'activités, fonctionnalités.
  */
 function BouquetsComptableSection() {
+  const { t } = useLocale();
   const [bouquets, setBouquets] = useState<ComptablePlan[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -595,18 +606,18 @@ function BouquetsComptableSection() {
     api
       .get<ComptablePlan[]>("/admin/comptable/plans")
       .then(setBouquets)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
   useEffect(recharger, []);
 
-  if (chargement) return <p>Chargement des bouquets Secourable…</p>;
+  if (chargement) return <p>{t("admtarifs_cpt_chargementBouquets")}</p>;
 
   return (
     <div>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
-      {bouquets.length === 0 && <p className={styles.messageVide}>Aucun bouquet Secourable.</p>}
+      {bouquets.length === 0 && <p className={styles.messageVide}>{t("admtarifs_cpt_aucunBouquet")}</p>}
       {bouquets.map((b) => (
         <LigneBouquetComptable key={b.id} bouquet={b} onChange={recharger} />
       ))}
@@ -622,6 +633,7 @@ function BouquetsComptableSection() {
  * paramétrables ici.
  */
 function TarifsComptableSection() {
+  const { t } = useLocale();
   const [mensuel, setMensuel] = useState("");
   const [annuel, setAnnuel] = useState("");
   const [moisGratuits, setMoisGratuits] = useState("");
@@ -639,7 +651,7 @@ function TarifsComptableSection() {
         setAnnuel(s.comptableYearlyFee);
         setMoisGratuits(String(s.comptableFreeMonths));
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -655,82 +667,79 @@ function TarifsComptableSection() {
         comptableYearlyFee: Number(annuel),
         comptableFreeMonths: Number(moisGratuits),
       });
-      setMessage("Tarifs Secourable enregistrés.");
+      setMessage(t("admtarifs_cpt_tarifsEnregistres"));
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
   }
 
-  async function declencher(action: string, chemin: string) {
-    setActionEnCours(action);
+  async function declencher(libelleAction: string, chemin: string) {
+    setActionEnCours(libelleAction);
     setErreur(null);
     setMessage(null);
     try {
       const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${action} : ${resultat.length} compte(s) concerné(s).`);
+      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_cpt_concerne")}`);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setActionEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement des tarifs Secourable…</p>;
+  if (chargement) return <p>{t("admtarifs_cpt_chargementTarifs")}</p>;
 
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Tarification d&apos;ELEGANZ Secourable</span>
+        <span className={styles.planNom}>{t("admtarifs_cpt_titreTarification")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Depuis l&apos;introduction des bouquets ci-dessous, le prix facturé est celui du bouquet choisi
-        par l&apos;abonné ; les tarifs ici ne servent plus que de filet de sécurité pour un abonnement
-        qui se retrouverait sans bouquet rattaché. Le nombre de mois de gratuité reste global, pour
-        tous les bouquets.
+        {t("admtarifs_cpt_noteFiletSecurite")}
       </p>
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Abonnement mensuel de secours (USD)</span>
+          <span>{t("admtarifs_cpt_abonnementMensuelSecours")}</span>
           <input value={mensuel} onChange={(e) => setMensuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Abonnement annuel de secours (USD)</span>
+          <span>{t("admtarifs_cpt_abonnementAnnuelSecours")}</span>
           <input value={annuel} onChange={(e) => setAnnuel(e.target.value)} />
         </label>
         <label className={styles.champ}>
-          <span>Mois de gratuité dès la première activation</span>
+          <span>{t("admtarifs_cpt_moisGratuitePremiereActivation")}</span>
           <input value={moisGratuits} onChange={(e) => setMoisGratuits(e.target.value)} />
         </label>
       </div>
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
-          Enregistrer les tarifs
+          {t("admtarifs_enregistrerLesTarifs")}
         </button>
       </div>
       <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Vérification des gratuités échues", "/admin/comptable/run-trial-check")}
+          onClick={() => declencher(t("admtarifs_verificationGratuitesEchues"), "/admin/comptable/run-trial-check")}
         >
-          Vérifier les gratuités échues
+          {t("admtarifs_verificationGratuitesEchues")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Facturation de renouvellement", "/admin/comptable/run-renewal-billing")}
+          onClick={() => declencher(t("admtarifs_cpt_facturationRenouvellement"), "/admin/comptable/run-renewal-billing")}
         >
-          Lancer la facturation de renouvellement
+          {t("admtarifs_cpt_lancerFacturationRenouvellement")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Suspension des impayés", "/admin/comptable/run-suspension-check")}
+          onClick={() => declencher(t("admtarifs_suspensionImpayes"), "/admin/comptable/run-suspension-check")}
         >
-          Suspendre les comptes en impayé
+          {t("admtarifs_cpt_suspendreComptesImpaye")}
         </button>
       </div>
     </div>
@@ -745,6 +754,7 @@ function TarifsComptableSection() {
  * livreurs/Secourable, tant qu'aucun planificateur n'est en place.
  */
 function TarifsBoutiquesSection() {
+  const { t } = useLocale();
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -768,23 +778,23 @@ function TarifsBoutiquesSection() {
       await api.patch("/admin/platform-settings", {
         marketplaceCommissionRateDefault: tauxDefaut ? Number(tauxDefaut) : null,
       });
-      setMessage("Taux de commission par défaut enregistré.");
+      setMessage(t("admtarifs_boutiques_tauxDefautEnregistre"));
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCoursTaux(false);
     }
   }
 
-  async function declencher(action: string, chemin: string) {
-    setActionEnCours(action);
+  async function declencher(libelleAction: string, chemin: string) {
+    setActionEnCours(libelleAction);
     setErreur(null);
     setMessage(null);
     try {
       const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${action} : ${resultat.length} boutique(s) concernée(s).`);
+      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_boutiques_concernee")}`);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setActionEnCours(null);
     }
@@ -793,11 +803,10 @@ function TarifsBoutiquesSection() {
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Facturation des boutiques (bouquets Gestion)</span>
+        <span className={styles.planNom}>{t("admtarifs_boutiques_titreFacturation")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Frais d&apos;ouverture à la fin de la période gratuite (selon le bouquet de chaque boutique),
-        puis abonnement mensuel récurrent une fois la boutique active.
+        {t("admtarifs_boutiques_noteFraisOuverture")}
       </p>
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       {erreur && <p className={styles.erreur}>{erreur}</p>}
@@ -805,38 +814,36 @@ function TarifsBoutiquesSection() {
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Vérification des gratuités échues", "/admin/billing/run-trial-check")}
+          onClick={() => declencher(t("admtarifs_verificationGratuitesEchues"), "/admin/billing/run-trial-check")}
         >
-          Vérifier les gratuités échues
+          {t("admtarifs_verificationGratuitesEchues")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Facturation mensuelle", "/admin/billing/run-monthly-billing")}
+          onClick={() => declencher(t("admtarifs_facturationMensuelle"), "/admin/billing/run-monthly-billing")}
         >
-          Lancer la facturation mensuelle
+          {t("admtarifs_lancerFacturationMensuelle")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Suspension des impayés", "/admin/billing/run-suspension-check")}
+          onClick={() => declencher(t("admtarifs_suspensionImpayes"), "/admin/billing/run-suspension-check")}
         >
-          Suspendre les boutiques en impayé
+          {t("admtarifs_boutiques_suspendreBoutiquesImpaye")}
         </button>
       </div>
 
       <div className={styles.planEntete} style={{ borderTop: "1px solid var(--color-bordure)" }}>
-        <span className={styles.planNom}>Commission ELEGANZ Market</span>
+        <span className={styles.planNom}>{t("admtarifs_boutiques_titreCommission")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Taux global appliqué aux ventes des boutiques Marketplace dont le bouquet ne fixe pas son
-        propre taux (modifiable par bouquet ci-dessus). Calculée à la création de chaque commande,
-        facturée séparément sur les commandes terminées non encore facturées.
+        {t("admtarifs_boutiques_noteCommission")}
       </p>
       {!chargementTaux && (
         <div className={styles.planChamps}>
           <label className={styles.champ}>
-            <span>Taux de commission par défaut (%, vide = aucune commission)</span>
+            <span>{t("admtarifs_boutiques_tauxCommissionDefaut")}</span>
             <input
               placeholder="ex. 5"
               value={tauxDefaut}
@@ -847,14 +854,14 @@ function TarifsBoutiquesSection() {
       )}
       <div className={styles.planActions} style={{ flexWrap: "wrap" }}>
         <button className={styles.boutonEnregistrer} disabled={enCoursTaux} onClick={enregistrerTauxDefaut}>
-          Enregistrer le taux par défaut
+          {t("admtarifs_boutiques_enregistrerTauxDefaut")}
         </button>
         <button
           className={styles.boutonBasculer}
           disabled={actionEnCours !== null}
-          onClick={() => declencher("Facturation des commissions", "/admin/billing/run-commission-billing")}
+          onClick={() => declencher(t("admtarifs_boutiques_facturationCommissions"), "/admin/billing/run-commission-billing")}
         >
-          Lancer la facturation des commissions
+          {t("admtarifs_boutiques_lancerFacturationCommissions")}
         </button>
       </div>
     </div>
@@ -877,6 +884,7 @@ interface TauxChangeHistorique {
  * ventes/opérations déjà enregistrées (voir docs/PROJECT_STATUS.md).
  */
 function TauxChangeSection() {
+  const { t } = useLocale();
   const [tauxActuel, setTauxActuel] = useState<string | null>(null);
   const [misAJourLe, setMisAJourLe] = useState<string | null>(null);
   const [saisie, setSaisie] = useState("");
@@ -897,7 +905,7 @@ function TauxChangeSection() {
         setSaisie(s.cdfPerUsd ?? "");
         setHistorique(h);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -913,60 +921,57 @@ function TauxChangeSection() {
     setMessage(null);
     try {
       await api.patch("/admin/platform-settings/exchange-rate", { cdfPerUsd: valeur });
-      setMessage("Taux de change enregistré.");
+      setMessage(t("admtarifs_taux_tauxEnregistreMsg"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
   }
 
-  if (chargement) return <p>Chargement du taux de change…</p>;
+  if (chargement) return <p>{t("admtarifs_taux_chargement")}</p>;
 
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Taux de change système (CDF / USD)</span>
+        <span className={styles.planNom}>{t("admtarifs_taux_titre")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Un seul taux pour toute la plateforme — utilisé pour afficher un équivalent de devise partout
-        où c&apos;est utile (Marketplace, Caisse, Secourable). Les boutiques peuvent vous demander une
-        mise à jour en cas d&apos;oubli ou de retard, mais ne le modifient pas elles-mêmes.
+        {t("admtarifs_taux_noteUnSeulTaux")}
       </p>
       {tauxActuel ? (
         <p style={{ padding: "0 16px", fontSize: "0.875rem" }}>
-          Taux actuel : <strong>1 USD = {tauxActuel} CDF</strong>
-          {misAJourLe && ` — mis à jour le ${new Date(misAJourLe).toLocaleString("fr-FR")}`}
+          {t("admtarifs_taux_tauxActuel")} <strong>1 USD = {tauxActuel} CDF</strong>
+          {misAJourLe && ` — ${t("admtarifs_taux_misAJourLe")} ${new Date(misAJourLe).toLocaleString("fr-FR")}`}
         </p>
       ) : (
         <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-flamme)" }}>
-          Aucun taux configuré pour l&apos;instant — aucun équivalent de devise ne s&apos;affiche nulle part
-          tant que ce n&apos;est pas fait.
+          {t("admtarifs_taux_aucunTauxConfigure")}
         </p>
       )}
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       <div className={styles.planChamps}>
         <label className={styles.champ}>
-          <span>Combien de CDF pour 1 USD ?</span>
+          <span>{t("admtarifs_taux_combienCdfPourUsd")}</span>
           <input value={saisie} onChange={(e) => setSaisie(e.target.value)} placeholder="ex. 2900" />
         </label>
       </div>
       {apercuValide && (
         <p style={{ padding: "0 16px", fontSize: "0.875rem", fontFamily: "var(--font-mono), monospace" }}>
-          Aperçu avant d&apos;enregistrer : 1 USD = {valeur.toLocaleString("fr-FR")} CDF — 1 000 CDF ≈{" "}
+          {t("admtarifs_taux_apercuAvantEnregistrement")} 1 USD = {valeur.toLocaleString("fr-FR")} CDF — 1 000 CDF ≈{" "}
           {(1000 / valeur).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} USD
         </p>
       )}
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours || !apercuValide} onClick={enregistrer}>
-          Enregistrer le taux
+          {t("admtarifs_taux_enregistrerLeTaux")}
         </button>
       </div>
       {historique.length > 0 && (
         <details style={{ padding: "0 16px 16px" }}>
-          <summary style={{ cursor: "pointer", fontSize: "0.875rem" }}>Historique des changements</summary>
+          <summary style={{ cursor: "pointer", fontSize: "0.875rem" }}>{t("admtarifs_taux_historiqueChangements")}</summary>
           <ul style={{ fontSize: "0.8125rem", marginTop: 8 }}>
             {historique.map((h) => (
               <li key={h.id}>
@@ -1006,6 +1011,7 @@ interface AiCreditTopUpAdmin {
  * schema.prisma.
  */
 function TarifsServicesALaCarteSection() {
+  const { t } = useLocale();
   const [prixCredit, setPrixCredit] = useState("");
   const [smsActif, setSmsActif] = useState(false);
   const [smsTarif, setSmsTarif] = useState("");
@@ -1037,7 +1043,7 @@ function TarifsServicesALaCarteSection() {
         setSmsActif(s.smsWhatsappPremiumEnabled);
         setSmsTarif(s.smsWhatsappPremiumMonthlyFee ?? "");
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargementTarifs(false));
   }
 
@@ -1045,7 +1051,7 @@ function TarifsServicesALaCarteSection() {
     api
       .get<AiService[]>("/admin/ai-credits/services")
       .then(setServices)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargementServices(false));
   }
 
@@ -1053,7 +1059,7 @@ function TarifsServicesALaCarteSection() {
     api
       .get<AiCreditTopUpAdmin[]>("/admin/ai-credits/top-ups")
       .then(setTopUps)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargementTopUps(false));
   }
 
@@ -1073,9 +1079,9 @@ function TarifsServicesALaCarteSection() {
         smsWhatsappPremiumEnabled: smsActif,
         smsWhatsappPremiumMonthlyFee: smsTarif ? Number(smsTarif) : null,
       });
-      setMessage("Tarifs des services à la carte enregistrés.");
+      setMessage(t("admtarifs_ia_tarifsALaCarteEnregistres"));
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCoursTarifs(false);
     }
@@ -1094,7 +1100,7 @@ function TarifsServicesALaCarteSection() {
       setCoutService("");
       rechargerServices();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_creationImpossible"));
     } finally {
       setEnCoursService(false);
     }
@@ -1106,7 +1112,7 @@ function TarifsServicesALaCarteSection() {
       await api.patch(`/admin/ai-credits/services/${service.id}`, { active: !service.active });
       rechargerServices();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     }
   }
 
@@ -1119,62 +1125,59 @@ function TarifsServicesALaCarteSection() {
         `/admin/ai-credits/top-ups/${invoiceId}/mark-paid`,
         {},
       );
-      setMessage(`Facture marquée payée — ${resultat.balanceGranted} crédit(s) accordé(s).`);
+      setMessage(`${t("admtarifs_ia_facturePayee")} — ${resultat.balanceGranted} ${t("admtarifs_ia_creditAccorde")}`);
       rechargerTopUps();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
       setActionEnCours(null);
     }
   }
 
-  const topUpsEnAttente = topUps.filter((t) => t.invoice.status === "PENDING");
+  const topUpsEnAttente = topUps.filter((tu) => tu.invoice.status === "PENDING");
 
   return (
     <div className={styles.plan}>
       <div className={styles.planEntete}>
-        <span className={styles.planNom}>Crédits IA</span>
+        <span className={styles.planNom}>{t("admtarifs_ia_creditsIa")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Une boutique demande un certain nombre de crédits ; la facture correspondante (au prix unitaire
-        ci-dessous, figé au moment de la demande) doit être marquée payée ici pour que les crédits soient
-        accordés — jamais automatiquement. Le coût en crédits de chaque service IA se règle dans le
-        catalogue ci-dessous.
+        {t("admtarifs_ia_noteCreditsIa")}
       </p>
       {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {!chargementTarifs && (
         <div className={styles.planChamps}>
           <label className={styles.champ}>
-            <span>Prix d&apos;un crédit (USD, vide = achat indisponible)</span>
+            <span>{t("admtarifs_ia_prixUnCredit")}</span>
             <input placeholder="ex. 0.10" value={prixCredit} onChange={(e) => setPrixCredit(e.target.value)} />
           </label>
         </div>
       )}
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCoursTarifs} onClick={enregistrerTarifs}>
-          Enregistrer le prix du crédit
+          {t("admtarifs_ia_enregistrerPrixCredit")}
         </button>
       </div>
 
       <div style={{ padding: "8px 16px" }}>
-        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>Catalogue des services IA</span>
+        <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>{t("admtarifs_ia_catalogueServices")}</span>
         {chargementServices ? (
-          <p style={{ fontSize: "0.875rem" }}>Chargement…</p>
+          <p style={{ fontSize: "0.875rem" }}>{t("commun_chargement")}</p>
         ) : (
           <>
-            {services.length === 0 && <p className={styles.messageVide}>Aucun service IA configuré.</p>}
+            {services.length === 0 && <p className={styles.messageVide}>{t("admtarifs_ia_aucunServiceConfigure")}</p>}
             {services.map((service) => (
               <div
                 key={service.id}
                 style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.875rem", padding: "4px 0" }}
               >
                 <span style={{ flex: 1 }}>
-                  {service.name} — {service.creditCost} crédit(s)
-                  {!service.active && " (désactivé)"}
+                  {service.name} — {service.creditCost} {t("admtarifs_ia_credits")}
+                  {!service.active && ` (${t("eq_statutDesactive").toLowerCase()})`}
                 </span>
                 <button className={styles.boutonBasculer} onClick={() => basculerServiceActif(service)}>
-                  {service.active ? "Désactiver" : "Réactiver"}
+                  {service.active ? t("gliv_desactiver") : t("gliv_reactiver")}
                 </button>
               </div>
             ))}
@@ -1182,46 +1185,46 @@ function TarifsServicesALaCarteSection() {
         )}
         <form onSubmit={creerService} className={styles.nouveauPlan} style={{ marginTop: 8 }}>
           <input
-            placeholder="Nom du service (ex. Génération de visuel publicitaire)"
+            placeholder={t("admtarifs_ia_nomService")}
             value={nomService}
             onChange={(e) => setNomService(e.target.value)}
             required
           />
           <input
-            placeholder="Coût en crédits"
+            placeholder={t("admtarifs_ia_coutEnCredits")}
             value={coutService}
             onChange={(e) => setCoutService(e.target.value)}
             required
           />
           <button className={styles.boutonEnregistrer} type="submit" disabled={enCoursService}>
-            Ajouter un service
+            {t("admtarifs_ia_ajouterService")}
           </button>
         </form>
       </div>
 
       <div style={{ padding: "8px 16px" }}>
         <span style={{ fontSize: "0.875rem", fontWeight: 600 }}>
-          Demandes d&apos;achat de crédits en attente de paiement
+          {t("admtarifs_ia_demandesEnAttente")}
         </span>
         {chargementTopUps ? (
-          <p style={{ fontSize: "0.875rem" }}>Chargement…</p>
+          <p style={{ fontSize: "0.875rem" }}>{t("commun_chargement")}</p>
         ) : topUpsEnAttente.length === 0 ? (
-          <p className={styles.messageVide}>Aucune demande en attente.</p>
+          <p className={styles.messageVide}>{t("admtarifs_ia_aucuneDemandeEnAttente")}</p>
         ) : (
-          topUpsEnAttente.map((t) => (
+          topUpsEnAttente.map((tu) => (
             <div
-              key={t.id}
+              key={tu.id}
               style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.875rem", padding: "4px 0" }}
             >
               <span style={{ flex: 1 }}>
-                {t.wallet.shop.name} — {t.quantity} crédit(s), {t.invoice.amount} $
+                {tu.wallet.shop.name} — {tu.quantity} {t("admtarifs_ia_credits")}, {tu.invoice.amount} $
               </span>
               <button
                 className={styles.boutonEnregistrer}
                 disabled={actionEnCours !== null}
-                onClick={() => marquerPaye(t.invoice.id)}
+                onClick={() => marquerPaye(tu.invoice.id)}
               >
-                Marquer payée
+                {t("admtarifs_ia_marquerPayee")}
               </button>
             </div>
           ))
@@ -1229,25 +1232,24 @@ function TarifsServicesALaCarteSection() {
       </div>
 
       <div className={styles.planEntete} style={{ borderTop: "1px solid var(--color-bordure)" }}>
-        <span className={styles.planNom}>SMS / WhatsApp premium</span>
+        <span className={styles.planNom}>{t("admtarifs_sms_titre")}</span>
       </div>
       <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
-        Préparation du tarif uniquement — aucun envoi réel n&apos;est encore branché (aucun compte
-        Twilio/WhatsApp Business configuré). Permet d&apos;afficher le prix dès maintenant.
+        {t("admtarifs_sms_notePreparationTarif")}
       </p>
       <div className={styles.planChamps}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
           <input type="checkbox" checked={smsActif} onChange={(e) => setSmsActif(e.target.checked)} />
-          Afficher l&apos;offre SMS/WhatsApp premium
+          {t("admtarifs_sms_afficherOffre")}
         </label>
         <label className={styles.champ}>
-          <span>Tarif mensuel (USD)</span>
+          <span>{t("admtarifs_sms_tarifMensuel")}</span>
           <input placeholder="ex. 10" value={smsTarif} onChange={(e) => setSmsTarif(e.target.value)} />
         </label>
       </div>
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCoursTarifs} onClick={enregistrerTarifs}>
-          Enregistrer le tarif SMS/WhatsApp
+          {t("admtarifs_sms_enregistrerTarif")}
         </button>
       </div>
     </div>
@@ -1255,6 +1257,7 @@ function TarifsServicesALaCarteSection() {
 }
 
 function TarifsContent() {
+  const { t } = useLocale();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -1263,52 +1266,52 @@ function TarifsContent() {
     api
       .get<Plan[]>("/admin/billing/plans")
       .then(setPlans)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
   useEffect(recharger, []);
 
-  if (chargement) return <p>Chargement des tarifs…</p>;
+  if (chargement) return <p>{t("admtarifs_chargementTarifs")}</p>;
 
   const gestion = plans.filter((p) => p.category === "GESTION");
   const marketplace = plans.filter((p) => p.category === "MARKETPLACE");
 
   return (
     <div>
-      <h1 className={styles.titre}>Tarifs et conditions</h1>
+      <h1 className={styles.titre}>{t("admtarifs_titrePage")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
-      <h2 className={styles.sectionTitre}>Bouquets ELEGANZ Gestion</h2>
-      {gestion.length === 0 && <p className={styles.messageVide}>Aucun bouquet Gestion.</p>}
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionBouquetsGestion")}</h2>
+      {gestion.length === 0 && <p className={styles.messageVide}>{t("admtarifs_aucunBouquetGestion")}</p>}
       {gestion.map((plan) => (
         <LignePlan key={plan.id} plan={plan} onChange={recharger} />
       ))}
 
-      <h2 className={styles.sectionTitre}>Bouquets Marketplace</h2>
-      {marketplace.length === 0 && <p className={styles.messageVide}>Aucun bouquet Marketplace.</p>}
+      <h2 className={styles.sectionTitre}>{t("admtarifs_marketplace")}</h2>
+      {marketplace.length === 0 && <p className={styles.messageVide}>{t("admtarifs_aucunBouquetMarketplace")}</p>}
       {marketplace.map((plan) => (
         <LignePlan key={plan.id} plan={plan} onChange={recharger} />
       ))}
 
       <FormulaireNouveauPlan onCree={recharger} />
 
-      <h2 className={styles.sectionTitre}>Facturation des boutiques</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionFacturationBoutiques")}</h2>
       <TarifsBoutiquesSection />
 
-      <h2 className={styles.sectionTitre}>Tarifs livreurs</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionTarifsLivreurs")}</h2>
       <TarifsLivreursSection />
 
-      <h2 className={styles.sectionTitre}>Tarifs Secourable</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionTarifsSecourable")}</h2>
       <TarifsComptableSection />
 
-      <h2 className={styles.sectionTitre}>Bouquets ELEGANZ Secourable</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionBouquetsSecourable")}</h2>
       <BouquetsComptableSection />
 
-      <h2 className={styles.sectionTitre}>Taux de change</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionTauxDeChange")}</h2>
       <TauxChangeSection />
 
-      <h2 className={styles.sectionTitre}>Services à la carte</h2>
+      <h2 className={styles.sectionTitre}>{t("admtarifs_sectionServicesALaCarte")}</h2>
       <TarifsServicesALaCarteSection />
     </div>
   );

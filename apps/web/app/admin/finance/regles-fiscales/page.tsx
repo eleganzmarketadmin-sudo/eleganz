@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../../AdminShell";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Règles fiscales applicables à ELEGANZ (prompt du 13 oct. 2026, §14) —
@@ -21,14 +22,15 @@ interface RegleFiscale {
   status: "PROPOSEE" | "CONFIGUREE" | "VERIFIEE" | "OBSOLETE";
 }
 
-const LABELS_STATUT: Record<RegleFiscale["status"], string> = {
-  PROPOSEE: "Proposée",
-  CONFIGUREE: "Configurée",
-  VERIFIEE: "Vérifiée",
-  OBSOLETE: "Obsolète",
+const CLES_STATUT: Record<RegleFiscale["status"], string> = {
+  PROPOSEE: "rfi_statutProposee",
+  CONFIGUREE: "admrfi_statutConfiguree",
+  VERIFIEE: "admrfi_statutVerifiee",
+  OBSOLETE: "rfi_statutObsolete",
 };
 
 function ReglesFiscalesAdminContenu() {
+  const { t } = useLocale();
   const [regles, setRegles] = useState<RegleFiscale[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -46,7 +48,7 @@ function ReglesFiscalesAdminContenu() {
     api
       .get<RegleFiscale[]>("/admin/finance/fiscal-rules")
       .then(setRegles)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -69,10 +71,10 @@ function ReglesFiscalesAdminContenu() {
       setLabel("");
       setRateOrFormula("");
       setMotif("");
-      setMessage("Règle fiscale ELEGANZ enregistrée.");
+      setMessage(t("admrfi_regleEnregistree"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -80,48 +82,46 @@ function ReglesFiscalesAdminContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Règles fiscales applicables à ELEGANZ</h1>
+      <h1 className={styles.titre}>{t("admrfi_titre")}</h1>
       <p style={{ color: "var(--color-texte-muted)", marginBottom: "16px" }}>
-        Profil fiscal propre à la société exploitante ELEGANZ — totalement
-        indépendant des règles fiscales de chaque boutique. Aucune
-        modification ici ne touche une boutique, et réciproquement.
+        {t("admrfi_description")}
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {message && <div className={styles.message}>{message}</div>}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : (
         <>
           <form onSubmit={creer} style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginBottom: "24px" }}>
-            <input placeholder="Intitulé" value={label} onChange={(e) => setLabel(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
+            <input placeholder={t("rfi_intitule")} value={label} onChange={(e) => setLabel(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
             <select value={category} onChange={(e) => setCategory(e.target.value as RegleFiscale["category"])} style={{ minHeight: 40 }}>
-              <option value="TVA">TVA</option>
-              <option value="IMPOT">Impôt</option>
-              <option value="RETENUE">Retenue</option>
-              <option value="CONTRIBUTION">Contribution</option>
-              <option value="AUTRE">Autre</option>
+              <option value="TVA">{t("rfi_catTva")}</option>
+              <option value="IMPOT">{t("rfi_catImpot")}</option>
+              <option value="RETENUE">{t("rfi_catRetenue")}</option>
+              <option value="CONTRIBUTION">{t("rfi_catContribution")}</option>
+              <option value="AUTRE">{t("rfi_catAutre")}</option>
             </select>
-            <input placeholder="Taux ou formule" value={rateOrFormula} onChange={(e) => setRateOrFormula(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
+            <input placeholder={t("rfi_tauxOuFormule")} value={rateOrFormula} onChange={(e) => setRateOrFormula(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
             <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
-            <input placeholder="Motif" value={motif} onChange={(e) => setMotif(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
+            <input placeholder={t("admrfi_placeholderMotif")} value={motif} onChange={(e) => setMotif(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
             <button className={styles.boutonVerif} type="submit" disabled={enCours || !label || !rateOrFormula || !motif}>
-              {enCours ? "Enregistrement…" : "Ajouter"}
+              {enCours ? t("cha_enregistrementEnCours") : t("admrfi_ajouter")}
             </button>
           </form>
 
           {regles.length === 0 ? (
-            <p>Aucune règle fiscale ELEGANZ enregistrée pour l&apos;instant.</p>
+            <p>{t("rfi_aucuneRegle")}</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left" }}>Intitulé</th>
-                  <th style={{ textAlign: "left" }}>Catégorie</th>
-                  <th style={{ textAlign: "left" }}>Taux / formule</th>
-                  <th style={{ textAlign: "left" }}>Depuis</th>
-                  <th style={{ textAlign: "left" }}>Statut</th>
+                  <th style={{ textAlign: "left" }}>{t("rfi_intitule")}</th>
+                  <th style={{ textAlign: "left" }}>{t("cat_categorie")}</th>
+                  <th style={{ textAlign: "left" }}>{t("rfi_colTauxFormule")}</th>
+                  <th style={{ textAlign: "left" }}>{t("rfi_colDepuis")}</th>
+                  <th style={{ textAlign: "left" }}>{t("rfi_colStatut")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,7 +131,7 @@ function ReglesFiscalesAdminContenu() {
                     <td>{r.category}</td>
                     <td>{r.rateOrFormula}</td>
                     <td>{new Date(r.effectiveFrom).toLocaleDateString("fr-FR")}</td>
-                    <td>{LABELS_STATUT[r.status]}</td>
+                    <td>{t(CLES_STATUT[r.status])}</td>
                   </tr>
                 ))}
               </tbody>

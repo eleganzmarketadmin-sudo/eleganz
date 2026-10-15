@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminShell } from "../../AdminShell";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Miroir ELEGANZ du moteur comptable (13 oct. 2026, Phase 2) — scope
@@ -76,6 +77,7 @@ function aujourdhui(): string {
 }
 
 function ComptabiliteAdminContenu() {
+  const { t } = useLocale();
   const [from, setFrom] = useState(debutMois());
   const [to, setTo] = useState(aujourdhui());
   const [journal, setJournal] = useState<Ecriture[] | null>(null);
@@ -103,49 +105,46 @@ function ComptabiliteAdminContenu() {
         setCompteResultat(cr);
         setBilan(bi);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, [from, to]);
+  }, [from, to, t]);
 
   return (
     <div>
-      <h1 className={styles.titre}>Comptabilité ELEGANZ</h1>
+      <h1 className={styles.titre}>{t("admfinct_titre")}</h1>
       <p style={{ marginBottom: "16px" }}>
-        <Link href="/admin/finance">← Tableau de bord Finance ELEGANZ</Link>
+        <Link href="/admin/finance">{t("admfinct_lienTableauBord")}</Link>
       </p>
       <p style={{ color: "var(--color-texte-muted)", marginBottom: "16px" }}>
-        Journal et balance générés automatiquement à partir des revenus
-        ELEGANZ réellement encaissés (abonnements, frais livreur, Mon
-        Comptable) — jamais à la facturation. Indépendant des écritures de
-        chaque boutique. Voir docs/ARCHITECTURE_FINANCE.md §8bis.
+        {t("admfinct_description")}
       </p>
 
       <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
         <label>
-          Du <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ minHeight: 40, padding: 6 }} />
+          {t("rel_du")} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ minHeight: 40, padding: 6 }} />
         </label>
         <label>
-          Au <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ minHeight: 40, padding: 6 }} />
+          {t("rel_au")} <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ minHeight: 40, padding: 6 }} />
         </label>
       </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : (
         <>
-          <h2 className={styles.sectionTitre}>Journal général</h2>
+          <h2 className={styles.sectionTitre}>{t("cpt_journalGeneral")}</h2>
           {!journal || journal.length === 0 ? (
-            <p>Aucune écriture sur cette période.</p>
+            <p>{t("cpt_aucuneEcriturePeriode")}</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "28px" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left" }}>Date</th>
-                  <th style={{ textAlign: "left" }}>Libellé</th>
-                  <th style={{ textAlign: "left" }}>Compte</th>
-                  <th style={{ textAlign: "right" }}>Débit</th>
-                  <th style={{ textAlign: "right" }}>Crédit</th>
+                  <th style={{ textAlign: "left" }}>{t("cha_colDate")}</th>
+                  <th style={{ textAlign: "left" }}>{t("tre_colLibelle")}</th>
+                  <th style={{ textAlign: "left" }}>{t("cpt_compte")}</th>
+                  <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+                  <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -170,24 +169,23 @@ function ComptabiliteAdminContenu() {
             </table>
           )}
 
-          <h2 className={styles.sectionTitre}>Balance</h2>
+          <h2 className={styles.sectionTitre}>{t("cpt_balance")}</h2>
           {!balance || balance.comptes.length === 0 ? (
-            <p>Aucun mouvement sur cette période.</p>
+            <p>{t("cpt_aucunMouvementPeriode")}</p>
           ) : (
             <>
               {!balance.equilibree && (
                 <div className={styles.erreur}>
-                  Anomalie : le total débit ne correspond pas au total
-                  crédit — à signaler, ne pas ignorer.
+                  {t("cpt_anomalieBalance")}
                 </div>
               )}
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: "left" }}>Compte</th>
-                    <th style={{ textAlign: "right" }}>Débit</th>
-                    <th style={{ textAlign: "right" }}>Crédit</th>
-                    <th style={{ textAlign: "right" }}>Solde</th>
+                    <th style={{ textAlign: "left" }}>{t("cpt_compte")}</th>
+                    <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+                    <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
+                    <th style={{ textAlign: "right" }}>{t("cpt_colSolde")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -204,7 +202,7 @@ function ComptabiliteAdminContenu() {
                 </tbody>
                 <tfoot>
                   <tr style={{ fontWeight: 700 }}>
-                    <td>Total</td>
+                    <td>{t("cpt_total")}</td>
                     <td style={{ textAlign: "right" }}>{f(balance.totalDebit)} $</td>
                     <td style={{ textAlign: "right" }}>{f(balance.totalCredit)} $</td>
                     <td></td>
@@ -214,13 +212,13 @@ function ComptabiliteAdminContenu() {
             </>
           )}
 
-          <h2 className={styles.sectionTitre}>Compte de résultat (période)</h2>
+          <h2 className={styles.sectionTitre}>{t("cpt_compteDeResultat")}</h2>
           {!compteResultat || (compteResultat.charges.length === 0 && compteResultat.produits.length === 0) ? (
-            <p>Aucune charge ni aucun produit sur cette période.</p>
+            <p>{t("cpt_aucuneChargeProduitPeriode")}</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "28px" }}>
               <div>
-                <h3>Charges</h3>
+                <h3>{t("cpt_charges")}</h3>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     {compteResultat.charges.map((l) => (
@@ -232,14 +230,14 @@ function ComptabiliteAdminContenu() {
                   </tbody>
                   <tfoot>
                     <tr style={{ fontWeight: 700 }}>
-                      <td>Total charges</td>
+                      <td>{t("cpt_totalCharges")}</td>
                       <td style={{ textAlign: "right" }}>{f(compteResultat.totalCharges)} $</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
               <div>
-                <h3>Produits</h3>
+                <h3>{t("cpt_produits")}</h3>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     {compteResultat.produits.map((l) => (
@@ -251,31 +249,31 @@ function ComptabiliteAdminContenu() {
                   </tbody>
                   <tfoot>
                     <tr style={{ fontWeight: 700 }}>
-                      <td>Total produits</td>
+                      <td>{t("cpt_totalProduits")}</td>
                       <td style={{ textAlign: "right" }}>{f(compteResultat.totalProduits)} $</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
               <p style={{ gridColumn: "1 / -1", fontWeight: 700 }}>
-                Résultat net de la période : {f(compteResultat.resultatNet)} $ (
-                {compteResultat.resultatNet >= 0 ? "bénéfice" : "perte"})
+                {t("cpt_resultatNetPeriode")} {f(compteResultat.resultatNet)} $ (
+                {compteResultat.resultatNet >= 0 ? t("cpt_benefice") : t("cpt_perte")})
               </p>
             </div>
           )}
 
-          <h2 className={styles.sectionTitre}>Bilan (à la date « Au »)</h2>
+          <h2 className={styles.sectionTitre}>{t("cpt_bilan")}</h2>
           {!bilan || (bilan.actif.length === 0 && bilan.passif.length === 0) ? (
-            <p>Aucun solde à cette date.</p>
+            <p>{t("cpt_aucunSoldeDate")}</p>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
               {!bilan.equilibre && (
                 <div className={styles.erreur} style={{ gridColumn: "1 / -1" }}>
-                  Anomalie : le total actif ne correspond pas au total passif — à signaler, ne pas ignorer.
+                  {t("cpt_anomalieBilan")}
                 </div>
               )}
               <div>
-                <h3>Actif</h3>
+                <h3>{t("cpt_actif")}</h3>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     {bilan.actif.map((l) => (
@@ -287,14 +285,14 @@ function ComptabiliteAdminContenu() {
                   </tbody>
                   <tfoot>
                     <tr style={{ fontWeight: 700 }}>
-                      <td>Total actif</td>
+                      <td>{t("cpt_totalActif")}</td>
                       <td style={{ textAlign: "right" }}>{f(bilan.totalActif)} $</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
               <div>
-                <h3>Passif</h3>
+                <h3>{t("cpt_passif")}</h3>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
                     {bilan.passif.map((l) => (
@@ -306,7 +304,7 @@ function ComptabiliteAdminContenu() {
                   </tbody>
                   <tfoot>
                     <tr style={{ fontWeight: 700 }}>
-                      <td>Total passif</td>
+                      <td>{t("cpt_totalPassif")}</td>
                       <td style={{ textAlign: "right" }}>{f(bilan.totalPassif)} $</td>
                     </tr>
                   </tfoot>

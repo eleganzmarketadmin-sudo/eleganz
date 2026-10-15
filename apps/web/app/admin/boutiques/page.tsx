@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { formatDate } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Boutique {
@@ -26,16 +27,17 @@ interface Plan {
   name: string;
 }
 
-const LIBELLES_STATUT: Record<string, string> = {
-  PENDING_VALIDATION: "En attente de validation",
-  FREE_PERIOD: "Période gratuite",
-  ACTIVE: "Active",
-  PAYMENT_DUE: "Paiement dû",
-  SUSPENDED: "Suspendue",
-  CLOSED: "Fermée",
+const CLES_STATUT: Record<string, string> = {
+  PENDING_VALIDATION: "admbout_statutEnAttenteValidation",
+  FREE_PERIOD: "admbout_statutPeriodeGratuite",
+  ACTIVE: "admbout_statutActive",
+  PAYMENT_DUE: "admbout_statutPaiementDu",
+  SUSPENDED: "admbout_statutSuspendue",
+  CLOSED: "admbout_statutFermee",
 };
 
 function BoutiquesContent() {
+  const { t } = useLocale();
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -48,7 +50,7 @@ function BoutiquesContent() {
         setBoutiques(shops);
         setPlans(plansList);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -61,7 +63,7 @@ function BoutiquesContent() {
       await api.post(`/admin/shops/${shopId}/${action}`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admbout_actionImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -74,7 +76,7 @@ function BoutiquesContent() {
       await api.patch(`/admin/shops/${shopId}/fiscal-homologation`, { confirmed });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Changement d'homologation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admbout_changementHomologationImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -87,21 +89,21 @@ function BoutiquesContent() {
       await api.patch(`/admin/shops/${shopId}/plan`, { kind, planId: planId || null });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Changement de bouquet impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admbout_changementBouquetImpossible"));
     } finally {
       setEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement des boutiques…</p>;
+  if (chargement) return <p>{t("admbout_chargementBoutiques")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Boutiques</h1>
+      <h1 className={styles.titre}>{t("admbout_titre")}</h1>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
 
       {boutiques.length === 0 ? (
-        <p className={styles.messageVide}>Aucune boutique inscrite pour l&apos;instant.</p>
+        <p className={styles.messageVide}>{t("admbout_aucuneBoutique")}</p>
       ) : (
         boutiques.map((b) => {
           const suspendue = b.status === "SUSPENDED";
@@ -113,28 +115,28 @@ function BoutiquesContent() {
                   <span
                     className={`${styles.statut} ${suspendue ? styles.statutSuspendu : ""}`}
                   >
-                    {LIBELLES_STATUT[b.status] ?? b.status}
+                    {t(CLES_STATUT[b.status] ?? "") || b.status}
                   </span>
                 </div>
-                <span className={styles.date}>Inscrite le {formatDate(b.createdAt)}</span>
+                <span className={styles.date}>{t("admbout_inscriteLe")} {formatDate(b.createdAt)}</span>
               </div>
               <div className={styles.corps}>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Propriétaire</span>
+                  <span className={styles.champLabel}>{t("admbout_proprietaire")}</span>
                   <span>{b.owner.fullName} — {b.owner.email ?? b.owner.phone}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Mode</span>
-                  <span>{b.mode}{b.isPubliclyListed ? " · publiée sur la Marketplace" : ""}</span>
+                  <span className={styles.champLabel}>{t("admbout_mode")}</span>
+                  <span>{b.mode}{b.isPubliclyListed ? ` · ${t("admbout_publieeMarketplace")}` : ""}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Bouquet Gestion</span>
+                  <span className={styles.champLabel}>{t("admbout_bouquetGestion")}</span>
                   <select
                     value={b.gestionBouquet?.id ?? ""}
                     disabled={enCours === b.id}
                     onChange={(e) => changerBouquet(b.id, "gestion", e.target.value)}
                   >
-                    <option value="">Aucun</option>
+                    <option value="">{t("admbout_aucun")}</option>
                     {plans
                       .filter((p) => p.category === "GESTION")
                       .map((p) => (
@@ -145,13 +147,13 @@ function BoutiquesContent() {
                   </select>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Bouquet Marketplace</span>
+                  <span className={styles.champLabel}>{t("admbout_bouquetMarketplace")}</span>
                   <select
                     value={b.marketplaceBouquet?.id ?? ""}
                     disabled={enCours === b.id}
                     onChange={(e) => changerBouquet(b.id, "marketplace", e.target.value)}
                   >
-                    <option value="">Aucun</option>
+                    <option value="">{t("admbout_aucun")}</option>
                     {plans
                       .filter((p) => p.category === "MARKETPLACE")
                       .map((p) => (
@@ -162,11 +164,11 @@ function BoutiquesContent() {
                   </select>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Catalogue</span>
-                  <span>{b._count.products} articles · {b._count.orders} commandes reçues</span>
+                  <span className={styles.champLabel}>{t("admbout_catalogue")}</span>
+                  <span>{b._count.products} {t("admbout_articles")} · {b._count.orders} {t("admbout_commandesRecues")}</span>
                 </div>
                 <div className={styles.champInfo}>
-                  <span className={styles.champLabel}>Facture fiscale homologuée</span>
+                  <span className={styles.champLabel}>{t("admbout_factureFiscaleHomologuee")}</span>
                   <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <input
                       type="checkbox"
@@ -175,8 +177,8 @@ function BoutiquesContent() {
                       onChange={(e) => basculerHomologation(b.id, e.target.checked)}
                     />
                     {b.fiscalHomologationConfirmed
-                      ? "Confirmée — peut émettre des factures fiscales"
-                      : "Non confirmée — facture fiscale indisponible"}
+                      ? t("admbout_homologationConfirmee")
+                      : t("admbout_homologationNonConfirmee")}
                   </label>
                 </div>
               </div>
@@ -187,7 +189,7 @@ function BoutiquesContent() {
                     disabled={enCours === b.id}
                     onClick={() => basculer(b.id, "reactivate")}
                   >
-                    Réactiver
+                    {t("admbout_reactiver")}
                   </button>
                 ) : (
                   <button
@@ -195,7 +197,7 @@ function BoutiquesContent() {
                     disabled={enCours === b.id}
                     onClick={() => basculer(b.id, "suspend")}
                   >
-                    Suspendre
+                    {t("admbout_suspendre")}
                   </button>
                 )}
               </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { StatusTag } from "../../components/StatusTag";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface CommandeEnCours {
@@ -40,13 +41,14 @@ interface ComportementLivreur {
   delaiMoyenLivraisonHeures: number | null;
 }
 
-function formaterDuree(heures: number): string {
-  if (heures < 1) return `${Math.round(heures * 60)} min`;
-  if (heures < 48) return `${heures.toFixed(1)} h`;
-  return `${Math.round(heures / 24)} j`;
+function formaterDuree(heures: number, t: (cle: string) => string): string {
+  if (heures < 1) return `${Math.round(heures * 60)} ${t("admsuivi_uniteMin")}`;
+  if (heures < 48) return `${heures.toFixed(1)} ${t("admsuivi_uniteHeure")}`;
+  return `${Math.round(heures / 24)} ${t("admsuivi_uniteJour")}`;
 }
 
 function SuiviCommandesContent() {
+  const { t } = useLocale();
   const [commandes, setCommandes] = useState<CommandeEnCours[] | null>(null);
   const [boutiques, setBoutiques] = useState<ComportementBoutique[] | null>(null);
   const [livreurs, setLivreurs] = useState<ComportementLivreur[] | null>(null);
@@ -64,44 +66,40 @@ function SuiviCommandesContent() {
         setBoutiques(b);
         setLivreurs(l);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Chargement impossible."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("admsuivi_chargementImpossible")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
   const nombreEnRetard = commandes?.filter((c) => c.enRetard).length ?? 0;
 
   return (
     <div>
-      <h1 className={styles.titre}>Suivi des commandes</h1>
-      <p className={styles.sousTitre}>
-        Toutes les commandes actives de la plateforme (caisse exclue, Marketplace uniquement), avec un
-        repère de retard indicatif par étape, et le comportement des boutiques et des livreurs dans la
-        durée.
-      </p>
+      <h1 className={styles.titre}>{t("admsuivi_titre")}</h1>
+      <p className={styles.sousTitre}>{t("admsuivi_sousTitre")}</p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
-      {chargement && <p>Chargement…</p>}
+      {chargement && <p>{t("commun_chargement")}</p>}
 
       {commandes && (
         <section className={styles.section}>
           <h2 className={styles.titreSection}>
-            Commandes en cours ({commandes.length})
+            {t("admsuivi_commandesEnCours")} ({commandes.length})
             {nombreEnRetard > 0 && (
-              <span className={styles.compteurRetard}>{nombreEnRetard} en retard ou à traiter</span>
+              <span className={styles.compteurRetard}>{nombreEnRetard} {t("admsuivi_enRetardOuATraiter")}</span>
             )}
           </h2>
           {commandes.length === 0 ? (
-            <p className={styles.vide}>Aucune commande active en ce moment.</p>
+            <p className={styles.vide}>{t("admsuivi_aucuneCommandeActive")}</p>
           ) : (
             <div className={styles.tableauScroll}>
               <table className={styles.tableau}>
                 <thead>
                   <tr>
-                    <th>Boutique</th>
-                    <th>Acheteur</th>
-                    <th>Statut</th>
-                    <th>Livreur</th>
-                    <th className={styles.colChiffre}>Temps dans l&apos;étape</th>
+                    <th>{t("admsuivi_colBoutique")}</th>
+                    <th>{t("gcmd_acheteurFallback")}</th>
+                    <th>{t("rfi_colStatut")}</th>
+                    <th>{t("gcmd_livreurLabel")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colTempsEtape")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -117,9 +115,9 @@ function SuiviCommandesContent() {
                       </td>
                       <td>{c.livreur ?? "—"}</td>
                       <td className={styles.colChiffre}>
-                        {formaterDuree(c.heuresDansStatut)}
+                        {formaterDuree(c.heuresDansStatut, t)}
                         {c.seuilHeures !== null && (
-                          <span className={styles.seuil}> / seuil {formaterDuree(c.seuilHeures)}</span>
+                          <span className={styles.seuil}> / {t("admsuivi_seuil")} {formaterDuree(c.seuilHeures, t)}</span>
                         )}
                       </td>
                     </tr>
@@ -133,19 +131,19 @@ function SuiviCommandesContent() {
 
       {boutiques && (
         <section className={styles.section}>
-          <h2 className={styles.titreSection}>Comportement des boutiques</h2>
+          <h2 className={styles.titreSection}>{t("admsuivi_comportementBoutiques")}</h2>
           {boutiques.length === 0 ? (
-            <p className={styles.vide}>Aucune commande Marketplace enregistrée pour l&apos;instant.</p>
+            <p className={styles.vide}>{t("admsuivi_aucuneCommandeMarketplace")}</p>
           ) : (
             <div className={styles.tableauScroll}>
               <table className={styles.tableau}>
                 <thead>
                   <tr>
-                    <th>Boutique</th>
-                    <th className={styles.colChiffre}>Commandes</th>
-                    <th className={styles.colChiffre}>Taux d&apos;annulation</th>
-                    <th className={styles.colChiffre}>Taux de litige</th>
-                    <th className={styles.colChiffre}>Délai moyen d&apos;acceptation</th>
+                    <th>{t("admsuivi_colBoutique")}</th>
+                    <th className={styles.colChiffre}>{t("nav_commandes")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colTauxAnnulation")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colTauxLitige")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colDelaiAcceptation")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,7 +155,7 @@ function SuiviCommandesContent() {
                       <td className={styles.colChiffre}>{b.tauxLitigePct}%</td>
                       <td className={styles.colChiffre}>
                         {b.delaiMoyenAcceptationHeures !== null
-                          ? formaterDuree(b.delaiMoyenAcceptationHeures)
+                          ? formaterDuree(b.delaiMoyenAcceptationHeures, t)
                           : "—"}
                       </td>
                     </tr>
@@ -166,29 +164,26 @@ function SuiviCommandesContent() {
               </table>
             </div>
           )}
-          <p className={styles.note}>
-            Le délai d&apos;acceptation n&apos;est calculé que pour les commandes passées depuis la mise en
-            place de ce suivi (12 octobre 2026) — « — » signifie pas encore de données.
-          </p>
+          <p className={styles.note}>{t("admsuivi_noteDelaiAcceptation")}</p>
         </section>
       )}
 
       {livreurs && (
         <section className={styles.section}>
-          <h2 className={styles.titreSection}>Comportement des livreurs</h2>
+          <h2 className={styles.titreSection}>{t("admsuivi_comportementLivreurs")}</h2>
           {livreurs.length === 0 ? (
-            <p className={styles.vide}>Aucune livraison assignée pour l&apos;instant.</p>
+            <p className={styles.vide}>{t("admsuivi_aucuneLivraisonAssignee")}</p>
           ) : (
             <div className={styles.tableauScroll}>
               <table className={styles.tableau}>
                 <thead>
                   <tr>
-                    <th>Livreur</th>
-                    <th>Vérifié</th>
-                    <th className={styles.colChiffre}>Livraisons assignées</th>
-                    <th className={styles.colChiffre}>Livrées</th>
-                    <th className={styles.colChiffre}>Taux de litige</th>
-                    <th className={styles.colChiffre}>Délai moyen de livraison</th>
+                    <th>{t("gcmd_livreurLabel")}</th>
+                    <th>{t("admsuivi_colVerifie")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colLivraisonsAssignees")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colLivrees")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colTauxLitige")}</th>
+                    <th className={styles.colChiffre}>{t("admsuivi_colDelaiLivraison")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,14 +191,14 @@ function SuiviCommandesContent() {
                     <tr key={l.livreurId}>
                       <td>{l.nom}</td>
                       <td>
-                        <StatusTag label={l.verifie ? "Vérifié" : "Non vérifié"} humeur={l.verifie ? "paye" : "neutre"} />
+                        <StatusTag label={l.verifie ? t("admsuivi_verifie") : t("admsuivi_nonVerifie")} humeur={l.verifie ? "paye" : "neutre"} />
                       </td>
                       <td className={styles.colChiffre}>{l.totalLivraisons}</td>
                       <td className={styles.colChiffre}>{l.livrees}</td>
                       <td className={styles.colChiffre}>{l.tauxLitigePct}%</td>
                       <td className={styles.colChiffre}>
                         {l.delaiMoyenLivraisonHeures !== null
-                          ? formaterDuree(l.delaiMoyenLivraisonHeures)
+                          ? formaterDuree(l.delaiMoyenLivraisonHeures, t)
                           : "—"}
                       </td>
                     </tr>

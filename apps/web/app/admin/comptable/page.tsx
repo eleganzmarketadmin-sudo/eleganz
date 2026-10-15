@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Overview {
@@ -15,11 +16,11 @@ interface Overview {
   sansPlanChoisi: number;
 }
 
-const LABELS_STATUT: Record<string, string> = {
-  FREE_PERIOD: "Période gratuite",
-  PAYMENT_DUE: "Paiement attendu",
-  ACTIVE: "Abonnement à jour",
-  SUSPENDED: "Suspendus",
+const CLES_STATUT: Record<string, string> = {
+  FREE_PERIOD: "admcpt_catPeriodeGratuite",
+  PAYMENT_DUE: "admcpt_catPaiementAttendu",
+  ACTIVE: "admcpt_catAbonnementAJour",
+  SUSPENDED: "admcpt_catSuspendus",
 };
 
 /**
@@ -30,6 +31,7 @@ const LABELS_STATUT: Record<string, string> = {
  * revenus du module sont visibles ici.
  */
 function ComptableAdminContenu() {
+  const { t } = useLocale();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -40,7 +42,7 @@ function ComptableAdminContenu() {
     api
       .get<Overview>("/admin/comptable/overview")
       .then(setOverview)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
@@ -52,87 +54,93 @@ function ComptableAdminContenu() {
     setMessage(null);
     try {
       const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${action} : ${resultat.length} compte(s) concerné(s).`);
+      setMessage(
+        t("admcpt_messageResultat")
+          .replace("{{action}}", action)
+          .replace("{{count}}", String(resultat.length)),
+      );
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Action impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("admcpt_actionImpossible"));
     } finally {
       setVerificationEnCours(null);
     }
   }
 
-  if (chargement) return <p>Chargement…</p>;
+  if (chargement) return <p>{t("commun_chargement")}</p>;
   if (erreur) return <p className={styles.erreur}>{erreur}</p>;
   if (!overview) return null;
 
   return (
     <div>
-      <h1 className={styles.titre}>Secourable</h1>
+      <h1 className={styles.titre}>{t("admcpt_titre")}</h1>
       {message && <p className={styles.message}>{message}</p>}
 
       <div className={styles.grille}>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Comptes activés</div>
+          <div className={styles.carteLabel}>{t("admcpt_comptesActives")}</div>
           <div className={styles.carteValeur}>{overview.totalInscrits}</div>
         </div>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Activités créées</div>
+          <div className={styles.carteLabel}>{t("admcpt_activitesCreees")}</div>
           <div className={styles.carteValeur}>{overview.activitesCreees}</div>
         </div>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Revenus encaissés</div>
+          <div className={styles.carteLabel}>{t("admcpt_revenusEncaisses")}</div>
           <div className={styles.carteValeur}>{overview.revenusEncaisses.toFixed(2)} $</div>
         </div>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Factures en attente</div>
+          <div className={styles.carteLabel}>{t("admcpt_facturesEnAttente")}</div>
           <div className={styles.carteValeur}>{overview.facturesEnAttente}</div>
         </div>
       </div>
 
-      <h2 className={styles.sectionTitre}>Répartition par statut de facturation</h2>
+      <h2 className={styles.sectionTitre}>{t("admcpt_repartitionStatut")}</h2>
       <div className={styles.grille}>
-        {Object.entries(LABELS_STATUT).map(([cle, label]) => (
+        {Object.entries(CLES_STATUT).map(([cle, labelKey]) => (
           <div className={styles.carte} key={cle}>
-            <div className={styles.carteLabel}>{label}</div>
+            <div className={styles.carteLabel}>{t(labelKey)}</div>
             <div className={styles.carteValeur}>{overview.parStatut[cle] ?? 0}</div>
           </div>
         ))}
       </div>
 
-      <h2 className={styles.sectionTitre}>Formules choisies (abonnés actifs)</h2>
+      <h2 className={styles.sectionTitre}>{t("admcpt_formulesChoisies")}</h2>
       <div className={styles.grille}>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Mensuelle</div>
+          <div className={styles.carteLabel}>{t("admcpt_mensuelle")}</div>
           <div className={styles.carteValeur}>{overview.parPlan["MONTHLY"] ?? 0}</div>
         </div>
         <div className={styles.carte}>
-          <div className={styles.carteLabel}>Annuelle</div>
+          <div className={styles.carteLabel}>{t("admcpt_annuelle")}</div>
           <div className={styles.carteValeur}>{overview.parPlan["YEARLY"] ?? 0}</div>
         </div>
       </div>
 
-      <h2 className={styles.sectionTitre}>Cycle de facturation (déclenchement manuel)</h2>
+      <h2 className={styles.sectionTitre}>{t("admcpt_cycleFacturation")}</h2>
       <div className={styles.verifications}>
         <button
           className={styles.boutonVerif}
           disabled={verificationEnCours !== null}
-          onClick={() => lancer("Fin de période gratuite", "/admin/comptable/run-trial-check")}
+          onClick={() => lancer(t("admcpt_actionFinPeriodeGratuite"), "/admin/comptable/run-trial-check")}
         >
-          Vérifier les gratuités échues
+          {t("admcpt_verifierGratuitesEchues")}
         </button>
         <button
           className={styles.boutonVerif}
           disabled={verificationEnCours !== null}
-          onClick={() => lancer("Facturation de renouvellement", "/admin/comptable/run-renewal-billing")}
+          onClick={() =>
+            lancer(t("admcpt_actionFacturationRenouvellement"), "/admin/comptable/run-renewal-billing")
+          }
         >
-          Lancer la facturation de renouvellement
+          {t("admcpt_lancerFacturationRenouvellement")}
         </button>
         <button
           className={styles.boutonVerif}
           disabled={verificationEnCours !== null}
-          onClick={() => lancer("Suspension des impayés", "/admin/comptable/run-suspension-check")}
+          onClick={() => lancer(t("admcpt_actionSuspensionImpayes"), "/admin/comptable/run-suspension-check")}
         >
-          Suspendre les comptes en impayé
+          {t("admcpt_suspendreImpayes")}
         </button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { formatMoney } from "../../lib/money";
 import { EvolutionChart } from "../EvolutionChart";
 import { CompteurAnime } from "../CompteurAnime";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Dashboard {
@@ -40,6 +41,7 @@ interface Evolution {
 }
 
 function PilotageContent() {
+  const { t } = useLocale();
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [evolution, setEvolution] = useState<Evolution | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -52,7 +54,7 @@ function PilotageContent() {
     try {
       await telechargerFichier(`/admin/exports/${cle}`, nomFichier);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Export impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("chiffres_exportImpossible"));
     } finally {
       setExportEnCours(null);
     }
@@ -67,11 +69,11 @@ function PilotageContent() {
         setDashboard(d);
         setEvolution(e);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, []);
+  }, [t]);
 
-  if (chargement) return <p>Chargement du tableau de bord…</p>;
+  if (chargement) return <p>{t("admpilot_chargementTableauBord")}</p>;
   if (erreur) return <p>{erreur}</p>;
   if (!dashboard) return null;
 
@@ -82,91 +84,88 @@ function PilotageContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Tableau de bord exécutif</h1>
+      <h1 className={styles.titre}>{t("admpilot_titre")}</h1>
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitre}>Activité</h2>
+        <h2 className={styles.sectionTitre}>{t("commun_activite")}</h2>
         <div className={styles.grille}>
           <div className={`${styles.carte} ${styles.carteCobalt}`}>
-            <span className={styles.carteLabel}>Boutiques</span>
+            <span className={styles.carteLabel}>{t("nav_boutiques")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.totalShops} /></span>
           </div>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>Actives</span>
+            <span className={styles.carteLabel}>{t("admpilot_actives")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.activeShops} /></span>
           </div>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>En période gratuite</span>
+            <span className={styles.carteLabel}>{t("admpilot_enPeriodeGratuite")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.freeShops} /></span>
           </div>
           <div className={`${styles.carte} ${dashboard.activity.suspendedShops > 0 ? styles.carteFlamme : ""}`}>
-            <span className={styles.carteLabel}>Suspendues</span>
+            <span className={styles.carteLabel}>{t("admpilot_suspendues")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.suspendedShops} /></span>
           </div>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>Vendeurs</span>
+            <span className={styles.carteLabel}>{t("admpilot_vendeurs")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.totalVendors} /></span>
           </div>
           <div className={`${styles.carte} ${styles.carteMagenta}`}>
-            <span className={styles.carteLabel}>Articles au catalogue</span>
+            <span className={styles.carteLabel}>{t("admpilot_articlesCatalogue")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.totalProducts} /></span>
           </div>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>Articles épuisés</span>
+            <span className={styles.carteLabel}>{t("admpilot_articlesEpuises")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.activity.productsOutOfStock} /></span>
           </div>
         </div>
       </div>
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitre}>Exports Excel</h2>
-        <p className={styles.noteRevenu}>
-          Téléchargez un instantané de la plateforme entière — boutiques, produits, commandes,
-          factures — pour l&apos;analyser ou l&apos;archiver hors de l&apos;interface.
-        </p>
+        <h2 className={styles.sectionTitre}>{t("admpilot_exportsExcel")}</h2>
+        <p className={styles.noteRevenu}>{t("admpilot_noteExports")}</p>
         <div className={styles.exports}>
           <button className={styles.boutonExport} onClick={() => exporter("boutiques", "boutiques-eleganz.xlsx")} disabled={exportEnCours !== null}>
-            {exportEnCours === "boutiques" ? "…" : "Boutiques (.xlsx)"}
+            {exportEnCours === "boutiques" ? "…" : t("admpilot_exportBoutiques")}
           </button>
           <button className={styles.boutonExport} onClick={() => exporter("produits", "produits-eleganz.xlsx")} disabled={exportEnCours !== null}>
-            {exportEnCours === "produits" ? "…" : "Produits (.xlsx)"}
+            {exportEnCours === "produits" ? "…" : t("admpilot_exportProduits")}
           </button>
           <button className={styles.boutonExport} onClick={() => exporter("commandes", "commandes-eleganz.xlsx")} disabled={exportEnCours !== null}>
-            {exportEnCours === "commandes" ? "…" : "Commandes (.xlsx)"}
+            {exportEnCours === "commandes" ? "…" : t("admpilot_exportCommandes")}
           </button>
           <button className={styles.boutonExport} onClick={() => exporter("factures", "factures-plateforme-eleganz.xlsx")} disabled={exportEnCours !== null}>
-            {exportEnCours === "factures" ? "…" : "Factures plateforme (.xlsx)"}
+            {exportEnCours === "factures" ? "…" : t("admpilot_exportFactures")}
           </button>
         </div>
       </div>
 
       {evolution && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitre}>Évolution (30 derniers jours)</h2>
+          <h2 className={styles.sectionTitre}>{t("admpilot_evolution30Jours")}</h2>
           <div className={styles.grilleGraphiques}>
             <EvolutionChart
-              titre="Nouvelles boutiques"
+              titre={t("admpilot_graphNouvellesBoutiques")}
               jours={evolution.jours}
               valeurs={evolution.nouvellesBoutiques}
               couleur="var(--color-cobalt)"
               style="barres"
             />
             <EvolutionChart
-              titre="Nouveaux articles publiés"
+              titre={t("admpilot_graphNouveauxArticles")}
               jours={evolution.jours}
               valeurs={evolution.nouveauxProduits}
               couleur="var(--color-magenta)"
               style="barres"
             />
             <EvolutionChart
-              titre="Commandes Marketplace"
+              titre={t("admpilot_graphCommandesMarketplace")}
               jours={evolution.jours}
               valeurs={evolution.commandes}
               couleur="var(--color-flamme)"
               style="barres"
             />
             <EvolutionChart
-              titre="Valeur brute des commandes"
+              titre={t("admpilot_valeurBrute")}
               jours={evolution.jours}
               valeurs={evolution.valeurCommandes}
               couleur="var(--color-or)"
@@ -177,11 +176,11 @@ function PilotageContent() {
       )}
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitre}>Commandes Marketplace par statut</h2>
+        <h2 className={styles.sectionTitre}>{t("admpilot_commandesParStatut")}</h2>
         <div className={styles.grille}>
           {Object.entries(dashboard.activity.ordersByStatus).length === 0 ? (
             <div className={styles.carte}>
-              <span className={styles.carteLabel}>Aucune commande encore</span>
+              <span className={styles.carteLabel}>{t("admpilot_aucuneCommandeEncore")}</span>
             </div>
           ) : (
             Object.entries(dashboard.activity.ordersByStatus).map(([statut, n]) => (
@@ -195,22 +194,19 @@ function PilotageContent() {
       </div>
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitre}>Revenus</h2>
-        <p className={styles.noteRevenu}>
-          La valeur brute des commandes n&apos;est pas un revenu ELEGANZ — l&apos;essentiel revient
-          aux boutiques. Seules les factures payées comptent comme revenu de la plateforme.
-        </p>
+        <h2 className={styles.sectionTitre}>{t("admpilot_revenus")}</h2>
+        <p className={styles.noteRevenu}>{t("admpilot_noteRevenus")}</p>
         <div className={styles.grille}>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>Valeur brute des commandes</span>
+            <span className={styles.carteLabel}>{t("admpilot_valeurBrute")}</span>
             <span className={styles.carteValeur}>{formatMoney(dashboard.revenue.grossOrderValue)}</span>
           </div>
           <div className={`${styles.carte} ${styles.carteOr}`}>
-            <span className={styles.carteLabel}>Revenu ELEGANZ (factures payées)</span>
+            <span className={styles.carteLabel}>{t("admpilot_revenuEleganz")}</span>
             <span className={styles.carteValeur}>{formatMoney(revenuPlatformeTotal)}</span>
           </div>
           <div className={styles.carte}>
-            <span className={styles.carteLabel}>Factures en attente</span>
+            <span className={styles.carteLabel}>{t("admpilot_facturesEnAttente")}</span>
             <span className={styles.carteValeur}>
               {formatMoney(dashboard.revenue.pendingInvoicesAmount)}
             </span>
@@ -221,7 +217,7 @@ function PilotageContent() {
       {evolution && (
         <div className={styles.section}>
           <EvolutionChart
-            titre="Revenu plateforme encaissé"
+            titre={t("admpilot_revenuPlateformeEncaisse")}
             jours={evolution.jours}
             valeurs={evolution.revenuPlateforme}
             couleur="var(--color-vert-paiement)"
@@ -231,10 +227,10 @@ function PilotageContent() {
       )}
 
       <div className={styles.section}>
-        <h2 className={styles.sectionTitre}>Litiges</h2>
+        <h2 className={styles.sectionTitre}>{t("nav_litiges")}</h2>
         <div className={styles.grille}>
           <div className={`${styles.carte} ${dashboard.operations.openDisputes > 0 ? styles.carteFlamme : ""}`}>
-            <span className={styles.carteLabel}>Litiges ouverts</span>
+            <span className={styles.carteLabel}>{t("admpilot_litigesOuverts")}</span>
             <span className={styles.carteValeur}><CompteurAnime valeur={dashboard.operations.openDisputes} /></span>
           </div>
         </div>
