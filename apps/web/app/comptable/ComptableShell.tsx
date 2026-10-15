@@ -56,13 +56,30 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) return null;
 
-  const LIENS = [
-    { href: "/comptable", label: t("nav_accueil") },
-    { href: "/comptable/activites", label: t("nav_mesActivites") },
-    { href: "/comptable/chiffres", label: t("nav_chiffres") },
-    { href: "/comptable/agenda", label: t("nav_agenda") },
-    { href: "/comptable/messagerie", label: t("nav_messagerie") },
-    { href: "/comptable/abonnement", label: t("nav_abonnement") },
+  // Regroupement visuel du menu (voir ComptableShell.module.css, .navGroupe /
+  // .navSeparateur) : "Activité quotidienne" (usage fréquent), "Pilotage"
+  // (suivi financier, dont le Dossier de financement — anciennement accessible
+  // uniquement en lien profond depuis /comptable/chiffres) et "Compte".
+  const GROUPES_NAV = [
+    {
+      liens: [
+        { href: "/comptable", label: t("nav_accueil"), icone: "🏠" },
+        { href: "/comptable/activites", label: t("nav_mesActivites"), icone: "📋" },
+        { href: "/comptable/agenda", label: t("nav_agenda"), icone: "📅" },
+      ],
+    },
+    {
+      liens: [
+        { href: "/comptable/chiffres", label: t("nav_chiffres"), icone: "📊" },
+        { href: "/comptable/dossier-financement", label: t("titre_dossierFinancement"), icone: "💰" },
+      ],
+    },
+    {
+      liens: [
+        { href: "/comptable/messagerie", label: t("nav_messagerie"), icone: "💬" },
+        { href: "/comptable/abonnement", label: t("nav_abonnement"), icone: "⭐" },
+      ],
+    },
   ];
 
   return (
@@ -90,7 +107,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
             className={styles.deconnexion}
             onClick={() => {
               logout();
-              router.push("/marketplace/compte");
+              router.push("/");
             }}
           >
             {t("action_seDeconnecter")}
@@ -102,14 +119,18 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
       )}
       <BandeMarque />
       <nav className={styles.nav}>
-        {LIENS.map((lien) => (
-          <Link
-            key={lien.href}
-            href={lien.href}
-            className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
-          >
-            {lien.label}
-          </Link>
+        {GROUPES_NAV.map((groupe, indexGroupe) => (
+          <div className={styles.navGroupe} key={indexGroupe}>
+            {groupe.liens.map((lien) => (
+              <Link
+                key={lien.href}
+                href={lien.href}
+                className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
+              >
+                <span aria-hidden="true">{lien.icone}</span> {lien.label}
+              </Link>
+            ))}
+          </div>
         ))}
       </nav>
       <main className={styles.contenu} key={pathname}>

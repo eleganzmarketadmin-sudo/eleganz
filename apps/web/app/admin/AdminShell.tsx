@@ -67,7 +67,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className={styles.deconnexion}
             onClick={() => {
               logout();
-              router.push("/admin/connexion");
+              router.push("/");
             }}
           >
             {t("action_seDeconnecter")}

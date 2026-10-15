@@ -62,7 +62,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
             className={styles.deconnexion}
             onClick={() => {
               logout();
-              router.push("/livreur/connexion");
+              router.push("/");
             }}
           >
             {t("action_seDeconnecter")}

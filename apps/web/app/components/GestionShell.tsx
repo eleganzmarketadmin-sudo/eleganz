@@ -97,7 +97,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
             className={styles.deconnexion}
             onClick={() => {
               logout();
-              router.push("/connexion");
+              router.push("/");
             }}
           >
             {t("action_seDeconnecter")}
