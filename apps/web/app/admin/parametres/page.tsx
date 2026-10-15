@@ -16,6 +16,9 @@ interface PlatformSettings {
   instagramUrl?: string | null;
   photoSearchEnabled?: boolean;
   adStudioEnabled?: boolean;
+  notificationsInAppEnabled?: boolean;
+  notificationsEmailEnabled?: boolean;
+  notificationsSmsEnabled?: boolean;
 }
 
 const FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; label: string; description: string }[] = [
@@ -33,7 +36,39 @@ const FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; label
   },
 ];
 
-type ChampTexte = Exclude<keyof PlatformSettings, "photoSearchEnabled" | "adStudioEnabled">;
+type ChampTexte = Exclude<
+  keyof PlatformSettings,
+  | "photoSearchEnabled"
+  | "adStudioEnabled"
+  | "notificationsInAppEnabled"
+  | "notificationsEmailEnabled"
+  | "notificationsSmsEnabled"
+>;
+
+const CANAUX_NOTIFICATION: {
+  cle: "notificationsInAppEnabled" | "notificationsEmailEnabled" | "notificationsSmsEnabled";
+  label: string;
+  description: string;
+}[] = [
+  {
+    cle: "notificationsInAppEnabled",
+    label: "Notifications dans la plateforme",
+    description:
+      "Cloche 🔔 et centre de messagerie pour tous les acteurs (vendeurs, comptables, livreurs, acheteurs) : nouvelle commande, nouveau message, échéances. Activé par défaut.",
+  },
+  {
+    cle: "notificationsEmailEnabled",
+    label: "Notifications par e-mail",
+    description:
+      "Prévu mais sans effet tant qu'aucun fournisseur d'envoi d'e-mails n'est branché (ex. SendGrid, Mailgun) — l'activer ici ne fait rien de plus aujourd'hui, par choix explicite plutôt que d'écrire une notification qui ne serait jamais envoyée.",
+  },
+  {
+    cle: "notificationsSmsEnabled",
+    label: "Notifications par SMS",
+    description:
+      "Même principe que l'e-mail : prévu, pas encore branché à un fournisseur SMS. Voir aussi les crédits SMS/WhatsApp premium (section services à la carte).",
+  },
+];
 
 const CHAMPS: { cle: ChampTexte; label: string; placeholder: string }[] = [
   { cle: "address", label: "Adresse", placeholder: "Ex. 12 Avenue du Commerce, Gombe, Kinshasa" },
@@ -108,6 +143,38 @@ function ParametresContent() {
           {enregistrement ? "Enregistrement…" : "Enregistrer"}
         </button>
       </form>
+
+      <h2 className={styles.titreSection}>Notifications</h2>
+      <p className={styles.sousTitre}>
+        Choisissez quels canaux de notification sont actifs sur la plateforme. Ce réglage s&apos;applique
+        immédiatement à tous les comptes (vendeurs, comptables, livreurs, acheteurs, équipe admin).
+      </p>
+      <div className={styles.listeBascules}>
+        {CANAUX_NOTIFICATION.map((canal) => (
+          <label className={styles.bascule} key={canal.cle}>
+            <input
+              type="checkbox"
+              checked={Boolean(valeurs[canal.cle])}
+              onChange={async (e) => {
+                const coche = e.target.checked;
+                setValeurs((v) => ({ ...v, [canal.cle]: coche }));
+                try {
+                  const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+                    [canal.cle]: coche,
+                  });
+                  setValeurs(resultat);
+                } catch (err) {
+                  setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+                }
+              }}
+            />
+            <div>
+              <div className={styles.basculeLabel}>{canal.label}</div>
+              <div className={styles.basculeDescription}>{canal.description}</div>
+            </div>
+          </label>
+        ))}
+      </div>
 
       <h2 className={styles.titreSection}>Fonctionnalités IA prévues</h2>
       <p className={styles.sousTitre}>

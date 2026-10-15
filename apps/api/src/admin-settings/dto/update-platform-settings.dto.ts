@@ -114,4 +114,20 @@ export class UpdatePlatformSettingsDto {
   @IsNumber()
   @Min(0)
   smsWhatsappPremiumMonthlyFee?: number;
+
+  // Interrupteurs de canaux de notification (demande UX du 15 oct. 2026,
+  // point 3/8) — seul NotificationsService les consulte ; e-mail et SMS
+  // restent sans effet pratique tant qu'aucun fournisseur d'envoi n'est
+  // branché, par choix explicite (voir notifications.service.ts).
+  @IsOptional()
+  @IsBoolean()
+  notificationsInAppEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notificationsEmailEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notificationsSmsEnabled?: boolean;
 }

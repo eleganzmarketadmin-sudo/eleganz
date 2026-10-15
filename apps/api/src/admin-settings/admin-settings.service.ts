@@ -52,6 +52,15 @@ export class AdminSettingsService {
         ...(dto.smsWhatsappPremiumMonthlyFee !== undefined && {
           smsWhatsappPremiumMonthlyFee: dto.smsWhatsappPremiumMonthlyFee,
         }),
+        ...(dto.notificationsInAppEnabled !== undefined && {
+          notificationsInAppEnabled: dto.notificationsInAppEnabled,
+        }),
+        ...(dto.notificationsEmailEnabled !== undefined && {
+          notificationsEmailEnabled: dto.notificationsEmailEnabled,
+        }),
+        ...(dto.notificationsSmsEnabled !== undefined && {
+          notificationsSmsEnabled: dto.notificationsSmsEnabled,
+        }),
       },
     });
   }
