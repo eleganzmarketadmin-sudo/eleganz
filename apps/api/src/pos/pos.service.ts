@@ -224,8 +224,14 @@ export class PosService {
 
   /**
    * Tableau de bord chiffre d'affaires journalier (complément stratégique §4).
-   * Distingue explicitement CA, encaissements confirmés et bénéfice — qui
-   * n'est calculable que si costPrice est renseigné sur les lignes vendues.
+   * Distingue explicitement CA, encaissements confirmés et bénéfice.
+   *
+   * Marge brute harmonisée avec le CUMP réellement comptabilisé (14 oct.
+   * 2026, chantier SYSCOHADA) — voir finance.service.ts::dashboardForShop
+   * pour le même changement et son motif : le CMV vient des
+   * StockMovement(POS_SALE_OUT) déjà valorisés au CUMP lors de la vente,
+   * plus fiable que l'ancien Variant.costPrice (champ manuel, jamais
+   * synchronisé avec les réceptions de stock).
    */
   async dailyDashboard(shopId: string, date: Date = new Date()) {
     const startOfDay = new Date(date);
@@ -233,10 +239,24 @@ export class PosService {
     const endOfDay = new Date(startOfDay);
     endOfDay.setDate(endOfDay.getDate() + 1);
 
-    const sales = await this.prisma.posSale.findMany({
-      where: { shopId, createdAt: { gte: startOfDay, lt: endOfDay }, status: { not: "CANCELLED" } },
-      include: { lines: { include: { variant: true } }, payments: true },
-    });
+    const [sales, cmvAgg, cmvInconnuCount] = await Promise.all([
+      this.prisma.posSale.findMany({
+        where: { shopId, createdAt: { gte: startOfDay, lt: endOfDay }, status: { not: "CANCELLED" } },
+        include: { lines: true, payments: true },
+      }),
+      this.prisma.stockMovement.aggregate({
+        where: { shopId, type: StockMovementType.POS_SALE_OUT, createdAt: { gte: startOfDay, lt: endOfDay } },
+        _sum: { valeur: true },
+      }),
+      this.prisma.stockMovement.count({
+        where: {
+          shopId,
+          type: StockMovementType.POS_SALE_OUT,
+          createdAt: { gte: startOfDay, lt: endOfDay },
+          valeur: null,
+        },
+      }),
+    ]);
 
     const revenue = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
     const confirmedCollections = sales.reduce(
@@ -244,18 +264,10 @@ export class PosService {
       0,
     );
 
-    let costKnownForAllLines = true;
-    let grossMargin = 0;
-    for (const sale of sales) {
-      for (const line of sale.lines) {
-        const cost = line.variant?.costPrice;
-        if (cost == null) {
-          costKnownForAllLines = false;
-          continue;
-        }
-        grossMargin += (Number(line.unitPrice) - Number(cost)) * line.quantity;
-      }
-    }
+    const venteSansVariante = sales.some((s) => s.lines.some((l) => !l.variantId));
+    const costKnownForAllLines = cmvInconnuCount === 0 && !venteSansVariante;
+    const cmvDuJour = -(Number(cmvAgg._sum.valeur ?? 0));
+    const grossMargin = revenue - cmvDuJour;
 
     return {
       date: startOfDay.toISOString().slice(0, 10),
@@ -266,7 +278,7 @@ export class PosService {
       marginReliable: costKnownForAllLines,
       note: costKnownForAllLines
         ? undefined
-        : "Marge non calculable de façon fiable : prix d'achat manquant sur au moins un article vendu.",
+        : "Marge non calculable de façon fiable : coût moyen pondéré (CUMP) inconnu pour au moins un article vendu, ou vente rapide sans article catalogué.",
     };
   }
 }

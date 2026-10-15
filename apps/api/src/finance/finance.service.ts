@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { AccountingQueryService } from "./accounting-query.service";
-import { FiscalRuleScope } from "@eleganz/database";
+import { FiscalRuleScope, StockMovementType } from "@eleganz/database";
 
 /**
  * Tableau de bord financier boutique (prompt du 13 oct. 2026, §7) —
@@ -39,10 +39,10 @@ export class FinanceService {
   }
 
   async dashboardForShop(shopId: string, from: Date, to: Date) {
-    const [posSales, shopOrders, expenses, purchases, supplier, customers] = await Promise.all([
+    const [posSales, shopOrders, expenses, purchases, supplier, customers, cmvAgg, cmvInconnuCount] = await Promise.all([
       this.prisma.posSale.findMany({
         where: { shopId, createdAt: { gte: from, lt: to }, status: { not: "CANCELLED" } },
-        include: { lines: { include: { variant: true } }, payments: true },
+        include: { lines: true, payments: true },
       }),
       this.prisma.shopOrder.findMany({
         where: { shopId, createdAt: { gte: from, lt: to } },
@@ -59,6 +59,19 @@ export class FinanceService {
       }),
       this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
       this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
+      // CMV réellement comptabilisé (valorisation CUMP des sorties de caisse,
+      // chantier SYSCOHADA phase 4b) — remplace l'ancien calcul approximatif
+      // à partir de Variant.costPrice (champ manuel séparé, jamais tenu à
+      // jour par la comptabilité). `valeur` porte déjà le signe négatif
+      // d'une sortie ; la somme sur la période donne directement le CMV
+      // (voir packages/database/prisma/schema.prisma, StockMovement).
+      this.prisma.stockMovement.aggregate({
+        where: { shopId, type: StockMovementType.POS_SALE_OUT, createdAt: { gte: from, lt: to } },
+        _sum: { valeur: true },
+      }),
+      this.prisma.stockMovement.count({
+        where: { shopId, type: StockMovementType.POS_SALE_OUT, createdAt: { gte: from, lt: to }, valeur: null },
+      }),
     ]);
 
     // Dotations aux amortissements (681) réellement comptabilisées sur la
@@ -85,18 +98,20 @@ export class FinanceService {
       0,
     );
 
-    let margeConnuePourTout = true;
-    let margeBrute = 0;
-    for (const sale of posSales) {
-      for (const line of sale.lines) {
-        const cout = line.variant?.costPrice;
-        if (cout == null) {
-          margeConnuePourTout = false;
-          continue;
-        }
-        margeBrute += (Number(line.unitPrice) - Number(cout)) * line.quantity;
-      }
-    }
+    // Marge brute harmonisée avec le CUMP réellement comptabilisé (14 oct.
+    // 2026, chantier SYSCOHADA) : auparavant recalculée ligne par ligne à
+    // partir de Variant.costPrice (un champ manuel, jamais synchronisé avec
+    // les réceptions de stock), ce qui pouvait diverger du CMV réellement
+    // posté en comptabilité (compte 603) pour les mêmes ventes. Le CMV de la
+    // période vient maintenant exclusivement des StockMovement(POS_SALE_OUT)
+    // déjà valorisés au CUMP lors de la vente (voir pos.service.ts). Une
+    // vente rapide sans article catalogué (pas de variantId) n'a et n'aura
+    // jamais de coût connu : sa présence rend la marge de la période non
+    // fiable, comme avant.
+    const venteSansVariante = posSales.some((s) => s.lines.some((l) => !l.variantId));
+    const margeConnuePourTout = cmvInconnuCount === 0 && !venteSansVariante;
+    const cmvPeriode = -(Number(cmvAgg._sum.valeur ?? 0));
+    const margeBrute = caBoutique - cmvPeriode;
 
     const achats = purchases.reduce((sum, p) => sum + Number(p.amount), 0);
     const chargesParDevise = Object.fromEntries(

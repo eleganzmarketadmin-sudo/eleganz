@@ -86,7 +86,7 @@ function FinanceDashboardContent() {
             <Carte
               titre="Marge brute"
               valeur={data.margeFiable && data.margeBrute != null ? `${formatMontant(data.margeBrute)} $` : "—"}
-              detail={data.margeFiable ? undefined : "Prix d'achat manquant sur au moins un article vendu."}
+              detail={data.margeFiable ? undefined : "Coût moyen pondéré (CUMP) inconnu pour au moins un article vendu, ou vente rapide sans article catalogué."}
             />
             <Carte titre="Résultat estimé" valeur={`${formatMontant(data.resultatEstime)} $`} detail={data.statut.resultat} />
             <Carte titre="Dettes fournisseurs" valeur={`${formatMontant(data.dettesFournisseurs)} $`} detail={data.statut.dettesFournisseurs} />
