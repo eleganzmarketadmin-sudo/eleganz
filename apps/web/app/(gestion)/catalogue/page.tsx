@@ -8,6 +8,7 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { telechargerFichier, envoyerFichier } from "../../lib/telecharger-fichier";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface LigneResultatImport {
@@ -32,6 +33,7 @@ interface ResultatImport {
  */
 function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const [enCours, setEnCours] = useState<"gabarit" | "export" | "import" | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -46,7 +48,7 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
         "gabarit-articles-eleganz.xlsx",
       );
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Téléchargement impossible.");
+      setErreur(err instanceof Error ? err.message : t("cat_telechargementImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -58,7 +60,7 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
     try {
       await telechargerFichier(`/shops/${currentShop!.id}/products/export`, "articles-eleganz.xlsx");
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Export impossible.");
+      setErreur(err instanceof Error ? err.message : t("fact_exportImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -76,7 +78,7 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
       setResultat(resultat);
       if (resultat.creees > 0 || resultat.misesAJour > 0) onImporte();
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Import impossible.");
+      setErreur(err instanceof Error ? err.message : t("cat_importImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -84,25 +86,20 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
 
   return (
     <div className={styles.blocImport}>
-      <h2 className={styles.sousTitre}>Importer ou exporter en masse (Excel)</h2>
-      <p className={styles.texteAide}>
-        Ajoutez des dizaines d&apos;articles d&apos;un coup à partir d&apos;un fichier Excel, dans
-        l&apos;ordre de colonnes de la plateforme — téléchargez le gabarit, remplissez-le, puis
-        importez-le. Une référence déjà connue de votre boutique est mise à jour (prix, stock) au
-        lieu d&apos;être dupliquée.
-      </p>
+      <h2 className={styles.sousTitre}>{t("cat_importExportTitre")}</h2>
+      <p className={styles.texteAide}>{t("cat_importExportAide")}</p>
       <div className={styles.actionsImport}>
         <button className={styles.boutonSecondaire} onClick={telechargerGabarit} disabled={enCours !== null}>
-          {enCours === "gabarit" ? "…" : "Télécharger le gabarit"}
+          {enCours === "gabarit" ? "…" : t("cat_telechargerGabarit")}
         </button>
         <button className={styles.boutonSecondaire} onClick={exporterCatalogue} disabled={enCours !== null}>
-          {enCours === "export" ? "…" : "Exporter mon catalogue (.xlsx)"}
+          {enCours === "export" ? "…" : t("cat_exporterCatalogue")}
         </button>
         <label
           className={styles.bouton}
           style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", minHeight: "40px" }}
         >
-          {enCours === "import" ? "Import en cours…" : "Importer un fichier Excel"}
+          {enCours === "import" ? t("cat_importEnCours") : t("cat_importerFichier")}
           <input
             ref={inputRef}
             type="file"
@@ -121,8 +118,9 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
       {resultat && (
         <div className={styles.resultatImport}>
           <p>
-            <strong>{resultat.creees}</strong> créé(s), <strong>{resultat.misesAJour}</strong> mis à
-            jour, <strong>{resultat.erreurs}</strong> erreur(s) sur {resultat.resultats.length} ligne(s).
+            <strong>{resultat.creees}</strong> {t("cat_resultatCrees")}, <strong>{resultat.misesAJour}</strong>{" "}
+            {t("cat_resultatMisAJour")}, <strong>{resultat.erreurs}</strong> {t("cat_resultatErreurs")}{" "}
+            {resultat.resultats.length} {t("cat_resultatLignes")}
           </p>
           {resultat.erreurs > 0 && (
             <ul className={styles.listeErreursImport}>
@@ -130,7 +128,7 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
                 .filter((r) => r.statut === "erreur")
                 .map((r, i) => (
                   <li key={i}>
-                    Ligne {r.ligne}{r.sku ? ` (${r.sku})` : ""} : {r.message}
+                    {t("cat_ligne")} {r.ligne}{r.sku ? ` (${r.sku})` : ""} : {r.message}
                   </li>
                 ))}
             </ul>
@@ -169,6 +167,7 @@ function ImagesProduit({
   onChange: () => void;
 }) {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [url, setUrl] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -181,7 +180,7 @@ function ImagesProduit({
       await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { images });
       onChange();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Image refusée (doit être une URL valide).");
+      setErreur(err instanceof ApiError ? err.message : t("cat_imageRefusee"));
     } finally {
       setEnCours(false);
     }
@@ -208,11 +207,11 @@ function ImagesProduit({
         body: fichier,
       });
       if (!envoi.ok) {
-        throw new Error("Le fichier n'a pas pu être envoyé au stockage.");
+        throw new Error(t("cat_erreurEnvoiStockage"));
       }
       await sauvegarder([...produit.images, publicUrl]);
     } catch (err) {
-      setErreur(err instanceof ApiError || err instanceof Error ? err.message : "Envoi de la photo impossible.");
+      setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("cat_erreurEnvoiPhoto"));
     } finally {
       setEnCours(false);
     }
@@ -234,7 +233,7 @@ function ImagesProduit({
           />
           <button
             onClick={() => retirerImage(i)}
-            aria-label="Retirer l'image"
+            aria-label={t("cat_retirerImage")}
             style={{
               position: "absolute",
               top: "-8px",
@@ -252,7 +251,7 @@ function ImagesProduit({
         </div>
       ))}
       <label className={styles.bouton} style={{ minHeight: "40px", display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
-        Téléverser une photo
+        {t("cat_televerserPhoto")}
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
@@ -266,16 +265,16 @@ function ImagesProduit({
         />
       </label>
       <details style={{ fontSize: "0.8125rem" }}>
-        <summary style={{ cursor: "pointer", color: "var(--color-cobalt)" }}>ou coller une URL existante</summary>
+        <summary style={{ cursor: "pointer", color: "var(--color-cobalt)" }}>{t("cat_collerUrl")}</summary>
         <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
           <input
-            placeholder="URL d'une photo déjà hébergée ailleurs"
+            placeholder={t("cat_placeholderUrlPhoto")}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             style={{ minWidth: "260px", padding: "8px", border: "1px solid var(--color-border)" }}
           />
           <button className={styles.bouton} style={{ minHeight: "40px" }} onClick={ajouterImage} disabled={enCours || !url}>
-            Ajouter
+            {t("cat_ajouter")}
           </button>
         </div>
       </details>
@@ -308,6 +307,7 @@ function SelecteurMultiple({
   onChangeSelection: (v: string[]) => void;
   onAjouterValeur: (valeur: string) => Promise<void>;
 }) {
+  const { t } = useLocale();
   const [nouvelleValeur, setNouvelleValeur] = useState("");
   const [enCours, setEnCours] = useState(false);
 
@@ -340,7 +340,7 @@ function SelecteurMultiple({
       </select>
       <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
         <input
-          placeholder={`+ nouvelle valeur`}
+          placeholder={t("cat_nouvelleValeur")}
           value={nouvelleValeur}
           onChange={(e) => setNouvelleValeur(e.target.value)}
           onKeyDown={(e) => {
@@ -358,19 +358,17 @@ function SelecteurMultiple({
           onClick={ajouter}
           disabled={enCours || !nouvelleValeur.trim()}
         >
-          Ajouter
+          {t("cat_ajouter")}
         </button>
       </div>
-      <span style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)" }}>
-        Ctrl/Cmd + clic pour sélectionner plusieurs valeurs — une variante sera créée par
-        combinaison.
-      </span>
+      <span style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)" }}>{t("cat_aideSelecteurMultiple")}</span>
     </div>
   );
 }
 
 function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [options, setOptions] = useState<VariantOptionsListe>({ sizes: [], colors: [] });
   const [sku, setSku] = useState("");
   const [taillesChoisies, setTaillesChoisies] = useState<string[]>([]);
@@ -424,7 +422,9 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
         },
       );
       setConfirmation(
-        variantes.length > 1 ? `${variantes.length} variantes créées.` : "Variante créée.",
+        variantes.length > 1
+          ? `${variantes.length} ${t("cat_variantesCreees")}`
+          : t("cat_varianteCreee"),
       );
       setSku("");
       setTaillesChoisies([]);
@@ -434,7 +434,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
       setStock("0");
       onAjoutee();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Ajout impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_ajoutImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -443,44 +443,44 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
   return (
     <div className={styles.ajoutVariante}>
       <input
-        placeholder="Référence (SKU) — préfixe si plusieurs tailles/couleurs"
+        placeholder={t("cat_placeholderReference")}
         value={sku}
         onChange={(e) => setSku(e.target.value)}
       />
       <SelecteurMultiple
-        label="Tailles"
+        label={t("cat_tailles")}
         valeurs={options.sizes}
         selection={taillesChoisies}
         onChangeSelection={setTaillesChoisies}
         onAjouterValeur={(v) => ajouterOption("SIZE", v)}
       />
       <SelecteurMultiple
-        label="Couleurs"
+        label={t("cat_couleurs")}
         valeurs={options.colors}
         selection={couleursChoisies}
         onChangeSelection={setCouleursChoisies}
         onAjouterValeur={(v) => ajouterOption("COLOR", v)}
       />
       <input
-        placeholder="Prix d'achat"
+        placeholder={t("cat_placeholderPrixAchat")}
         type="number"
         value={prixAchat}
         onChange={(e) => setPrixAchat(e.target.value)}
       />
       <input
-        placeholder="Prix de vente"
+        placeholder={t("cat_placeholderPrixVente")}
         type="number"
         value={prixVente}
         onChange={(e) => setPrixVente(e.target.value)}
       />
       <input
-        placeholder="Stock initial (par variante)"
+        placeholder={t("cat_placeholderStockInitial")}
         type="number"
         value={stock}
         onChange={(e) => setStock(e.target.value)}
       />
       <button className={styles.bouton} onClick={ajouter} disabled={enCours || !sku || !prixVente}>
-        {nombreVariantes > 1 ? `Créer ${nombreVariantes} variantes` : "Ajouter la variante"}
+        {nombreVariantes > 1 ? `${t("cat_creer")} ${nombreVariantes} ${t("cat_variantesMinuscule")}` : t("cat_ajouterVariante")}
       </button>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
@@ -490,6 +490,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
 
 function CatalogueContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [produits, setProduits] = useState<Product[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -504,7 +505,7 @@ function CatalogueContent() {
     api
       .get<Product[]>(`/shops/${currentShop.id}/products`)
       .then(setProduits)
-      .catch((err) => setErreur(err instanceof Error ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof Error ? err.message : t("cmd_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -517,7 +518,7 @@ function CatalogueContent() {
       await api.post(`/shops/${currentShop.id}/publish`, { productIds: [produitId] });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Publication impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_publicationImpossible"));
     }
   }
 
@@ -528,7 +529,7 @@ function CatalogueContent() {
       await api.post(`/shops/${currentShop.id}/unpublish`, { productIds: [produitId] });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Retrait impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_retraitImpossible"));
     }
   }
 
@@ -545,7 +546,7 @@ function CatalogueContent() {
       setCategorieNouveau("");
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cat_creationImpossible"));
     } finally {
       setCreationEnCours(false);
     }
@@ -563,8 +564,8 @@ function CatalogueContent() {
   return (
     <div>
       <div className={styles.enteteTitre}>
-        <h1 className={styles.titre}>Catalogue</h1>
-        <BoutonBientotDisponible icone="🪄" label="Studio publicitaire IA" />
+        <h1 className={styles.titre}>{t("cat_titre")}</h1>
+        <BoutonBientotDisponible icone="🪄" label={t("cat_studioPublicitaire")} />
       </div>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
@@ -573,42 +574,42 @@ function CatalogueContent() {
       <input
         className={styles.recherche}
         type="text"
-        placeholder="Chercher un article par nom, catégorie ou référence…"
+        placeholder={t("cat_placeholderRechercheArticle")}
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
       />
 
       <div className={styles.nouveauProduit}>
         <div className={styles.champ}>
-          <label htmlFor="nom">Nouvel article</label>
+          <label htmlFor="nom">{t("cat_nouvelArticle")}</label>
           <input
             id="nom"
-            placeholder="Ex. Robe wax bleue"
+            placeholder={t("cat_placeholderNomArticle")}
             value={nomNouveau}
             onChange={(e) => setNomNouveau(e.target.value)}
           />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="categorie">Catégorie</label>
+          <label htmlFor="categorie">{t("cat_categorie")}</label>
           <input
             id="categorie"
-            placeholder="Ex. Robes"
+            placeholder={t("cat_placeholderCategorie")}
             value={categorieNouveau}
             onChange={(e) => setCategorieNouveau(e.target.value)}
           />
         </div>
         <button className={styles.bouton} onClick={creerProduit} disabled={creationEnCours || !nomNouveau}>
-          Créer l&apos;article
+          {t("cat_creerArticle")}
         </button>
       </div>
 
       {chargement ? (
-        <p>Chargement du catalogue…</p>
+        <p>{t("caisse_chargementCatalogue")}</p>
       ) : produitsVisibles.length === 0 ? (
         <p>
           {produits.length === 0
-            ? "Aucun article pour l'instant. Importez un fichier Excel ou créez-en un ci-dessus."
-            : "Aucun article ne correspond à la recherche."}
+            ? t("cat_aucunArticle")
+            : t("cat_aucunResultatRecherche")}
         </p>
       ) : (
         produitsVisibles.map((produit) => (
@@ -616,16 +617,16 @@ function CatalogueContent() {
             <div className={styles.produitEntete}>
               <strong>{produit.name}</strong>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                {produit.category ?? "Sans catégorie"}
+                {produit.category ?? t("cat_sansCategorie")}
                 {produit.isPublished ? (
                   <>
-                    <StatusTag label="Publié sur la Marketplace" humeur="paye" />
+                    <StatusTag label={t("cat_publieSurMarketplace")} humeur="paye" />
                     <button
                       className={styles.bouton}
                       style={{ padding: "6px 12px", minHeight: "32px", background: "var(--color-flamme)" }}
                       onClick={() => depublier(produit.id)}
                     >
-                      Retirer de la Marketplace
+                      {t("cat_retirerDeLaMarketplace")}
                     </button>
                   </>
                 ) : (
@@ -634,7 +635,7 @@ function CatalogueContent() {
                     style={{ padding: "6px 12px", minHeight: "32px" }}
                     onClick={() => publier(produit.id)}
                   >
-                    Publier sur la Marketplace
+                    {t("cat_publierSurLaMarketplace")}
                   </button>
                 )}
               </span>
@@ -644,11 +645,11 @@ function CatalogueContent() {
               <table className={styles.tableauVariantes}>
                 <thead>
                   <tr>
-                    <th>Référence</th>
-                    <th>Taille / couleur</th>
-                    <th className={styles.colChiffre}>Prix d&apos;achat</th>
-                    <th className={styles.colChiffre}>Prix de vente</th>
-                    <th className={styles.colChiffre}>Stock</th>
+                    <th>{t("cat_colReference")}</th>
+                    <th>{t("cat_colTailleCouleur")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colPrixAchat")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colPrixVente")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colStock")}</th>
                   </tr>
                 </thead>
                 <tbody>
