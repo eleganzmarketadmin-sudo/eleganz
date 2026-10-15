@@ -254,7 +254,7 @@ export class ComptableController {
     const { bouquet, features } = await this.comptableService.getBouquetEtFonctionnalites(user.id);
     if (features.exportDossierFinancement !== true) {
       throw new ForbiddenException(
-        `Le dossier de financement n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Passez au bouquet Premium pour y accéder.`,
+        `Le dossier de financement n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon assistant. Passez au bouquet Premium pour y accéder.`,
       );
     }
     const dossier = await this.comptableExportService.dossierFinancement(user.id);

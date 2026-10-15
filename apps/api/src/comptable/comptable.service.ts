@@ -66,7 +66,7 @@ export class ComptableService {
       const nombreActuel = await this.prisma.comptableActivity.count({ where: { userId, archived: false } });
       if (nombreActuel >= maxActivities) {
         throw new ConflictException(
-          `Le bouquet ${bouquet?.name ?? "actuel"} de Secourable est limité à ${maxActivities} activité(s) suivie(s) simultanément. Passez à un bouquet supérieur pour en suivre davantage.`,
+          `Le bouquet ${bouquet?.name ?? "actuel"} de Mon assistant est limité à ${maxActivities} activité(s) suivie(s) simultanément. Passez à un bouquet supérieur pour en suivre davantage.`,
         );
       }
     }
@@ -518,7 +518,7 @@ export class ComptableService {
     const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
     if (features.comparaisonPeriodes !== true) {
       throw new ForbiddenException(
-        `La comparaison entre activités n'est pas incluse dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Passez à un bouquet supérieur pour y accéder.`,
+        `La comparaison entre activités n'est pas incluse dans le bouquet ${bouquet?.name ?? "actuel"} de Mon assistant. Passez à un bouquet supérieur pour y accéder.`,
       );
     }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });
@@ -623,7 +623,7 @@ export class ComptableService {
     if (subscription.billingStatus === "FREE_PERIOD") {
       infos.push({ label: "Période gratuite en cours", detail: "Voir l'abonnement" });
     } else if (subscription.billingStatus === "PAYMENT_DUE") {
-      urgents.push({ label: "Abonnement à régulariser", detail: "ELEGANZ Secourable", refType: "subscription", refId: subscription.id });
+      urgents.push({ label: "Abonnement à régulariser", detail: "ELEGANZ Mon assistant", refType: "subscription", refId: subscription.id });
     }
 
     return { urgents, aVenir, infos };
@@ -640,7 +640,7 @@ export class ComptableService {
     const { bouquet, features } = await this.getBouquetEtFonctionnalites(userId);
     if (features.rappelsAgenda !== true) {
       throw new ForbiddenException(
-        `L'agenda n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Secourable. Les rappels prioritaires de la page d'accueil restent disponibles ; passez à un bouquet supérieur pour accéder à la vue agenda complète.`,
+        `L'agenda n'est pas inclus dans le bouquet ${bouquet?.name ?? "actuel"} de Mon assistant. Les rappels prioritaires de la page d'accueil restent disponibles ; passez à un bouquet supérieur pour accéder à la vue agenda complète.`,
       );
     }
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId, archived: false } });

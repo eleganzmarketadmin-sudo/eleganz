@@ -101,7 +101,7 @@ function FinanceDashboardContent() {
         <p style={{ marginTop: "6px", fontSize: "0.85rem", color: "#888" }}>
           {t("fin_noteCarnetPersonnel1")}{" "}
           <a href="/comptable" target="_blank" rel="noreferrer">
-            ELEGANZ Secourable
+            ELEGANZ {t("titre_accueil")}
           </a>{" "}
           {t("fin_noteCarnetPersonnel2")}
         </p>
