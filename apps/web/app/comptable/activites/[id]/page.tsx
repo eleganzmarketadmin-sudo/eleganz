@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ComptableShell } from "../../ComptableShell";
+import { RetourLien } from "../../../components/RetourLien";
 import { api, ApiError } from "../../../lib/api";
 import { formatMoney, formatDate } from "../../../lib/money";
 import { ajouterOperation } from "../../../lib/offline-queue";
@@ -399,6 +400,7 @@ function ActiviteContenu({ activityId }: { activityId: string }) {
 
   return (
     <div>
+      <RetourLien href="/comptable" label="Retour aux activités" />
       <h1 className={styles.titre}>{activite.name}</h1>
       <p className={styles.sousTitre}>Carnet de gestion de cette activité.</p>
       {erreur && <p className={styles.erreur}>{erreur}</p>}

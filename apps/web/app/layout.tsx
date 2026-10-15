@@ -4,6 +4,7 @@ import { AuthProvider } from "./lib/auth";
 import { ExchangeRateProvider } from "./lib/exchange-rate";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import { SCRIPT_INIT_THEME } from "./components/ThemeToggle";
+import { LocaleProvider } from "./lib/i18n/LocaleContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,9 +27,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ServiceWorkerRegistration />
-        <AuthProvider>
-          <ExchangeRateProvider>{children}</ExchangeRateProvider>
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <ExchangeRateProvider>{children}</ExchangeRateProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

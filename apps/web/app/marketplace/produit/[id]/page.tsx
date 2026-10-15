@@ -6,6 +6,7 @@ import { api } from "../../../lib/api";
 import { formatMoney } from "../../../lib/money";
 import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
+import { RetourLien } from "../../../components/RetourLien";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -70,6 +71,9 @@ export default function ProduitPage() {
 
   return (
     <div className={styles.cadre}>
+      <div style={{ gridColumn: "1 / -1" }}>
+        <RetourLien href="/marketplace" label="Retour au marketplace" />
+      </div>
       {produit.images[0] ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={produit.images[0]} alt={produit.name} className={styles.image} style={{ objectFit: "cover", width: "100%" }} />

@@ -8,27 +8,9 @@ import { useOfflineSync } from "../lib/offline-sync";
 import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, BandeMarque } from "./Logo";
 import { Footer } from "./Footer";
+import { useLocale } from "../lib/i18n/LocaleContext";
+import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./GestionShell.module.css";
-
-const LIENS = [
-  { href: "/caisse", label: "Caisse" },
-  { href: "/tableau-de-bord", label: "Tableau de bord" },
-  { href: "/catalogue", label: "Catalogue" },
-  { href: "/commandes", label: "Commandes" },
-  { href: "/factures", label: "Mes factures" },
-  { href: "/releves", label: "Relevés d'activité" },
-  { href: "/litiges", label: "Litiges" },
-  { href: "/finance", label: "Finance & Comptabilité" },
-  { href: "/livreurs", label: "Livreurs" },
-  { href: "/equipe", label: "Équipe" },
-  { href: "/parametres", label: "Paramètres" },
-];
-
-// Un comptable externe (StaffRole.EXTERNAL_ACCOUNTANT) n'a, côté API, accès
-// qu'en lecture seule à Finance & Comptabilité (docs/ARCHITECTURE_FINANCE.md
-// §8sexies) — masquer les autres onglets évite de lui montrer un lien qui
-// échouerait systématiquement avec une erreur 403.
-const LIEN_FINANCE_SEUL = LIENS.filter((l) => l.href === "/finance");
 
 export function GestionShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,6 +18,27 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
   const { shops, currentShop, setCurrentShopId } = useShop();
   const { nombreEnAttente, synchroniser } = useOfflineSync();
+  const { t } = useLocale();
+
+  const LIENS = [
+    { href: "/caisse", label: t("nav_caisse") },
+    { href: "/tableau-de-bord", label: t("nav_tableauDeBord") },
+    { href: "/catalogue", label: t("nav_catalogue") },
+    { href: "/commandes", label: t("nav_commandes") },
+    { href: "/factures", label: t("nav_mesFactures") },
+    { href: "/releves", label: t("nav_releves") },
+    { href: "/litiges", label: t("nav_litiges") },
+    { href: "/finance", label: t("nav_finance") },
+    { href: "/livreurs", label: t("nav_livreurs") },
+    { href: "/equipe", label: t("nav_equipe") },
+    { href: "/parametres", label: t("nav_parametres") },
+  ];
+
+  // Un comptable externe (StaffRole.EXTERNAL_ACCOUNTANT) n'a, côté API, accès
+  // qu'en lecture seule à Finance & Comptabilité (docs/ARCHITECTURE_FINANCE.md
+  // §8sexies) — masquer les autres onglets évite de lui montrer un lien qui
+  // échouerait systématiquement avec une erreur 403.
+  const LIEN_FINANCE_SEUL = LIENS.filter((l) => l.href === "/finance");
   const liens = currentShop?.myRole === "EXTERNAL_ACCOUNTANT" ? LIEN_FINANCE_SEUL : LIENS;
 
   return (
@@ -82,6 +85,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               ))}
             </select>
           )}
+          <LanguageSwitcher />
           <ThemeToggle clair />
           <button
             className={styles.deconnexion}
@@ -90,7 +94,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               router.push("/connexion");
             }}
           >
-            Se déconnecter
+            {t("action_seDeconnecter")}
           </button>
         </div>
       </header>

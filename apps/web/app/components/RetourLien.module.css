@@ -1,0 +1,14 @@
+.lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--color-ink);
+  min-height: var(--touche-min);
+  padding: var(--espace-2) 0;
+  margin-bottom: var(--espace-3);
+}
+
+.lien:hover {
+  text-decoration: underline;
+}

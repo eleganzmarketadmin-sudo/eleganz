@@ -7,7 +7,7 @@ import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
-import { LocaleProvider, useLocale } from "../lib/i18n/LocaleContext";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
 import styles from "./ComptableShell.module.css";
@@ -21,10 +21,12 @@ import styles from "./ComptableShell.module.css";
  * qui range tout ce qui n'est pas /admin ou /livreur dans le même espace
  * "défaut" que la Marketplace et Gestion).
  *
- * Enveloppé dans LocaleProvider (prompt §21 + réponse du 13 oct. 2026) :
- * choix de langue pour les menus/titres/boutons, mémorisé par navigateur.
+ * `LocaleProvider` (prompt §21 + réponse du 13 oct. 2026) est monté une
+ * seule fois à la racine (`app/layout.tsx`, généralisé le 15 oct. 2026) —
+ * `useLocale()` ci-dessous lit ce contexte partagé, plus besoin de le
+ * remonter ici.
  *
- * Enveloppé aussi dans OfflineSyncProvider (réponse du 13 oct. 2026, point 2 :
+ * Enveloppé dans OfflineSyncProvider (réponse du 13 oct. 2026, point 2 :
  * "saisie différée synchronisée au retour du réseau") — même contexte déjà
  * utilisé côté Caisse (apps/web/app/(gestion)/layout.tsx), ici pour que la
  * saisie rapide du Carnet puisse se mettre en file d'attente hors-ligne et
@@ -32,11 +34,9 @@ import styles from "./ComptableShell.module.css";
  */
 export function ComptableShell({ children }: { children: React.ReactNode }) {
   return (
-    <LocaleProvider>
-      <OfflineSyncProvider>
-        <ComptableShellInterieur>{children}</ComptableShellInterieur>
-      </OfflineSyncProvider>
-    </LocaleProvider>
+    <OfflineSyncProvider>
+      <ComptableShellInterieur>{children}</ComptableShellInterieur>
+    </OfflineSyncProvider>
   );
 }
 

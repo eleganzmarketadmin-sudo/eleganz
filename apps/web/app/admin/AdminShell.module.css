@@ -38,18 +38,45 @@
   display: flex;
   background: var(--color-surface);
   border-bottom: 2px solid var(--color-or);
+  /* 13 liens ne tiennent pas toujours sur une largeur d'écran réduite —
+     sans ceci, ils débordaient du conteneur flex sans barre de défilement
+     visible, laissant une zone vide (bug remonté le 15 oct. 2026). */
+  overflow-x: auto;
 }
 
 .navLien {
   padding: var(--espace-3) var(--espace-4);
   font-weight: 500;
   color: var(--color-ink);
+  white-space: nowrap;
   border-right: 1px solid var(--color-border);
+  min-height: var(--touche-min);
+  display: flex;
+  align-items: center;
+}
+
+.navLien:hover {
+  text-decoration: none;
+  background: var(--color-toile);
 }
 
 .navLienActif {
   background: var(--color-or);
   color: var(--color-encre-fixe);
+}
+
+.navLienActif:hover {
+  background: var(--color-or);
+}
+
+@media (max-width: 560px) {
+  .entete {
+    flex-wrap: wrap;
+    gap: var(--espace-2);
+  }
+  .contenu {
+    padding: var(--espace-4) var(--espace-3);
+  }
 }
 
 .enteteActions {

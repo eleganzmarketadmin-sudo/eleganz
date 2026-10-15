@@ -142,6 +142,30 @@ const fr: Dictionnaire = {
   agenda_versement: "Versement",
   dossier_contenuTitre: "Ce que contient le dossier",
   dossier_genererEnCours: "Génération…",
+
+  // Généralisation du sélecteur de langue à toute la plateforme (15 oct.
+  // 2026) — libellés de navigation pour Admin, Gestion et Marketplace.
+  nav_tableauDeBord: "Tableau de bord",
+  nav_boutiques: "Boutiques",
+  nav_livreurs: "Livreurs",
+  nav_finance: "Finance & Comptabilité",
+  nav_suiviCommandes: "Suivi commandes",
+  nav_utilisateurs: "Utilisateurs",
+  nav_tarifs: "Tarifs",
+  nav_factures: "Factures",
+  nav_releves: "Relevés d'activité",
+  nav_litiges: "Litiges",
+  nav_equipeAdmin: "Équipe admin",
+  nav_parametresPlateforme: "Paramètres plateforme",
+  nav_caisse: "Caisse",
+  nav_catalogue: "Catalogue",
+  nav_commandes: "Commandes",
+  nav_mesFactures: "Mes factures",
+  nav_equipe: "Équipe",
+  nav_parametres: "Paramètres",
+  nav_panier: "Panier",
+  nav_mesCommandes: "Mes commandes",
+  action_seConnecter: "Se connecter",
 };
 
 const en: Dictionnaire = {
@@ -245,6 +269,28 @@ const en: Dictionnaire = {
   agenda_emprunt: "Loan",
   agenda_loyer: "Rent",
   agenda_versement: "Remittance",
+
+  nav_tableauDeBord: "Dashboard",
+  nav_boutiques: "Shops",
+  nav_livreurs: "Drivers",
+  nav_finance: "Finance & Accounting",
+  nav_suiviCommandes: "Order tracking",
+  nav_utilisateurs: "Users",
+  nav_tarifs: "Pricing",
+  nav_factures: "Invoices",
+  nav_releves: "Activity statements",
+  nav_litiges: "Disputes",
+  nav_equipeAdmin: "Admin team",
+  nav_parametresPlateforme: "Platform settings",
+  nav_caisse: "Checkout",
+  nav_catalogue: "Catalog",
+  nav_commandes: "Orders",
+  nav_mesFactures: "My invoices",
+  nav_equipe: "Team",
+  nav_parametres: "Settings",
+  nav_panier: "Cart",
+  nav_mesCommandes: "My orders",
+  action_seConnecter: "Log in",
 };
 
 const es: Dictionnaire = {

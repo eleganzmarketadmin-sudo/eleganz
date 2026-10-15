@@ -5,11 +5,14 @@ import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart-context";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
+import { useLocale } from "../lib/i18n/LocaleContext";
+import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./MarketplaceHeader.module.css";
 
 export function MarketplaceHeader() {
   const { lignes } = useCart();
   const { user, logout } = useAuth();
+  const { t } = useLocale();
   const nombreArticles = lignes.reduce((s, l) => s + l.quantity, 0);
 
   return (
@@ -20,23 +23,24 @@ export function MarketplaceHeader() {
           ELEGANZ <span className={styles.nomModule}>Market</span>
         </Link>
         <nav className={styles.liens}>
+          <LanguageSwitcher />
           <ThemeToggle clair />
           <Link href="/marketplace/panier" className={styles.panier}>
-            Panier
+            {t("nav_panier")}
             {nombreArticles > 0 && <span className={styles.compteur}>{nombreArticles}</span>}
           </Link>
           {user ? (
             <>
-              <Link href="/marketplace/commandes">Mes commandes</Link>
+              <Link href="/marketplace/commandes">{t("nav_mesCommandes")}</Link>
               <button
                 onClick={logout}
                 style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}
               >
-                Se déconnecter
+                {t("action_seDeconnecter")}
               </button>
             </>
           ) : (
-            <Link href="/marketplace/compte">Se connecter</Link>
+            <Link href="/marketplace/compte">{t("action_seConnecter")}</Link>
           )}
         </nav>
       </header>

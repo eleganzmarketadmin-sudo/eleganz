@@ -7,28 +7,31 @@ import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
+import { useLocale } from "../lib/i18n/LocaleContext";
+import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./AdminShell.module.css";
-
-const LIENS = [
-  { href: "/admin/pilotage", label: "Tableau de bord" },
-  { href: "/admin/boutiques", label: "Boutiques" },
-  { href: "/admin/livreurs", label: "Livreurs" },
-  { href: "/admin/comptable", label: "Mon Comptable" },
-  { href: "/admin/finance", label: "Finance & Comptabilité" },
-  { href: "/admin/suivi-commandes", label: "Suivi commandes" },
-  { href: "/admin/utilisateurs", label: "Utilisateurs" },
-  { href: "/admin/tarifs", label: "Tarifs" },
-  { href: "/admin/factures", label: "Factures" },
-  { href: "/admin/releves", label: "Relevés d'activité" },
-  { href: "/admin/litiges", label: "Litiges" },
-  { href: "/admin/equipe", label: "Équipe admin" },
-  { href: "/admin/parametres", label: "Paramètres plateforme" },
-];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
+
+  const LIENS = [
+    { href: "/admin/pilotage", label: t("nav_tableauDeBord") },
+    { href: "/admin/boutiques", label: t("nav_boutiques") },
+    { href: "/admin/livreurs", label: t("nav_livreurs") },
+    { href: "/admin/comptable", label: t("titre_accueil") },
+    { href: "/admin/finance", label: t("nav_finance") },
+    { href: "/admin/suivi-commandes", label: t("nav_suiviCommandes") },
+    { href: "/admin/utilisateurs", label: t("nav_utilisateurs") },
+    { href: "/admin/tarifs", label: t("nav_tarifs") },
+    { href: "/admin/factures", label: t("nav_factures") },
+    { href: "/admin/releves", label: t("nav_releves") },
+    { href: "/admin/litiges", label: t("nav_litiges") },
+    { href: "/admin/equipe", label: t("nav_equipeAdmin") },
+    { href: "/admin/parametres", label: t("nav_parametresPlateforme") },
+  ];
 
   useEffect(() => {
     if (!loading && !user) router.replace("/admin/connexion");
@@ -52,6 +55,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>Centre de pilotage</span>
         </span>
         <div className={styles.enteteActions}>
+          <LanguageSwitcher />
           <ThemeToggle clair />
           <button
             className={styles.deconnexion}
@@ -60,7 +64,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               router.push("/admin/connexion");
             }}
           >
-            Se déconnecter
+            {t("action_seDeconnecter")}
           </button>
         </div>
       </header>
