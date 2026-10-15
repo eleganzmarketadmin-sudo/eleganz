@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Simulation fiscale (13 oct. 2026, Finance & Comptabilité Phase 7) — voir
@@ -53,6 +54,7 @@ function aujourdhui(): string {
 
 function SimulationFiscaleContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [from, setFrom] = useState(debutMois());
   const [to, setTo] = useState(aujourdhui());
   const [simulation, setSimulation] = useState<Simulation | null>(null);
@@ -70,56 +72,53 @@ function SimulationFiscaleContenu() {
         `/shops/${currentShop.id}/finance/simulation-fiscale?from=${from}&to=${toExclusif.toISOString().slice(0, 10)}`,
       )
       .then(setSimulation)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
-  }, [currentShop, from, to]);
+  }, [currentShop, from, to, t]);
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Estimation calculée à partir de vos règles fiscales configurées
-        (onglet Règles fiscales) et de vos données comptables réelles de la
-        période. Ce n&apos;est <strong>jamais une déclaration officielle</strong> :
-        à vérifier avec un professionnel avant tout paiement.
+        {t("sim_noteAide1")} <strong>{t("sim_noteAideGras")}</strong> {t("sim_noteAide2")}
       </p>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>
-          <label>Du</label>
+          <label>{t("rel_du")}</label>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label>Au</label>
+          <label>{t("rel_au")}</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : !simulation ? (
-        <p>Aucune donnée.</p>
+        <p>{t("fin_aucuneDonnee")}</p>
       ) : (
         <>
           <p>
-            Chiffre d&apos;affaires de la période : {f(simulation.chiffreAffaires)} $ — Résultat net :{" "}
+            {t("sim_chiffreAffairesPeriode")} {f(simulation.chiffreAffaires)} $ — {t("sim_resultatNet")}{" "}
             {f(simulation.resultatNet)} $
           </p>
 
           {simulation.lignes.length === 0 ? (
-            <p>Aucune règle fiscale simulable sur cette période.</p>
+            <p>{t("sim_aucuneRegle")}</p>
           ) : (
             <table className={styles.tableau}>
               <thead>
                 <tr>
-                  <th>Règle</th>
-                  <th>Base</th>
-                  <th style={{ textAlign: "right" }}>Montant base</th>
-                  <th style={{ textAlign: "right" }}>Taux</th>
-                  <th style={{ textAlign: "right" }}>Estimation</th>
+                  <th>{t("sim_colRegle")}</th>
+                  <th>{t("sim_colBase")}</th>
+                  <th style={{ textAlign: "right" }}>{t("sim_colMontantBase")}</th>
+                  <th style={{ textAlign: "right" }}>{t("sim_colTaux")}</th>
+                  <th style={{ textAlign: "right" }}>{t("sim_colEstimation")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,7 +134,7 @@ function SimulationFiscaleContenu() {
               </tbody>
               <tfoot>
                 <tr style={{ fontWeight: 700 }}>
-                  <td colSpan={4}>Total estimé</td>
+                  <td colSpan={4}>{t("sim_totalEstime")}</td>
                   <td style={{ textAlign: "right" }}>{f(simulation.totalEstime)} $</td>
                 </tr>
               </tfoot>
@@ -144,7 +143,7 @@ function SimulationFiscaleContenu() {
 
           {simulation.nonSimulables.length > 0 && (
             <div style={{ marginTop: "20px" }}>
-              <h3>Règles non simulables automatiquement</h3>
+              <h3>{t("sim_reglesNonSimulables")}</h3>
               <ul>
                 {simulation.nonSimulables.map((r) => (
                   <li key={r.ruleId}>

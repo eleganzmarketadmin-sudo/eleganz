@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../components/FinanceSubNav";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Tableau de bord financier (prompt du 13 oct. 2026, §7) — chaque chiffre
@@ -36,6 +37,7 @@ function formatMontant(n: number): string {
 
 function FinanceDashboardContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [data, setData] = useState<Dashboard | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -46,27 +48,24 @@ function FinanceDashboardContent() {
     api
       .get<Dashboard>(`/shops/${currentShop.id}/finance/dashboard`)
       .then(setData)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
-  }, [currentShop]);
+  }, [currentShop, t]);
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "20px" }}>
-        Mois en cours — chiffres calculés à partir des opérations déjà
-        enregistrées (caisse, commandes Marketplace, achats, charges).
-        Ce sont des estimations de pilotage, pas des états financiers
-        certifiés.
+        {t("fin_noteEstimation")}
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Calcul en cours…</p>
+        <p>{t("fin_calculEnCours")}</p>
       ) : !data ? (
-        <p>Aucune donnée.</p>
+        <p>{t("fin_aucuneDonnee")}</p>
       ) : (
         <>
           <div
@@ -77,36 +76,34 @@ function FinanceDashboardContent() {
               marginBottom: "28px",
             }}
           >
-            <Carte titre="Chiffre d'affaires" valeur={`${formatMontant(data.chiffreAffaires.total)} $`}
-              detail={`Caisse ${formatMontant(data.chiffreAffaires.boutique)} $ · Marketplace ${formatMontant(data.chiffreAffaires.marketplace)} $`} />
-            <Carte titre="Encaissements confirmés" valeur={`${formatMontant(data.encaissementsConfirmes)} $`} />
-            <Carte titre="Achats" valeur={`${formatMontant(data.achats)} $`} />
-            <Carte titre="Charges" valeur={`${formatMontant(data.charges.total)} $`} />
-            <Carte titre="Amortissements" valeur={`${formatMontant(data.amortissements)} $`} detail="Dotations aux amortissements comptabilisées sur la période (compte 681)." />
+            <Carte titre={t("fin_chiffreAffaires")} valeur={`${formatMontant(data.chiffreAffaires.total)} $`}
+              detail={`${t("fin_caisse")} ${formatMontant(data.chiffreAffaires.boutique)} $ · Marketplace ${formatMontant(data.chiffreAffaires.marketplace)} $`} />
+            <Carte titre={t("fin_encaissementsConfirmes")} valeur={`${formatMontant(data.encaissementsConfirmes)} $`} />
+            <Carte titre={t("fin_achats")} valeur={`${formatMontant(data.achats)} $`} />
+            <Carte titre={t("fin_charges")} valeur={`${formatMontant(data.charges.total)} $`} />
+            <Carte titre={t("fin_amortissements")} valeur={`${formatMontant(data.amortissements)} $`} detail={t("fin_detailAmortissements")} />
             <Carte
-              titre="Marge brute"
+              titre={t("fin_margeBrute")}
               valeur={data.margeFiable && data.margeBrute != null ? `${formatMontant(data.margeBrute)} $` : "—"}
-              detail={data.margeFiable ? undefined : "Coût moyen pondéré (CUMP) inconnu pour au moins un article vendu, ou vente rapide sans article catalogué."}
+              detail={data.margeFiable ? undefined : t("fin_margeIncertaine")}
             />
-            <Carte titre="Résultat estimé" valeur={`${formatMontant(data.resultatEstime)} $`} detail={data.statut.resultat} />
-            <Carte titre="Dettes fournisseurs" valeur={`${formatMontant(data.dettesFournisseurs)} $`} detail={data.statut.dettesFournisseurs} />
-            <Carte titre="Crédit client accordé" valeur={`${formatMontant(data.creditClientAccorde)} $`} detail="Ventes à crédit accordées aux clients — distinct de la créance Marketplace ci-dessous." />
-            <Carte titre="Créances Marketplace (411)" valeur={`${formatMontant(data.creancesMarketplace411)} $`} detail={data.statut.creancesMarketplace411} />
-            <Carte titre="Commission Marketplace" valeur={`${formatMontant(data.commissionMarketplace)} $`} detail={data.statut.commission} />
+            <Carte titre={t("fin_resultatEstime")} valeur={`${formatMontant(data.resultatEstime)} $`} detail={data.statut.resultat} />
+            <Carte titre={t("fin_dettesFournisseurs")} valeur={`${formatMontant(data.dettesFournisseurs)} $`} detail={data.statut.dettesFournisseurs} />
+            <Carte titre={t("fin_creditClientAccorde")} valeur={`${formatMontant(data.creditClientAccorde)} $`} detail={t("fin_detailCreditClient")} />
+            <Carte titre={t("fin_creancesMarketplace411")} valeur={`${formatMontant(data.creancesMarketplace411)} $`} detail={data.statut.creancesMarketplace411} />
+            <Carte titre={t("fin_commissionMarketplace")} valeur={`${formatMontant(data.commissionMarketplace)} $`} detail={data.statut.commission} />
           </div>
         </>
       )}
 
       <div style={{ border: "1px dashed var(--color-bordure, #333)", borderRadius: "8px", padding: "14px 16px", marginTop: "12px" }}>
-        <strong style={{ fontSize: "0.9rem" }}>Besoin d&apos;un carnet personnel, sans boutique ?</strong>
+        <strong style={{ fontSize: "0.9rem" }}>{t("fin_besoinCarnetPersonnel")}</strong>
         <p style={{ marginTop: "6px", fontSize: "0.85rem", color: "#888" }}>
-          Finance &amp; Comptabilité est toujours lié à cette boutique. Pour un
-          suivi indépendant (vos propres ventes, dépenses, dettes et créances,
-          sans créer de boutique), utilisez{" "}
+          {t("fin_noteCarnetPersonnel1")}{" "}
           <a href="/comptable" target="_blank" rel="noreferrer">
             ELEGANZ Secourable
           </a>{" "}
-          — un carnet séparé, pas un substitut à cet écran.
+          {t("fin_noteCarnetPersonnel2")}
         </p>
       </div>
     </div>

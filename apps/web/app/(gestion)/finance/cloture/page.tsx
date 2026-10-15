@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Assistant de clôture de période (13 oct. 2026, Finance & Comptabilité
@@ -37,6 +38,7 @@ function moisCourant(): string {
 
 function ClotureContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [clotures, setClotures] = useState<Cloture[] | null>(null);
   const [periode, setPeriode] = useState(moisCourant());
   const [chargement, setChargement] = useState(false);
@@ -49,7 +51,7 @@ function ClotureContenu() {
     api
       .get<Cloture[]>(`/shops/${currentShop.id}/finance/clotures`)
       .then(setClotures)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   };
 
@@ -61,10 +63,10 @@ function ClotureContenu() {
     setConfirmation(null);
     try {
       await api.post(`/shops/${currentShop.id}/finance/clotures`, { periode });
-      setConfirmation(`Période ${periode} clôturée.`);
+      setConfirmation(t("clo_periodeCloturee").replace("{{periode}}", periode));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Erreur.");
+      setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique"));
     }
   };
 
@@ -74,33 +76,29 @@ function ClotureContenu() {
     setConfirmation(null);
     try {
       await api.delete(`/shops/${currentShop.id}/finance/clotures/${periodeCloture}`);
-      setConfirmation(`Période ${periodeCloture} rouverte.`);
+      setConfirmation(t("clo_periodeRouverte").replace("{{periode}}", periodeCloture));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Erreur.");
+      setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique"));
     }
   };
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Clôturer un mois fige un résumé (totaux débit/crédit, résultat net)
-        et verrouille ce mois : plus aucune écriture comptable (vente,
-        charge, achat, dotation d&apos;amortissement…) ne sera acceptée pour
-        cette période. La réouverture reste possible en cas d&apos;erreur —
-        cet outil n&apos;est pas un registre légalement immuable.
+        {t("clo_noteAide")}
       </p>
 
       <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", marginBottom: "24px" }}>
         <div className={styles.champ}>
-          <label>Mois à clôturer</label>
+          <label>{t("clo_moisACloturer")}</label>
           <input type="month" value={periode} onChange={(e) => setPeriode(e.target.value)} />
         </div>
         <button type="button" className={styles.bouton} onClick={cloturer}>
-          Clôturer ce mois
+          {t("clo_cloturerCeMois")}
         </button>
       </div>
 
@@ -108,18 +106,18 @@ function ClotureContenu() {
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : !clotures || clotures.length === 0 ? (
-        <p>Aucune période clôturée.</p>
+        <p>{t("clo_aucunePeriode")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Mois</th>
-              <th>Clôturé le</th>
-              <th style={{ textAlign: "right" }}>Total débit</th>
-              <th style={{ textAlign: "right" }}>Total crédit</th>
-              <th style={{ textAlign: "right" }}>Résultat net</th>
+              <th>{t("ana_colMois")}</th>
+              <th>{t("clo_colClotureLe")}</th>
+              <th style={{ textAlign: "right" }}>{t("clo_colTotalDebit")}</th>
+              <th style={{ textAlign: "right" }}>{t("clo_colTotalCredit")}</th>
+              <th style={{ textAlign: "right" }}>{t("ana_colResultatNet")}</th>
               <th></th>
             </tr>
           </thead>
@@ -135,7 +133,7 @@ function ClotureContenu() {
                   <td style={{ textAlign: "right" }}>{f(c.resultatNet)} $</td>
                   <td>
                     <button type="button" className={styles.retirer} onClick={() => reouvrir(p)}>
-                      Rouvrir
+                      {t("clo_rouvrir")}
                     </button>
                   </td>
                 </tr>

@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Analytique et prévisions (13 oct. 2026, Finance & Comptabilité Phase 8)
@@ -50,6 +51,7 @@ function Barre({ valeur, max }: { valeur: number; max: number }) {
 
 function AnalytiqueContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [serie, setSerie] = useState<MoisAnalytique[] | null>(null);
   const [nombreMois, setNombreMois] = useState(6);
   const [chargement, setChargement] = useState(false);
@@ -62,52 +64,48 @@ function AnalytiqueContenu() {
     api
       .get<MoisAnalytique[]>(`/shops/${currentShop.id}/finance/analytique?mois=${nombreMois}`)
       .then(setSerie)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
-  }, [currentShop, nombreMois]);
+  }, [currentShop, nombreMois, t]);
 
   const projection = serie ? moyenneMobile(serie) : null;
   const maxCa = serie ? Math.max(...serie.map((m) => m.chiffreAffaires), projection ?? 0, 1) : 1;
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Évolution mensuelle réelle du chiffre d&apos;affaires, des charges
-        et du résultat net, recalculée à partir des mêmes écritures que le
-        compte de résultat. La projection du mois suivant est une simple
-        moyenne mobile des 3 derniers mois complets — une estimation, pas
-        une prévision garantie.
+        {t("ana_noteAide")}
       </p>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>
-          <label>Nombre de mois</label>
+          <label>{t("ana_nombreMois")}</label>
           <select value={nombreMois} onChange={(e) => setNombreMois(Number(e.target.value))}>
-            <option value={3}>3 mois</option>
-            <option value={6}>6 mois</option>
-            <option value={12}>12 mois</option>
+            <option value={3}>{t("ana_3mois")}</option>
+            <option value={6}>{t("ana_6mois")}</option>
+            <option value={12}>{t("ana_12mois")}</option>
           </select>
         </div>
       </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : !serie || serie.length === 0 ? (
-        <p>Aucune donnée.</p>
+        <p>{t("fin_aucuneDonnee")}</p>
       ) : (
         <>
           <table className={styles.tableau}>
             <thead>
               <tr>
-                <th>Mois</th>
-                <th style={{ textAlign: "right" }}>Chiffre d&apos;affaires</th>
+                <th>{t("ana_colMois")}</th>
+                <th style={{ textAlign: "right" }}>{t("fin_chiffreAffaires")}</th>
                 <th></th>
-                <th style={{ textAlign: "right" }}>Charges</th>
-                <th style={{ textAlign: "right" }}>Résultat net</th>
+                <th style={{ textAlign: "right" }}>{t("fin_charges")}</th>
+                <th style={{ textAlign: "right" }}>{t("ana_colResultatNet")}</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +113,7 @@ function AnalytiqueContenu() {
                 <tr key={m.mois}>
                   <td>
                     {m.mois}
-                    {i === serie.length - 1 ? " (en cours, partiel)" : ""}
+                    {i === serie.length - 1 ? ` (${t("ana_enCoursPartiel")})` : ""}
                   </td>
                   <td style={{ textAlign: "right" }}>{f(m.chiffreAffaires)} $</td>
                   <td style={{ width: "160px" }}>
@@ -130,8 +128,8 @@ function AnalytiqueContenu() {
 
           <p style={{ marginTop: "16px" }}>
             {projection === null
-              ? "Pas assez de mois complets pour une projection."
-              : `Projection (estimation, moyenne mobile) du chiffre d'affaires du mois suivant : ${f(projection)} $`}
+              ? t("ana_pasAssezDeMois")
+              : `${t("ana_projectionLabel")} ${f(projection)} $`}
           </p>
         </>
       )}
