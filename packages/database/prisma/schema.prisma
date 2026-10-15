@@ -228,6 +228,62 @@ enum ShopStatus {
   CLOSED
 }
 
+// ---------------------------------------------------------------------------
+// GÉOGRAPHIE — pays/villes de référence pour les zones de livraison des
+// boutiques Marketplace (demande du 15 oct. 2026 : "faciliter les acheteurs
+// et les vendeurs" en rattachant à chaque vendeur les lieux où il peut
+// livrer). Liste volontairement amorcée avec la RDC et ses pays limitrophes
+// seulement ; `continent` existe dès maintenant pour anticiper l'ouverture
+// progressive aux autres pays, dans l'ordre convenu : Afrique, puis Asie,
+// Amérique, Europe, Océanie — ajouter un pays plus tard ne demandera que de
+// nouvelles lignes de seed (GeoService), jamais de nouvelle migration.
+enum Continent {
+  AFRIQUE
+  ASIE
+  AMERIQUE
+  EUROPE
+  OCEANIE
+}
+
+model Country {
+  id        String   @id @default(uuid())
+  isoCode   String   @unique // ISO 3166-1 alpha-2, ex. "CD"
+  // Nom canonique (français) — valeur de repli tant qu'aucune traduction
+  // n'existe pour la langue active (voir translations.ts, clé pays_<isoCode>).
+  name      String
+  continent Continent
+
+  cities        City[]
+  deliveryZones ShopDeliveryZone[]
+}
+
+model City {
+  id        String  @id @default(uuid())
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
+  name      String
+
+  deliveryZones ShopDeliveryZone[]
+
+  @@unique([countryId, name])
+}
+
+// Zone de livraison déclarée par un vendeur (prompt du 15 oct. 2026) — une
+// boutique peut en avoir plusieurs ; chaque zone est un couple pays+ville
+// précis, jamais une saisie libre, pour rester filtrable côté acheteur.
+model ShopDeliveryZone {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  countryId String
+  country   Country  @relation(fields: [countryId], references: [id])
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([shopId, cityId])
+}
+
 model Shop {
   id               String     @id @default(uuid())
   ownerId          String
@@ -310,6 +366,7 @@ model Shop {
   relances       Relance[]
   receptionsStock ReceptionStock[]
   conversations  Conversation[]
+  deliveryZones  ShopDeliveryZone[]
 }
 
 model ShopStaff {
