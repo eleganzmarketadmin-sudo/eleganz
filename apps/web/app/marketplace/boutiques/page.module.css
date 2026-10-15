@@ -1,0 +1,112 @@
+.cadre {
+  min-height: 100vh;
+  background: var(--color-surface);
+}
+
+.entete {
+  background: var(--color-magenta);
+  color: #fff;
+  padding: var(--espace-7) var(--espace-5);
+}
+
+.entete h1 {
+  font-family: var(--font-display), serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-bottom: var(--espace-3);
+}
+
+.entete p {
+  max-width: 48ch;
+}
+
+.barreRecherche {
+  padding: var(--espace-4) var(--espace-5);
+  border-bottom: 2px solid var(--color-ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+}
+
+.barreRecherche input {
+  flex: 1;
+  min-width: 200px;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+}
+
+.barreRecherche select {
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espace-5);
+  padding: var(--espace-5);
+}
+
+.carte {
+  display: block;
+  transition: transform 180ms ease;
+}
+
+.carte:hover {
+  transform: translateY(-4px);
+}
+
+.logo {
+  background: var(--color-toile);
+  border: 1px solid var(--color-border);
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  margin-bottom: var(--espace-2);
+  transition: border-color 180ms ease;
+}
+
+.carte:hover .logo {
+  border-color: var(--color-magenta);
+  border-width: 2px;
+}
+
+.nomBoutique {
+  font-weight: 600;
+  margin-bottom: var(--espace-1);
+  transition: color 180ms ease;
+}
+
+.carte:hover .nomBoutique {
+  color: var(--color-magenta);
+}
+
+.note {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-1);
+}
+
+.produitsCount {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-1);
+}
+
+.zones {
+  font-size: 0.75rem;
+  color: var(--color-texte-muted);
+}
+
+.messageVide {
+  padding: var(--espace-6);
+  text-align: center;
+  color: var(--color-texte-muted);
+}

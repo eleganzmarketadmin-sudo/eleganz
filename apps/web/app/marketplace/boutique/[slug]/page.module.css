@@ -1,0 +1,200 @@
+.cadre {
+  min-height: 100vh;
+  background: var(--color-surface);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--espace-5);
+}
+
+.entete {
+  margin-bottom: var(--espace-6);
+}
+
+.titre {
+  font-family: var(--font-display), serif;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  margin: var(--espace-3) 0 var(--espace-5);
+}
+
+.fiche {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--espace-4);
+  align-items: center;
+}
+
+.logo {
+  background: var(--color-toile);
+  border: 1px solid var(--color-border);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+  padding: var(--espace-2);
+}
+
+.moyenne {
+  color: var(--color-texte-muted);
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-1);
+  margin-bottom: var(--espace-2);
+}
+
+.boutique {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+}
+
+.section {
+  border-top: 2px solid var(--color-ink);
+  padding-top: var(--espace-5);
+  margin-bottom: var(--espace-6);
+}
+
+.titreSection {
+  font-size: 1.125rem;
+  margin-bottom: var(--espace-4);
+}
+
+.vide {
+  color: var(--color-texte-muted);
+}
+
+.lien {
+  color: var(--color-magenta);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-width: 480px;
+}
+
+.formulaire textarea {
+  padding: var(--espace-3);
+  border: 1px solid var(--color-border);
+  font: inherit;
+  resize: vertical;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.boutonEnvoyer {
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: var(--touche-min);
+  cursor: pointer;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.boutonEnvoyer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+}
+
+.confirmation .lien {
+  color: #fff;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-3);
+  font-size: 0.875rem;
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espace-5);
+}
+
+.carte {
+  display: block;
+  transition: transform 180ms ease;
+}
+
+.carte:hover {
+  transform: translateY(-4px);
+}
+
+.imageProduit {
+  background: var(--color-toile);
+  border: 1px solid var(--color-border);
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  margin-bottom: var(--espace-2);
+  transition: border-color 180ms ease;
+}
+
+.carte:hover .imageProduit {
+  border-color: var(--color-magenta);
+  border-width: 2px;
+}
+
+.nomProduit {
+  font-weight: 600;
+  margin-bottom: var(--espace-1);
+  transition: color 180ms ease;
+}
+
+.carte:hover .nomProduit {
+  color: var(--color-magenta);
+}
+
+.prix {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.etoiles {
+  display: inline-flex;
+}
+
+.avis {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--espace-3) 0;
+}
+
+.avisEntete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-1);
+  font-size: 0.875rem;
+}
+
+.badge {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: 2px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.commentaire {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}

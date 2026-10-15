@@ -3,7 +3,7 @@ import { MessagingService } from "./messaging.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
-import { DemarrerConversationDto, EnvoyerMessageDto } from "./dto/messaging.dto";
+import { ContacterBoutiqueDto, DemarrerConversationDto, EnvoyerMessageDto } from "./dto/messaging.dto";
 
 @Controller("messagerie")
 @UseGuards(JwtAuthGuard)
@@ -23,6 +23,17 @@ export class MessagingController {
   @Post("conversations")
   demarrerConversation(@CurrentUser() user: AuthenticatedUser, @Body() dto: DemarrerConversationDto) {
     return this.messaging.demarrerConversation(user.id, dto.destinataireId, dto.subject, dto.message, dto.shopId);
+  }
+
+  // "Contacter la boutique" (prompt du 15 oct. 2026, point 7) — pas de
+  // destinataireId à fournir : résolu côté service à partir de la boutique.
+  @Post("conversations/boutique/:shopId")
+  contacterBoutique(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Body() dto: ContacterBoutiqueDto,
+  ) {
+    return this.messaging.contacterBoutique(user.id, shopId, dto.subject, dto.message);
   }
 
   @Post("conversations/:id/messages")

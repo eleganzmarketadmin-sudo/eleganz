@@ -23,3 +23,13 @@ export class EnvoyerMessageDto {
   @MinLength(1)
   body!: string;
 }
+
+export class ContacterBoutiqueDto {
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsString()
+  @MinLength(1)
+  message!: string;
+}

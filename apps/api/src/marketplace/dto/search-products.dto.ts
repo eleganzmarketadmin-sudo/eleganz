@@ -38,4 +38,11 @@ export class SearchProductsDto {
   @IsOptional()
   @IsString()
   cityId?: string;
+
+  // Filtre "produits d'une boutique précise" (prompt du 15 oct. 2026, point
+  // 6 — page boutique publique) — le slug est déjà l'identifiant public de
+  // la boutique (visible dans son lien partageable), jamais son id interne.
+  @IsOptional()
+  @IsString()
+  shopSlug?: string;
 }

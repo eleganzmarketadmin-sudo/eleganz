@@ -16,6 +16,8 @@ export class MarketplaceCatalogService {
           // Filtre "livre chez moi" (prompt du 15 oct. 2026) — ne garde que
           // les boutiques ayant déclaré cette ville comme zone de livraison.
           ...(dto.cityId ? { deliveryZones: { some: { cityId: dto.cityId } } } : {}),
+          // Filtre "page boutique publique" (prompt du 15 oct. 2026, point 6).
+          ...(dto.shopSlug ? { slug: dto.shopSlug } : {}),
         },
         ...(dto.category ? { category: dto.category } : {}),
         ...(dto.q

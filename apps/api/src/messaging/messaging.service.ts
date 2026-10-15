@@ -121,4 +121,37 @@ export class MessagingService {
       data: { lastReadAt: new Date() },
     });
   }
+
+  /**
+   * "Contacter la boutique" depuis la page boutique publique (prompt du 15
+   * oct. 2026, point 7) — un acheteur ne connaît ni ne choisit de
+   * destinataire précis : on résout la propriétaire de la boutique
+   * (ownerId) comme interlocuteur. Si un fil existe déjà entre cet
+   * acheteur et cette boutique, le message s'y ajoute (pas de nouveau fil
+   * à chaque visite) ; sinon un nouveau fil est créé.
+   */
+  async contacterBoutique(userId: string, shopId: string, subject: string | undefined, message: string) {
+    const boutique = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { id: true, ownerId: true } });
+    if (!boutique) {
+      throw new BadRequestException("Boutique introuvable.");
+    }
+    if (boutique.ownerId === userId) {
+      throw new BadRequestException("Impossible de contacter votre propre boutique.");
+    }
+
+    const conversationExistante = await this.prisma.conversation.findFirst({
+      where: { shopId, participants: { some: { userId } } },
+      select: { id: true },
+    });
+
+    if (conversationExistante) {
+      await this.envoyerMessage(userId, conversationExistante.id, message);
+      return this.prisma.conversation.findUnique({
+        where: { id: conversationExistante.id },
+        include: { messages: true, participants: true },
+      });
+    }
+
+    return this.demarrerConversation(userId, boutique.ownerId, subject, message, shopId);
+  }
 }

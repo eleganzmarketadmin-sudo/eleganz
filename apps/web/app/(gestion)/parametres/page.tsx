@@ -11,6 +11,8 @@ import styles from "./page.module.css";
 interface ShopDetails {
   id: string;
   name: string;
+  slug: string;
+  isPubliclyListed: boolean;
   invoiceAddress?: string | null;
   invoicePhone?: string | null;
   invoiceLogoUrl?: string | null;
@@ -29,6 +31,9 @@ function ParametresContent() {
   const [telephone, setTelephone] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [noteBasPage, setNoteBasPage] = useState("");
+  const [slug, setSlug] = useState("");
+  const [publiee, setPubliee] = useState(false);
+  const [lienCopie, setLienCopie] = useState(false);
 
   useEffect(() => {
     if (!currentShop) return;
@@ -41,6 +46,8 @@ function ParametresContent() {
         setTelephone(shop.invoicePhone ?? "");
         setLogoUrl(shop.invoiceLogoUrl ?? "");
         setNoteBasPage(shop.invoiceFooterNote ?? "");
+        setSlug(shop.slug);
+        setPubliee(shop.isPubliclyListed);
       })
       .catch((err) =>
         setErreur(
@@ -135,6 +142,43 @@ function ParametresContent() {
           </button>
         </form>
       </section>
+
+      {currentShop && (
+        <section className={styles.section}>
+          <h2 className={styles.sousTitre}>{t("param_lienBoutiqueTitre")}</h2>
+          {publiee ? (
+            <>
+              <p className={styles.note}>{t("param_lienBoutiqueDescription")}</p>
+              <div className={styles.champ}>
+                <input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/marketplace/boutique/${slug}` : ""}
+                  onFocus={(e) => e.target.select()}
+                />
+              </div>
+              <button
+                className={styles.bouton}
+                type="button"
+                onClick={async () => {
+                  const lien = `${window.location.origin}/marketplace/boutique/${slug}`;
+                  try {
+                    await navigator.clipboard.writeText(lien);
+                    setLienCopie(true);
+                    setTimeout(() => setLienCopie(false), 2000);
+                  } catch {
+                    // Presse-papiers indisponible (permission refusée, contexte non sécurisé) —
+                    // le champ ci-dessus reste copiable manuellement.
+                  }
+                }}
+              >
+                {lienCopie ? t("param_lienCopie") : t("param_copierLien")}
+              </button>
+            </>
+          ) : (
+            <p className={styles.note}>{t("param_boutiqueNonPubliee")}</p>
+          )}
+        </section>
+      )}
 
       {currentShop && (
         <section className={styles.section}>
