@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Stock & CMV (14 oct. 2026, chantier SYSCOHADA phase 4) — seul écran qui
@@ -46,6 +47,7 @@ function f(n: number | string): string {
 
 function StockContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [produits, setProduits] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [chargement, setChargement] = useState(false);
@@ -71,7 +73,7 @@ function StockContenu() {
         setProduits(p);
         setSuppliers(s);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -111,7 +113,7 @@ function StockContenu() {
       recharger();
       ouvrirVariante(varianteOuverte);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Erreur lors de la réception.");
+      setErreur(err instanceof ApiError ? err.message : t("sto_erreurReception"));
     } finally {
       setEnCours(false);
     }
@@ -119,27 +121,24 @@ function StockContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "20px" }}>
-        Chaque réception (quantité + coût unitaire réel) fait progresser le
-        coût unitaire moyen pondéré (CUMP) de la variante. Tant qu&apos;aucune
-        réception n&apos;a été saisie, le CUMP reste inconnu (&laquo;&nbsp;—&nbsp;&raquo;) et la
-        sortie correspondante n&apos;est pas valorisée en comptabilité.
+        {t("sto_noteAide")}
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : (
         <table className={styles.tableau} style={{ marginBottom: "28px" }}>
           <thead>
             <tr>
-              <th>Article</th>
-              <th>Variante</th>
-              <th style={{ textAlign: "right" }}>Stock</th>
-              <th style={{ textAlign: "right" }}>CUMP</th>
+              <th>{t("sto_colArticle")}</th>
+              <th>{t("sto_colVariante")}</th>
+              <th style={{ textAlign: "right" }}>{t("cat_colStock")}</th>
+              <th style={{ textAlign: "right" }}>{t("sto_colCump")}</th>
               <th></th>
             </tr>
           </thead>
@@ -154,7 +153,7 @@ function StockContenu() {
                   <td style={{ textAlign: "right" }}>{v.stockQty}</td>
                   <td style={{ textAlign: "right" }}>{v.coutMoyenPondere ? `${f(v.coutMoyenPondere)} $` : "—"}</td>
                   <td>
-                    <button onClick={() => ouvrirVariante(v.id)}>Réceptionner</button>
+                    <button onClick={() => ouvrirVariante(v.id)}>{t("sto_receptionner")}</button>
                   </td>
                 </tr>
               )),
@@ -165,18 +164,18 @@ function StockContenu() {
 
       {varianteOuverte && (
         <div style={{ border: "1px solid var(--color-bordure, #333)", borderRadius: "8px", padding: "16px" }}>
-          <strong>Nouvelle réception</strong>
+          <strong>{t("sto_nouvelleReception")}</strong>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end", marginTop: "10px" }}>
             <div className={styles.champ}>
-              <label>Quantité</label>
+              <label>{t("sto_quantite")}</label>
               <input type="number" min="1" value={quantite} onChange={(e) => setQuantite(e.target.value)} />
             </div>
             <div className={styles.champ}>
-              <label>Coût unitaire ($)</label>
+              <label>{t("sto_coutUnitaire")}</label>
               <input type="number" min="0" step="0.01" value={coutUnitaire} onChange={(e) => setCoutUnitaire(e.target.value)} />
             </div>
             <div className={styles.champ}>
-              <label>Fournisseur (optionnel)</label>
+              <label>{t("sto_fournisseurOptionnel")}</label>
               <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
                 <option value="">—</option>
                 {suppliers.map((s) => (
@@ -188,25 +187,25 @@ function StockContenu() {
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <input type="checkbox" checked={onCredit} onChange={(e) => setOnCredit(e.target.checked)} />
-              À crédit
+              {t("sto_aCredit")}
             </label>
             <button onClick={enregistrerReception} disabled={enCours || !quantite || !coutUnitaire}>
-              Enregistrer la réception
+              {t("sto_enregistrerReception")}
             </button>
-            <button onClick={() => setVarianteOuverte(null)}>Fermer</button>
+            <button onClick={() => setVarianteOuverte(null)}>{t("action_fermer")}</button>
           </div>
 
-          <h4 style={{ marginTop: "20px" }}>Historique des réceptions</h4>
+          <h4 style={{ marginTop: "20px" }}>{t("sto_historiqueReceptions")}</h4>
           {historique.length === 0 ? (
-            <p style={{ color: "#888", fontSize: "0.875rem" }}>Aucune réception encore saisie pour cette variante.</p>
+            <p style={{ color: "#888", fontSize: "0.875rem" }}>{t("sto_aucuneReception")}</p>
           ) : (
             <table className={styles.tableau}>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th style={{ textAlign: "right" }}>Quantité</th>
-                  <th style={{ textAlign: "right" }}>Coût unitaire</th>
-                  <th>Crédit</th>
+                  <th>{t("cha_colDate")}</th>
+                  <th style={{ textAlign: "right" }}>{t("sto_quantite")}</th>
+                  <th style={{ textAlign: "right" }}>{t("sto_coutUnitaireCourt")}</th>
+                  <th>{t("sto_colCredit")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,7 +214,7 @@ function StockContenu() {
                     <td>{new Date(r.createdAt).toLocaleDateString("fr-FR")}</td>
                     <td style={{ textAlign: "right" }}>{r.quantity}</td>
                     <td style={{ textAlign: "right" }}>{f(r.coutUnitaire)} $</td>
-                    <td>{r.onCredit ? "Oui" : "Non"}</td>
+                    <td>{r.onCredit ? t("commun_oui") : t("commun_non")}</td>
                   </tr>
                 ))}
               </tbody>

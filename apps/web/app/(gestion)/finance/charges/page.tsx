@@ -5,67 +5,68 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Charges et dépenses (prompt du 13 oct. 2026, §8) — groupées en 6 familles,
 // mais enregistrées avec une sous-catégorie précise (le serveur valide la
 // liste complète, voir apps/api/src/operations/dto/expense.dto.ts).
-const GROUPES: { groupe: string; categories: { valeur: string; label: string }[] }[] = [
+const GROUPES: { cleGroupe: string; categories: { valeur: string; cle: string }[] }[] = [
   {
-    groupe: "Fonctionnement",
+    cleGroupe: "cha_groupeFonctionnement",
     categories: [
-      { valeur: "loyer", label: "Loyer" },
-      { valeur: "eau", label: "Eau" },
-      { valeur: "electricite", label: "Électricité" },
-      { valeur: "internet", label: "Internet" },
-      { valeur: "telecommunications", label: "Téléphone" },
-      { valeur: "transport", label: "Transport" },
-      { valeur: "carburant", label: "Carburant" },
-      { valeur: "entretien", label: "Entretien" },
-      { valeur: "reparations", label: "Réparations" },
-      { valeur: "fournitures", label: "Fournitures" },
+      { valeur: "loyer", cle: "cha_catLoyer" },
+      { valeur: "eau", cle: "cha_catEau" },
+      { valeur: "electricite", cle: "cha_catElectricite" },
+      { valeur: "internet", cle: "cha_catInternet" },
+      { valeur: "telecommunications", cle: "cha_catTelecommunications" },
+      { valeur: "transport", cle: "cha_catTransport" },
+      { valeur: "carburant", cle: "cha_catCarburant" },
+      { valeur: "entretien", cle: "cha_catEntretien" },
+      { valeur: "reparations", cle: "cha_catReparations" },
+      { valeur: "fournitures", cle: "cha_catFournitures" },
     ],
   },
   {
-    groupe: "Personnel",
+    cleGroupe: "cha_groupePersonnel",
     categories: [
-      { valeur: "salaires", label: "Salaires" },
-      { valeur: "primes", label: "Primes" },
-      { valeur: "charges_sociales", label: "Charges sociales" },
+      { valeur: "salaires", cle: "cha_catSalaires" },
+      { valeur: "primes", cle: "cha_catPrimes" },
+      { valeur: "charges_sociales", cle: "cha_catChargesSociales" },
     ],
   },
   {
-    groupe: "Charges administratives",
+    cleGroupe: "cha_groupeAdministratives",
     categories: [
-      { valeur: "frais_bancaires", label: "Frais bancaires" },
-      { valeur: "honoraires", label: "Honoraires" },
-      { valeur: "assurances", label: "Assurances" },
-      { valeur: "abonnements_logiciels", label: "Abonnements / logiciels" },
+      { valeur: "frais_bancaires", cle: "cha_catFraisBancaires" },
+      { valeur: "honoraires", cle: "cha_catHonoraires" },
+      { valeur: "assurances", cle: "cha_catAssurances" },
+      { valeur: "abonnements_logiciels", cle: "cha_catAbonnementsLogiciels" },
     ],
   },
   {
-    groupe: "Charges commerciales",
+    cleGroupe: "cha_groupeCommerciales",
     categories: [
-      { valeur: "publicite", label: "Publicité" },
-      { valeur: "promotions", label: "Promotions" },
-      { valeur: "livraison", label: "Livraison" },
-      { valeur: "emballages", label: "Emballages" },
-      { valeur: "commissions", label: "Commissions" },
+      { valeur: "publicite", cle: "cha_catPublicite" },
+      { valeur: "promotions", cle: "cha_catPromotions" },
+      { valeur: "livraison", cle: "cha_catLivraison" },
+      { valeur: "emballages", cle: "cha_catEmballages" },
+      { valeur: "commissions", cle: "cha_catCommissions" },
     ],
   },
-  { groupe: "Fiscalité", categories: [{ valeur: "impots_taxes", label: "Impôts et taxes" }] },
+  { cleGroupe: "cha_groupeFiscalite", categories: [{ valeur: "impots_taxes", cle: "cha_catImpotsTaxes" }] },
   {
-    groupe: "Financement",
+    cleGroupe: "cha_groupeFinancement",
     categories: [
-      { valeur: "interets_frais_financiers", label: "Intérêts / frais financiers" },
-      { valeur: "remboursement_capital", label: "Remboursement de capital" },
+      { valeur: "interets_frais_financiers", cle: "cha_catInteretsFraisFinanciers" },
+      { valeur: "remboursement_capital", cle: "cha_catRemboursementCapital" },
     ],
   },
-  { groupe: "Autre", categories: [{ valeur: "autre", label: "Autre" }] },
+  { cleGroupe: "cha_groupeAutre", categories: [{ valeur: "autre", cle: "cha_catAutre" }] },
 ];
 
-const LABELS_CATEGORIE: Record<string, string> = Object.fromEntries(
-  GROUPES.flatMap((g) => g.categories.map((c) => [c.valeur, c.label])),
+const CLES_CATEGORIE: Record<string, string> = Object.fromEntries(
+  GROUPES.flatMap((g) => g.categories.map((c) => [c.valeur, c.cle])),
 );
 
 interface Depense {
@@ -79,6 +80,7 @@ interface Depense {
 
 function ChargesContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [depenses, setDepenses] = useState<Depense[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -95,7 +97,7 @@ function ChargesContent() {
     api
       .get<Depense[]>(`/shops/${currentShop.id}/expenses`)
       .then(setDepenses)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -116,10 +118,10 @@ function ChargesContent() {
       });
       setMontant("");
       setNote("");
-      setConfirmation("Charge enregistrée.");
+      setConfirmation(t("cha_chargeEnregistree"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnregistrementEnCours(false);
     }
@@ -127,22 +129,22 @@ function ChargesContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
-      <h2 style={{ fontSize: "1.1rem", marginBottom: "16px" }}>Charges et dépenses</h2>
+      <h2 style={{ fontSize: "1.1rem", marginBottom: "16px" }}>{t("cha_sousTitre")}</h2>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
       <form className={styles.formulaire} onSubmit={enregistrer}>
         <div className={styles.champ}>
-          <label htmlFor="categorie">Catégorie</label>
+          <label htmlFor="categorie">{t("cat_categorie")}</label>
           <select id="categorie" value={categorie} onChange={(e) => setCategorie(e.target.value)}>
             {GROUPES.map((g) => (
-              <optgroup key={g.groupe} label={g.groupe}>
+              <optgroup key={g.cleGroupe} label={t(g.cleGroupe)}>
                 {g.categories.map((c) => (
                   <option key={c.valeur} value={c.valeur}>
-                    {c.label}
+                    {t(c.cle)}
                   </option>
                 ))}
               </optgroup>
@@ -150,44 +152,44 @@ function ChargesContent() {
           </select>
         </div>
         <div className={styles.champ}>
-          <label htmlFor="montant">Montant</label>
+          <label htmlFor="montant">{t("cha_montant")}</label>
           <input id="montant" type="number" min="0" step="0.01" value={montant} onChange={(e) => setMontant(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="devise">Devise</label>
+          <label htmlFor="devise">{t("cha_devise")}</label>
           <select id="devise" value={devise} onChange={(e) => setDevise(e.target.value as "USD" | "CDF")}>
             <option value="USD">USD</option>
             <option value="CDF">CDF</option>
           </select>
         </div>
         <div className={styles.champ}>
-          <label htmlFor="note">Note (facultatif)</label>
-          <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex. loyer d'octobre" />
+          <label htmlFor="note">{t("cha_noteFacultatif")}</label>
+          <input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("cha_placeholderNote")} />
         </div>
         <button className={styles.bouton} type="submit" disabled={enregistrementEnCours || !montant}>
-          {enregistrementEnCours ? "Enregistrement…" : "Enregistrer la charge"}
+          {enregistrementEnCours ? t("cha_enregistrementEnCours") : t("cha_enregistrerCharge")}
         </button>
       </form>
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : depenses.length === 0 ? (
-        <p>Aucune charge enregistrée pour l&apos;instant.</p>
+        <p>{t("cha_aucuneCharge")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Catégorie</th>
-              <th>Montant</th>
-              <th>Note</th>
+              <th>{t("cha_colDate")}</th>
+              <th>{t("cat_categorie")}</th>
+              <th>{t("cha_montant")}</th>
+              <th>{t("cha_colNote")}</th>
             </tr>
           </thead>
           <tbody>
             {depenses.map((d) => (
               <tr key={d.id}>
                 <td>{new Date(d.createdAt).toLocaleDateString("fr-FR")}</td>
-                <td>{LABELS_CATEGORIE[d.category] ?? d.category}</td>
+                <td>{CLES_CATEGORIE[d.category] ? t(CLES_CATEGORIE[d.category]) : d.category}</td>
                 <td>
                   {Number(d.amount).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} {d.currency}
                 </td>

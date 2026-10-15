@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Créances & dettes (14 oct. 2026, chantier SYSCOHADA phase 3) — échéancier
@@ -48,6 +49,7 @@ function f(n: number): string {
 
 function CreancesDettesContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [echeancier, setEcheancier] = useState<LigneEcheancier[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -72,7 +74,7 @@ function CreancesDettesContenu() {
         setCustomers(c);
         setRelances(r);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -106,32 +108,30 @@ function CreancesDettesContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "20px" }}>
-        Échéancier des achats à crédit, soldes dus par les clients, et
-        relances — un rappel enregistré ici est une note interne, pas un
-        SMS ou un email réellement envoyé.
+        {t("crd_noteAide")}
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
-      {chargement && <p>Chargement…</p>}
+      {chargement && <p>{t("commun_chargement")}</p>}
 
-      <h3>Échéancier fournisseurs</h3>
+      <h3>{t("crd_echeancierFournisseurs")}</h3>
       {echeancier.length === 0 ? (
         <p style={{ color: "#888", fontSize: "0.875rem" }}>
-          Aucun achat à crédit avec une échéance saisie.
+          {t("crd_aucunAchatCredit")}
         </p>
       ) : (
         <table className={styles.tableau} style={{ marginBottom: "28px" }}>
           <thead>
             <tr>
-              <th>Fournisseur</th>
-              <th>Échéance</th>
-              <th style={{ textAlign: "right" }}>Montant</th>
-              <th style={{ textAlign: "right" }}>Réglé</th>
-              <th style={{ textAlign: "right" }}>Restant</th>
+              <th>{t("crd_colFournisseur")}</th>
+              <th>{t("crd_colEcheance")}</th>
+              <th style={{ textAlign: "right" }}>{t("cha_montant")}</th>
+              <th style={{ textAlign: "right" }}>{t("crd_colRegle")}</th>
+              <th style={{ textAlign: "right" }}>{t("crd_colRestant")}</th>
               <th></th>
             </tr>
           </thead>
@@ -148,7 +148,7 @@ function CreancesDettesContenu() {
                   <td>
                     {l.restant > 0.009 && supplier && (
                       <button onClick={() => reglerAchat(supplier.id, l.purchaseId, l.restant)}>
-                        Marquer réglé
+                        {t("crd_marquerRegle")}
                       </button>
                     )}
                   </td>
@@ -159,9 +159,9 @@ function CreancesDettesContenu() {
         </table>
       )}
 
-      <h3>Dettes fournisseurs (solde cumulé)</h3>
+      <h3>{t("crd_dettesFournisseursSolde")}</h3>
       {suppliers.filter((s) => Number(s.balanceOwed) > 0).length === 0 ? (
-        <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "28px" }}>Aucune dette en cours.</p>
+        <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "28px" }}>{t("crd_aucuneDette")}</p>
       ) : (
         <ul style={{ marginBottom: "28px" }}>
           {suppliers
@@ -170,22 +170,22 @@ function CreancesDettesContenu() {
               <li key={s.id} style={{ marginBottom: "6px" }}>
                 {s.name} — {f(s.balanceOwed)} $
                 <input
-                  placeholder="Relance..."
+                  placeholder={t("crd_placeholderRelance")}
                   value={messageRelance[s.id] ?? ""}
                   onChange={(e) => setMessageRelance((m) => ({ ...m, [s.id]: e.target.value }))}
                   style={{ marginLeft: "12px", width: "220px" }}
                 />
                 <button onClick={() => envoyerRelance("FOURNISSEUR", s.id)} style={{ marginLeft: "6px" }}>
-                  Enregistrer une relance
+                  {t("crd_enregistrerRelance")}
                 </button>
               </li>
             ))}
         </ul>
       )}
 
-      <h3>Créances clients (solde cumulé)</h3>
+      <h3>{t("crd_creancesClientsSolde")}</h3>
       {customers.filter((c) => Number(c.creditBalance) > 0).length === 0 ? (
-        <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "28px" }}>Aucune créance en cours.</p>
+        <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "28px" }}>{t("crd_aucuneCreance")}</p>
       ) : (
         <ul style={{ marginBottom: "28px" }}>
           {customers
@@ -194,29 +194,29 @@ function CreancesDettesContenu() {
               <li key={c.id} style={{ marginBottom: "6px" }}>
                 {c.fullName} — {f(c.creditBalance)} $
                 <input
-                  placeholder="Relance..."
+                  placeholder={t("crd_placeholderRelance")}
                   value={messageRelance[c.id] ?? ""}
                   onChange={(e) => setMessageRelance((m) => ({ ...m, [c.id]: e.target.value }))}
                   style={{ marginLeft: "12px", width: "220px" }}
                 />
                 <button onClick={() => envoyerRelance("CLIENT", c.id)} style={{ marginLeft: "6px" }}>
-                  Enregistrer une relance
+                  {t("crd_enregistrerRelance")}
                 </button>
               </li>
             ))}
         </ul>
       )}
 
-      <h3>Historique des relances</h3>
+      <h3>{t("crd_historiqueRelances")}</h3>
       {relances.length === 0 ? (
-        <p style={{ color: "#888", fontSize: "0.875rem" }}>Aucune relance enregistrée.</p>
+        <p style={{ color: "#888", fontSize: "0.875rem" }}>{t("crd_aucuneRelance")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Cible</th>
-              <th>Message</th>
+              <th>{t("cha_colDate")}</th>
+              <th>{t("crd_colCible")}</th>
+              <th>{t("crd_colMessage")}</th>
             </tr>
           </thead>
           <tbody>

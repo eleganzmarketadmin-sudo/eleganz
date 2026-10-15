@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Immobilisations et amortissements (13 oct. 2026, Finance & Comptabilité
@@ -50,6 +51,7 @@ function cumulAmorti(actif: Asset): number {
 
 function AmortissementsContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [actifs, setActifs] = useState<Asset[] | null>(null);
   const [label, setLabel] = useState("");
   const [acquisitionDate, setAcquisitionDate] = useState(new Date().toISOString().slice(0, 10));
@@ -67,7 +69,7 @@ function AmortissementsContenu() {
     api
       .get<Asset[]>(`/shops/${currentShop.id}/assets`)
       .then(setActifs)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   };
 
@@ -87,10 +89,10 @@ function AmortissementsContenu() {
       });
       setLabel("");
       setAcquisitionCost("");
-      setConfirmation("Immobilisation enregistrée.");
+      setConfirmation(t("imm_immobilisationEnregistree"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Erreur.");
+      setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique"));
     }
   };
 
@@ -112,35 +114,31 @@ function AmortissementsContenu() {
       setResultatsDotation(resultats);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Erreur.");
+      setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique"));
     }
   };
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Immobilisations de la boutique et amortissement linéaire sur la durée
-        saisie. La dotation d&apos;un mois n&apos;est jamais comptabilisée
-        automatiquement : cliquez sur « Comptabiliser les dotations » pour le
-        mois choisi — l&apos;écriture (compte 681 débité / compte 2841
-        crédité) apparaît ensuite dans l&apos;onglet Comptabilité.
+        {t("imm_noteAide")}
       </p>
 
-      <h2>Nouvelle immobilisation</h2>
+      <h2>{t("imm_nouvelleImmobilisation")}</h2>
       <form onSubmit={creerActif} className={styles.formulaire}>
         <div className={styles.champ}>
-          <label>Libellé</label>
-          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex. Ordinateur comptoir" required />
+          <label>{t("imm_libelle")}</label>
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("imm_placeholderLibelle")} required />
         </div>
         <div className={styles.champ}>
-          <label>Date d&apos;acquisition</label>
+          <label>{t("imm_dateAcquisition")}</label>
           <input type="date" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} required />
         </div>
         <div className={styles.champ}>
-          <label>Coût (USD)</label>
+          <label>{t("imm_coutUsd")}</label>
           <input
             type="number"
             min="0"
@@ -151,7 +149,7 @@ function AmortissementsContenu() {
           />
         </div>
         <div className={styles.champ}>
-          <label>Durée d&apos;amortissement (mois)</label>
+          <label>{t("imm_dureeAmortissement")}</label>
           <input
             type="number"
             min="1"
@@ -161,7 +159,7 @@ function AmortissementsContenu() {
           />
         </div>
         <button type="submit" className={styles.bouton}>
-          Enregistrer l&apos;immobilisation
+          {t("imm_enregistrerImmobilisation")}
         </button>
       </form>
 
@@ -170,11 +168,11 @@ function AmortissementsContenu() {
 
       <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", margin: "24px 0" }}>
         <div className={styles.champ}>
-          <label>Comptabiliser les dotations du mois</label>
+          <label>{t("imm_comptabiliserDotationsMois")}</label>
           <input type="month" value={periode} onChange={(e) => setPeriode(e.target.value)} />
         </div>
         <button type="button" className={styles.bouton} onClick={comptabiliserDotations}>
-          Comptabiliser les dotations
+          {t("imm_comptabiliserDotations")}
         </button>
       </div>
 
@@ -184,29 +182,29 @@ function AmortissementsContenu() {
             <li key={r.assetId}>
               {r.label} :{" "}
               {r.statut === "comptabilise"
-                ? `dotation de ${f(r.montant)} $ comptabilisée.`
+                ? `${t("imm_dotationDe")} ${f(r.montant)} $ ${t("imm_comptabilisee")}`
                 : r.statut === "deja_comptabilise"
-                ? "déjà comptabilisée pour ce mois."
-                : "durée d'amortissement déjà écoulée."}
+                ? t("imm_dejaComptabiliseeMois")
+                : t("imm_dureeDejaEcoulee")}
             </li>
           ))}
         </ul>
       )}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : !actifs || actifs.length === 0 ? (
-        <p>Aucune immobilisation enregistrée.</p>
+        <p>{t("imm_aucuneImmobilisation")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Libellé</th>
-              <th>Acquisition</th>
-              <th style={{ textAlign: "right" }}>Coût</th>
-              <th>Durée</th>
-              <th style={{ textAlign: "right" }}>Amorti à ce jour</th>
-              <th style={{ textAlign: "right" }}>Valeur nette</th>
+              <th>{t("imm_libelle")}</th>
+              <th>{t("imm_colAcquisition")}</th>
+              <th style={{ textAlign: "right" }}>{t("imm_colCout")}</th>
+              <th>{t("imm_colDuree")}</th>
+              <th style={{ textAlign: "right" }}>{t("imm_colAmortiACeJour")}</th>
+              <th style={{ textAlign: "right" }}>{t("imm_colValeurNette")}</th>
               <th></th>
             </tr>
           </thead>
@@ -218,17 +216,17 @@ function AmortissementsContenu() {
                 <tr key={a.id} style={{ opacity: a.disposed ? 0.5 : 1 }}>
                   <td>
                     {a.label}
-                    {a.disposed ? " (mis au rebut)" : ""}
+                    {a.disposed ? ` (${t("imm_misAuRebutParenthese")})` : ""}
                   </td>
                   <td>{new Date(a.acquisitionDate).toLocaleDateString("fr-FR")}</td>
                   <td style={{ textAlign: "right" }}>{f(a.acquisitionCost)} $</td>
-                  <td>{a.durationMonths} mois</td>
+                  <td>{a.durationMonths} {t("imm_mois")}</td>
                   <td style={{ textAlign: "right" }}>{f(amorti)} $</td>
                   <td style={{ textAlign: "right" }}>{f(valeurNette)} $</td>
                   <td>
                     {!a.disposed && (
                       <button type="button" className={styles.retirer} onClick={() => miseAuRebut(a.id)}>
-                        Mettre au rebut
+                        {t("imm_mettreAuRebut")}
                       </button>
                     )}
                   </td>
