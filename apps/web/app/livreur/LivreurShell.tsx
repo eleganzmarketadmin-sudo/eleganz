@@ -8,6 +8,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
+import { ChatWidget } from "../components/ChatWidget";
 import styles from "./LivreurShell.module.css";
 
 const LIENS = [
@@ -78,6 +79,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
         <div className="entree-page">{children}</div>
       </main>
       <Footer variante="livreur" />
+      <ChatWidget />
     </div>
   );
 }

@@ -61,6 +61,7 @@ export class AdminSettingsService {
         ...(dto.notificationsSmsEnabled !== undefined && {
           notificationsSmsEnabled: dto.notificationsSmsEnabled,
         }),
+        ...(dto.chatWidgetEnabled !== undefined && { chatWidgetEnabled: dto.chatWidgetEnabled }),
       },
     });
   }
@@ -76,6 +77,7 @@ export class AdminSettingsService {
     return {
       photoSearchEnabled: settings.photoSearchEnabled,
       adStudioEnabled: settings.adStudioEnabled,
+      chatWidgetEnabled: settings.chatWidgetEnabled,
     };
   }
 

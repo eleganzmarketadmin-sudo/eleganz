@@ -1,5 +1,6 @@
 import { CartProvider } from "../lib/cart-context";
 import { Footer } from "../components/Footer";
+import { ChatWidget } from "../components/ChatWidget";
 import { MarketplaceHeader } from "./MarketplaceHeader";
 
 export default function MarketplaceLayout({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export default function MarketplaceLayout({ children }: { children: React.ReactN
           {children}
         </div>
         <Footer variante="marketplace" />
+        <ChatWidget />
       </div>
     </CartProvider>
   );

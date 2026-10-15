@@ -19,6 +19,7 @@ interface PlatformSettings {
   notificationsInAppEnabled?: boolean;
   notificationsEmailEnabled?: boolean;
   notificationsSmsEnabled?: boolean;
+  chatWidgetEnabled?: boolean;
 }
 
 const FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; label: string; description: string }[] = [
@@ -43,6 +44,7 @@ type ChampTexte = Exclude<
   | "notificationsInAppEnabled"
   | "notificationsEmailEnabled"
   | "notificationsSmsEnabled"
+  | "chatWidgetEnabled"
 >;
 
 const CANAUX_NOTIFICATION: {
@@ -143,6 +145,38 @@ function ParametresContent() {
           {enregistrement ? "Enregistrement…" : "Enregistrer"}
         </button>
       </form>
+
+      <h2 className={styles.titreSection}>Chatbox</h2>
+      <p className={styles.sousTitre}>
+        Bulle de discussion flottante, visible dans tous les espaces authentifiés (vendeurs,
+        comptables, livreurs, acheteurs, équipe admin), qui ouvre le centre de messagerie en un clic.
+        Désactivez-la ici si vous préférez que les échanges passent uniquement par la page
+        « Messagerie » du menu.
+      </p>
+      <div className={styles.listeBascules}>
+        <label className={styles.bascule}>
+          <input
+            type="checkbox"
+            checked={Boolean(valeurs.chatWidgetEnabled)}
+            onChange={async (e) => {
+              const coche = e.target.checked;
+              setValeurs((v) => ({ ...v, chatWidgetEnabled: coche }));
+              try {
+                const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+                  chatWidgetEnabled: coche,
+                });
+                setValeurs(resultat);
+              } catch (err) {
+                setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+              }
+            }}
+          />
+          <div>
+            <div className={styles.basculeLabel}>Afficher la bulle de chat</div>
+            <div className={styles.basculeDescription}>Activée par défaut.</div>
+          </div>
+        </label>
+      </div>
 
       <h2 className={styles.titreSection}>Notifications</h2>
       <p className={styles.sousTitre}>

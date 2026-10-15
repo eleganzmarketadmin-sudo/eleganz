@@ -9,6 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, BandeMarque } from "./Logo";
 import { Footer } from "./Footer";
 import { NotificationBell } from "./NotificationBell";
+import { ChatWidget } from "./ChatWidget";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./GestionShell.module.css";
@@ -119,6 +120,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
         <div className="entree-page">{children}</div>
       </main>
       <Footer variante="gestion" />
+      <ChatWidget />
     </div>
   );
 }

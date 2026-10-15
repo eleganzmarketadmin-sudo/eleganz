@@ -8,6 +8,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
+import { ChatWidget } from "../components/ChatWidget";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
@@ -113,6 +114,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
         <div className="entree-page">{children}</div>
       </main>
       <Footer variante="comptable" />
+      <ChatWidget />
     </div>
   );
 }

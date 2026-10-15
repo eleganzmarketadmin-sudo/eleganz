@@ -130,4 +130,11 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsBoolean()
   notificationsSmsEnabled?: boolean;
+
+  // Chatbox native (demande UX du 15 oct. 2026, point 3) — interrupteur
+  // global de la bulle flottante, lu publiquement (voir publicFeatures ci-
+  // dessous) car chaque espace authentifié doit savoir s'il faut l'afficher.
+  @IsOptional()
+  @IsBoolean()
+  chatWidgetEnabled?: boolean;
 }

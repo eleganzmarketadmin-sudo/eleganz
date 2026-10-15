@@ -39,7 +39,7 @@ function nomAutrePartie(conv: Conversation, monId: string): string {
  * (nouvelle commande, etc.) restent le point d'entrée principal pour
  * l'instant.
  */
-export function MessagerieEcran() {
+export function MessagerieEcran({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [selectionId, setSelectionId] = useState<string | null>(null);
@@ -119,7 +119,7 @@ export function MessagerieEcran() {
   return (
     <div className={styles.cadre}>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
-      <div className={styles.disposition}>
+      <div className={`${styles.disposition} ${compact ? styles.dispositionCompacte : ""}`}>
         <div className={styles.colonneListe}>
           <button
             type="button"
