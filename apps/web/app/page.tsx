@@ -82,7 +82,7 @@ export default function HomePage() {
             <p>
               <strong className="titre-vitrine">ELEGANZ {t("nom_market")}</strong> — la vitrine qui réunit
               vendeurs et acheteurs congolais, tous secteurs confondus : recherche, commande et
-              livraison suivie à Kinshasa.
+              livraison suivie, où que vous soyez.
             </p>
             <Link className={styles.lienCarte} href="/marketplace">
               Parcourir la vitrine

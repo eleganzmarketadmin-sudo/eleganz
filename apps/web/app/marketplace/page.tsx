@@ -108,10 +108,11 @@ export default function MarketplacePage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.entete}>
-        <h1>ELEGANZ Market</h1>
+        <h1>ELEGANZ {t("nom_market")}</h1>
         <p>
           La marketplace qui réunit vendeurs et acheteurs congolais dans une seule vitrine, tous
-          secteurs confondus — recherche, fiche produit, commande et livraison suivie à Kinshasa.
+          secteurs confondus — recherche, fiche produit, commande et livraison suivie, où que vous
+          soyez.
         </p>
       </div>
 
