@@ -1,54 +1,91 @@
 import Link from "next/link";
-import { LogoMark } from "./components/Logo";
+import { SiteHeader } from "./components/SiteHeader";
 import { Footer } from "./components/Footer";
 import styles from "./page.module.css";
 
-// Porte d'entrée de la maison ELEGANZ : deux pièces, deux publics. Le
-// commerçant qui tient la caisse n'a rien à faire du côté vitrine, et
-// l'acheteur qui vient chiner n'a pas besoin de voir un tableau de bord.
+// Refonte du 15 oct. 2026 (demande UX, point 1) : l'ancienne page montrait
+// trois blocs plein écran, un par module, sans barre de menu ni phrase de
+// présentation globale — il fallait déjà savoir laquelle des trois portes
+// ouvrir avant même d'arriver. Ici, un seul message d'ensemble d'abord
+// ("qu'est-ce qu'ELEGANZ"), puis une section d'orientation qui pose la
+// question dans les mots du visiteur ("vous avez une boutique ?") plutôt que
+// de nommer directement un produit — à la manière d'un portail Odoo, qui
+// présente la suite avant de pousser vers une app précise.
 export default function HomePage() {
   return (
     <div className={styles.page}>
-      <Link href="/" className={styles.marqueFlottante}>
-        <LogoMark size={26} />
-        ELEGANZ
-      </Link>
-      <div className={styles.cadre}>
-        <div className={`${styles.bloc} ${styles.comptable}`}>
-          <h1>ELEGANZ Mon Comptable</h1>
+      <SiteHeader />
+
+      <section className={styles.hero}>
+        <div className={styles.heroTexte}>
+          <h1>Le commerce congolais, du comptoir à la vitrine</h1>
           <p>
-            Ventes et dépenses par devise, dettes et créances, loyers,
-            versements des travailleurs, agenda des échéances et synthèses
-            exportables — un carnet de gestion complet, sans boutique ni
-            catalogue à créer.
+            ELEGANZ est un écosystème pensé pour les commerçants et indépendants de Kinshasa : tenir ses
+            comptes, gérer une boutique et vendre en ligne — trois outils séparés, une seule plateforme,
+            construite et exploitée depuis la RDC.
           </p>
-          <Link className={styles.lien} href="/comptable">
-            Ouvrir mon carnet
-          </Link>
+          <div className={styles.heroActions}>
+            <a className={styles.lienPrincipal} href="#outils">
+              Choisir mon outil
+            </a>
+            <Link className={styles.lienSecondaire} href="/a-propos">
+              À propos d&apos;ELEGANZ
+            </Link>
+          </div>
         </div>
-        <div className={`${styles.bloc} ${styles.gestion}`}>
-          <h1>ELEGANZ Gestion</h1>
-          <p>
-            La caisse, le stock, les factures et les commandes de votre
-            boutique à Kinshasa, avec livraison suivie et équipe intégrée —
-            du comptoir jusqu&apos;au tableau de bord du soir.
-          </p>
-          <Link className={styles.lien} href="/connexion">
-            Ouvrir ma caisse
-          </Link>
+        <div className={styles.heroMotif} aria-hidden="true">
+          <span className={styles.piece} style={{ background: "var(--color-cobalt)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-flamme)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-or)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-magenta)" }} />
         </div>
-        <div className={`${styles.bloc} ${styles.marketplace}`}>
-          <h1 className="titre-vitrine">ELEGANZ Market</h1>
-          <p>
-            Porter la couleur : la marketplace qui réunit les boutiques de
-            mode et de luxe congolaises dans une seule vitrine — recherche,
-            commande et livraison suivie à Kinshasa.
-          </p>
-          <Link className={styles.lien} href="/marketplace">
-            Parcourir la vitrine
-          </Link>
+      </section>
+
+      <section className={styles.outils} id="outils">
+        <h2>Quel outil vous correspond ?</h2>
+        <p className={styles.outilsIntro}>
+          Pas besoin de connaître la plateforme à l&apos;avance : répondez à la question qui vous
+          concerne.
+        </p>
+        <div className={styles.grille}>
+          <div className={`${styles.carte} ${styles.comptable}`}>
+            <h3>Vous tenez une activité, sans boutique ni catalogue ?</h3>
+            <p>
+              <strong>ELEGANZ Mon Comptable</strong> — ventes et dépenses par devise, dettes et
+              créances, loyers, versements des travailleurs, agenda des échéances et synthèses
+              exportables. Six mois gratuits, puis 1 $ par mois.
+            </p>
+            <Link className={styles.lienCarte} href="/comptable">
+              Ouvrir mon carnet
+            </Link>
+          </div>
+
+          <div className={`${styles.carte} ${styles.gestion}`}>
+            <h3>Vous avez une boutique, avec caisse et stock à gérer ?</h3>
+            <p>
+              <strong>ELEGANZ Gestion</strong> — la caisse, le stock, les factures et les commandes de
+              votre boutique, avec livraison suivie et équipe intégrée, du comptoir jusqu&apos;au
+              tableau de bord du soir.
+            </p>
+            <Link className={styles.lienCarte} href="/connexion">
+              Ouvrir ma caisse
+            </Link>
+          </div>
+
+          <div className={`${styles.carte} ${styles.marketplace}`}>
+            <h3>Vous cherchez à acheter ou vendre en ligne ?</h3>
+            <p>
+              <strong className="titre-vitrine">ELEGANZ Market</strong> — la vitrine qui réunit les
+              boutiques de mode et de luxe congolaises : recherche, commande et livraison suivie à
+              Kinshasa.
+            </p>
+            <Link className={styles.lienCarte} href="/marketplace">
+              Parcourir la vitrine
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
+
       <Footer variante="accueil" />
     </div>
   );

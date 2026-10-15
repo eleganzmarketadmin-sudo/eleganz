@@ -1,0 +1,83 @@
+.entete {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.contenu {
+  max-width: 1160px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-5);
+  padding: var(--espace-3) var(--espace-5);
+}
+
+.marque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-ink);
+  flex-shrink: 0;
+}
+
+.marque:hover {
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: var(--espace-5);
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 var(--espace-5);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.navLien {
+  color: var(--color-texte-muted);
+  font-weight: 500;
+  padding: var(--espace-2) 0 var(--espace-3);
+  border-bottom: 2px solid transparent;
+  min-height: var(--touche-min);
+  display: flex;
+  align-items: center;
+}
+
+.navLien:hover {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.navLienActif {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-cobalt-texte);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  margin-left: auto;
+}
+
+.connexion {
+  background: var(--color-ink);
+  color: var(--color-surface);
+  padding: var(--espace-2) var(--espace-4);
+  font-weight: 600;
+  min-height: var(--touche-min);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.connexion:hover {
+  text-decoration: none;
+  opacity: 0.85;
+}

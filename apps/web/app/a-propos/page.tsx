@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogoMark } from "../components/Logo";
+import { SiteHeader } from "../components/SiteHeader";
 import { Footer } from "../components/Footer";
 import styles from "./page.module.css";
 
@@ -16,10 +16,7 @@ import styles from "./page.module.css";
 export default function AProposPage() {
   return (
     <div className={styles.page}>
-      <Link href="/" className={styles.marqueFlottante}>
-        <LogoMark size={26} />
-        ELEGANZ
-      </Link>
+      <SiteHeader />
 
       <section className={styles.hero}>
         <h1>Une maison, trois pièces</h1>
