@@ -6,6 +6,7 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface CelluleReleve {
@@ -33,17 +34,17 @@ interface ReleveActivite {
 }
 
 const GRANULARITES = [
-  { valeur: "JOUR", label: "Journalier" },
-  { valeur: "SEMAINE", label: "Hebdomadaire" },
-  { valeur: "MOIS", label: "Mensuel" },
-  { valeur: "ANNEE", label: "Annuel" },
+  { valeur: "JOUR", cle: "rel_granulariteJour" },
+  { valeur: "SEMAINE", cle: "rel_granulariteSemaine" },
+  { valeur: "MOIS", cle: "rel_granulariteMois" },
+  { valeur: "ANNEE", cle: "rel_granulariteAnnee" },
 ];
 
 const REGROUPEMENTS = [
-  { valeur: "", label: "Aucun (totaux seulement)" },
-  { valeur: "PRODUIT", label: "Par produit" },
-  { valeur: "CATEGORIE", label: "Par catégorie" },
-  { valeur: "MOYEN_PAIEMENT", label: "Par moyen de paiement" },
+  { valeur: "", cle: "rel_regroupementAucun" },
+  { valeur: "PRODUIT", cle: "rel_regroupementProduit" },
+  { valeur: "CATEGORIE", cle: "rel_regroupementCategorie" },
+  { valeur: "MOYEN_PAIEMENT", cle: "rel_regroupementMoyenPaiement" },
 ];
 
 function formaterCellule(c: CelluleReleve): string {
@@ -61,6 +62,7 @@ function ilYA(jours: number): string {
 
 function RelevesContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [from, setFrom] = useState(ilYA(30));
   const [to, setTo] = useState(ilYA(0));
   const [granularite, setGranularite] = useState("JOUR");
@@ -90,7 +92,7 @@ function RelevesContent() {
       );
       setReleve(data);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Le relevé n'a pas pu être généré.");
+      setErreur(err instanceof ApiError ? err.message : t("rel_erreurGeneration"));
     } finally {
       setChargement(false);
     }
@@ -110,7 +112,7 @@ function RelevesContent() {
         await ouvrirDocumentPdf(path);
       }
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Export impossible.");
+      setErreur(err instanceof Error ? err.message : t("fact_exportImpossible"));
     } finally {
       setExportEnCours(null);
     }
@@ -118,44 +120,40 @@ function RelevesContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Relevés d&apos;activité</h1>
-      <p className={styles.sousTitre}>
-        Relevé certifié par la plateforme ELEGANZ à partir de vos ventes réellement enregistrées
-        (caisse et Marketplace) — choisissez une période, une fréquence, et un critère de
-        regroupement si besoin, puis exportez en Excel ou PDF.
-      </p>
+      <h1 className={styles.titre}>{t("nav_releves")}</h1>
+      <p className={styles.sousTitre}>{t("rel_sousTitre")}</p>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>
-          <label htmlFor="from">Du</label>
+          <label htmlFor="from">{t("rel_du")}</label>
           <input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="to">Au</label>
+          <label htmlFor="to">{t("rel_au")}</label>
           <input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="granularite">Fréquence</label>
+          <label htmlFor="granularite">{t("rel_frequence")}</label>
           <select id="granularite" value={granularite} onChange={(e) => setGranularite(e.target.value)}>
             {GRANULARITES.map((g) => (
               <option key={g.valeur} value={g.valeur}>
-                {g.label}
+                {t(g.cle)}
               </option>
             ))}
           </select>
         </div>
         <div className={styles.champ}>
-          <label htmlFor="regroupement">Regroupement</label>
+          <label htmlFor="regroupement">{t("rel_regroupement")}</label>
           <select id="regroupement" value={regroupement} onChange={(e) => setRegroupement(e.target.value)}>
             {REGROUPEMENTS.map((r) => (
               <option key={r.valeur} value={r.valeur}>
-                {r.label}
+                {t(r.cle)}
               </option>
             ))}
           </select>
         </div>
         <button className={styles.bouton} onClick={genererApercu} disabled={chargement}>
-          {chargement ? "Génération…" : "Afficher l'aperçu"}
+          {chargement ? t("rel_generationEnCours") : t("rel_afficherApercu")}
         </button>
       </div>
 
@@ -165,10 +163,10 @@ function RelevesContent() {
         <>
           <div className={styles.actionsExport}>
             <button className={styles.boutonSecondaire} onClick={() => exporter("xlsx")} disabled={exportEnCours !== null}>
-              {exportEnCours === "xlsx" ? "…" : "Exporter en Excel"}
+              {exportEnCours === "xlsx" ? "…" : t("fact_exporterExcel")}
             </button>
             <button className={styles.boutonSecondaire} onClick={() => exporter("pdf")} disabled={exportEnCours !== null}>
-              {exportEnCours === "pdf" ? "…" : "Exporter en PDF"}
+              {exportEnCours === "pdf" ? "…" : t("rel_exporterPdf")}
             </button>
           </div>
 
@@ -176,13 +174,13 @@ function RelevesContent() {
             <table className={styles.tableau}>
               <thead>
                 <tr>
-                  <th>{regroupement ? REGROUPEMENTS.find((r) => r.valeur === regroupement)?.label : "Total"}</th>
+                  <th>{regroupement ? t(REGROUPEMENTS.find((r) => r.valeur === regroupement)?.cle ?? "rel_regroupementAucun") : t("panier_total")}</th>
                   {releve.periodes.map((p) => (
                     <th key={p.cle} className={styles.colChiffre}>
                       {p.label}
                     </th>
                   ))}
-                  <th className={styles.colChiffre}>Total</th>
+                  <th className={styles.colChiffre}>{t("panier_total")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,7 +198,7 @@ function RelevesContent() {
                   </tr>
                 ))}
                 <tr className={styles.ligneTotal}>
-                  <td>TOTAL GÉNÉRAL</td>
+                  <td>{t("rel_totalGeneral")}</td>
                   {releve.periodes.map((p) => (
                     <td key={p.cle} className={styles.colChiffre}>
                       {formaterCellule(releve.totauxParPeriode[p.cle])}
@@ -213,12 +211,12 @@ function RelevesContent() {
           </div>
 
           <p className={styles.certification}>
-            Relevé certifié par la plateforme ELEGANZ — généré le{" "}
+            {t("rel_certifiePar")}{" "}
             {new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(
               new Date(releve.genereLe),
             )}
-            . Code de vérification : <strong>{releve.codeCertification}</strong> —{" "}
-            {releve.totalGeneral.ventesCount} vente(s)/commande(s) incluse(s).
+            . {t("rel_codeVerification")} <strong>{releve.codeCertification}</strong> —{" "}
+            {releve.totalGeneral.ventesCount} {t("rel_venteCommandeIncluse")}
           </p>
         </>
       )}

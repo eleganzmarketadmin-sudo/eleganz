@@ -7,6 +7,7 @@ import { api, ApiError } from "../../lib/api";
 import { formatMoney, formatDate } from "../../lib/money";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface DocumentVente {
@@ -21,21 +22,21 @@ interface DocumentVente {
   client: string | null;
 }
 
-const LABELS_TYPE: Record<string, string> = {
-  TICKET: "Ticket de caisse",
-  RECEIPT: "Reçu",
-  INVOICE_INTERNAL: "Facture interne",
-  INVOICE_FISCAL: "Facture fiscale",
-  PROFORMA: "Facture proforma",
-  QUOTE: "Devis",
-  CREDIT_NOTE: "Note de crédit",
-  DELIVERY_NOTE: "Bon de livraison",
+const CLES_TYPE: Record<string, string> = {
+  TICKET: "fact_typeTicket",
+  RECEIPT: "fact_typeRecu",
+  INVOICE_INTERNAL: "fact_typeFactureInterne",
+  INVOICE_FISCAL: "fact_typeFactureFiscale",
+  PROFORMA: "fact_typeProforma",
+  QUOTE: "fact_typeDevis",
+  CREDIT_NOTE: "fact_typeNoteCredit",
+  DELIVERY_NOTE: "fact_typeBonLivraison",
 };
 
-const LABELS_SOURCE: Record<string, string> = {
-  CAISSE: "Caisse",
-  MARKETPLACE: "Marketplace",
-  AUTRE: "Autre",
+const CLES_SOURCE: Record<string, string> = {
+  CAISSE: "nav_caisse",
+  MARKETPLACE: "nom_market",
+  AUTRE: "fact_sourceAutre",
 };
 
 /**
@@ -48,6 +49,7 @@ const LABELS_SOURCE: Record<string, string> = {
  */
 function FacturesContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [documents, setDocuments] = useState<DocumentVente[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -62,7 +64,7 @@ function FacturesContent() {
     api
       .get<DocumentVente[]>(`/shops/${currentShop.id}/documents`)
       .then(setDocuments)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cmd_erreurGenerique")))
       .finally(() => setChargement(false));
   }, [currentShop]);
 
@@ -91,7 +93,7 @@ function FacturesContent() {
     try {
       await ouvrirDocumentPdf(`/shops/${currentShop.id}/documents/${documentId}/pdf`);
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Le document n'a pas pu être ouvert.");
+      setErreur(err instanceof Error ? err.message : t("fact_erreurOuverture"));
     } finally {
       setImpressionEnCours(null);
     }
@@ -104,7 +106,7 @@ function FacturesContent() {
     try {
       await telechargerFichier(`/shops/${currentShop.id}/documents/export`, "mes-ventes-eleganz.xlsx");
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Export impossible.");
+      setErreur(err instanceof Error ? err.message : t("fact_exportImpossible"));
     } finally {
       setExportEnCours(false);
     }
@@ -112,11 +114,8 @@ function FacturesContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Mes factures</h1>
-      <p className={styles.texteAide}>
-        Toutes les ventes de la boutique — comptoir et Marketplace — avec leurs documents, en un
-        seul endroit, indépendamment de la gestion du catalogue ou des commandes en cours.
-      </p>
+      <h1 className={styles.titre}>{t("nav_mesFactures")}</h1>
+      <p className={styles.texteAide}>{t("fact_texteAide")}</p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
@@ -124,7 +123,7 @@ function FacturesContent() {
         <input
           className={styles.recherche}
           type="text"
-          placeholder="Chercher par n° de document ou client…"
+          placeholder={t("fact_placeholderRecherche")}
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
@@ -135,12 +134,12 @@ function FacturesContent() {
               className={`${styles.filtreBouton} ${filtreSource === f ? styles.filtreBoutonActif : ""}`}
               onClick={() => setFiltreSource(f)}
             >
-              {f === "TOUS" ? "Toutes origines" : LABELS_SOURCE[f]}
+              {f === "TOUS" ? t("fact_toutesOrigines") : t(CLES_SOURCE[f])}
             </button>
           ))}
         </div>
         <button className={styles.boutonSecondaire} onClick={exporter} disabled={exportEnCours}>
-          {exportEnCours ? "…" : "Exporter en Excel"}
+          {exportEnCours ? "…" : t("fact_exporterExcel")}
         </button>
       </div>
 
@@ -148,30 +147,28 @@ function FacturesContent() {
         <div className={styles.totaux}>
           {totalParDevise.map(([devise, montant]) => (
             <span key={devise}>
-              Total affiché : <strong className="chiffre">{formatMoney(montant, devise)}</strong>
+              {t("fact_totalAffiche")} <strong className="chiffre">{formatMoney(montant, devise)}</strong>
             </span>
           ))}
         </div>
       )}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : documentsVisibles.length === 0 ? (
         <p className={styles.messageVide}>
-          {documents.length === 0
-            ? "Aucune vente enregistrée pour l'instant. Vos tickets de caisse et vos commandes Marketplace apparaîtront ici."
-            : "Aucun document ne correspond à cette recherche."}
+          {documents.length === 0 ? t("fact_aucuneVente") : t("fact_aucunResultatRecherche")}
         </p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>N°</th>
-              <th>Type</th>
-              <th>Origine</th>
-              <th>Client</th>
-              <th className={styles.colChiffre}>Montant</th>
-              <th>Date</th>
+              <th>{t("fact_colNum")}</th>
+              <th>{t("fact_colType")}</th>
+              <th>{t("fact_colOrigine")}</th>
+              <th>{t("eq_colContact")}</th>
+              <th className={styles.colChiffre}>{t("fact_colMontant")}</th>
+              <th>{t("fact_colDate")}</th>
               <th></th>
             </tr>
           </thead>
@@ -179,8 +176,8 @@ function FacturesContent() {
             {documentsVisibles.map((d) => (
               <tr key={d.id}>
                 <td className={styles.colMono}>{d.number}</td>
-                <td>{LABELS_TYPE[d.type] ?? d.type}</td>
-                <td>{LABELS_SOURCE[d.source]}</td>
+                <td>{CLES_TYPE[d.type] ? t(CLES_TYPE[d.type]) : d.type}</td>
+                <td>{t(CLES_SOURCE[d.source])}</td>
                 <td>{d.client ?? "—"}</td>
                 <td className={styles.colChiffre}>
                   {d.amount != null && d.currency ? formatMoney(d.amount, d.currency) : "—"}
@@ -192,7 +189,7 @@ function FacturesContent() {
                     onClick={() => reimprimer(d.id)}
                     disabled={impressionEnCours === d.id}
                   >
-                    {impressionEnCours === d.id ? "…" : "Réimprimer"}
+                    {impressionEnCours === d.id ? "…" : t("fact_reimprimer")}
                   </button>
                 </td>
               </tr>
