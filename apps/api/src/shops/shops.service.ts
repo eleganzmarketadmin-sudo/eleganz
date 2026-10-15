@@ -4,6 +4,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
+import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
@@ -309,5 +310,39 @@ export class ShopsService {
     // fiche livreur d'une autre boutique en devinant un id.
     await this.prisma.shopDriver.findFirstOrThrow({ where: { id: driverId, shopId } });
     return this.prisma.shopDriver.update({ where: { id: driverId }, data: dto });
+  }
+
+  // ---------------------------------------------------------------------
+  // Zones de livraison (prompt du 15 oct. 2026) — où un vendeur peut
+  // livrer, en couples pays+ville précis (jamais de saisie libre), pour
+  // rester filtrable côté acheteur (voir MarketplaceCatalogService).
+  // ---------------------------------------------------------------------
+
+  listDeliveryZones(shopId: string) {
+    return this.prisma.shopDeliveryZone.findMany({
+      where: { shopId },
+      include: { country: true, city: true },
+      orderBy: [{ country: { name: "asc" } }, { city: { name: "asc" } }],
+    });
+  }
+
+  async addDeliveryZone(shopId: string, dto: AddDeliveryZoneDto) {
+    // La ville porte déjà son pays (City.countryId) — on le récupère plutôt
+    // que de le demander au client, pour ne jamais stocker un couple
+    // pays/ville incohérent.
+    const city = await this.prisma.city.findUniqueOrThrow({ where: { id: dto.cityId } });
+    return this.prisma.shopDeliveryZone.upsert({
+      where: { shopId_cityId: { shopId, cityId: city.id } },
+      update: {},
+      create: { shopId, cityId: city.id, countryId: city.countryId },
+      include: { country: true, city: true },
+    });
+  }
+
+  async removeDeliveryZone(shopId: string, zoneId: string) {
+    // findFirstOrThrow avec shopId : même garde que pour les livreurs —
+    // empêche une boutique de retirer la zone d'une autre boutique.
+    await this.prisma.shopDeliveryZone.findFirstOrThrow({ where: { id: zoneId, shopId } });
+    await this.prisma.shopDeliveryZone.delete({ where: { id: zoneId } });
   }
 }

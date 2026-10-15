@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
+import { ZonesLivraison } from "../../components/ZonesLivraison";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface ShopDetails {
@@ -17,6 +19,7 @@ interface ShopDetails {
 
 function ParametresContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -136,6 +139,14 @@ function ParametresContent() {
           </button>
         </form>
       </section>
+
+      {currentShop && (
+        <section className={styles.section}>
+          <h2 className={styles.sousTitre}>{t("zonesLivraison_titre")}</h2>
+          <p className={styles.note}>{t("zonesLivraison_description")}</p>
+          <ZonesLivraison shopId={currentShop.id} />
+        </section>
+      )}
     </div>
   );
 }

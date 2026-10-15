@@ -26,6 +26,7 @@ import { AiCreditsModule } from "./ai-credits/ai-credits.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { EcheancierModule } from "./echeancier/echeancier.module";
+import { GeoModule } from "./geo/geo.module";
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { EcheancierModule } from "./echeancier/echeancier.module";
     NotificationsModule,
     MessagingModule,
     EcheancierModule,
+    GeoModule,
   ],
 })
 export class AppModule {}

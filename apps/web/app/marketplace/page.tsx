@@ -6,6 +6,8 @@ import { api } from "../lib/api";
 import { formatMoney } from "../lib/money";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
+import { useLocale } from "../lib/i18n/LocaleContext";
+import { nomPays } from "../lib/i18n/nomPays";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -24,20 +26,71 @@ interface Produit {
   variants: Variant[];
 }
 
+interface Pays {
+  id: string;
+  isoCode: string;
+  name: string;
+}
+
+interface Ville {
+  id: string;
+  name: string;
+}
+
 export default function MarketplacePage() {
+  const { t } = useLocale();
   const [recherche, setRecherche] = useState("");
   const [requeteActive, setRequeteActive] = useState("");
   const [produits, setProduits] = useState<Produit[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  // Filtre "livre chez moi" (prompt du 15 oct. 2026) — deux menus en
+  // cascade, jamais de saisie libre, pour rester un filtre exact côté API.
+  const [pays, setPays] = useState<Pays[]>([]);
+  const [villesDuPaysChoisi, setVillesDuPaysChoisi] = useState<Ville[]>([]);
+  const [paysChoisiId, setPaysChoisiId] = useState("");
+  const [villeChoisieId, setVilleChoisieId] = useState("");
+
+  useEffect(() => {
+    api
+      .get<Pays[]>("/geo/pays", false)
+      .then(setPays)
+      .catch(() => {
+        // Non bloquant : sans liste de pays, le filtre par ville reste simplement caché.
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!paysChoisiId) {
+      setVillesDuPaysChoisi([]);
+      return;
+    }
+    let annule = false;
+    api
+      .get<Ville[]>(`/geo/pays/${paysChoisiId}/villes`, false)
+      .then((villes) => {
+        if (!annule) {
+          setVillesDuPaysChoisi(villes);
+          setVilleChoisieId("");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+    };
+  }, [paysChoisiId]);
+
   useEffect(() => {
     let annule = false;
     setChargement(true);
     setErreur(null);
-    const params = requeteActive ? `?q=${encodeURIComponent(requeteActive)}` : "";
+    const parametres = new URLSearchParams();
+    if (requeteActive) parametres.set("q", requeteActive);
+    if (villeChoisieId) parametres.set("cityId", villeChoisieId);
+    const chaine = parametres.toString();
     api
-      .get<Produit[]>(`/marketplace/products${params}`, false)
+      .get<Produit[]>(`/marketplace/products${chaine ? `?${chaine}` : ""}`, false)
       .then((data) => {
         if (!annule) setProduits(data);
       })
@@ -50,7 +103,7 @@ export default function MarketplacePage() {
     return () => {
       annule = true;
     };
-  }, [requeteActive]);
+  }, [requeteActive, villeChoisieId]);
 
   return (
     <div className={styles.cadre}>
@@ -75,6 +128,31 @@ export default function MarketplacePage() {
           onChange={(e) => setRecherche(e.target.value)}
         />
         <BoutonBientotDisponible icone="📷" label="Rechercher par photo" />
+        <select
+          aria-label={t("zonesLivraison_pays")}
+          value={paysChoisiId}
+          onChange={(e) => setPaysChoisiId(e.target.value)}
+        >
+          <option value="">{t("zonesLivraison_choisirPays")}</option>
+          {pays.map((p) => (
+            <option key={p.id} value={p.id}>
+              {nomPays(t, p)}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t("zonesLivraison_ville")}
+          value={villeChoisieId}
+          onChange={(e) => setVilleChoisieId(e.target.value)}
+          disabled={!paysChoisiId}
+        >
+          <option value="">{t("zonesLivraison_choisirVille")}</option>
+          {villesDuPaysChoisi.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+            </option>
+          ))}
+        </select>
       </form>
 
       {chargement ? (

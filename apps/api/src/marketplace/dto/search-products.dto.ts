@@ -32,4 +32,10 @@ export class SearchProductsDto {
   @Type(() => Number)
   @IsNumber()
   maxPrice?: number;
+
+  // Filtre "livre chez moi" (prompt du 15 oct. 2026) — id d'une City de
+  // référence (voir GeoModule), jamais une saisie libre.
+  @IsOptional()
+  @IsString()
+  cityId?: string;
 }

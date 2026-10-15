@@ -35,6 +35,15 @@
   min-height: var(--touche-min);
 }
 
+.barreRecherche select {
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
 .grille {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

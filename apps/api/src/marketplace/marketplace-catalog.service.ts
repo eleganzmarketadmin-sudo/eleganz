@@ -10,7 +10,13 @@ export class MarketplaceCatalogService {
     return this.prisma.product.findMany({
       where: {
         isPublished: true,
-        shop: { isPubliclyListed: true, status: { in: ["FREE_PERIOD", "ACTIVE"] } },
+        shop: {
+          isPubliclyListed: true,
+          status: { in: ["FREE_PERIOD", "ACTIVE"] },
+          // Filtre "livre chez moi" (prompt du 15 oct. 2026) — ne garde que
+          // les boutiques ayant déclaré cette ville comme zone de livraison.
+          ...(dto.cityId ? { deliveryZones: { some: { cityId: dto.cityId } } } : {}),
+        },
         ...(dto.category ? { category: dto.category } : {}),
         ...(dto.q
           ? {
@@ -32,7 +38,14 @@ export class MarketplaceCatalogService {
       },
       include: {
         variants: { where: { stockQty: { gt: 0 } } },
-        shop: { select: { id: true, name: true, slug: true } },
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            deliveryZones: { include: { country: true, city: true } },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -41,7 +54,17 @@ export class MarketplaceCatalogService {
   async findPublished(productId: string) {
     return this.prisma.product.findFirstOrThrow({
       where: { id: productId, isPublished: true, shop: { isPubliclyListed: true } },
-      include: { variants: true, shop: { select: { id: true, name: true, slug: true } } },
+      include: {
+        variants: true,
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            deliveryZones: { include: { country: true, city: true } },
+          },
+        },
+      },
     });
   }
 }

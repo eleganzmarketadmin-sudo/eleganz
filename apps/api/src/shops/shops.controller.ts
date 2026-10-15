@@ -4,6 +4,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
+import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "./shop-membership.guard";
 import { ShopRoles } from "./roles.decorator";
@@ -100,5 +101,28 @@ export class ShopsController {
     @Body() dto: UpdateShopDriverDto,
   ) {
     return this.shopsService.updateShopDriver(shopId, driverId, dto);
+  }
+
+  // Zones de livraison (prompt du 15 oct. 2026) — mêmes rôles que les
+  // réglages de facturation : qui peut changer les paramètres de la
+  // boutique peut aussi déclarer où elle livre.
+  @Get(":shopId/delivery-zones")
+  @UseGuards(ShopMembershipGuard)
+  listDeliveryZones(@Param("shopId") shopId: string) {
+    return this.shopsService.listDeliveryZones(shopId);
+  }
+
+  @Post(":shopId/delivery-zones")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  addDeliveryZone(@Param("shopId") shopId: string, @Body() dto: AddDeliveryZoneDto) {
+    return this.shopsService.addDeliveryZone(shopId, dto);
+  }
+
+  @Delete(":shopId/delivery-zones/:zoneId")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  removeDeliveryZone(@Param("shopId") shopId: string, @Param("zoneId") zoneId: string) {
+    return this.shopsService.removeDeliveryZone(shopId, zoneId);
   }
 }

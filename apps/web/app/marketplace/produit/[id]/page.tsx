@@ -7,6 +7,8 @@ import { formatMoney } from "../../../lib/money";
 import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
 import { RetourLien } from "../../../components/RetourLien";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
+import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
 
 interface Variant {
@@ -18,18 +20,25 @@ interface Variant {
   stockQty: number;
 }
 
+interface ZoneLivraison {
+  id: string;
+  country: { isoCode: string; name: string };
+  city: { name: string };
+}
+
 interface Produit {
   id: string;
   name: string;
   description?: string | null;
   images: string[];
-  shop: { id: string; name: string; slug: string };
+  shop: { id: string; name: string; slug: string; deliveryZones?: ZoneLivraison[] };
   variants: Variant[];
 }
 
 export default function ProduitPage() {
   const params = useParams<{ id: string }>();
   const { ajouter } = useCart();
+  const { t } = useLocale();
   const [produit, setProduit] = useState<Produit | null>(null);
   const [varianteId, setVarianteId] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -83,6 +92,14 @@ export default function ProduitPage() {
       <div>
         <h1 className={styles.titre}>{produit.name}</h1>
         <p className={styles.boutique}>Vendu par {produit.shop.name}</p>
+        {produit.shop.deliveryZones && produit.shop.deliveryZones.length > 0 && (
+          <p className={styles.boutique} style={{ marginBottom: "16px" }}>
+            {t("zonesLivraison_titre")} : {" "}
+            {produit.shop.deliveryZones
+              .map((zone) => `${nomPays(t, zone.country)} — ${zone.city.name}`)
+              .join(" · ")}
+          </p>
+        )}
         {produit.description && <p style={{ marginBottom: "24px" }}>{produit.description}</p>}
 
         {variante && <div className={styles.prix}>{formatMoney(Number(variante.sellPrice), variante.currency)}</div>}
