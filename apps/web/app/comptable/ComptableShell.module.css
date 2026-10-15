@@ -73,6 +73,15 @@
   overflow-x: auto;
 }
 
+.navGroupe {
+  display: flex;
+  flex: none;
+}
+
+.navGroupe + .navGroupe {
+  border-left: 2px solid var(--color-border);
+}
+
 .navLien {
   padding: var(--espace-3) var(--espace-4);
   font-weight: 500;
@@ -82,6 +91,7 @@
   min-height: var(--touche-min);
   display: flex;
   align-items: center;
+  gap: var(--espace-2);
 }
 
 .navLien:hover {

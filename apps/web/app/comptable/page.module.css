@@ -31,6 +31,38 @@
   border-bottom: 2px solid var(--color-ink);
 }
 
+.blocUrgent {
+  border: 2px solid var(--color-flamme);
+  background: color-mix(in srgb, var(--color-flamme) 8%, transparent);
+  padding: var(--espace-3) var(--espace-4) var(--espace-2);
+  margin-bottom: var(--espace-4);
+}
+
+.sectionTitreUrgent {
+  font-size: 1rem;
+  margin: 0 0 var(--espace-3);
+  padding-bottom: var(--espace-2);
+  border-bottom: 2px solid var(--color-flamme);
+  color: var(--color-flamme);
+}
+
+.carteDossier {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  border: 2px solid var(--color-vert-paiement);
+  color: var(--color-ink);
+  padding: var(--espace-3) var(--espace-4);
+  margin-bottom: var(--espace-4);
+  font-weight: 600;
+}
+
+.carteDossier:hover {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  text-decoration: none;
+}
+
 .rappel {
   display: flex;
   justify-content: space-between;

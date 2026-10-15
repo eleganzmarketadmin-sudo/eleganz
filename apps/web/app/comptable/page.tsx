@@ -159,12 +159,12 @@ function AccueilContenu() {
           {reminders && (reminders.urgents.length > 0 || reminders.aVenir.length > 0 || reminders.infos.length > 0) && (
             <>
               {reminders.urgents.length > 0 && (
-                <>
-                  <h2 className={styles.sectionTitre}>{t("accueil_urgent")}</h2>
+                <div className={styles.blocUrgent}>
+                  <h2 className={styles.sectionTitreUrgent}>{t("accueil_urgent")}</h2>
                   {reminders.urgents.map((r, i) => (
                     <RappelLigne key={`u-${i}`} rappel={r} niveau="urgent" />
                   ))}
-                </>
+                </div>
               )}
               {reminders.aVenir.length > 0 && (
                 <>
@@ -205,6 +205,9 @@ function AccueilContenu() {
               <p>
                 <Link href="/comptable/chiffres">{t("accueil_voirChiffres")}</Link>
               </p>
+              <Link className={styles.carteDossier} href="/comptable/dossier-financement">
+                <span aria-hidden="true">💰</span> {t("titre_dossierFinancement")}
+              </Link>
             </>
           )}
 
