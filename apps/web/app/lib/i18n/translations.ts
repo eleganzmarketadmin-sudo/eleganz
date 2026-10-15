@@ -41,6 +41,7 @@ type Dictionnaire = Record<string, string>;
 
 const fr: Dictionnaire = {
   nav_accueil: "Accueil",
+  nav_aPropos: "À propos",
   nav_mesActivites: "Mes activités",
   nav_chiffres: "Mon activité en chiffres",
   nav_agenda: "Agenda",
@@ -73,6 +74,8 @@ const fr: Dictionnaire = {
   langue_reviewNotice:
     "Traduction automatique pour cette langue — en cours de vérification par un locuteur natif. Certains termes peuvent être imprécis.",
   titre_accueil: "Secourable",
+  nom_gestion: "Gestion",
+  nom_market: "Market",
   soustitre_accueil: "Mon carnet de gestion au quotidien.",
   titre_activites: "Mes activités",
   titre_chiffres: "Mon activité en chiffres",
@@ -175,6 +178,7 @@ const fr: Dictionnaire = {
 
 const en: Dictionnaire = {
   nav_accueil: "Home",
+  nav_aPropos: "About",
   nav_mesActivites: "My activities",
   nav_chiffres: "My activity in numbers",
   nav_agenda: "Agenda",
@@ -206,7 +210,9 @@ const en: Dictionnaire = {
   langue_label: "Language",
   langue_reviewNotice:
     "Machine-assisted translation for this language — under review by a native speaker. Some terms may be imprecise.",
-  titre_accueil: "Secourable",
+  titre_accueil: "Helper",
+  nom_gestion: "Management",
+  nom_market: "Market",
   soustitre_accueil: "Your day-to-day bookkeeping notebook.",
   titre_activites: "My activities",
   titre_chiffres: "My activity in numbers",
@@ -305,6 +311,7 @@ const en: Dictionnaire = {
 
 const es: Dictionnaire = {
   nav_accueil: "Inicio",
+  nav_aPropos: "Acerca de",
   nav_mesActivites: "Mis actividades",
   nav_chiffres: "Mi actividad en cifras",
   nav_agenda: "Agenda",
@@ -336,7 +343,9 @@ const es: Dictionnaire = {
   langue_label: "Idioma",
   langue_reviewNotice:
     "Traducción asistida por máquina para este idioma, en revisión por un hablante nativo. Algunos términos pueden ser imprecisos.",
-  titre_accueil: "Secourable",
+  titre_accueil: "Auxilio",
+  nom_gestion: "Gestión",
+  nom_market: "Mercado",
   soustitre_accueil: "Tu cuaderno de gestión diaria.",
   titre_activites: "Mis actividades",
   titre_chiffres: "Mi actividad en cifras",
@@ -408,6 +417,7 @@ const es: Dictionnaire = {
 
 const ar: Dictionnaire = {
   nav_accueil: "الرئيسية",
+  nav_aPropos: "حول",
   nav_mesActivites: "أنشطتي",
   nav_chiffres: "نشاطي بالأرقام",
   nav_agenda: "الأجندة",
@@ -438,7 +448,9 @@ const ar: Dictionnaire = {
   commun_au: "إلى",
   langue_label: "اللغة",
   langue_reviewNotice: "ترجمة آلية لهذه اللغة، قيد المراجعة من قبل متحدث أصلي. قد تكون بعض المصطلحات غير دقيقة.",
-  titre_accueil: "Secourable",
+  titre_accueil: "العون",
+  nom_gestion: "الإدارة",
+  nom_market: "السوق",
   soustitre_accueil: "دفتر إدارتك اليومي.",
   titre_activites: "أنشطتي",
   titre_chiffres: "نشاطي بالأرقام",
@@ -509,6 +521,7 @@ const ar: Dictionnaire = {
 
 const pt: Dictionnaire = {
   nav_accueil: "Início",
+  nav_aPropos: "Sobre",
   nav_mesActivites: "Minhas atividades",
   nav_chiffres: "Minha atividade em números",
   nav_agenda: "Agenda",
@@ -540,7 +553,9 @@ const pt: Dictionnaire = {
   langue_label: "Idioma",
   langue_reviewNotice:
     "Tradução assistida por máquina para este idioma, em revisão por um falante nativo. Alguns termos podem ser imprecisos.",
-  titre_accueil: "Secourable",
+  titre_accueil: "Socorro",
+  nom_gestion: "Gestão",
+  nom_market: "Mercado",
   soustitre_accueil: "Seu caderno de gestão do dia a dia.",
   titre_activites: "Minhas atividades",
   titre_chiffres: "Minha atividade em números",
@@ -612,6 +627,7 @@ const pt: Dictionnaire = {
 
 const sw: Dictionnaire = {
   nav_accueil: "Nyumbani",
+  nav_aPropos: "Kuhusu",
   nav_mesActivites: "Shughuli zangu",
   nav_chiffres: "Shughuli yangu kwa namba",
   nav_agenda: "Ratiba",
@@ -642,7 +658,9 @@ const sw: Dictionnaire = {
   commun_au: "Hadi",
   langue_label: "Lugha",
   langue_reviewNotice: "Tafsiri ya kiotomatiki kwa lugha hii — inakaguliwa na mzawa wa lugha. Maneno mengine yanaweza kuwa si sahihi kabisa.",
-  titre_accueil: "Secourable",
+  titre_accueil: "Msaidizi",
+  nom_gestion: "Usimamizi",
+  nom_market: "Soko",
   soustitre_accueil: "Kitabu changu cha usimamizi wa kila siku.",
   titre_activites: "Shughuli zangu",
   titre_chiffres: "Shughuli yangu kwa namba",
@@ -719,6 +737,7 @@ const sw: Dictionnaire = {
 // manque retombe sur le français (voir resoudre() dans LocaleContext.tsx).
 const ln: Dictionnaire = {
   nav_accueil: "Ebandeli",
+  nav_aPropos: "Na ntina na",
   nav_mesActivites: "Misala na ngai",
   nav_chiffres: "Misala na ngai na mituya",
   nav_agenda: "Agenda",
@@ -742,7 +761,9 @@ const ln: Dictionnaire = {
   commun_total: "Motango mobimba",
   commun_solde: "Oyo etikali",
   langue_label: "Monoko",
-  titre_accueil: "Secourable",
+  titre_accueil: "Lisungi",
+  nom_gestion: "Bokambi",
+  nom_market: "Zando",
   soustitre_accueil: "Buku na ngai ya kotambwisa mombongo mokolo na mokolo.",
   titre_activites: "Misala na ngai",
   titre_chiffres: "Misala na ngai na mituya",
@@ -758,6 +779,7 @@ const ln: Dictionnaire = {
 
 const kg: Dictionnaire = {
   nav_accueil: "Ntete",
+  nav_aPropos: "Mu diambu dia",
   nav_mesActivites: "Mavanga mama",
   nav_chiffres: "Mavanga mama mu bitini",
   nav_agenda: "Agenda",
@@ -781,7 +803,9 @@ const kg: Dictionnaire = {
   commun_total: "Yonso kumosi",
   commun_solde: "Mbongo yina sala",
   langue_label: "Ndinga",
-  titre_accueil: "Secourable",
+  titre_accueil: "Lusadusu",
+  nom_gestion: "Luyalu",
+  nom_market: "Zandu",
   soustitre_accueil: "Kahya ya mavanga ma lumbu ke lumbu.",
   titre_activites: "Mavanga mama",
   titre_chiffres: "Mavanga mama mu bitini",
@@ -797,6 +821,7 @@ const kg: Dictionnaire = {
 
 const lu: Dictionnaire = {
   nav_accueil: "Kuetu",
+  nav_aPropos: "Bualu bua",
   nav_mesActivites: "Midimu yanyi",
   nav_chiffres: "Midimu yanyi mu nombre",
   nav_agenda: "Agenda",
@@ -820,7 +845,9 @@ const lu: Dictionnaire = {
   commun_total: "Yonso pamue",
   commun_solde: "Tshisala",
   langue_label: "Muakulu",
-  titre_accueil: "Secourable",
+  titre_accueil: "Diambuluisha",
+  nom_gestion: "Bulombodi",
+  nom_market: "Tshisale",
   soustitre_accueil: "Mukanda wanyi wa kulombola bibi bia dituku ne dituku.",
   titre_activites: "Midimu yanyi",
   titre_chiffres: "Midimu yanyi mu nombre",

@@ -52,7 +52,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           <LogoMark size={30} />
           <div>
             <div className={styles.marque}>
-              ELEGANZ <span>Gestion</span>
+              ELEGANZ <span>{t("nom_gestion")}</span>
             </div>
             {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
           </div>

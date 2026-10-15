@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { SiteHeader } from "./components/SiteHeader";
 import { Footer } from "./components/Footer";
+import { useLocale } from "./lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Refonte du 15 oct. 2026 (demande UX, point 1) : l'ancienne page montrait
@@ -12,6 +15,8 @@ import styles from "./page.module.css";
 // de nommer directement un produit — à la manière d'un portail Odoo, qui
 // présente la suite avant de pousser vers une app précise.
 export default function HomePage() {
+  const { t } = useLocale();
+
   return (
     <div className={styles.page}>
       <SiteHeader />
@@ -51,7 +56,7 @@ export default function HomePage() {
           <div className={`${styles.carte} ${styles.comptable}`}>
             <h3>Vous tenez une activité, sans boutique ni catalogue ?</h3>
             <p>
-              <strong>ELEGANZ Secourable</strong> — ventes et dépenses par devise, dettes et
+              <strong>ELEGANZ {t("titre_accueil")}</strong> — ventes et dépenses par devise, dettes et
               créances, loyers, versements des travailleurs, agenda des échéances et synthèses
               exportables. Six mois gratuits, puis 1 $ par mois.
             </p>
@@ -63,7 +68,7 @@ export default function HomePage() {
           <div className={`${styles.carte} ${styles.gestion}`}>
             <h3>Vous avez une boutique, avec caisse et stock à gérer ?</h3>
             <p>
-              <strong>ELEGANZ Gestion</strong> — la caisse, le stock, les factures et les commandes de
+              <strong>ELEGANZ {t("nom_gestion")}</strong> — la caisse, le stock, les factures et les commandes de
               votre boutique, avec livraison suivie et équipe intégrée, du comptoir jusqu&apos;au
               tableau de bord du soir.
             </p>
@@ -75,7 +80,7 @@ export default function HomePage() {
           <div className={`${styles.carte} ${styles.marketplace}`}>
             <h3>Vous cherchez à acheter ou vendre en ligne ?</h3>
             <p>
-              <strong className="titre-vitrine">ELEGANZ Market</strong> — la vitrine qui réunit
+              <strong className="titre-vitrine">ELEGANZ {t("nom_market")}</strong> — la vitrine qui réunit
               vendeurs et acheteurs congolais, tous secteurs confondus : recherche, commande et
               livraison suivie à Kinshasa.
             </p>

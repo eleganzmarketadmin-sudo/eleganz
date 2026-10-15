@@ -8,14 +8,6 @@ import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./SiteHeader.module.css";
 
-const LIENS = [
-  { href: "/", label: "Accueil" },
-  { href: "/connexion", label: "Gestion" },
-  { href: "/marketplace", label: "Market" },
-  { href: "/comptable", label: "Secourable" },
-  { href: "/a-propos", label: "À propos" },
-];
-
 /**
  * Barre de navigation des pages publiques (accueil, à propos) — demande UX
  * du 15 oct. 2026, point 1 : "il n'y a même pas de barre de menu". N'est
@@ -28,6 +20,14 @@ const LIENS = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { t } = useLocale();
+
+  const LIENS = [
+    { href: "/", label: t("nav_accueil") },
+    { href: "/connexion", label: t("nom_gestion") },
+    { href: "/marketplace", label: t("nom_market") },
+    { href: "/comptable", label: t("titre_accueil") },
+    { href: "/a-propos", label: t("nav_aPropos") },
+  ];
 
   return (
     <header className={styles.entete}>

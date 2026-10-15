@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { SiteHeader } from "../components/SiteHeader";
 import { Footer } from "../components/Footer";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 /**
@@ -14,6 +17,8 @@ import styles from "./page.module.css";
  * livreur/inscription/page.tsx et delivery.service.ts.
  */
 export default function AProposPage() {
+  const { t } = useLocale();
+
   return (
     <div className={styles.page}>
       <SiteHeader />
@@ -32,7 +37,7 @@ export default function AProposPage() {
 
       <section className={styles.modules}>
         <div className={`${styles.carte} ${styles.comptable}`}>
-          <h2>ELEGANZ Secourable</h2>
+          <h2>ELEGANZ {t("titre_accueil")}</h2>
           <p>
             Un carnet de gestion quotidien pour toute activité — commerce,
             location, service, véhicule — sans boutique ni catalogue à créer.
@@ -46,7 +51,7 @@ export default function AProposPage() {
         </div>
 
         <div className={`${styles.carte} ${styles.gestion}`}>
-          <h2>ELEGANZ Gestion</h2>
+          <h2>ELEGANZ {t("nom_gestion")}</h2>
           <p>
             La caisse, le stock et les factures d&apos;une boutique, avec prix
             négocié à l&apos;encaissement, import/export Excel du catalogue,
@@ -58,7 +63,7 @@ export default function AProposPage() {
         </div>
 
         <div className={`${styles.carte} ${styles.marketplace}`}>
-          <h2 className="titre-vitrine">ELEGANZ Market</h2>
+          <h2 className="titre-vitrine">ELEGANZ {t("nom_market")}</h2>
           <p>
             La vitrine qui réunit vendeurs et acheteurs congolais dans un même marché en ligne,
             tous secteurs confondus. Recherche, fiche produit, panier, commande, suivi de livraison

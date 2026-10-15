@@ -22,7 +22,7 @@ export function MarketplaceHeader() {
       <header className={styles.entete}>
         <Link href="/marketplace" className={styles.marque}>
           <LogoMark size={28} />
-          ELEGANZ <span className={styles.nomModule}>Market</span>
+          ELEGANZ <span className={styles.nomModule}>{t("nom_market")}</span>
         </Link>
         <nav className={styles.liens}>
           <AccueilLien />

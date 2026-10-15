@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { LogoMark, BandeMarque } from "./Logo";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./Footer.module.css";
 
 const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable", string> = {
@@ -40,6 +41,7 @@ export function Footer({
 }: {
   variante: "accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable";
 }) {
+  const { t } = useLocale();
   const [contact, setContact] = useState<CoordonneesPlateforme | null>(null);
 
   useEffect(() => {
@@ -85,20 +87,20 @@ export function Footer({
           <p className={styles.titreColonne}>À propos d&apos;ELEGANZ</p>
           <p className={styles.texteColonne}>
             Un écosystème congolais pour commerçants et indépendants : le carnet
-            de gestion Secourable, la caisse et le stock de Gestion, et la
-            marketplace Market pour vendre en ligne — trois outils, une seule
+            de gestion {t("titre_accueil")}, la caisse et le stock de {t("nom_gestion")}, et la
+            marketplace {t("nom_market")} pour vendre en ligne — trois outils, une seule
             maison.
           </p>
           <Link href="/a-propos">En savoir plus</Link>
         </div>
 
         <nav className={styles.liens} aria-label="Autres espaces ELEGANZ">
-          <Link href="/">Accueil</Link>
-          <Link href="/marketplace">ELEGANZ Market</Link>
-          <Link href="/connexion">ELEGANZ Gestion</Link>
-          <Link href="/comptable">ELEGANZ Secourable</Link>
+          <Link href="/">{t("nav_accueil")}</Link>
+          <Link href="/marketplace">ELEGANZ {t("nom_market")}</Link>
+          <Link href="/connexion">ELEGANZ {t("nom_gestion")}</Link>
+          <Link href="/comptable">ELEGANZ {t("titre_accueil")}</Link>
           <Link href="/admin/connexion">Centre de pilotage</Link>
-          <Link href="/a-propos">À propos</Link>
+          <Link href="/a-propos">{t("nav_aPropos")}</Link>
         </nav>
 
         {aDesCoordonnees && (
