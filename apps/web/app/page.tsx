@@ -23,18 +23,14 @@ export default function HomePage() {
 
       <section className={styles.hero}>
         <div className={styles.heroTexte}>
-          <h1>Le commerce congolais, du comptoir à la vitrine</h1>
-          <p>
-            ELEGANZ est un écosystème pensé pour les commerçants et indépendants de Kinshasa : tenir ses
-            comptes, gérer une boutique et vendre en ligne — trois outils séparés, une seule plateforme,
-            construite et exploitée depuis la RDC.
-          </p>
+          <h1>{t("accueil_h1")}</h1>
+          <p>{t("accueil_heroTexte")}</p>
           <div className={styles.heroActions}>
             <a className={styles.lienPrincipal} href="#outils">
-              Choisir mon outil
+              {t("accueil_choisirOutil")}
             </a>
             <Link className={styles.lienSecondaire} href="/a-propos">
-              À propos d&apos;ELEGANZ
+              {t("accueil_aProposLien")}
             </Link>
           </div>
         </div>
@@ -47,45 +43,36 @@ export default function HomePage() {
       </section>
 
       <section className={styles.outils} id="outils">
-        <h2>Quel outil vous correspond ?</h2>
-        <p className={styles.outilsIntro}>
-          Pas besoin de connaître la plateforme à l&apos;avance : répondez à la question qui vous
-          concerne.
-        </p>
+        <h2>{t("accueil_h2Outils")}</h2>
+        <p className={styles.outilsIntro}>{t("accueil_outilsIntro")}</p>
         <div className={styles.grille}>
           <div className={`${styles.carte} ${styles.comptable}`}>
-            <h3>Vous tenez une activité, sans boutique ni catalogue ?</h3>
+            <h3>{t("accueil_questionComptable")}</h3>
             <p>
-              <strong>ELEGANZ {t("titre_accueil")}</strong> — ventes et dépenses par devise, dettes et
-              créances, loyers, versements des travailleurs, agenda des échéances et synthèses
-              exportables. Six mois gratuits, puis 1 $ par mois.
+              <strong>ELEGANZ {t("titre_accueil")}</strong> {t("accueil_descComptable")}
             </p>
             <Link className={styles.lienCarte} href="/comptable">
-              Ouvrir mon carnet
+              {t("accueil_ouvrirCarnet")}
             </Link>
           </div>
 
           <div className={`${styles.carte} ${styles.gestion}`}>
-            <h3>Vous avez une boutique, avec caisse et stock à gérer ?</h3>
+            <h3>{t("accueil_questionGestion")}</h3>
             <p>
-              <strong>ELEGANZ {t("nom_gestion")}</strong> — la caisse, le stock, les factures et les commandes de
-              votre boutique, avec livraison suivie et équipe intégrée, du comptoir jusqu&apos;au
-              tableau de bord du soir.
+              <strong>ELEGANZ {t("nom_gestion")}</strong> {t("accueil_descGestion")}
             </p>
             <Link className={styles.lienCarte} href="/connexion">
-              Ouvrir ma caisse
+              {t("accueil_ouvrirCaisse")}
             </Link>
           </div>
 
           <div className={`${styles.carte} ${styles.marketplace}`}>
-            <h3>Vous cherchez à acheter ou vendre en ligne ?</h3>
+            <h3>{t("accueil_questionMarket")}</h3>
             <p>
-              <strong className="titre-vitrine">ELEGANZ {t("nom_market")}</strong> — la vitrine qui réunit
-              vendeurs et acheteurs congolais, tous secteurs confondus : recherche, commande et
-              livraison suivie, où que vous soyez.
+              <strong className="titre-vitrine">ELEGANZ {t("nom_market")}</strong> {t("accueil_descMarket")}
             </p>
             <Link className={styles.lienCarte} href="/marketplace">
-              Parcourir la vitrine
+              {t("accueil_parcourirVitrine")}
             </Link>
           </div>
         </div>

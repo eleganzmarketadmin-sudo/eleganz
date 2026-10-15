@@ -7,13 +7,13 @@ import { LogoMark, BandeMarque } from "./Logo";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./Footer.module.css";
 
-const TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable", string> = {
-  accueil: "Une maison, plusieurs pièces : la boutique, la vitrine et la route.",
-  gestion: "La caisse et la boutique, tenues au carré.",
-  admin: "La plateforme, supervisée en un coup d'œil.",
-  marketplace: "Vendeurs et acheteurs congolais, une seule vitrine.",
-  livreur: "De l'enlèvement à la remise, mission par mission.",
-  comptable: "Mon carnet de gestion au quotidien.",
+const CLES_TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable", string> = {
+  accueil: "footer_tagline_accueil",
+  gestion: "footer_tagline_gestion",
+  admin: "footer_tagline_admin",
+  marketplace: "footer_tagline_marketplace",
+  livreur: "footer_tagline_livreur",
+  comptable: "footer_tagline_comptable",
 };
 
 interface CoordonneesPlateforme {
@@ -80,32 +80,32 @@ export function Footer({
             <LogoMark size={22} />
             <span>ELEGANZ</span>
           </div>
-          <p className={styles.slogan}>{TAGLINES[variante]}</p>
+          <p className={styles.slogan}>{t(CLES_TAGLINES[variante])}</p>
         </div>
 
         <div className={styles.bloc}>
-          <p className={styles.titreColonne}>À propos d&apos;ELEGANZ</p>
+          <p className={styles.titreColonne}>{t("accueil_aProposLien")}</p>
           <p className={styles.texteColonne}>
-            Un écosystème congolais pour commerçants et indépendants : le carnet
-            de gestion {t("titre_accueil")}, la caisse et le stock de {t("nom_gestion")}, et la
-            marketplace {t("nom_market")} pour vendre en ligne — trois outils, une seule
-            maison.
+            {t("footer_description")
+              .replace("{{secourable}}", t("titre_accueil"))
+              .replace("{{gestion}}", t("nom_gestion"))
+              .replace("{{market}}", t("nom_market"))}
           </p>
-          <Link href="/a-propos">En savoir plus</Link>
+          <Link href="/a-propos">{t("footer_enSavoirPlus")}</Link>
         </div>
 
-        <nav className={styles.liens} aria-label="Autres espaces ELEGANZ">
+        <nav className={styles.liens} aria-label={t("footer_autresEspaces")}>
           <Link href="/">{t("nav_accueil")}</Link>
           <Link href="/marketplace">ELEGANZ {t("nom_market")}</Link>
           <Link href="/connexion">ELEGANZ {t("nom_gestion")}</Link>
           <Link href="/comptable">ELEGANZ {t("titre_accueil")}</Link>
-          <Link href="/admin/connexion">Centre de pilotage</Link>
+          <Link href="/admin/connexion">{t("footer_centreDePilotage")}</Link>
           <Link href="/a-propos">{t("nav_aPropos")}</Link>
         </nav>
 
         {aDesCoordonnees && (
           <div className={styles.bloc}>
-            <p className={styles.titreColonne}>Contact</p>
+            <p className={styles.titreColonne}>{t("footer_contact")}</p>
             <ul className={styles.liensContact}>
               {contact!.address && <li>{contact!.address}</li>}
               {contact!.supportPhone && <li>{contact!.supportPhone}</li>}
@@ -154,7 +154,7 @@ export function Footer({
         )}
 
         <p className={styles.copyright}>
-          © {new Date().getFullYear()} ELEGANZ — République démocratique du Congo.
+          © {new Date().getFullYear()} ELEGANZ — {t("pays_CD")}.
         </p>
       </div>
     </footer>
