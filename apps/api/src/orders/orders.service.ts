@@ -150,14 +150,14 @@ export class OrdersService {
     // chaque boutique concernée par la commande (son propriétaire + son
     // équipe active) est notifiée, sans bloquer la réponse à l'acheteur si
     // la notification échoue.
-    this.notifierBoutiquesCommandeRecue(order.id, order.shopOrders.map((so) => so.shopId)).catch((err) => {
+    this.notifierBoutiquesCommandeRecue(order.shopOrders.map((so) => so.shopId)).catch((err) => {
       this.logger.error(`Notification "commande reçue" échouée pour la commande ${order.id}`, err);
     });
 
     return order;
   }
 
-  private async notifierBoutiquesCommandeRecue(orderId: string, shopIds: string[]) {
+  private async notifierBoutiquesCommandeRecue(shopIds: string[]) {
     const uniqueShopIds = [...new Set(shopIds)];
     const shops = await this.prisma.shop.findMany({
       where: { id: { in: uniqueShopIds } },
@@ -174,7 +174,7 @@ export class OrdersService {
         type: NotificationType.COMMANDE_RECUE,
         title: "Nouvelle commande reçue",
         body: `${shop.name} a reçu une nouvelle commande.`,
-        link: `/gestion/commandes?orderId=${orderId}`,
+        link: "/commandes",
       });
     }
   }

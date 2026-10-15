@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart-context";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
+import { NotificationBell } from "../components/NotificationBell";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./MarketplaceHeader.module.css";
@@ -31,7 +32,9 @@ export function MarketplaceHeader() {
           </Link>
           {user ? (
             <>
+              <NotificationBell />
               <Link href="/marketplace/commandes">{t("nav_mesCommandes")}</Link>
+              <Link href="/marketplace/messagerie">{t("nav_messagerie")}</Link>
               <button
                 onClick={logout}
                 style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}

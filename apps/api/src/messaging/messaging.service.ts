@@ -73,11 +73,16 @@ export class MessagingService {
       include: { messages: true, participants: true },
     });
 
+    // Lien générique : ce service ne sait pas dans quel espace (admin,
+    // Gestion, Mon Comptable, livreur...) le destinataire va le lire —
+    // chaque espace a sa propre page de messagerie (voir NotificationBell
+    // côté web, qui résout "/messagerie" vers la bonne URL selon l'espace
+    // courant). Pas encore de lien profond vers une conversation précise.
     await this.notifications.notifierUtilisateurs([destinataireId], {
       type: NotificationType.NOUVEAU_MESSAGE,
       title: "Nouveau message",
       body: premierMessage.slice(0, 140),
-      link: `/messagerie/${conversation.id}`,
+      link: "/messagerie",
     });
 
     return conversation;
@@ -102,7 +107,7 @@ export class MessagingService {
         type: NotificationType.NOUVEAU_MESSAGE,
         title: "Nouveau message",
         body: body.slice(0, 140),
-        link: `/messagerie/${conversationId}`,
+        link: "/messagerie",
       },
     );
 

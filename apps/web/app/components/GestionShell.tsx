@@ -8,6 +8,7 @@ import { useOfflineSync } from "../lib/offline-sync";
 import { ThemeToggle } from "./ThemeToggle";
 import { LogoMark, BandeMarque } from "./Logo";
 import { Footer } from "./Footer";
+import { NotificationBell } from "./NotificationBell";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./GestionShell.module.css";
@@ -30,6 +31,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
     { href: "/litiges", label: t("nav_litiges") },
     { href: "/finance", label: t("nav_finance") },
     { href: "/livreurs", label: t("nav_livreurs") },
+    { href: "/messagerie", label: t("nav_messagerie") },
     { href: "/equipe", label: t("nav_equipe") },
     { href: "/parametres", label: t("nav_parametres") },
   ];
@@ -85,6 +87,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               ))}
             </select>
           )}
+          <NotificationBell />
           <LanguageSwitcher />
           <ThemeToggle clair />
           <button

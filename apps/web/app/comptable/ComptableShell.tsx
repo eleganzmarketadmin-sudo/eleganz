@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
+import { NotificationBell } from "../components/NotificationBell";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
@@ -58,6 +59,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
     { href: "/comptable/activites", label: t("nav_mesActivites") },
     { href: "/comptable/chiffres", label: t("nav_chiffres") },
     { href: "/comptable/agenda", label: t("nav_agenda") },
+    { href: "/comptable/messagerie", label: t("nav_messagerie") },
     { href: "/comptable/abonnement", label: t("nav_abonnement") },
   ];
 
@@ -78,6 +80,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
               {nombreEnAttente} {t("horsLigne_enAttente")}
             </button>
           )}
+          <NotificationBell />
           <LanguageSwitcher />
           <ThemeToggle clair />
           <button

@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
+import { NotificationBell } from "../components/NotificationBell";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import styles from "./AdminShell.module.css";
@@ -29,6 +30,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/factures", label: t("nav_factures") },
     { href: "/admin/releves", label: t("nav_releves") },
     { href: "/admin/litiges", label: t("nav_litiges") },
+    { href: "/admin/messagerie", label: t("nav_messagerie") },
     { href: "/admin/equipe", label: t("nav_equipeAdmin") },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme") },
   ];
@@ -55,6 +57,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>Centre de pilotage</span>
         </span>
         <div className={styles.enteteActions}>
+          <NotificationBell />
           <LanguageSwitcher />
           <ThemeToggle clair />
           <button

@@ -1,0 +1,142 @@
+.conteneur {
+  position: relative;
+}
+
+.cloche {
+  position: relative;
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  min-width: var(--touche-min);
+  min-height: var(--touche-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  background: var(--color-flamme);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.panneau {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 200;
+  color: var(--color-ink);
+  display: flex;
+  flex-direction: column;
+}
+
+.entetePanneau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.lienAction {
+  background: none;
+  border: none;
+  color: var(--color-cobalt-texte);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.lienAction:hover {
+  text-decoration: underline;
+}
+
+.liste {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.vide {
+  padding: var(--espace-4);
+  color: var(--color-texte-muted);
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--espace-3);
+  cursor: pointer;
+  color: var(--color-ink);
+}
+
+.item:hover {
+  background: var(--color-surface-muted);
+}
+
+.itemNonLu {
+  background: color-mix(in srgb, var(--color-cobalt) 6%, var(--color-surface));
+}
+
+.itemNonLu .itemTitre::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--color-cobalt);
+  margin-right: 6px;
+}
+
+.itemTitre {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.itemCorps {
+  font-size: 13px;
+  color: var(--color-texte-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voirTout {
+  display: block;
+  text-align: center;
+  padding: var(--espace-3);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-cobalt-texte);
+  border-top: 1px solid var(--color-border);
+}
+
+.voirTout:hover {
+  text-decoration: underline;
+}

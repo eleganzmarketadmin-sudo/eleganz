@@ -1,0 +1,180 @@
+.cadre {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.erreur {
+  color: var(--color-flamme);
+  font-weight: 600;
+}
+
+.disposition {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: var(--espace-4);
+  min-height: 60vh;
+}
+
+@media (max-width: 720px) {
+  .disposition {
+    grid-template-columns: 1fr;
+  }
+}
+
+.colonneListe {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.boutonNouveau {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: var(--touche-min);
+}
+
+.formulaireNouveau {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.formulaireNouveau input,
+.formulaireNouveau textarea {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.formulaireNouveau textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.formulaireNouveau button {
+  min-height: var(--touche-min);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chargement,
+.vide {
+  padding: var(--espace-4);
+  color: var(--color-texte-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.itemConversation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--espace-3);
+  cursor: pointer;
+  color: var(--color-ink);
+}
+
+.itemConversation:hover {
+  background: var(--color-surface-muted);
+}
+
+.itemActif {
+  background: color-mix(in srgb, var(--color-cobalt) 10%, var(--color-surface));
+}
+
+.itemNom {
+  font-weight: 600;
+}
+
+.itemApercu {
+  font-size: 13px;
+  color: var(--color-texte-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colonneThread {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.listeMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--espace-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.bulle {
+  max-width: 70%;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+}
+
+.bulle p {
+  margin: 0;
+}
+
+.bulleMoi {
+  align-self: flex-end;
+  background: var(--color-cobalt);
+  color: #fff;
+  border-color: var(--color-cobalt);
+}
+
+.bulleAutre {
+  align-self: flex-start;
+  background: var(--color-surface-muted);
+}
+
+.zoneReponse {
+  display: flex;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.zoneReponse textarea {
+  flex: 1;
+  min-height: var(--touche-min);
+  resize: vertical;
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.zoneReponse button {
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-4);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}

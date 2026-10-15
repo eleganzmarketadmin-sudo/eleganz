@@ -7,10 +7,12 @@ import { useAuth } from "../lib/auth";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
+import { NotificationBell } from "../components/NotificationBell";
 import styles from "./LivreurShell.module.css";
 
 const LIENS = [
   { href: "/livreur/missions", label: "Mes missions" },
+  { href: "/livreur/messagerie", label: "Messagerie" },
   { href: "/livreur/profil", label: "Mon profil" },
 ];
 
@@ -47,6 +49,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
           ELEGANZ <span>Livreur</span>
         </span>
         <div className={styles.enteteActions}>
+          <NotificationBell />
           <ThemeToggle clair />
           <button
             className={styles.deconnexion}

@@ -166,6 +166,11 @@ const fr: Dictionnaire = {
   nav_panier: "Panier",
   nav_mesCommandes: "Mes commandes",
   action_seConnecter: "Se connecter",
+  nav_notifications: "Notifications",
+  nav_messagerie: "Messagerie",
+  notif_aucune: "Aucune notification pour l'instant.",
+  notif_toutMarquerLu: "Tout marquer comme lu",
+  notif_voirTout: "Voir toute la messagerie",
 };
 
 const en: Dictionnaire = {
@@ -291,6 +296,11 @@ const en: Dictionnaire = {
   nav_panier: "Cart",
   nav_mesCommandes: "My orders",
   action_seConnecter: "Log in",
+  nav_notifications: "Notifications",
+  nav_messagerie: "Messages",
+  notif_aucune: "No notifications yet.",
+  notif_toutMarquerLu: "Mark all as read",
+  notif_voirTout: "View all messages",
 };
 
 const es: Dictionnaire = {
