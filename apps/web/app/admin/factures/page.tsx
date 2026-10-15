@@ -115,6 +115,27 @@ function FacturesContent() {
     }
   }
 
+  async function lancerEcheancier() {
+    setVerificationEnCours("echeancier");
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultats = await api.post<{ dettes: number; loyers: number; versements: number; achatsFournisseur: number }>(
+        "/admin/echeancier/run",
+      );
+      const total = resultats.dettes + resultats.loyers + resultats.versements + resultats.achatsFournisseur;
+      setMessage(
+        total === 0
+          ? "Aucune échéance à relancer pour l'instant."
+          : `${total} relance(s) envoyée(s) (dettes/créances : ${resultats.dettes}, loyers : ${resultats.loyers}, versements : ${resultats.versements}, fournisseurs : ${resultats.achatsFournisseur}).`,
+      );
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : "Vérification impossible.");
+    } finally {
+      setVerificationEnCours(null);
+    }
+  }
+
   async function lancerVerification(type: "run-trial-check" | "run-suspension-check") {
     setVerificationEnCours(type);
     setErreur(null);
@@ -172,6 +193,19 @@ function FacturesContent() {
           disabled={verificationEnCours !== null}
           onClick={() => lancerVerification("run-suspension-check")}
         >
+          Vérifier maintenant
+        </button>
+      </div>
+      <div className={styles.verifications}>
+        <div>
+          <p className={styles.verifLabel}>Échéancier (relances dettes/créances/loyers/versements)</p>
+          <p className={styles.verifDescription}>
+            Notifie (cloche + messagerie) les acteurs concernés (Gestion, Mon Comptable) pour toute
+            échéance non réglée à J-3, le jour même, ou en retard — dettes et créances Mon Comptable,
+            loyers, versements de travailleurs, et dettes fournisseur côté Gestion.
+          </p>
+        </div>
+        <button className={styles.boutonVerif} disabled={verificationEnCours !== null} onClick={lancerEcheancier}>
           Vérifier maintenant
         </button>
       </div>

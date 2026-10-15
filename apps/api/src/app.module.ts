@@ -25,6 +25,7 @@ import { FinanceModule } from "./finance/finance.module";
 import { AiCreditsModule } from "./ai-credits/ai-credits.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { MessagingModule } from "./messaging/messaging.module";
+import { EcheancierModule } from "./echeancier/echeancier.module";
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { MessagingModule } from "./messaging/messaging.module";
     AiCreditsModule,
     NotificationsModule,
     MessagingModule,
+    EcheancierModule,
   ],
 })
 export class AppModule {}
