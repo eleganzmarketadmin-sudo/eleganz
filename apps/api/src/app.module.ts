@@ -27,6 +27,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { EcheancierModule } from "./echeancier/echeancier.module";
 import { GeoModule } from "./geo/geo.module";
+import { AddressesModule } from "./addresses/addresses.module";
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { GeoModule } from "./geo/geo.module";
     MessagingModule,
     EcheancierModule,
     GeoModule,
+    AddressesModule,
   ],
 })
 export class AppModule {}

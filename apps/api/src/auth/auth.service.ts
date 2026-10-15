@@ -75,4 +75,18 @@ export class AuthService {
     const accessToken = await this.jwt.signAsync({ sub: userId, role });
     return { accessToken };
   }
+
+  // Profil du compte connecté (prompt du 15 oct. 2026, point 2 — page "Mon
+  // profil" Marketplace) — n'expose que des champs d'identité, jamais le
+  // mot de passe ni un champ interne à un autre espace (boutique, livreur…).
+  async me(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, fullName: true, email: true, phone: true, role: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException("Compte introuvable.");
+    }
+    return user;
+  }
 }

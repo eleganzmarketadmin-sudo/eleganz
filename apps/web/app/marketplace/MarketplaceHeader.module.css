@@ -64,3 +64,55 @@
   padding: 1px 6px;
   margin-left: var(--espace-1);
 }
+
+/* Menu "Mon compte" (prompt du 15 oct. 2026, point 2) — regroupe profil,
+   adresses, commandes et messagerie derrière un seul menu déroulant. */
+.menuCompte {
+  position: relative;
+}
+
+.menuCompteBouton {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.menuCompteDropdown {
+  position: absolute;
+  top: calc(100% + var(--espace-2));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+}
+
+.menuCompteDropdown a,
+.menuCompteDeconnexion {
+  padding: var(--espace-2) var(--espace-3);
+  color: var(--color-ink);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.menuCompteDropdown a:hover,
+.menuCompteDeconnexion:hover {
+  background: var(--color-toile);
+}
+
+.menuCompteDeconnexion {
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+}

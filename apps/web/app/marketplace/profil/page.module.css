@@ -1,0 +1,152 @@
+.cadre {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.section {
+  margin-bottom: var(--espace-6);
+  padding-bottom: var(--espace-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.enteteSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  flex-wrap: wrap;
+}
+
+.sousTitre {
+  margin-bottom: var(--espace-3);
+}
+
+.note {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+  margin-bottom: var(--espace-3);
+}
+
+.champLecture {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.champLabel {
+  color: var(--color-texte-muted);
+}
+
+.listeAdresses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.carteAdresse {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--espace-3);
+  border: 1px solid var(--color-border);
+  padding: var(--espace-3);
+}
+
+.badgeDefaut {
+  display: inline-block;
+  background: var(--color-vert-paiement);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  margin-bottom: var(--espace-1);
+}
+
+.carteAdresseActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  flex-shrink: 0;
+}
+
+.lienAction {
+  background: none;
+  border: none;
+  color: var(--color-ink);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  text-align: right;
+  padding: 0;
+}
+
+.messageVide {
+  padding: var(--espace-4);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.formulaire {
+  margin-top: var(--espace-4);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+}
+
+.champs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espace-3);
+}
+
+@media (max-width: 560px) {
+  .champs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.caseParDefaut {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-top: var(--espace-3);
+}
+
+.actionsFormulaire {
+  display: flex;
+  gap: var(--espace-3);
+  margin-top: var(--espace-4);
+}
+
+.bouton {
+  background: var(--color-ink);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-4);
+  border: none;
+  cursor: pointer;
+}
+
+.boutonSecondaire {
+  background: none;
+  border: 1px solid var(--color-ink);
+  color: var(--color-ink);
+  padding: var(--espace-2) var(--espace-4);
+  cursor: pointer;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-3);
+}

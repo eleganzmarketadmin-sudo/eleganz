@@ -10,6 +10,15 @@ import { formatMoney } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
+interface AdresseEnregistree {
+  id: string;
+  commune: string | null;
+  quartier: string | null;
+  avenue: string | null;
+  repere: string | null;
+  isDefault: boolean;
+}
+
 export default function CommandePage() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useLocale();
@@ -31,11 +40,48 @@ export default function CommandePage() {
   const [repere, setRepere] = useState("");
   const [note, setNote] = useState("");
 
+  // Carnet d'adresses (prompt du 15 oct. 2026, point 2) — pré-remplit les
+  // champs ci-dessus au lieu de les resaisir à chaque commande ; la saisie
+  // libre reste toujours possible et prioritaire si l'acheteur la modifie.
+  const [adressesEnregistrees, setAdressesEnregistrees] = useState<AdresseEnregistree[]>([]);
+  const [adresseChoisieId, setAdresseChoisieId] = useState("");
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/marketplace/compte?retour=/marketplace/commande");
     }
   }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get<AdresseEnregistree[]>("/addresses")
+      .then((adresses) => {
+        setAdressesEnregistrees(adresses);
+        const parDefaut = adresses.find((a) => a.isDefault);
+        if (parDefaut) {
+          setAdresseChoisieId(parDefaut.id);
+          setCommune(parDefaut.commune ?? "");
+          setQuartier(parDefaut.quartier ?? "");
+          setAvenue(parDefaut.avenue ?? "");
+          setRepere(parDefaut.repere ?? "");
+        }
+      })
+      .catch(() => {
+        // Non bloquant : sans carnet d'adresses, la saisie libre reste disponible.
+      });
+  }, [user]);
+
+  function choisirAdresseEnregistree(id: string) {
+    setAdresseChoisieId(id);
+    const adresse = adressesEnregistrees.find((a) => a.id === id);
+    if (adresse) {
+      setCommune(adresse.commune ?? "");
+      setQuartier(adresse.quartier ?? "");
+      setAvenue(adresse.avenue ?? "");
+      setRepere(adresse.repere ?? "");
+    }
+  }
 
   async function confirmer() {
     setEnCours(true);
@@ -112,6 +158,19 @@ export default function CommandePage() {
         <p className={styles.note} style={{ marginBottom: "var(--espace-3)" }}>
           {t("cmd_noteLivraison")}
         </p>
+        {adressesEnregistrees.length > 0 && (
+          <label className={styles.champ} style={{ marginBottom: "var(--espace-3)" }}>
+            <span>{t("cmd_labelAdresseEnregistree")}</span>
+            <select value={adresseChoisieId} onChange={(e) => choisirAdresseEnregistree(e.target.value)}>
+              <option value="">{t("cmd_optionNouvelleAdresse")}</option>
+              {adressesEnregistrees.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {[a.avenue, a.quartier, a.commune].filter(Boolean).join(", ") || t("profil_adresseSansDetail")}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className={styles.champs}>
           <label className={styles.champ}>
             <span>{t("cmd_labelWhatsapp")}</span>
