@@ -8,6 +8,7 @@ import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface OrderLine {
@@ -60,45 +61,45 @@ function versLienWhatsapp(numero: string): string {
 // Reflet côté écran de ALLOWED_TRANSITIONS (orders.service.ts) — seulement
 // les transitions qu'un membre de l'équipe déclenche lui-même ; la
 // confirmation de réception reste un geste de l'acheteur.
-const TRANSITIONS_STAFF: Record<string, { cible: string; label: string; annulation?: boolean }[]> = {
+const TRANSITIONS_STAFF: Record<string, { cible: string; cle: string; annulation?: boolean }[]> = {
   CREATED: [
-    { cible: "PAYMENT_PENDING", label: "Marquer paiement en attente" },
-    { cible: "CANCELLED", label: "Annuler", annulation: true },
+    { cible: "PAYMENT_PENDING", cle: "gcmd_marquerPaiementAttente" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
   ],
   PAYMENT_PENDING: [
-    { cible: "PAYMENT_CONFIRMED", label: "Confirmer le paiement" },
-    { cible: "CANCELLED", label: "Annuler", annulation: true },
+    { cible: "PAYMENT_CONFIRMED", cle: "gcmd_confirmerPaiement" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
   ],
   PAYMENT_CONFIRMED: [
-    { cible: "ACCEPTED", label: "Accepter la commande" },
-    { cible: "CANCELLED", label: "Annuler", annulation: true },
+    { cible: "ACCEPTED", cle: "gcmd_accepterCommande" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
   ],
   ACCEPTED: [
-    { cible: "PREPARING", label: "Commencer la préparation" },
-    { cible: "CANCELLED", label: "Annuler", annulation: true },
+    { cible: "PREPARING", cle: "gcmd_commencerPreparation" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
   ],
-  PREPARING: [{ cible: "READY_FOR_PICKUP", label: "Prête pour l'enlèvement" }],
-  READY_FOR_PICKUP: [{ cible: "PICKED_UP", label: "Récupérée par le livreur" }],
-  PICKED_UP: [{ cible: "IN_TRANSIT", label: "En livraison" }],
-  IN_TRANSIT: [{ cible: "DELIVERED_DECLARED", label: "Déclarer la livraison" }],
+  PREPARING: [{ cible: "READY_FOR_PICKUP", cle: "statut_preteEnlevement" }],
+  READY_FOR_PICKUP: [{ cible: "PICKED_UP", cle: "statut_recupereeLivreur" }],
+  PICKED_UP: [{ cible: "IN_TRANSIT", cle: "statut_enLivraison" }],
+  IN_TRANSIT: [{ cible: "DELIVERED_DECLARED", cle: "gcmd_declarerLivraison" }],
 };
 
-const LABELS_STATUT: Record<string, string> = {
-  CREATED: "Créée",
-  PAYMENT_PENDING: "Paiement en attente",
-  PAYMENT_CONFIRMED: "Paiement confirmé",
-  ACCEPTED: "Acceptée",
-  PREPARING: "En préparation",
-  READY_FOR_PICKUP: "Prête pour l'enlèvement",
-  PICKED_UP: "Récupérée par le livreur",
-  IN_TRANSIT: "En livraison",
-  DELIVERED_DECLARED: "Livraison déclarée",
-  RECEIVED_CONFIRMED: "Réception confirmée par l'acheteur",
-  CLOSED: "Terminée",
-  CANCELLED: "Annulée",
-  DISPUTED: "En litige",
-  RETURN_REQUESTED: "Retour demandé",
-  REFUNDED: "Remboursée",
+const CLES_STATUT: Record<string, string> = {
+  CREATED: "statut_creee",
+  PAYMENT_PENDING: "statut_paiementAttente",
+  PAYMENT_CONFIRMED: "statut_paiementConfirme",
+  ACCEPTED: "gcmd_statutAcceptee",
+  PREPARING: "statut_enPreparation",
+  READY_FOR_PICKUP: "statut_preteEnlevement",
+  PICKED_UP: "statut_recupereeLivreur",
+  IN_TRANSIT: "statut_enLivraison",
+  DELIVERED_DECLARED: "statut_livraisonDeclaree",
+  RECEIVED_CONFIRMED: "gcmd_statutReceptionConfirmeeAcheteur",
+  CLOSED: "statut_terminee",
+  CANCELLED: "statut_annulee",
+  DISPUTED: "statut_enLitige",
+  RETURN_REQUESTED: "statut_retourDemande",
+  REFUNDED: "statut_remboursee",
 };
 
 const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"> = {
@@ -114,6 +115,7 @@ const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"
 
 function CommandesContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [commandes, setCommandes] = useState<ShopOrder[]>([]);
   const [livreurs, setLivreurs] = useState<Livreur[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -131,7 +133,7 @@ function CommandesContent() {
     try {
       await telechargerFichier(`/shops/${currentShop.id}/orders/export`, "mes-commandes-eleganz.xlsx");
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Export impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("fact_exportImpossible"));
     } finally {
       setExportEnCours(false);
     }
@@ -146,10 +148,10 @@ function CommandesContent() {
       .catch((err) =>
         setErreur(
           err instanceof ApiError && err.statusCode === 403
-            ? "Cette page est réservée à l'équipe qui gère les commandes de la boutique."
+            ? t("gcmd_reserveEquipe")
             : err instanceof Error
               ? err.message
-              : "Erreur.",
+              : t("cmd_erreurGenerique"),
         ),
       )
       .finally(() => setChargement(false));
@@ -178,7 +180,7 @@ function CommandesContent() {
       await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { shopDriverId });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Affectation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_affectationImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -191,7 +193,7 @@ function CommandesContent() {
       await api.post(`/shops/${currentShop!.id}/orders/${shopOrderId}/driver`, { shopDriverId: null });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Retrait impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_retraitImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -204,7 +206,7 @@ function CommandesContent() {
       await api.patch(`/shops/${currentShop!.id}/orders/${shopOrderId}/status`, { status: cible });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Changement de statut impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_changementStatutImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -220,7 +222,7 @@ function CommandesContent() {
       setMotifLitige("");
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible d'ouvrir le litige.");
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_ouvertureLitigeImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -235,31 +237,31 @@ function CommandesContent() {
       );
       await ouvrirDocumentPdf(`/shops/${currentShop!.id}/documents/${document.id}/pdf`);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible de générer le document.");
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_generationDocumentImpossible"));
     }
   }
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <h1 className={styles.titre}>Commandes Marketplace</h1>
+        <h1 className={styles.titre}>{t("gcmd_titre")}</h1>
         <button className={styles.boutonAction} onClick={exporter} disabled={exportEnCours}>
-          {exportEnCours ? "…" : "Exporter en Excel"}
+          {exportEnCours ? "…" : t("fact_exporterExcel")}
         </button>
       </div>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : commandes.length === 0 ? (
-        <p className={styles.messageVide}>Aucune commande venue de la Marketplace pour l&apos;instant.</p>
+        <p className={styles.messageVide}>{t("gcmd_aucuneCommande")}</p>
       ) : (
         commandes.map((so) => (
           <div className={styles.commande} key={so.id}>
             <div className={styles.entete}>
-              <span>Commande #{so.order.id.slice(0, 8)}</span>
+              <span>{t("lit_commandeNum").replace("{{id}}", so.order.id.slice(0, 8))}</span>
               <StatusTag
-                label={LABELS_STATUT[so.status] ?? so.status}
+                label={CLES_STATUT[so.status] ? t(CLES_STATUT[so.status]) : so.status}
                 humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
               />
             </div>
@@ -272,7 +274,7 @@ function CommandesContent() {
               so.order.deliveryNote) && (
               <div className={styles.contact}>
                 <div className={styles.contactLigne}>
-                  <strong>{so.order.buyer?.fullName ?? "Acheteur"}</strong>
+                  <strong>{so.order.buyer?.fullName ?? t("gcmd_acheteurFallback")}</strong>
                   {so.order.buyerWhatsapp && (
                     <a
                       className={styles.lienWhatsapp}
@@ -280,32 +282,32 @@ function CommandesContent() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      WhatsApp : {so.order.buyerWhatsapp}
+                      {t("gcmd_whatsappPrefix")} {so.order.buyerWhatsapp}
                     </a>
                   )}
-                  {so.order.buyerPhone && <span>Tél. {so.order.buyerPhone}</span>}
+                  {so.order.buyerPhone && <span>{t("gcmd_telPrefix")} {so.order.buyerPhone}</span>}
                 </div>
                 {(so.order.deliveryCommune || so.order.deliveryQuartier || so.order.deliveryAvenue || so.order.deliveryRepere) && (
                   <div className={styles.contactAdresse}>
-                    Livraison :{" "}
+                    {t("gcmd_livraisonPrefix")}{" "}
                     {[so.order.deliveryAvenue, so.order.deliveryQuartier, so.order.deliveryCommune]
                       .filter(Boolean)
                       .join(", ")}
-                    {so.order.deliveryRepere ? ` — repère : ${so.order.deliveryRepere}` : ""}
+                    {so.order.deliveryRepere ? ` — ${t("gcmd_reperePrefix")} ${so.order.deliveryRepere}` : ""}
                   </div>
                 )}
-                {so.order.deliveryNote && <div className={styles.contactAdresse}>Note : {so.order.deliveryNote}</div>}
+                {so.order.deliveryNote && (
+                  <div className={styles.contactAdresse}>
+                    {t("gcmd_notePrefix")} {so.order.deliveryNote}
+                  </div>
+                )}
               </div>
             )}
             {!["CLOSED", "CANCELLED", "REFUNDED"].includes(so.status) && (
               <div className={styles.contact}>
                 <div className={styles.contactLigne}>
-                  <strong>Livreur</strong>
-                  <span>
-                    {so.shopDriver
-                      ? so.shopDriver.fullName
-                      : "Pas encore affecté"}
-                  </span>
+                  <strong>{t("gcmd_livreurLabel")}</strong>
+                  <span>{so.shopDriver ? so.shopDriver.fullName : t("gcmd_pasAffecte")}</span>
                 </div>
                 <div className={styles.contactLigne}>
                   <select
@@ -316,7 +318,7 @@ function CommandesContent() {
                     }
                   >
                     <option value="">
-                      {livreurs.length === 0 ? "Aucun livreur enregistré — voir Livreurs" : "Choisir un livreur…"}
+                      {livreurs.length === 0 ? t("gcmd_aucunLivreurVoirLivreurs") : t("gcmd_choisirLivreur")}
                     </option>
                     {livreurs.map((l) => (
                       <option key={l.id} value={l.id}>
@@ -331,7 +333,7 @@ function CommandesContent() {
                     disabled={enCours === so.id || !selectionLivreur[so.id]}
                     onClick={() => affecterLivreur(so.id)}
                   >
-                    {so.shopDriver ? "Changer de livreur" : "Affecter"}
+                    {so.shopDriver ? t("gcmd_changerLivreur") : t("gcmd_affecter")}
                   </button>
                   {so.shopDriver && (
                     <button
@@ -339,7 +341,7 @@ function CommandesContent() {
                       disabled={enCours === so.id}
                       onClick={() => retirerLivreur(so.id)}
                     >
-                      Retirer l&apos;affectation
+                      {t("gcmd_retirerAffectation")}
                     </button>
                   )}
                 </div>
@@ -356,23 +358,23 @@ function CommandesContent() {
                 </div>
               ))}
               <div className={styles.ligne} style={{ fontWeight: 600 }}>
-                <span>Sous-total</span>
+                <span>{t("gcmd_sousTotal")}</span>
                 <span className="chiffre">{formatMoney(Number(so.subtotal))}</span>
               </div>
             </div>
             <div className={styles.actions}>
-              {(TRANSITIONS_STAFF[so.status] ?? []).map((t) => (
+              {(TRANSITIONS_STAFF[so.status] ?? []).map((transition) => (
                 <button
-                  key={t.cible}
-                  className={`${styles.boutonAction} ${t.annulation ? styles.boutonAnnuler : ""}`}
+                  key={transition.cible}
+                  className={`${styles.boutonAction} ${transition.annulation ? styles.boutonAnnuler : ""}`}
                   disabled={enCours === so.id}
-                  onClick={() => changerStatut(so.id, t.cible)}
+                  onClick={() => changerStatut(so.id, transition.cible)}
                 >
-                  {t.label}
+                  {t(transition.cle)}
                 </button>
               ))}
               <button className={styles.boutonAction} onClick={() => imprimerBonLivraison(so.id)}>
-                Imprimer le bon de livraison
+                {t("gcmd_imprimerBonLivraison")}
               </button>
               {!["DISPUTED", "CANCELLED", "REFUNDED", "CLOSED"].includes(so.status) && (
                 <button
@@ -382,7 +384,7 @@ function CommandesContent() {
                     setMotifLitige("");
                   }}
                 >
-                  Signaler un litige
+                  {t("gcmd_signalerLitige")}
                 </button>
               )}
             </div>
@@ -390,7 +392,7 @@ function CommandesContent() {
               <div className={styles.corps}>
                 <textarea
                   className={styles.motifLitige}
-                  placeholder="Expliquez le problème (ex. acheteur introuvable à la livraison, colis refusé sans motif...)"
+                  placeholder={t("gcmd_placeholderMotifLitige")}
                   value={motifLitige}
                   onChange={(e) => setMotifLitige(e.target.value)}
                   rows={3}
@@ -401,7 +403,7 @@ function CommandesContent() {
                     disabled={enCours === so.id || !motifLitige.trim()}
                     onClick={() => signalerLitige(so.id)}
                   >
-                    Envoyer à l&apos;administration
+                    {t("gcmd_envoyerAdministration")}
                   </button>
                   <button
                     className={styles.boutonAction}
@@ -410,7 +412,7 @@ function CommandesContent() {
                       setMotifLitige("");
                     }}
                   >
-                    Annuler
+                    {t("action_annuler")}
                   </button>
                 </div>
               </div>
