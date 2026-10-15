@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface Dashboard {
@@ -31,6 +32,7 @@ function todayIso(): string {
 
 function DashboardContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [date, setDate] = useState(todayIso());
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -51,10 +53,10 @@ function DashboardContent() {
         if (!annule) {
           setErreur(
             err instanceof ApiError && err.statusCode === 403
-              ? "Ce tableau de bord est réservé au propriétaire, au gérant ou au comptable de la boutique."
+              ? t("tdb_reserveRole")
               : err instanceof Error
                 ? err.message
-                : "Erreur.",
+                : t("cmd_erreurGenerique"),
           );
         }
       })
@@ -76,13 +78,13 @@ function DashboardContent() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Tableau de bord du jour</h1>
+      <h1 className={styles.titre}>{t("tdb_titre")}</h1>
       <p className={styles.selecteurDate}>
-        Journée du
+        {t("tdb_journeeDu")}
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </p>
 
-      {chargement && <p>Chargement…</p>}
+      {chargement && <p>{t("commun_chargement")}</p>}
       {erreur && <p>{erreur}</p>}
 
       {dashboard && (
@@ -91,22 +93,23 @@ function DashboardContent() {
 
           <div className={styles.grille}>
             <div className={styles.carte}>
-              <span className={styles.carteLabel}>Ventes</span>
+              <span className={styles.carteLabel}>{t("tdb_ventes")}</span>
               <span className={styles.carteValeur}>{dashboard.salesCount}</span>
             </div>
             <div className={`${styles.carte} ${styles.carteEncre}`}>
-              <span className={styles.carteLabel}>Chiffre d&apos;affaires</span>
+              <span className={styles.carteLabel}>{t("tdb_chiffreAffaires")}</span>
               <span className={styles.carteValeur}>{formatMoney(dashboard.revenue)}</span>
             </div>
             <div className={styles.carte}>
-              <span className={styles.carteLabel}>Encaissements confirmés</span>
+              <span className={styles.carteLabel}>{t("tdb_encaissementsConfirmes")}</span>
               <span className={styles.carteValeur}>
                 {formatMoney(dashboard.confirmedCollections)}
               </span>
             </div>
             <div className={styles.carte}>
               <span className={styles.carteLabel}>
-                Marge brute{!dashboard.marginReliable && " (incomplète)"}
+                {t("tdb_margeBrute")}
+                {!dashboard.marginReliable && ` ${t("tdb_margeIncomplete")}`}
               </span>
               <span className={styles.carteValeur}>
                 {dashboard.grossMargin != null ? formatMoney(dashboard.grossMargin) : "—"}
@@ -114,27 +117,22 @@ function DashboardContent() {
             </div>
           </div>
 
-          <p style={{ color: "#555", fontSize: "0.875rem" }}>
-            Le chiffre d&apos;affaires compte toutes les ventes de la journée, même celles pas
-            encore totalement encaissées (crédit client). La marge brute n&apos;est fiable que si
-            le prix d&apos;achat est renseigné sur chaque article vendu.
-          </p>
+          <p style={{ color: "#555", fontSize: "0.875rem" }}>{t("tdb_noteMarge")}</p>
         </>
       )}
 
       {ecartsStock.length > 0 && (
         <div style={{ marginTop: "32px" }}>
           <h2 style={{ fontSize: "1rem", marginBottom: "12px" }}>
-            Écarts de stock à vérifier ({ecartsStock.length})
+            {t("tdb_ecartsStockTitre")} ({ecartsStock.length})
           </h2>
           <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "12px" }}>
-            Ventes acceptées pendant une coupure réseau alors que le stock affiché était déjà
-            insuffisant — à régulariser par un comptage physique.
+            {t("tdb_ecartsStockNote")}
           </p>
           <div className={styles.note}>
             {ecartsStock.map((e) => (
               <div key={e.id} style={{ marginBottom: "4px" }}>
-                {e.label} ({e.variant?.sku ?? "sans référence"}) × {e.quantity} —{" "}
+                {e.label} ({e.variant?.sku ?? t("tdb_sansReference")}) × {e.quantity} —{" "}
                 {new Date(e.sale.createdAt).toLocaleString("fr-FR")}
               </div>
             ))}

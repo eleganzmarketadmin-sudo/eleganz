@@ -44,7 +44,7 @@ function ParametresContent() {
       })
       .catch((err) =>
         setErreur(
-          err instanceof Error ? err.message : "Impossible de charger les paramètres de la boutique.",
+          err instanceof Error ? err.message : t("param_erreurChargement"),
         ),
       )
       .finally(() => setChargement(false));
@@ -63,58 +63,54 @@ function ParametresContent() {
         invoiceLogoUrl: logoUrl,
         invoiceFooterNote: noteBasPage,
       });
-      setConfirmation("Paramètres enregistrés — vos prochains documents imprimés utiliseront ces informations.");
+      setConfirmation(t("param_confirmationEnregistrement"));
     } catch (err) {
       setErreur(
         err instanceof ApiError
           ? err.message
-          : "Impossible d'enregistrer ces paramètres pour le moment.",
+          : t("param_erreurEnregistrement"),
       );
     } finally {
       setEnregistrement(false);
     }
   }
 
-  if (chargement) return <p>Chargement des paramètres…</p>;
+  if (chargement) return <p>{t("param_chargement")}</p>;
 
   return (
     <div>
-      <h1 className={styles.titre}>Paramètres</h1>
+      <h1 className={styles.titre}>{t("nav_parametres")}</h1>
 
       <section className={styles.section}>
-        <h2 className={styles.sousTitre}>Identité sur vos documents</h2>
-        <p className={styles.note}>
-          Ces informations apparaissent sur vos tickets, factures et bons de livraison imprimés
-          (en plus du nom de la boutique et de la mention ELEGANZ Marketplace, affichée sur tous
-          les documents). Laissez un champ vide pour ne rien afficher.
-        </p>
+        <h2 className={styles.sousTitre}>{t("param_identiteTitre")}</h2>
+        <p className={styles.note}>{t("param_identiteNote")}</p>
 
         {erreur && <div className={styles.erreur}>{erreur}</div>}
         {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
         <form className={styles.formulaire} onSubmit={enregistrer}>
           <div className={styles.champ}>
-            <label htmlFor="adresse">Adresse</label>
+            <label htmlFor="adresse">{t("param_labelAdresse")}</label>
             <input
               id="adresse"
               value={adresse}
               onChange={(e) => setAdresse(e.target.value)}
-              placeholder="Ex. 12 Avenue du Commerce, Gombe, Kinshasa"
+              placeholder={t("param_placeholderAdresse")}
               maxLength={200}
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="telephone">Téléphone affiché</label>
+            <label htmlFor="telephone">{t("param_labelTelephone")}</label>
             <input
               id="telephone"
               value={telephone}
               onChange={(e) => setTelephone(e.target.value)}
-              placeholder="Ex. +243 81 234 5678"
+              placeholder={t("param_placeholderTelephone")}
               maxLength={50}
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="logoUrl">Logo (URL d&apos;une image, https://…)</label>
+            <label htmlFor="logoUrl">{t("param_labelLogo")}</label>
             <input
               id="logoUrl"
               value={logoUrl}
@@ -124,18 +120,18 @@ function ParametresContent() {
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="noteBasPage">Note de bas de document (optionnel)</label>
+            <label htmlFor="noteBasPage">{t("param_labelNoteBasPage")}</label>
             <textarea
               id="noteBasPage"
               value={noteBasPage}
               onChange={(e) => setNoteBasPage(e.target.value)}
               rows={2}
-              placeholder="Ex. Merci pour votre achat ! Échange possible sous 7 jours."
+              placeholder={t("param_placeholderNoteBasPage")}
               maxLength={300}
             />
           </div>
           <button className={styles.bouton} type="submit" disabled={enregistrement}>
-            {enregistrement ? "Enregistrement…" : "Enregistrer"}
+            {enregistrement ? t("param_enregistrementEnCours") : t("param_enregistrer")}
           </button>
         </form>
       </section>

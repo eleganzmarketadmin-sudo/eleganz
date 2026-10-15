@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Livreurs propres à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) — le
@@ -21,22 +22,23 @@ interface ShopDriver {
 }
 
 const VEHICULES = [
-  { valeur: "", label: "Non précisé" },
-  { valeur: "MOTO", label: "Moto" },
-  { valeur: "VELO", label: "Vélo" },
-  { valeur: "VOITURE", label: "Voiture" },
-  { valeur: "A_PIED", label: "À pied" },
+  { valeur: "", cle: "gliv_vehiculeNonPrecise" },
+  { valeur: "MOTO", cle: "gliv_vehiculeMoto" },
+  { valeur: "VELO", cle: "gliv_vehiculeVelo" },
+  { valeur: "VOITURE", cle: "gliv_vehiculeVoiture" },
+  { valeur: "A_PIED", cle: "gliv_vehiculeAPied" },
 ] as const;
 
-const LABELS_VEHICULE: Record<string, string> = {
-  MOTO: "Moto",
-  VELO: "Vélo",
-  VOITURE: "Voiture",
-  A_PIED: "À pied",
+const CLES_VEHICULE: Record<string, string> = {
+  MOTO: "gliv_vehiculeMoto",
+  VELO: "gliv_vehiculeVelo",
+  VOITURE: "gliv_vehiculeVoiture",
+  A_PIED: "gliv_vehiculeAPied",
 };
 
 function LivreursContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [livreurs, setLivreurs] = useState<ShopDriver[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -55,10 +57,10 @@ function LivreursContent() {
       .catch((err) =>
         setErreur(
           err instanceof ApiError && err.statusCode === 403
-            ? "Cette page est réservée au personnel autorisé de la boutique."
+            ? t("gliv_reservePersonnel")
             : err instanceof Error
               ? err.message
-              : "Erreur.",
+              : t("cmd_erreurGenerique"),
         ),
       )
       .finally(() => setChargement(false));
@@ -81,10 +83,10 @@ function LivreursContent() {
       setFullName("");
       setPhone("");
       setVehicleType("");
-      setConfirmation("Livreur ajouté à votre liste.");
+      setConfirmation(t("gliv_livreurAjoute"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Ajout impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("gliv_ajoutImpossible"));
     } finally {
       setAjoutEnCours(false);
     }
@@ -97,28 +99,28 @@ function LivreursContent() {
       await api.patch(`/shops/${currentShop.id}/drivers/${livreur.id}`, { active: !livreur.active });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Modification impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("gliv_modificationImpossible"));
     }
   }
 
   return (
     <div>
-      <h1 className={styles.titre}>Livreurs</h1>
+      <h1 className={styles.titre}>{t("nav_livreurs")}</h1>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
       <form className={styles.formulaire} onSubmit={ajouter}>
         <div className={styles.champ}>
-          <label htmlFor="fullName">Nom du livreur</label>
+          <label htmlFor="fullName">{t("gliv_labelNom")}</label>
           <input
             id="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="Ex. Jean Mukendi"
+            placeholder={t("gliv_placeholderNom")}
           />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="phone">Téléphone / WhatsApp</label>
+          <label htmlFor="phone">{t("gliv_labelTelephone")}</label>
           <input
             id="phone"
             value={phone}
@@ -127,38 +129,33 @@ function LivreursContent() {
           />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="vehicleType">Véhicule</label>
+          <label htmlFor="vehicleType">{t("gliv_labelVehicule")}</label>
           <select id="vehicleType" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
             {VEHICULES.map((v) => (
               <option key={v.valeur} value={v.valeur}>
-                {v.label}
+                {t(v.cle)}
               </option>
             ))}
           </select>
         </div>
         <button className={styles.bouton} type="submit" disabled={ajoutEnCours || !fullName}>
-          {ajoutEnCours ? "Ajout…" : "Ajouter ce livreur"}
+          {ajoutEnCours ? t("gliv_ajoutEnCours") : t("gliv_ajouterLivreur")}
         </button>
       </form>
-      <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "24px" }}>
-        Ces livreurs n&apos;ont pas de compte ELEGANZ et ne sont pas vérifiés par la plateforme :
-        vous les gérez sous votre propre responsabilité (identité, sérieux, fiabilité). C&apos;est
-        votre équipe qui confirme elle-même le ramassage et la livraison depuis l&apos;écran
-        Commandes.
-      </p>
+      <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "24px" }}>{t("gliv_noteResponsabilite")}</p>
 
       {chargement ? (
-        <p>Chargement des livreurs…</p>
+        <p>{t("gliv_chargement")}</p>
       ) : livreurs.length === 0 ? (
-        <p>Aucun livreur enregistré pour l&apos;instant.</p>
+        <p>{t("gliv_aucunLivreur")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>Contact</th>
-              <th>Véhicule</th>
-              <th>Statut</th>
+              <th>{t("eq_colNom")}</th>
+              <th>{t("eq_colContact")}</th>
+              <th>{t("gliv_colVehicule")}</th>
+              <th>{t("eq_colStatut")}</th>
               <th></th>
             </tr>
           </thead>
@@ -167,11 +164,11 @@ function LivreursContent() {
               <tr key={l.id}>
                 <td>{l.fullName}</td>
                 <td>{l.phone ?? "—"}</td>
-                <td>{l.vehicleType ? LABELS_VEHICULE[l.vehicleType] ?? l.vehicleType : "—"}</td>
-                <td>{l.active ? "Actif" : "Désactivé"}</td>
+                <td>{l.vehicleType ? (CLES_VEHICULE[l.vehicleType] ? t(CLES_VEHICULE[l.vehicleType]) : l.vehicleType) : "—"}</td>
+                <td>{l.active ? t("eq_statutActif") : t("eq_statutDesactive")}</td>
                 <td>
                   <button className={styles.retirer} onClick={() => basculerActif(l)}>
-                    {l.active ? "Désactiver" : "Réactiver"}
+                    {l.active ? t("gliv_desactiver") : t("gliv_reactiver")}
                   </button>
                 </td>
               </tr>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface MembreEquipe {
@@ -14,29 +15,30 @@ interface MembreEquipe {
 }
 
 const ROLES = [
-  { valeur: "MANAGER", label: "Gérant" },
-  { valeur: "CASHIER", label: "Caissier" },
-  { valeur: "STOCK_KEEPER", label: "Magasinier" },
-  { valeur: "SALES_LEAD", label: "Responsable commercial" },
-  { valeur: "ACCOUNTANT", label: "Comptable" },
+  { valeur: "MANAGER", cle: "eq_roleGerant" },
+  { valeur: "CASHIER", cle: "eq_roleCaissier" },
+  { valeur: "STOCK_KEEPER", cle: "eq_roleMagasinier" },
+  { valeur: "SALES_LEAD", cle: "eq_roleResponsableCommercial" },
+  { valeur: "ACCOUNTANT", cle: "eq_roleComptable" },
   // Accès restreint à Finance & Comptabilité en lecture seule — voir
   // docs/ARCHITECTURE_FINANCE.md §8sexies. Jamais d'accès à la Caisse, au
   // Catalogue, aux Commandes, à l'Équipe ou aux Paramètres.
-  { valeur: "EXTERNAL_ACCOUNTANT", label: "Comptable externe (lecture seule)" },
+  { valeur: "EXTERNAL_ACCOUNTANT", cle: "eq_roleComptableExterne" },
 ] as const;
 
-const LABELS_ROLE: Record<string, string> = {
-  OWNER: "Propriétaire",
-  MANAGER: "Gérant",
-  CASHIER: "Caissier",
-  STOCK_KEEPER: "Magasinier",
-  SALES_LEAD: "Responsable commercial",
-  ACCOUNTANT: "Comptable",
-  EXTERNAL_ACCOUNTANT: "Comptable externe (lecture seule)",
+const CLES_ROLE: Record<string, string> = {
+  OWNER: "eq_roleProprietaire",
+  MANAGER: "eq_roleGerant",
+  CASHIER: "eq_roleCaissier",
+  STOCK_KEEPER: "eq_roleMagasinier",
+  SALES_LEAD: "eq_roleResponsableCommercial",
+  ACCOUNTANT: "eq_roleComptable",
+  EXTERNAL_ACCOUNTANT: "eq_roleComptableExterne",
 };
 
 function EquipeContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [membres, setMembres] = useState<MembreEquipe[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -54,10 +56,10 @@ function EquipeContent() {
       .catch((err) =>
         setErreur(
           err instanceof ApiError && err.statusCode === 403
-            ? "Cette page est réservée au propriétaire ou au gérant de la boutique."
+            ? t("eq_reserveRole")
             : err instanceof Error
               ? err.message
-              : "Erreur.",
+              : t("cmd_erreurGenerique"),
         ),
       )
       .finally(() => setChargement(false));
@@ -74,10 +76,10 @@ function EquipeContent() {
     try {
       await api.post(`/shops/${currentShop.id}/staff`, { identifier: identifiant, role });
       setIdentifiant("");
-      setConfirmation("Collaborateur ajouté à l'équipe.");
+      setConfirmation(t("eq_collaborateurAjoute"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Invitation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("eq_invitationImpossible"));
     } finally {
       setInvitationEnCours(false);
     }
@@ -90,19 +92,19 @@ function EquipeContent() {
       await api.delete(`/shops/${currentShop.id}/staff/${staffId}`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Suppression impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("eq_suppressionImpossible"));
     }
   }
 
   return (
     <div>
-      <h1 className={styles.titre}>Équipe</h1>
+      <h1 className={styles.titre}>{t("nav_equipe")}</h1>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
       <form className={styles.formulaire} onSubmit={inviter}>
         <div className={styles.champ}>
-          <label htmlFor="identifiant">Email ou téléphone du collaborateur</label>
+          <label htmlFor="identifiant">{t("eq_labelContact")}</label>
           <input
             id="identifiant"
             value={identifiant}
@@ -111,34 +113,31 @@ function EquipeContent() {
           />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="role">Rôle</label>
+          <label htmlFor="role">{t("eq_labelRole")}</label>
           <select id="role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
             {ROLES.map((r) => (
               <option key={r.valeur} value={r.valeur}>
-                {r.label}
+                {t(r.cle)}
               </option>
             ))}
           </select>
         </div>
         <button className={styles.bouton} type="submit" disabled={invitationEnCours || !identifiant}>
-          {invitationEnCours ? "Ajout…" : "Ajouter à l'équipe"}
+          {invitationEnCours ? t("eq_ajoutEnCours") : t("eq_ajouterEquipe")}
         </button>
       </form>
-      <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "24px" }}>
-        Le collaborateur doit déjà avoir créé son propre compte ELEGANZ avant de pouvoir être
-        ajouté — il peut s&apos;inscrire depuis la page de connexion.
-      </p>
+      <p style={{ color: "#555", fontSize: "0.875rem", marginBottom: "24px" }}>{t("eq_noteInscriptionPrealable")}</p>
 
       {chargement ? (
-        <p>Chargement de l&apos;équipe…</p>
+        <p>{t("eq_chargementEquipe")}</p>
       ) : (
         <table className={styles.tableau}>
           <thead>
             <tr>
-              <th>Nom</th>
-              <th>Contact</th>
-              <th>Rôle</th>
-              <th>Statut</th>
+              <th>{t("eq_colNom")}</th>
+              <th>{t("eq_colContact")}</th>
+              <th>{t("eq_colRole")}</th>
+              <th>{t("eq_colStatut")}</th>
               <th></th>
             </tr>
           </thead>
@@ -147,12 +146,12 @@ function EquipeContent() {
               <tr key={m.id}>
                 <td>{m.user.fullName}</td>
                 <td>{m.user.email ?? m.user.phone ?? "—"}</td>
-                <td>{LABELS_ROLE[m.role] ?? m.role}</td>
-                <td>{m.active ? "Actif" : "Désactivé"}</td>
+                <td>{CLES_ROLE[m.role] ? t(CLES_ROLE[m.role]) : m.role}</td>
+                <td>{m.active ? t("eq_statutActif") : t("eq_statutDesactive")}</td>
                 <td>
                   {m.role !== "OWNER" && m.active && (
                     <button className={styles.retirer} onClick={() => retirer(m.id)}>
-                      Retirer
+                      {t("eq_retirer")}
                     </button>
                   )}
                 </td>
