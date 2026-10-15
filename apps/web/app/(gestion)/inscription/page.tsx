@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 export default function InscriptionPage() {
   const { register } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [identifiant, setIdentifiant] = useState("");
@@ -20,7 +22,7 @@ export default function InscriptionPage() {
     e.preventDefault();
     setErreur(null);
     if (motDePasse.length < 8) {
-      setErreur("Le mot de passe doit contenir au moins 8 caractères.");
+      setErreur(t("compte_motDePasseCourt"));
       return;
     }
     setEnCours(true);
@@ -28,7 +30,7 @@ export default function InscriptionPage() {
       await register({ fullName, identifiant, motDePasse });
       router.push("/boutique/nouvelle");
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Inscription impossible pour le moment.");
+      setErreur(err instanceof ApiError ? err.message : t("ginscription_erreur"));
     } finally {
       setEnCours(false);
     }
@@ -37,18 +39,15 @@ export default function InscriptionPage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.panneauMarque}>
-        <h1>Ouvrez votre boutique</h1>
-        <p>
-          Créez votre compte ELEGANZ Gestion, puis votre boutique, en moins de
-          deux minutes. Trois mois gratuits pour démarrer.
-        </p>
+        <h1>{t("ginscription_titreMarque")}</h1>
+        <p>{t("ginscription_texteMarque")}</p>
       </div>
       <div className={styles.panneauForm}>
         <form className={styles.form} onSubmit={soumettre}>
-          <h2 style={{ marginBottom: "24px" }}>Créer un compte</h2>
+          <h2 style={{ marginBottom: "24px" }}>{t("compte_creerCompte")}</h2>
           {erreur && <div className={styles.erreur}>{erreur}</div>}
           <div className={styles.champ}>
-            <label htmlFor="fullName">Nom complet</label>
+            <label htmlFor="fullName">{t("compte_nomComplet")}</label>
             <input
               id="fullName"
               type="text"
@@ -59,7 +58,7 @@ export default function InscriptionPage() {
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="identifiant">Email ou numéro de téléphone</label>
+            <label htmlFor="identifiant">{t("compte_emailOuTelephone")}</label>
             <input
               id="identifiant"
               type="text"
@@ -70,7 +69,7 @@ export default function InscriptionPage() {
             />
           </div>
           <div className={styles.champ}>
-            <label htmlFor="motDePasse">Mot de passe (8 caractères minimum)</label>
+            <label htmlFor="motDePasse">{t("ginscription_labelMotDePasse")}</label>
             <input
               id="motDePasse"
               type="password"
@@ -82,10 +81,10 @@ export default function InscriptionPage() {
             />
           </div>
           <button className={styles.bouton} type="submit" disabled={enCours}>
-            {enCours ? "Création du compte…" : "Créer mon compte"}
+            {enCours ? t("ginscription_enCours") : t("compte_creerMonCompte")}
           </button>
           <p style={{ marginTop: "16px", fontSize: "0.875rem" }}>
-            Déjà un compte ? <Link href="/connexion">Se connecter</Link>
+            {t("ginscription_dejaCompte")} <Link href="/connexion">{t("compte_seConnecter")}</Link>
           </p>
         </form>
       </div>

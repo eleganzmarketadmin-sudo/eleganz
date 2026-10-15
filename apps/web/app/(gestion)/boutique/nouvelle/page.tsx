@@ -5,24 +5,26 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 const MODES = [
   {
     valeur: "PRIVATE" as const,
-    titre: "Privée",
-    description: "Caisse, stock et comptes — jamais visible sur la Marketplace.",
+    cleTitre: "boutique_modePriveeTitre",
+    cleDescription: "boutique_modePriveeDescription",
   },
   {
     valeur: "HYBRID" as const,
-    titre: "Hybride",
-    description: "Gestion complète, avec la possibilité de publier une sélection sur la Marketplace.",
+    cleTitre: "boutique_modeHybrideTitre",
+    cleDescription: "boutique_modeHybrideDescription",
   },
 ];
 
 export default function NouvelleBoutiquePage() {
   const { user, loading: authLoading } = useAuth();
   const { reload } = useShop();
+  const { t } = useLocale();
   const router = useRouter();
   const [nom, setNom] = useState("");
   const [mode, setMode] = useState<"PRIVATE" | "HYBRID">("PRIVATE");
@@ -42,7 +44,7 @@ export default function NouvelleBoutiquePage() {
       reload();
       router.push("/caisse");
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Création impossible pour le moment.");
+      setErreur(err instanceof ApiError ? err.message : t("boutique_erreurCreation"));
     } finally {
       setEnCours(false);
     }
@@ -52,20 +54,18 @@ export default function NouvelleBoutiquePage() {
 
   return (
     <div className={styles.cadre}>
-      <h1 className={styles.titre}>Créer votre boutique</h1>
-      <p className={styles.sousTitre}>
-        Trois mois gratuits démarrent dès maintenant. Vous pourrez changer de mode plus tard.
-      </p>
+      <h1 className={styles.titre}>{t("boutique_titre")}</h1>
+      <p className={styles.sousTitre}>{t("boutique_sousTitre")}</p>
 
       <form onSubmit={creer}>
         {erreur && <div className={styles.erreur}>{erreur}</div>}
 
         <div className={styles.champ}>
-          <label htmlFor="nom">Nom de la boutique</label>
+          <label htmlFor="nom">{t("boutique_labelNom")}</label>
           <input
             id="nom"
             type="text"
-            placeholder="Ex. Chez Kadiata"
+            placeholder={t("boutique_placeholderNom")}
             value={nom}
             onChange={(e) => setNom(e.target.value)}
             required
@@ -81,14 +81,14 @@ export default function NouvelleBoutiquePage() {
               className={`${styles.modeBouton} ${mode === m.valeur ? styles.modeBoutonActif : ""}`}
               onClick={() => setMode(m.valeur)}
             >
-              <strong>{m.titre}</strong>
-              <span>{m.description}</span>
+              <strong>{t(m.cleTitre)}</strong>
+              <span>{t(m.cleDescription)}</span>
             </button>
           ))}
         </div>
 
         <button className={styles.bouton} type="submit" disabled={enCours || nom.length < 2}>
-          {enCours ? "Création…" : "Créer ma boutique"}
+          {enCours ? t("boutique_creationEnCours") : t("boutique_creerMaBoutique")}
         </button>
       </form>
     </div>
