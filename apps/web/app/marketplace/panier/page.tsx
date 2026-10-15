@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useCart } from "../../lib/cart-context";
 import { formatMoney } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 export default function PanierPage() {
+  const { t } = useLocale();
   const { lignes, modifierQuantite, retirer, total, devise } = useCart();
 
   if (lignes.length === 0) {
     return (
       <div className={styles.cadre}>
-        <h1 className={styles.titre}>Panier</h1>
+        <h1 className={styles.titre}>{t("nav_panier")}</h1>
         <p className={styles.messageVide}>
-          Votre panier est vide. <Link href="/marketplace">Parcourir la vitrine</Link>.
+          {t("panier_vide")} <Link href="/marketplace">{t("accueil_parcourirVitrine")}</Link>.
         </p>
       </div>
     );
@@ -21,7 +23,7 @@ export default function PanierPage() {
 
   return (
     <div className={styles.cadre}>
-      <h1 className={styles.titre}>Panier</h1>
+      <h1 className={styles.titre}>{t("nav_panier")}</h1>
 
       {lignes.map((l) => (
         <div className={styles.ligne} key={l.variantId}>
@@ -46,12 +48,12 @@ export default function PanierPage() {
       ))}
 
       <div className={styles.total}>
-        <span>Total</span>
+        <span>{t("panier_total")}</span>
         <span className="chiffre">{formatMoney(total, devise)}</span>
       </div>
 
       <Link href="/marketplace/commande" className={styles.bouton} style={{ display: "block", textAlign: "center", lineHeight: "var(--touche-min)", textDecoration: "none" }}>
-        Passer la commande
+        {t("panier_passerCommande")}
       </Link>
     </div>
   );

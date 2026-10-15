@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth";
 import { api, ApiError } from "../lib/api";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./MessagerieEcran.module.css";
 
 interface Participant {
@@ -24,9 +25,9 @@ interface Conversation {
   messages: MessageApercu[];
 }
 
-function nomAutrePartie(conv: Conversation, monId: string): string {
+function nomAutrePartie(conv: Conversation, monId: string, conversationFallback: string): string {
   const autres = conv.participants.filter((p) => p.user.id !== monId);
-  return autres.map((p) => p.user.fullName).join(", ") || "Conversation";
+  return autres.map((p) => p.user.fullName).join(", ") || conversationFallback;
 }
 
 /**
@@ -41,6 +42,7 @@ function nomAutrePartie(conv: Conversation, monId: string): string {
  */
 export function MessagerieEcran({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
+  const { t } = useLocale();
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [selectionId, setSelectionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageApercu[] | null>(null);
@@ -57,7 +59,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
       const liste = await api.get<Conversation[]>("/messagerie/conversations");
       setConversations(liste);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible de charger la messagerie.");
+      setErreur(err instanceof ApiError ? err.message : t("msg_impossibleCharger"));
     }
   }
 
@@ -73,7 +75,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
       setMessages(liste);
       api.post(`/messagerie/conversations/${id}/lu`).catch(() => {});
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible de charger les messages.");
+      setErreur(err instanceof ApiError ? err.message : t("msg_impossibleChargerMessages"));
     }
   }
 
@@ -88,7 +90,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
       setBrouillon("");
       chargerConversations();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Envoi impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("msg_envoiImpossible"));
     } finally {
       setEnvoiEnCours(false);
     }
@@ -108,7 +110,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
       await chargerConversations();
       ouvrirConversation(conv.id);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Impossible de démarrer la conversation.");
+      setErreur(err instanceof ApiError ? err.message : t("msg_impossibleDemarrer"));
     } finally {
       setEnvoiEnCours(false);
     }
@@ -126,27 +128,27 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
             className={styles.boutonNouveau}
             onClick={() => setFormulaireOuvert((v) => !v)}
           >
-            + Nouvelle conversation
+            + {t("msg_nouvelleConversation")}
           </button>
           {formulaireOuvert && (
             <div className={styles.formulaireNouveau}>
               <input
-                placeholder="Identifiant du destinataire"
+                placeholder={t("msg_placeholderDestinataire")}
                 value={nouveauDestinataire}
                 onChange={(e) => setNouveauDestinataire(e.target.value)}
               />
               <textarea
-                placeholder="Votre message"
+                placeholder={t("msg_placeholderMessage")}
                 value={nouveauMessage}
                 onChange={(e) => setNouveauMessage(e.target.value)}
               />
               <button type="button" onClick={demarrerConversation} disabled={envoiEnCours}>
-                Envoyer
+                {t("msg_envoyer")}
               </button>
             </div>
           )}
-          {conversations === null && <p className={styles.chargement}>Chargement…</p>}
-          {conversations?.length === 0 && <p className={styles.vide}>Aucune conversation pour l&apos;instant.</p>}
+          {conversations === null && <p className={styles.chargement}>{t("commun_chargement")}</p>}
+          {conversations?.length === 0 && <p className={styles.vide}>{t("msg_aucuneConversation")}</p>}
           {conversations?.map((conv) => (
             <button
               key={conv.id}
@@ -154,17 +156,17 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
               className={`${styles.itemConversation} ${selectionId === conv.id ? styles.itemActif : ""}`}
               onClick={() => ouvrirConversation(conv.id)}
             >
-              <span className={styles.itemNom}>{nomAutrePartie(conv, user.id)}</span>
+              <span className={styles.itemNom}>{nomAutrePartie(conv, user.id, t("msg_conversationFallback"))}</span>
               {conv.messages[0] && <span className={styles.itemApercu}>{conv.messages[0].body}</span>}
             </button>
           ))}
         </div>
         <div className={styles.colonneThread}>
-          {!selectionId && <p className={styles.vide}>Choisissez une conversation à gauche.</p>}
+          {!selectionId && <p className={styles.vide}>{t("msg_choisirConversation")}</p>}
           {selectionId && (
             <>
               <div className={styles.listeMessages}>
-                {messages === null && <p className={styles.chargement}>Chargement…</p>}
+                {messages === null && <p className={styles.chargement}>{t("commun_chargement")}</p>}
                 {messages?.map((m) => (
                   <div
                     key={m.id}
@@ -178,7 +180,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
                 <textarea
                   value={brouillon}
                   onChange={(e) => setBrouillon(e.target.value)}
-                  placeholder="Écrire une réponse…"
+                  placeholder={t("msg_placeholderReponse")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -187,7 +189,7 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
                   }}
                 />
                 <button type="button" onClick={envoyerReponse} disabled={envoiEnCours || !brouillon.trim()}>
-                  Envoyer
+                  {t("msg_envoyer")}
                 </button>
               </div>
             </>

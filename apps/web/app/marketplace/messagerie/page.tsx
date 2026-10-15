@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { MessagerieEcran } from "../../components/MessagerieEcran";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 
 export default function MessagerieMarketplacePage() {
   const { user, loading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,7 +19,7 @@ export default function MessagerieMarketplacePage() {
 
   return (
     <>
-      <h1>Messagerie</h1>
+      <h1>{t("nav_messagerie")}</h1>
       <MessagerieEcran />
     </>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../lib/auth";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./AvisProduit.module.css";
 
 interface Avis {
@@ -20,7 +21,15 @@ interface ReponseAvis {
   avis: Avis[];
 }
 
-function Etoiles({ note, onChange }: { note: number; onChange?: (n: number) => void }) {
+function Etoiles({
+  note,
+  onChange,
+  etoileLabel,
+}: {
+  note: number;
+  onChange?: (n: number) => void;
+  etoileLabel: string;
+}) {
   return (
     <span className={styles.etoiles}>
       {[1, 2, 3, 4, 5].map((n) => (
@@ -30,7 +39,7 @@ function Etoiles({ note, onChange }: { note: number; onChange?: (n: number) => v
           className={styles.etoileBouton}
           disabled={!onChange}
           onClick={() => onChange?.(n)}
-          aria-label={`${n} étoile(s)`}
+          aria-label={`${n} ${etoileLabel}`}
           style={{ color: n <= note ? "var(--color-or)" : "var(--color-border)" }}
         >
           ★
@@ -49,6 +58,7 @@ function Etoiles({ note, onChange }: { note: number; onChange?: (n: number) => v
  */
 export function AvisProduit({ shopId, productId }: { shopId: string; productId: string }) {
   const { user } = useAuth();
+  const { t } = useLocale();
   const [donnees, setDonnees] = useState<ReponseAvis | null>(null);
   const [noteChoisie, setNoteChoisie] = useState(0);
   const [commentaire, setCommentaire] = useState("");
@@ -67,7 +77,7 @@ export function AvisProduit({ shopId, productId }: { shopId: string; productId: 
 
   async function envoyer() {
     if (!noteChoisie) {
-      setErreur("Choisissez une note avant d'envoyer.");
+      setErreur(t("avis_choisirNoteErreur"));
       return;
     }
     setEnvoiEnCours(true);
@@ -83,7 +93,7 @@ export function AvisProduit({ shopId, productId }: { shopId: string; productId: 
       setAfficherFormulaire(false);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "L'avis n'a pas pu être envoyé.");
+      setErreur(err instanceof ApiError ? err.message : t("avis_envoiEchec"));
     } finally {
       setEnvoiEnCours(false);
     }
@@ -94,22 +104,23 @@ export function AvisProduit({ shopId, productId }: { shopId: string; productId: 
   return (
     <div className={styles.section}>
       <div className={styles.entete}>
-        <h2 className={styles.titre}>Avis</h2>
+        <h2 className={styles.titre}>{t("avis_titre")}</h2>
         {donnees.total > 0 && (
           <span className={styles.moyenne}>
-            <Etoiles note={Math.round(donnees.moyenne)} /> {donnees.moyenne}/5 ({donnees.total} avis)
+            <Etoiles note={Math.round(donnees.moyenne)} etoileLabel={t("avis_etoileLabel")} />{" "}
+            {donnees.moyenne}/5 ({donnees.total} {t("avis_label")})
           </span>
         )}
       </div>
 
-      {donnees.total === 0 && <p className={styles.vide}>Aucun avis pour l&apos;instant.</p>}
+      {donnees.total === 0 && <p className={styles.vide}>{t("avis_aucun")}</p>}
 
       {donnees.avis.map((a) => (
         <div className={styles.avis} key={a.id}>
           <div className={styles.avisEntete}>
-            <Etoiles note={a.rating} />
+            <Etoiles note={a.rating} etoileLabel={t("avis_etoileLabel")} />
             <strong>{a.auteur}</strong>
-            {a.verifiedPurchase && <span className={styles.badge}>Achat vérifié</span>}
+            {a.verifiedPurchase && <span className={styles.badge}>{t("market_achatVerifie")}</span>}
           </div>
           {a.comment && <p className={styles.commentaire}>{a.comment}</p>}
         </div>
@@ -118,9 +129,9 @@ export function AvisProduit({ shopId, productId }: { shopId: string; productId: 
       {user ? (
         afficherFormulaire ? (
           <div className={styles.formulaire}>
-            <Etoiles note={noteChoisie} onChange={setNoteChoisie} />
+            <Etoiles note={noteChoisie} onChange={setNoteChoisie} etoileLabel={t("avis_etoileLabel")} />
             <textarea
-              placeholder="Votre avis sur cet article (optionnel)"
+              placeholder={t("avis_placeholderCommentaire")}
               value={commentaire}
               onChange={(e) => setCommentaire(e.target.value)}
               rows={3}
@@ -128,20 +139,20 @@ export function AvisProduit({ shopId, productId }: { shopId: string; productId: 
             {erreur && <div className={styles.erreur}>{erreur}</div>}
             <div className={styles.actionsFormulaire}>
               <button className={styles.boutonEnvoyer} onClick={envoyer} disabled={envoiEnCours}>
-                {envoiEnCours ? "Envoi…" : "Publier l'avis"}
+                {envoiEnCours ? t("avis_envoiEnCours") : t("avis_publier")}
               </button>
               <button className={styles.boutonAnnuler} onClick={() => setAfficherFormulaire(false)}>
-                Annuler
+                {t("action_annuler")}
               </button>
             </div>
           </div>
         ) : (
           <button className={styles.boutonOuvrir} onClick={() => setAfficherFormulaire(true)}>
-            Laisser un avis
+            {t("avis_laisserAvis")}
           </button>
         )
       ) : (
-        <p className={styles.vide}>Connectez-vous pour laisser un avis.</p>
+        <p className={styles.vide}>{t("avis_connectezVous")}</p>
       )}
     </div>
   );

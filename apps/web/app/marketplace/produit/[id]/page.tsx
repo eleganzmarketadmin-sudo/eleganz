@@ -52,11 +52,11 @@ export default function ProduitPage() {
         const premiereDisponible = data.variants.find((v) => v.stockQty > 0);
         setVarianteId(premiereDisponible?.id ?? null);
       })
-      .catch((err) => setErreur(err instanceof Error ? err.message : "Produit introuvable."));
-  }, [params.id]);
+      .catch((err) => setErreur(err instanceof Error ? err.message : t("produit_introuvable")));
+  }, [params.id, t]);
 
   if (erreur) return <p style={{ padding: "48px" }}>{erreur}</p>;
-  if (!produit) return <p style={{ padding: "48px" }}>Chargement…</p>;
+  if (!produit) return <p style={{ padding: "48px" }}>{t("produit_chargement")}</p>;
 
   const variante = produit.variants.find((v) => v.id === varianteId);
 
@@ -81,7 +81,7 @@ export default function ProduitPage() {
   return (
     <div className={styles.cadre}>
       <div style={{ gridColumn: "1 / -1" }}>
-        <RetourLien href="/marketplace" label="Retour au marketplace" />
+        <RetourLien href="/marketplace" label={t("produit_retourMarketplace")} />
       </div>
       {produit.images[0] ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -91,7 +91,7 @@ export default function ProduitPage() {
       )}
       <div>
         <h1 className={styles.titre}>{produit.name}</h1>
-        <p className={styles.boutique}>Vendu par {produit.shop.name}</p>
+        <p className={styles.boutique}>{t("produit_venduPar")} {produit.shop.name}</p>
         {produit.shop.deliveryZones && produit.shop.deliveryZones.length > 0 && (
           <p className={styles.boutique} style={{ marginBottom: "16px" }}>
             {t("zonesLivraison_titre")} : {" "}
@@ -113,17 +113,17 @@ export default function ProduitPage() {
                 className={`${styles.varianteBouton} ${varianteId === v.id ? styles.varianteBoutonActif : ""}`}
                 onClick={() => setVarianteId(v.id)}
               >
-                {[v.size, v.color].filter(Boolean).join(" · ") || "Unique"}
+                {[v.size, v.color].filter(Boolean).join(" · ") || t("produit_unique")}
               </button>
             ))}
           </div>
         )}
 
         <button className={styles.bouton} onClick={ajouterAuPanier} disabled={!variante || variante.stockQty <= 0}>
-          {variante && variante.stockQty > 0 ? "Ajouter au panier" : "Épuisé"}
+          {variante && variante.stockQty > 0 ? t("produit_ajouterPanier") : t("produit_epuise")}
         </button>
 
-        {confirmation && <div className={styles.confirmation}>Ajouté au panier.</div>}
+        {confirmation && <div className={styles.confirmation}>{t("produit_ajoutePanier")}</div>}
       </div>
 
       <AvisProduit shopId={produit.shop.id} productId={produit.id} />

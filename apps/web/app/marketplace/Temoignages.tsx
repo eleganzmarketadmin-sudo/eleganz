@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./Temoignages.module.css";
 
 interface Temoignage {
@@ -30,6 +31,7 @@ function Etoiles({ note }: { note: number }) {
  * acheteurs à en laisser un.
  */
 export function Temoignages() {
+  const { t } = useLocale();
   const [temoignages, setTemoignages] = useState<Temoignage[] | null>(null);
 
   useEffect(() => {
@@ -43,20 +45,22 @@ export function Temoignages() {
 
   return (
     <div className={styles.section}>
-      <h2 className={styles.titre}>Ce que disent les acheteurs</h2>
+      <h2 className={styles.titre}>{t("market_temoinTitre")}</h2>
       {temoignages.length === 0 ? (
-        <p className={styles.vide}>
-          Les premiers avis apparaîtront ici dès que des acheteurs partageront leur expérience.
-        </p>
+        <p className={styles.vide}>{t("market_temoinVide")}</p>
       ) : (
         <div className={styles.grille}>
-          {temoignages.map((t) => (
-            <div className={styles.carte} key={t.id}>
-              <Etoiles note={t.rating} />
-              {t.comment && <p className={styles.commentaire}>&laquo; {t.comment} &raquo;</p>}
+          {temoignages.map((temoignage) => (
+            <div className={styles.carte} key={temoignage.id}>
+              <Etoiles note={temoignage.rating} />
+              {temoignage.comment && (
+                <p className={styles.commentaire}>&laquo; {temoignage.comment} &raquo;</p>
+              )}
               <div className={styles.auteur}>
-                {t.auteur} — {t.boutique}
-                {t.verifiedPurchase && <span className={styles.badge}>Achat vérifié</span>}
+                {temoignage.auteur} — {temoignage.boutique}
+                {temoignage.verifiedPurchase && (
+                  <span className={styles.badge}>{t("market_achatVerifie")}</span>
+                )}
               </div>
             </div>
           ))}

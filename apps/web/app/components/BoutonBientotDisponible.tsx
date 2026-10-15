@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./BoutonBientotDisponible.module.css";
 
 /**
@@ -9,15 +12,11 @@ import styles from "./BoutonBientotDisponible.module.css";
  * admin (voir docs/PROJECT_STATUS.md).
  */
 export function BoutonBientotDisponible({ icone, label }: { icone: string; label: string }) {
+  const { t } = useLocale();
   return (
-    <button
-      type="button"
-      className={styles.bouton}
-      disabled
-      title="Fonctionnalité prévue — sera activée une fois un fournisseur choisi, en fonction des recettes et de la croissance."
-    >
+    <button type="button" className={styles.bouton} disabled title={t("bientotDisponible_info")}>
       <span aria-hidden="true">{icone}</span> {label}
-      <span className={styles.badge}>Bientôt disponible</span>
+      <span className={styles.badge}>{t("bientotDisponible_badge")}</span>
     </button>
   );
 }

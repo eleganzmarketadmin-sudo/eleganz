@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, ApiError } from "../../lib/auth";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 export default function ComptePage() {
@@ -15,6 +16,7 @@ export default function ComptePage() {
 
 function ComptePageContenu() {
   const { login, register } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [onglet, setOnglet] = useState<"connexion" | "inscription">("connexion");
@@ -37,7 +39,7 @@ function ComptePageContenu() {
         await login(identifiant, motDePasse);
       } else {
         if (motDePasse.length < 8) {
-          setErreur("Le mot de passe doit contenir au moins 8 caractères.");
+          setErreur(t("compte_motDePasseCourt"));
           setEnCours(false);
           return;
         }
@@ -45,7 +47,7 @@ function ComptePageContenu() {
       }
       router.push(destination());
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Opération impossible pour le moment.");
+      setErreur(err instanceof ApiError ? err.message : t("compte_operationImpossible"));
     } finally {
       setEnCours(false);
     }
@@ -58,13 +60,13 @@ function ComptePageContenu() {
           className={`${styles.onglet} ${onglet === "connexion" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("connexion")}
         >
-          Se connecter
+          {t("compte_seConnecter")}
         </button>
         <button
           className={`${styles.onglet} ${onglet === "inscription" ? styles.ongletActif : ""}`}
           onClick={() => setOnglet("inscription")}
         >
-          Créer un compte
+          {t("compte_creerCompte")}
         </button>
       </div>
 
@@ -73,7 +75,7 @@ function ComptePageContenu() {
 
         {onglet === "inscription" && (
           <div className={styles.champ}>
-            <label htmlFor="fullName">Nom complet</label>
+            <label htmlFor="fullName">{t("compte_nomComplet")}</label>
             <input
               id="fullName"
               value={fullName}
@@ -83,7 +85,7 @@ function ComptePageContenu() {
           </div>
         )}
         <div className={styles.champ}>
-          <label htmlFor="identifiant">Email ou numéro de téléphone</label>
+          <label htmlFor="identifiant">{t("compte_emailOuTelephone")}</label>
           <input
             id="identifiant"
             value={identifiant}
@@ -92,7 +94,7 @@ function ComptePageContenu() {
           />
         </div>
         <div className={styles.champ}>
-          <label htmlFor="motDePasse">Mot de passe</label>
+          <label htmlFor="motDePasse">{t("compte_motDePasse")}</label>
           <input
             id="motDePasse"
             type="password"
@@ -104,10 +106,10 @@ function ComptePageContenu() {
         </div>
         <button className={styles.bouton} type="submit" disabled={enCours}>
           {enCours
-            ? "Un instant…"
+            ? t("compte_unInstant")
             : onglet === "connexion"
-              ? "Se connecter"
-              : "Créer mon compte"}
+              ? t("compte_seConnecter")
+              : t("compte_creerMonCompte")}
         </button>
       </form>
     </div>

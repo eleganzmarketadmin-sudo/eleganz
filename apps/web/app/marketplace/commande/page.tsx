@@ -7,10 +7,12 @@ import { useAuth } from "../../lib/auth";
 import { useCart } from "../../lib/cart-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 export default function CommandePage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLocale();
   const { lignes, total, devise, vider } = useCart();
   const router = useRouter();
   const [enCours, setEnCours] = useState(false);
@@ -52,7 +54,7 @@ export default function CommandePage() {
       vider();
       setCommandeConfirmee(true);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "La commande n'a pas pu être enregistrée.");
+      setErreur(err instanceof ApiError ? err.message : t("cmd_erreurEnregistrement"));
     } finally {
       setEnCours(false);
     }
@@ -64,10 +66,10 @@ export default function CommandePage() {
     return (
       <div className={styles.cadre}>
         <div className={styles.confirmation}>
-          <h1>Commande enregistrée</h1>
-          <p>Chaque boutique concernée va la préparer. Vous réglez à la livraison, en espèces ou en mobile money.</p>
+          <h1>{t("cmd_titreConfirmee")}</h1>
+          <p>{t("cmd_texteConfirmee")}</p>
           <p style={{ marginTop: "24px" }}>
-            <Link href="/marketplace/commandes">Suivre mes commandes</Link>
+            <Link href="/marketplace/commandes">{t("cmd_suivreMesCommandes")}</Link>
           </p>
         </div>
       </div>
@@ -77,14 +79,16 @@ export default function CommandePage() {
   if (lignes.length === 0) {
     return (
       <div className={styles.cadre}>
-        <p>Votre panier est vide. <Link href="/marketplace">Parcourir la vitrine</Link>.</p>
+        <p>
+          {t("panier_vide")} <Link href="/marketplace">{t("accueil_parcourirVitrine")}</Link>.
+        </p>
       </div>
     );
   }
 
   return (
     <div className={styles.cadre}>
-      <h1 className={styles.titre}>Confirmer la commande</h1>
+      <h1 className={styles.titre}>{t("cmd_titreConfirmer")}</h1>
 
       <div className={styles.recap}>
         {lignes.map((l) => (
@@ -96,66 +100,61 @@ export default function CommandePage() {
           </div>
         ))}
         <div className={styles.total}>
-          <span>Total</span>
+          <span>{t("panier_total")}</span>
           <span className="chiffre">{formatMoney(total, devise)}</span>
         </div>
       </div>
 
-      <p className={styles.note}>
-        Paiement à la livraison pour l&apos;instant (espèces ou mobile money) — le paiement en
-        ligne arrive prochainement. Si votre commande vient de plusieurs boutiques, chacune la
-        prépare séparément.
-      </p>
+      <p className={styles.note}>{t("cmd_notePaiement")}</p>
 
       <div className={styles.livraison}>
-        <h2 className={styles.sousTitre}>Pour vous contacter et livrer la commande</h2>
+        <h2 className={styles.sousTitre}>{t("cmd_sousTitreLivraison")}</h2>
         <p className={styles.note} style={{ marginBottom: "var(--espace-3)" }}>
-          La boutique s&apos;en sert pour vous joindre et organiser la livraison. Donnez au moins
-          un numéro.
+          {t("cmd_noteLivraison")}
         </p>
         <div className={styles.champs}>
           <label className={styles.champ}>
-            <span>Numéro WhatsApp (de préférence)</span>
+            <span>{t("cmd_labelWhatsapp")}</span>
             <input
               type="tel"
-              placeholder="Ex. 081 234 5678"
+              placeholder={t("cmd_placeholderWhatsapp")}
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
             />
           </label>
           <label className={styles.champ}>
-            <span>Autre numéro de téléphone</span>
+            <span>{t("cmd_labelTelephone")}</span>
             <input
               type="tel"
-              placeholder="Si différent du WhatsApp"
+              placeholder={t("cmd_placeholderTelephone")}
               value={telephone}
               onChange={(e) => setTelephone(e.target.value)}
             />
           </label>
           <label className={styles.champ}>
-            <span>Commune</span>
-            <input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Ex. Gombe" />
+            <span>{t("cmd_labelCommune")}</span>
+            <input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder={t("cmd_placeholderCommune")} />
           </label>
           <label className={styles.champ}>
-            <span>Quartier</span>
-            <input value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder="Ex. Socimat" />
+            <span>{t("cmd_labelQuartier")}</span>
+            <input value={quartier} onChange={(e) => setQuartier(e.target.value)} placeholder={t("cmd_placeholderQuartier")} />
           </label>
           <label className={styles.champ}>
-            <span>Avenue</span>
-            <input value={avenue} onChange={(e) => setAvenue(e.target.value)} placeholder="Ex. Avenue du Commerce" />
+            <span>{t("cmd_labelAvenue")}</span>
+            <input value={avenue} onChange={(e) => setAvenue(e.target.value)} placeholder={t("cmd_placeholderAvenue")} />
           </label>
           <label className={styles.champ}>
-            <span>Point de repère</span>
-            <input value={repere} onChange={(e) => setRepere(e.target.value)} placeholder="Ex. Près de la pharmacie" />
+            <span>{t("cmd_labelRepere")}</span>
+            <input value={repere} onChange={(e) => setRepere(e.target.value)} placeholder={t("cmd_placeholderRepere")} />
           </label>
         </div>
         <label className={styles.champ} style={{ marginTop: "var(--espace-3)" }}>
-          <span>Note pour le livreur (optionnel)</span>
+          <span>{t("cmd_labelNote")}</span>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            placeholder="Ex. Appeler avant de monter, disponible après 17h…"
+            placeholder={t("cmd_placeholderNote")}
           />
         </label>
       </div>
@@ -163,7 +162,7 @@ export default function CommandePage() {
       {erreur && <div className={styles.erreur}>{erreur}</div>}
 
       <button className={styles.bouton} onClick={confirmer} disabled={enCours}>
-        {enCours ? "Enregistrement…" : "Confirmer la commande"}
+        {enCours ? t("cmd_enregistrementEnCours") : t("cmd_confirmerCommande")}
       </button>
     </div>
   );

@@ -109,11 +109,7 @@ export default function MarketplacePage() {
     <div className={styles.cadre}>
       <div className={styles.entete}>
         <h1>ELEGANZ {t("nom_market")}</h1>
-        <p>
-          La marketplace qui réunit vendeurs et acheteurs congolais dans une seule vitrine, tous
-          secteurs confondus — recherche, fiche produit, commande et livraison suivie, où que vous
-          soyez.
-        </p>
+        <p>{t("market_sousTitre")}</p>
       </div>
 
       <form
@@ -124,11 +120,11 @@ export default function MarketplacePage() {
         }}
       >
         <input
-          placeholder="Chercher une robe, une paire de sandales, une couleur…"
+          placeholder={t("market_rechercherPlaceholder")}
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
-        <BoutonBientotDisponible icone="📷" label="Rechercher par photo" />
+        <BoutonBientotDisponible icone="📷" label={t("market_rechercherParPhoto")} />
         <select
           aria-label={t("zonesLivraison_pays")}
           value={paysChoisiId}
@@ -157,11 +153,11 @@ export default function MarketplacePage() {
       </form>
 
       {chargement ? (
-        <p className={styles.messageVide}>Chargement de la vitrine…</p>
+        <p className={styles.messageVide}>{t("market_chargement")}</p>
       ) : erreur ? (
         <p className={styles.messageVide}>{erreur}</p>
       ) : produits.length === 0 ? (
-        <p className={styles.messageVide}>Aucun article ne correspond à cette recherche.</p>
+        <p className={styles.messageVide}>{t("market_aucunArticle")}</p>
       ) : (
         <div className={styles.grille}>
           {produits.map((produit) => {

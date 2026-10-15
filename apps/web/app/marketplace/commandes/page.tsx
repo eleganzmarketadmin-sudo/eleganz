@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth";
 import { api, ApiError } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/money";
 import { StatusTag } from "../../components/StatusTag";
+import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 interface OrderLine {
@@ -51,26 +52,27 @@ const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"
   REFUNDED: "alerte",
 };
 
-const LABELS_STATUT: Record<string, string> = {
-  CREATED: "Créée",
-  PAYMENT_PENDING: "Paiement en attente",
-  PAYMENT_CONFIRMED: "Paiement confirmé",
-  ACCEPTED: "Acceptée par la boutique",
-  PREPARING: "En préparation",
-  READY_FOR_PICKUP: "Prête pour l'enlèvement",
-  PICKED_UP: "Récupérée par le livreur",
-  IN_TRANSIT: "En livraison",
-  DELIVERED_DECLARED: "Livraison déclarée",
-  RECEIVED_CONFIRMED: "Réception confirmée",
-  CLOSED: "Terminée",
-  CANCELLED: "Annulée",
-  DISPUTED: "En litige",
-  RETURN_REQUESTED: "Retour demandé",
-  REFUNDED: "Remboursée",
+const CLES_STATUT: Record<string, string> = {
+  CREATED: "statut_creee",
+  PAYMENT_PENDING: "statut_paiementAttente",
+  PAYMENT_CONFIRMED: "statut_paiementConfirme",
+  ACCEPTED: "statut_accepteeBoutique",
+  PREPARING: "statut_enPreparation",
+  READY_FOR_PICKUP: "statut_preteEnlevement",
+  PICKED_UP: "statut_recupereeLivreur",
+  IN_TRANSIT: "statut_enLivraison",
+  DELIVERED_DECLARED: "statut_livraisonDeclaree",
+  RECEIVED_CONFIRMED: "statut_receptionConfirmee",
+  CLOSED: "statut_terminee",
+  CANCELLED: "statut_annulee",
+  DISPUTED: "statut_enLitige",
+  RETURN_REQUESTED: "statut_retourDemande",
+  REFUNDED: "statut_remboursee",
 };
 
 export default function CommandesPage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [commandes, setCommandes] = useState<Order[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -93,7 +95,7 @@ export default function CommandesPage() {
     api
       .get<Order[]>("/marketplace/orders/mine")
       .then(setCommandes)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cmd_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -105,7 +107,7 @@ export default function CommandesPage() {
       await api.post(`/marketplace/orders/${shopOrderId}/confirm-receipt`);
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Confirmation impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cmd_confirmationImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -120,7 +122,7 @@ export default function CommandesPage() {
 
   async function envoyerAvis() {
     if (!avisPour || !noteAvis) {
-      setErreur("Choisissez une note avant d'envoyer.");
+      setErreur(t("avis_choisirNoteErreur"));
       return;
     }
     setEnvoiAvisEnCours(true);
@@ -135,7 +137,7 @@ export default function CommandesPage() {
       setAvisEnvoyesPour((prev) => new Set(prev).add(avisPour.id));
       setAvisPour(null);
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "L'avis n'a pas pu être envoyé.");
+      setErreur(err instanceof ApiError ? err.message : t("cmd_avisEchec"));
     } finally {
       setEnvoiAvisEnCours(false);
     }
@@ -145,15 +147,15 @@ export default function CommandesPage() {
 
   return (
     <div className={styles.cadre}>
-      <h1 className={styles.titre}>Mes commandes</h1>
+      <h1 className={styles.titre}>{t("nav_mesCommandes")}</h1>
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : erreur ? (
         <p>{erreur}</p>
       ) : commandes.length === 0 ? (
         <p className={styles.messageVide}>
-          Aucune commande encore. <Link href="/marketplace">Parcourir la vitrine</Link>.
+          {t("cmd_aucuneCommande")} <Link href="/marketplace">{t("accueil_parcourirVitrine")}</Link>.
         </p>
       ) : (
         commandes.map((commande) => (
@@ -165,16 +167,16 @@ export default function CommandesPage() {
             {commande.shopOrders.map((so) => (
               <div className={styles.sousCommande} key={so.id}>
                 <span>
-                  {so.lines.length} article(s)
+                  {so.lines.length} {t("cmd_articleSuffix")}
                   {so.driver && (
                     <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
-                      Confié à {so.driver.user.fullName} pour livraison
+                      {t("cmd_confieA").replace("{{nom}}", so.driver.user.fullName)}
                     </span>
                   )}
                 </span>
                 <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <StatusTag
-                    label={LABELS_STATUT[so.status] ?? so.status}
+                    label={CLES_STATUT[so.status] ? t(CLES_STATUT[so.status]) : so.status}
                     humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
                   />
                   {so.status === "DELIVERED_DECLARED" && (
@@ -190,12 +192,12 @@ export default function CommandesPage() {
                         fontWeight: 600,
                       }}
                     >
-                      Confirmer la réception
+                      {t("cmd_confirmerReception")}
                     </button>
                   )}
                   {["RECEIVED_CONFIRMED", "CLOSED"].includes(so.status) &&
                     (avisEnvoyesPour.has(so.id) ? (
-                      <span style={{ color: "var(--color-vert-paiement)", fontSize: "0.8125rem" }}>Avis envoyé ✓</span>
+                      <span style={{ color: "var(--color-vert-paiement)", fontSize: "0.8125rem" }}>{t("cmd_avisEnvoye")}</span>
                     ) : (
                       <button
                         onClick={() => ouvrirAvis(so)}
@@ -208,7 +210,7 @@ export default function CommandesPage() {
                           fontWeight: 600,
                         }}
                       >
-                        Laisser un avis
+                        {t("avis_laisserAvis")}
                       </button>
                     ))}
                 </span>
@@ -221,7 +223,7 @@ export default function CommandesPage() {
       {avisPour && (
         <div className={styles.modaleFond} onClick={() => setAvisPour(null)}>
           <div className={styles.modale} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginBottom: "12px" }}>Votre avis</h2>
+            <h2 style={{ marginBottom: "12px" }}>{t("cmd_votreAvis")}</h2>
             <div style={{ marginBottom: "12px" }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -235,14 +237,14 @@ export default function CommandesPage() {
                     color: n <= noteAvis ? "var(--color-or)" : "var(--color-border)",
                     padding: "0 2px",
                   }}
-                  aria-label={`${n} étoile(s)`}
+                  aria-label={`${n} ${t("avis_etoileLabel")}`}
                 >
                   ★
                 </button>
               ))}
             </div>
             <textarea
-              placeholder="Votre expérience avec cette commande (optionnel)"
+              placeholder={t("cmd_placeholderExperience")}
               value={commentaireAvis}
               onChange={(e) => setCommentaireAvis(e.target.value)}
               rows={3}
@@ -262,13 +264,13 @@ export default function CommandesPage() {
                   fontWeight: 600,
                 }}
               >
-                {envoiAvisEnCours ? "Envoi…" : "Publier l'avis"}
+                {envoiAvisEnCours ? t("avis_envoiEnCours") : t("avis_publier")}
               </button>
               <button
                 onClick={() => setAvisPour(null)}
                 style={{ background: "none", border: "none", color: "var(--color-texte-muted)", cursor: "pointer" }}
               >
-                Annuler
+                {t("action_annuler")}
               </button>
             </div>
           </div>
