@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
 // Règles fiscales applicables à la boutique (prompt du 13 oct. 2026, §5) —
@@ -40,23 +41,24 @@ interface RegleFiscale {
   createdAt: string;
 }
 
-const LABELS_STATUT: Record<RegleFiscale["status"], string> = {
-  PROPOSEE: "Proposée",
-  CONFIGUREE: "Configurée par l'entreprise",
-  VERIFIEE: "Vérifiée par un professionnel",
-  OBSOLETE: "Obsolète",
+const CLES_STATUT: Record<RegleFiscale["status"], string> = {
+  PROPOSEE: "rfi_statutProposee",
+  CONFIGUREE: "rfi_statutConfiguree",
+  VERIFIEE: "rfi_statutVerifiee",
+  OBSOLETE: "rfi_statutObsolete",
 };
 
-const LABELS_CATEGORIE: Record<RegleFiscale["category"], string> = {
-  TVA: "TVA",
-  IMPOT: "Impôt",
-  RETENUE: "Retenue",
-  CONTRIBUTION: "Contribution",
-  AUTRE: "Autre",
+const CLES_CATEGORIE: Record<RegleFiscale["category"], string> = {
+  TVA: "rfi_catTva",
+  IMPOT: "rfi_catImpot",
+  RETENUE: "rfi_catRetenue",
+  CONTRIBUTION: "rfi_catContribution",
+  AUTRE: "rfi_catAutre",
 };
 
 function ReglesFiscalesContent() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [identite, setIdentite] = useState<IdentiteFiscale | null>(null);
   const [regles, setRegles] = useState<RegleFiscale[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -83,7 +85,7 @@ function ReglesFiscalesContent() {
         setIdentite(id);
         setRegles(r);
       })
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
   }
 
@@ -106,10 +108,10 @@ function ReglesFiscalesContent() {
         fiscalExercice: (form.get("fiscalExercice") as string) || undefined,
         fiscalVatRegistered: form.get("fiscalVatRegistered") === "on",
       });
-      setConfirmation("Informations fiscales enregistrées.");
+      setConfirmation(t("rfi_infosEnregistrees"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     }
   }
 
@@ -134,10 +136,10 @@ function ReglesFiscalesContent() {
       setBaseCalcul("");
       setSourceReference("");
       setMotif("");
-      setConfirmation("Règle fiscale enregistrée — statut « Configurée par l'entreprise ».");
+      setConfirmation(t("rfi_regleEnregistree"));
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Enregistrement impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnregistrementEnCours(false);
     }
@@ -145,125 +147,123 @@ function ReglesFiscalesContent() {
 
   async function archiver(regleId: string) {
     if (!currentShop) return;
-    const motifArchivage = window.prompt("Motif de l'archivage de cette règle ?");
+    const motifArchivage = window.prompt(t("rfi_promptMotifArchivage"));
     if (!motifArchivage) return;
     try {
       await api.delete(`/shops/${currentShop.id}/finance/fiscal-rules/${regleId}`, { motif: motifArchivage });
       recharger();
     } catch (err) {
-      setErreur(err instanceof ApiError ? err.message : "Archivage impossible.");
+      setErreur(err instanceof ApiError ? err.message : t("rfi_archivageImpossible"));
     }
   }
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
-      <h2 style={{ fontSize: "1.1rem", marginBottom: "4px" }}>Règles fiscales applicables à la boutique</h2>
+      <h2 style={{ fontSize: "1.1rem", marginBottom: "4px" }}>{t("rfi_titreSection")}</h2>
       <p style={{ color: "#888", fontSize: "0.85rem", marginBottom: "20px" }}>
-        Ces paramètres doivent être confirmés en fonction de votre situation
-        réelle. Leur enregistrement ici ne constitue ni une homologation ni
-        une validation officielle — voir le statut de chaque règle.
+        {t("rfi_noteAide")}
       </p>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
 
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : (
         <>
-          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>Informations fiscales de l&apos;entreprise</h3>
+          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>{t("rfi_infosEntreprise")}</h3>
           <form className={styles.formulaire} onSubmit={enregistrerIdentite} style={{ marginBottom: "32px" }}>
             <div className={styles.champ}>
-              <label htmlFor="fiscalLegalName">Dénomination</label>
+              <label htmlFor="fiscalLegalName">{t("rfi_denomination")}</label>
               <input id="fiscalLegalName" name="fiscalLegalName" defaultValue={identite?.fiscalLegalName ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalLegalForm">Forme juridique</label>
+              <label htmlFor="fiscalLegalForm">{t("rfi_formeJuridique")}</label>
               <input id="fiscalLegalForm" name="fiscalLegalForm" defaultValue={identite?.fiscalLegalForm ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalIdNumber">Numéro d&apos;identification fiscale</label>
+              <label htmlFor="fiscalIdNumber">{t("rfi_numeroIdFiscal")}</label>
               <input id="fiscalIdNumber" name="fiscalIdNumber" defaultValue={identite?.fiscalIdNumber ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalAddress">Adresse fiscale</label>
+              <label htmlFor="fiscalAddress">{t("rfi_adresseFiscale")}</label>
               <input id="fiscalAddress" name="fiscalAddress" defaultValue={identite?.fiscalAddress ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalJurisdiction">Juridiction fiscale</label>
+              <label htmlFor="fiscalJurisdiction">{t("rfi_juridictionFiscale")}</label>
               <input id="fiscalJurisdiction" name="fiscalJurisdiction" defaultValue={identite?.fiscalJurisdiction ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalRegime">Régime d&apos;imposition déclaré</label>
+              <label htmlFor="fiscalRegime">{t("rfi_regimeDeclare")}</label>
               <input id="fiscalRegime" name="fiscalRegime" defaultValue={identite?.fiscalRegime ?? ""} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="fiscalExercice">Exercice comptable</label>
+              <label htmlFor="fiscalExercice">{t("rfi_exerciceComptable")}</label>
               <input id="fiscalExercice" name="fiscalExercice" placeholder="01/01-31/12" defaultValue={identite?.fiscalExercice ?? ""} />
             </div>
             <div className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
               <input id="fiscalVatRegistered" name="fiscalVatRegistered" type="checkbox" defaultChecked={identite?.fiscalVatRegistered ?? false} />
-              <label htmlFor="fiscalVatRegistered">Assujettie à la TVA</label>
+              <label htmlFor="fiscalVatRegistered">{t("rfi_assujettieTva")}</label>
             </div>
             <button className={styles.bouton} type="submit">
-              Enregistrer les informations
+              {t("rfi_enregistrerInfos")}
             </button>
           </form>
 
-          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>Nouvelle règle</h3>
+          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>{t("rfi_nouvelleRegle")}</h3>
           <form className={styles.formulaire} onSubmit={creerRegle} style={{ marginBottom: "24px" }}>
             <div className={styles.champ}>
-              <label htmlFor="label">Intitulé</label>
-              <input id="label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex. TVA sur ventes" />
+              <label htmlFor="label">{t("rfi_intitule")}</label>
+              <input id="label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("rfi_placeholderIntitule")} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="category">Catégorie</label>
+              <label htmlFor="category">{t("cat_categorie")}</label>
               <select id="category" value={category} onChange={(e) => setCategory(e.target.value as RegleFiscale["category"])}>
-                {(Object.keys(LABELS_CATEGORIE) as RegleFiscale["category"][]).map((c) => (
+                {(Object.keys(CLES_CATEGORIE) as RegleFiscale["category"][]).map((c) => (
                   <option key={c} value={c}>
-                    {LABELS_CATEGORIE[c]}
+                    {t(CLES_CATEGORIE[c])}
                   </option>
                 ))}
               </select>
             </div>
             <div className={styles.champ}>
-              <label htmlFor="rateOrFormula">Taux ou formule</label>
+              <label htmlFor="rateOrFormula">{t("rfi_tauxOuFormule")}</label>
               <input id="rateOrFormula" value={rateOrFormula} onChange={(e) => setRateOrFormula(e.target.value)} placeholder="Ex. 16%" />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="baseCalcul">Base de calcul (facultatif)</label>
-              <input id="baseCalcul" value={baseCalcul} onChange={(e) => setBaseCalcul(e.target.value)} placeholder="Ex. prix de vente HT" />
+              <label htmlFor="baseCalcul">{t("rfi_baseCalcul")}</label>
+              <input id="baseCalcul" value={baseCalcul} onChange={(e) => setBaseCalcul(e.target.value)} placeholder={t("rfi_placeholderBaseCalcul")} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="effectiveFrom">Date de début</label>
+              <label htmlFor="effectiveFrom">{t("rfi_dateDebut")}</label>
               <input id="effectiveFrom" type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="sourceReference">Source réglementaire (facultatif)</label>
+              <label htmlFor="sourceReference">{t("rfi_sourceReglementaire")}</label>
               <input id="sourceReference" value={sourceReference} onChange={(e) => setSourceReference(e.target.value)} />
             </div>
             <div className={styles.champ}>
-              <label htmlFor="motif">Motif de cette règle</label>
-              <input id="motif" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Pourquoi cette règle ?" />
+              <label htmlFor="motif">{t("rfi_motifRegle")}</label>
+              <input id="motif" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder={t("rfi_placeholderMotif")} />
             </div>
             <button className={styles.bouton} type="submit" disabled={enregistrementEnCours || !label || !rateOrFormula || !motif}>
-              {enregistrementEnCours ? "Enregistrement…" : "Ajouter la règle"}
+              {enregistrementEnCours ? t("cha_enregistrementEnCours") : t("rfi_ajouterRegle")}
             </button>
           </form>
 
           {regles.length === 0 ? (
-            <p>Aucune règle fiscale enregistrée pour l&apos;instant.</p>
+            <p>{t("rfi_aucuneRegle")}</p>
           ) : (
             <table className={styles.tableau}>
               <thead>
                 <tr>
-                  <th>Intitulé</th>
-                  <th>Catégorie</th>
-                  <th>Taux / formule</th>
-                  <th>Depuis</th>
-                  <th>Statut</th>
+                  <th>{t("rfi_intitule")}</th>
+                  <th>{t("cat_categorie")}</th>
+                  <th>{t("rfi_colTauxFormule")}</th>
+                  <th>{t("rfi_colDepuis")}</th>
+                  <th>{t("rfi_colStatut")}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -271,14 +271,14 @@ function ReglesFiscalesContent() {
                 {regles.map((r) => (
                   <tr key={r.id} style={{ opacity: r.status === "OBSOLETE" ? 0.5 : 1 }}>
                     <td>{r.label}</td>
-                    <td>{LABELS_CATEGORIE[r.category]}</td>
+                    <td>{t(CLES_CATEGORIE[r.category])}</td>
                     <td>{r.rateOrFormula}</td>
                     <td>{new Date(r.effectiveFrom).toLocaleDateString("fr-FR")}</td>
-                    <td>{LABELS_STATUT[r.status]}</td>
+                    <td>{t(CLES_STATUT[r.status])}</td>
                     <td>
                       {r.status !== "OBSOLETE" && (
                         <button className={styles.retirer} onClick={() => archiver(r.id)}>
-                          Archiver
+                          {t("rfi_archiver")}
                         </button>
                       )}
                     </td>
@@ -289,9 +289,7 @@ function ReglesFiscalesContent() {
           )}
 
           <p style={{ color: "#888", fontSize: "0.8rem", marginTop: "16px" }}>
-            La vérification par un comptable ou conseiller fiscal externe et
-            la simulation d&apos;impact d&apos;une modification ne sont pas
-            encore disponibles dans cet écran.
+            {t("rfi_noteVerificationIndisponible")}
           </p>
         </>
       )}

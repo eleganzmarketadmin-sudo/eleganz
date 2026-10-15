@@ -5,6 +5,7 @@ import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Trésorerie multidevise réelle (13 oct. 2026, Finance & Comptabilité
@@ -65,6 +66,7 @@ interface CompteTresorerie {
 
 function TresorerieContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [from, setFrom] = useState(debutMois());
   const [to, setTo] = useState(aujourdhui());
   const [releve, setReleve] = useState<ReleveTresorerie | null>(null);
@@ -117,9 +119,9 @@ function TresorerieContenu() {
         `/shops/${currentShop.id}/finance/tresorerie?from=${from}&to=${toExclusif.toISOString().slice(0, 10)}`,
       )
       .then(setReleve)
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique")))
       .finally(() => setChargement(false));
-  }, [currentShop, from, to]);
+  }, [currentShop, from, to, t]);
 
   const soldeUsd = releve?.comptes.find((c) => c.code === "5711")?.soldeFinal ?? 0;
   const soldeCdf = releve?.comptes.find((c) => c.code === "5712")?.soldeFinal ?? 0;
@@ -127,27 +129,23 @@ function TresorerieContenu() {
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Soldes et mouvements réels des deux caisses (USD et CDF), déjà
-        comptabilisés automatiquement par les ventes, charges et achats.
-        L&apos;équivalent total en USD est indicatif, calculé au taux de
-        change système du jour — jamais figé par transaction à cette phase.
+        {t("tre_noteAide")}
       </p>
 
       <div style={{ border: "1px solid var(--color-bordure, #333)", borderRadius: "8px", padding: "16px", marginBottom: "20px" }}>
-        <strong style={{ fontSize: "0.9rem" }}>Comptes banque / mobile money</strong>
+        <strong style={{ fontSize: "0.9rem" }}>{t("tre_comptesBanqueMobileMoney")}</strong>
         <p style={{ fontSize: "0.8rem", color: "#888", margin: "6px 0 12px" }}>
-          Chaque compte ajouté ici obtient son propre sous-compte comptable
-          (visible ci-dessous dans le relevé) — distinct des deux caisses.
+          {t("tre_noteComptes")}
         </p>
         {comptes.length > 0 && (
           <ul style={{ margin: "0 0 12px", paddingLeft: "18px", fontSize: "0.875rem" }}>
             {comptes.map((c) => (
               <li key={c.id}>
-                {c.label} {c.numero ? `(${c.numero})` : ""} — {c.type === "BANQUE" ? "Banque" : "Mobile money"}, compte{" "}
+                {c.label} {c.numero ? `(${c.numero})` : ""} — {c.type === "BANQUE" ? t("tre_banque") : t("tre_mobileMoney")}, {t("tre_compte")}{" "}
                 {c.account.code}
               </li>
             ))}
@@ -155,41 +153,41 @@ function TresorerieContenu() {
         )}
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "flex-end" }}>
           <select value={nouveauType} onChange={(e) => setNouveauType(e.target.value as "BANQUE" | "MOBILE_MONEY")}>
-            <option value="BANQUE">Banque</option>
-            <option value="MOBILE_MONEY">Mobile money</option>
+            <option value="BANQUE">{t("tre_banque")}</option>
+            <option value="MOBILE_MONEY">{t("tre_mobileMoney")}</option>
           </select>
           <input
-            placeholder="Nom (ex. Equity BCDC, Orange Money)"
+            placeholder={t("tre_placeholderNom")}
             value={nouveauLabel}
             onChange={(e) => setNouveauLabel(e.target.value)}
           />
           <input
-            placeholder="Numéro (optionnel)"
+            placeholder={t("tre_placeholderNumero")}
             value={nouveauNumero}
             onChange={(e) => setNouveauNumero(e.target.value)}
           />
           <button onClick={ajouterCompte} disabled={!nouveauLabel.trim()}>
-            Ajouter ce compte
+            {t("tre_ajouterCeCompte")}
           </button>
         </div>
       </div>
 
       <div className={styles.formulaire}>
         <div className={styles.champ}>
-          <label>Du</label>
+          <label>{t("rel_du")}</label>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className={styles.champ}>
-          <label>Au</label>
+          <label>{t("rel_au")}</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : !releve || releve.comptes.length === 0 ? (
-        <p>Aucune caisse configurée pour cette boutique.</p>
+        <p>{t("tre_aucuneCaisse")}</p>
       ) : (
         <>
           <div style={{ display: "flex", gap: "24px", marginBottom: "20px", flexWrap: "wrap" }}>
@@ -197,16 +195,16 @@ function TresorerieContenu() {
               <div key={c.code} style={{ border: "2px solid var(--color-ink)", padding: "16px", minWidth: "220px" }}>
                 <div style={{ fontWeight: 700 }}>{c.label}</div>
                 <div style={{ fontSize: "1.5rem" }}>{f(c.soldeFinal)}</div>
-                <div style={{ color: "#888", fontSize: "0.8rem" }}>Solde d&apos;ouverture : {f(c.soldeInitial)}</div>
+                <div style={{ color: "#888", fontSize: "0.8rem" }}>{t("tre_soldeOuverture")} {f(c.soldeInitial)}</div>
               </div>
             ))}
             <div style={{ border: "2px solid var(--color-ink)", padding: "16px", minWidth: "220px" }}>
-              <div style={{ fontWeight: 700 }}>Équivalent total (indicatif)</div>
+              <div style={{ fontWeight: 700 }}>{t("tre_equivalentTotal")}</div>
               <div style={{ fontSize: "1.5rem" }}>{equivalentUsd === null ? "—" : `${f(equivalentUsd)} $`}</div>
               <div style={{ color: "#888", fontSize: "0.8rem" }}>
                 {taux?.cdfPerUsd
-                  ? `Taux du jour : 1 $ = ${f(taux.cdfPerUsd)} CDF`
-                  : "Taux de change non configuré — aucun équivalent calculé."}
+                  ? `${t("tre_tauxDuJour")} 1 $ = ${f(taux.cdfPerUsd)} CDF`
+                  : t("tre_tauxNonConfigure")}
               </div>
             </div>
           </div>
@@ -214,19 +212,19 @@ function TresorerieContenu() {
           {releve.comptes.map((c) => (
             <div key={c.code} style={{ marginBottom: "24px" }}>
               <h3>
-                {c.label} — mouvements de la période
+                {c.label} — {t("tre_mouvementsDeLaPeriode")}
               </h3>
               {c.mouvements.length === 0 ? (
-                <p>Aucun mouvement sur cette période.</p>
+                <p>{t("tre_aucunMouvement")}</p>
               ) : (
                 <table className={styles.tableau}>
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Libellé</th>
-                      <th style={{ textAlign: "right" }}>Débit</th>
-                      <th style={{ textAlign: "right" }}>Crédit</th>
-                      <th style={{ textAlign: "right" }}>Solde cumulé</th>
+                      <th>{t("cha_colDate")}</th>
+                      <th>{t("tre_colLibelle")}</th>
+                      <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+                      <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
+                      <th style={{ textAlign: "right" }}>{t("tre_colSoldeCumule")}</th>
                     </tr>
                   </thead>
                   <tbody>
