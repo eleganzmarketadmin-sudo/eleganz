@@ -6,6 +6,7 @@ import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
 import { telechargerFichier } from "../../../lib/telecharger-fichier";
+import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
 // Moteur de comptabilité en partie double (13 oct. 2026, Phase 2) — voir
@@ -126,6 +127,7 @@ function aujourdhui(): string {
 
 function ComptabiliteContenu() {
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [from, setFrom] = useState(debutMois());
   const [to, setTo] = useState(aujourdhui());
   const [asOf, setAsOf] = useState(aujourdhui());
@@ -170,7 +172,7 @@ function ComptabiliteContenu() {
         "dossier-validation-syscohada.xlsx",
       );
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Le dossier n'a pas pu être généré.");
+      setErreur(err instanceof Error ? err.message : t("cpt_dossierNonGenere"));
     } finally {
       setExportEnCours(false);
     }
@@ -220,76 +222,66 @@ function ComptabiliteContenu() {
           })();
 
     requete
-      .catch((err) => setErreur(err instanceof ApiError ? err.message : "Erreur."))
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
-  }, [currentShop, vue, from, to, asOf, compteChoisi]);
+  }, [currentShop, vue, from, to, asOf, compteChoisi, t]);
 
   return (
     <div>
-      <h1 className={styles.titre}>Finance &amp; Comptabilité</h1>
+      <h1 className={styles.titre}>{t("fin_titre")}</h1>
       <FinanceSubNav />
 
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "16px" }}>
-        Journal, grand livre et balance générés automatiquement à partir des
-        opérations réellement enregistrées (ventes, charges, achats,
-        commandes Marketplace reçues, factures réglées) — voir{" "}
-        <em>docs/ARCHITECTURE_FINANCE.md</em>. Le compte de résultat et le
-        bilan sont des estimations générées automatiquement à partir de ces
-        mêmes écritures : ils ne remplacent pas une comptabilité tenue par
-        un professionnel et ne constituent pas une liasse fiscale (pas de
-        clôture d&apos;exercice, pas de verrouillage de période à cette
-        phase). La créance « 411 » (ventes Marketplace) ne se solde jamais
-        automatiquement tant qu&apos;aucun reversement réel de fonds par la
-        plateforme n&apos;est modélisé.
+        {t("cpt_noteAide")}
       </p>
 
       <div className={styles.formulaire}>
         {vue === "bilan" || vue === "bilan-normalise" ? (
           <div className={styles.champ}>
-            <label>À la date du</label>
+            <label>{t("cpt_aLaDateDu")}</label>
             <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
           </div>
         ) : (
           <>
             <div className={styles.champ}>
-              <label>Du</label>
+              <label>{t("rel_du")}</label>
               <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className={styles.champ}>
-              <label>Au</label>
+              <label>{t("rel_au")}</label>
               <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
           </>
         )}
         <div className={styles.champ}>
-          <label>Vue</label>
+          <label>{t("cpt_vue")}</label>
           <select value={vue} onChange={(e) => setVue(e.target.value as typeof vue)}>
-            <option value="journal">Journal général</option>
-            <option value="grand-livre">Grand livre</option>
-            <option value="balance">Balance</option>
-            <option value="compte-resultat">Compte de résultat</option>
-            <option value="bilan">Bilan</option>
-            <option value="bilan-normalise">Bilan normalisé SYSCOHADA</option>
-            <option value="compte-resultat-normalise">Compte de résultat normalisé SYSCOHADA</option>
+            <option value="journal">{t("cpt_journalGeneral")}</option>
+            <option value="grand-livre">{t("cpt_grandLivre")}</option>
+            <option value="balance">{t("cpt_balance")}</option>
+            <option value="compte-resultat">{t("cpt_compteDeResultat")}</option>
+            <option value="bilan">{t("cpt_bilan")}</option>
+            <option value="bilan-normalise">{t("cpt_bilanNormaliseSyscohada")}</option>
+            <option value="compte-resultat-normalise">{t("cpt_compteDeResultatNormaliseSyscohada")}</option>
           </select>
         </div>
         {vue === "grand-livre" && (
           <div className={styles.champ}>
-            <label>Compte</label>
+            <label>{t("cpt_compte")}</label>
             <select value={compteChoisi} onChange={(e) => setCompteChoisi(e.target.value)}>
-              <option value="5711">5711 — Caisse USD</option>
-              <option value="5712">5712 — Caisse CDF</option>
-              <option value="411">411 — Clients</option>
-              <option value="401">401 — Fournisseurs</option>
-              <option value="601">601 — Achats de marchandises</option>
-              <option value="6220">6220 — Charges de fonctionnement</option>
-              <option value="6221">6221 — Charges administratives</option>
-              <option value="6222">6222 — Charges commerciales</option>
-              <option value="661">661 — Charges de personnel</option>
-              <option value="641">641 — Impôts et taxes</option>
-              <option value="671">671 — Charges financières</option>
-              <option value="701">701 — Ventes de marchandises</option>
-              <option value="7012">7012 — Ventes Marketplace</option>
+              <option value="5711">5711 — {t("cpt_compteCaisseUsd")}</option>
+              <option value="5712">5712 — {t("cpt_compteCaisseCdf")}</option>
+              <option value="411">411 — {t("cpt_compteClients")}</option>
+              <option value="401">401 — {t("cpt_compteFournisseurs")}</option>
+              <option value="601">601 — {t("cpt_compteAchatsMarchandises")}</option>
+              <option value="6220">6220 — {t("cpt_compteChargesFonctionnement")}</option>
+              <option value="6221">6221 — {t("cpt_compteChargesAdministratives")}</option>
+              <option value="6222">6222 — {t("cpt_compteChargesCommerciales")}</option>
+              <option value="661">661 — {t("cpt_compteChargesPersonnel")}</option>
+              <option value="641">641 — {t("cpt_compteImpotsTaxes")}</option>
+              <option value="671">671 — {t("cpt_compteChargesFinancieres")}</option>
+              <option value="701">701 — {t("cpt_compteVentesMarchandises")}</option>
+              <option value="7012">7012 — {t("cpt_compteVentesMarketplace")}</option>
             </select>
           </div>
         )}
@@ -298,20 +290,17 @@ function ComptabiliteContenu() {
       {(vue === "bilan-normalise" || vue === "compte-resultat-normalise") && (
         <div style={{ marginBottom: "16px" }}>
           <button onClick={telechargerDossierValidation} disabled={exportEnCours}>
-            {exportEnCours ? "Génération…" : "Télécharger le dossier de validation externe (Excel)"}
+            {exportEnCours ? t("cpt_generationEnCours") : t("cpt_telechargerDossierValidation")}
           </button>
           <p style={{ color: "#888", fontSize: "0.75rem", marginTop: "6px" }}>
-            Classeur complet (plan comptable, journal, balance, bilan et
-            compte de résultat normalisés) destiné à un expert-comptable
-            habilité — couvre, par défaut, l&apos;exercice en cours jusqu&apos;à
-            la date affichée ci-dessus.
+            {t("cpt_noteDossierValidation")}
           </p>
         </div>
       )}
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
-        <p>Chargement…</p>
+        <p>{t("commun_chargement")}</p>
       ) : vue === "journal" ? (
         <JournalTable ecritures={journal} />
       ) : vue === "grand-livre" ? (
@@ -332,18 +321,19 @@ function ComptabiliteContenu() {
 }
 
 function JournalTable({ ecritures }: { ecritures: Ecriture[] | null }) {
-  if (!ecritures) return <p>Aucune donnée.</p>;
-  if (ecritures.length === 0) return <p>Aucune écriture sur cette période.</p>;
+  const { t } = useLocale();
+  if (!ecritures) return <p>{t("cpt_aucuneDonnee")}</p>;
+  if (ecritures.length === 0) return <p>{t("cpt_aucuneEcriturePeriode")}</p>;
   return (
     <table className={styles.tableau}>
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Journal</th>
-          <th>Libellé</th>
-          <th>Compte</th>
-          <th style={{ textAlign: "right" }}>Débit</th>
-          <th style={{ textAlign: "right" }}>Crédit</th>
+          <th>{t("cha_colDate")}</th>
+          <th>{t("cpt_colJournal")}</th>
+          <th>{t("tre_colLibelle")}</th>
+          <th>{t("cpt_compte")}</th>
+          <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+          <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
         </tr>
       </thead>
       <tbody>
@@ -371,18 +361,19 @@ function JournalTable({ ecritures }: { ecritures: Ecriture[] | null }) {
 }
 
 function GrandLivreTable({ data }: { data: GrandLivre | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
-  if (data.mouvements.length === 0) return <p>Aucun mouvement sur ce compte pour cette période.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
+  if (data.mouvements.length === 0) return <p>{t("cpt_aucunMouvementComptePeriode")}</p>;
   return (
     <>
       <table className={styles.tableau}>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Libellé</th>
-            <th style={{ textAlign: "right" }}>Débit</th>
-            <th style={{ textAlign: "right" }}>Crédit</th>
-            <th style={{ textAlign: "right" }}>Solde cumulé</th>
+            <th>{t("cha_colDate")}</th>
+            <th>{t("tre_colLibelle")}</th>
+            <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+            <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
+            <th style={{ textAlign: "right" }}>{t("tre_colSoldeCumule")}</th>
           </tr>
         </thead>
         <tbody>
@@ -397,34 +388,32 @@ function GrandLivreTable({ data }: { data: GrandLivre | null }) {
           ))}
         </tbody>
       </table>
-      <p style={{ marginTop: "12px", fontWeight: 600 }}>Solde final : {f(data.soldeFinal)} $</p>
+      <p style={{ marginTop: "12px", fontWeight: 600 }}>{t("cpt_soldeFinal")} {f(data.soldeFinal)} $</p>
       <p style={{ marginTop: "4px", fontSize: "0.75rem", color: "#888" }}>
-        Convention : un solde cumulé négatif sur un compte à solde créditeur
-        normal (ventes, produits) est correct — il indique l&apos;ampleur du
-        crédit accumulé, pas une anomalie.
+        {t("cpt_noteConventionSoldeNegatif")}
       </p>
     </>
   );
 }
 
 function BalanceTable({ data }: { data: Balance | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
-  if (data.comptes.length === 0) return <p>Aucun mouvement sur cette période.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
+  if (data.comptes.length === 0) return <p>{t("cpt_aucunMouvementPeriode")}</p>;
   return (
     <>
       {!data.equilibree && (
         <div className={styles.erreur}>
-          Anomalie : le total débit ne correspond pas au total crédit sur
-          cette balance — à signaler, ne pas ignorer.
+          {t("cpt_anomalieBalance")}
         </div>
       )}
       <table className={styles.tableau}>
         <thead>
           <tr>
-            <th>Compte</th>
-            <th style={{ textAlign: "right" }}>Débit</th>
-            <th style={{ textAlign: "right" }}>Crédit</th>
-            <th style={{ textAlign: "right" }}>Solde</th>
+            <th>{t("cpt_compte")}</th>
+            <th style={{ textAlign: "right" }}>{t("tre_colDebit")}</th>
+            <th style={{ textAlign: "right" }}>{t("tre_colCredit")}</th>
+            <th style={{ textAlign: "right" }}>{t("cpt_colSolde")}</th>
           </tr>
         </thead>
         <tbody>
@@ -441,7 +430,7 @@ function BalanceTable({ data }: { data: Balance | null }) {
         </tbody>
         <tfoot>
           <tr style={{ fontWeight: 700 }}>
-            <td>Total</td>
+            <td>{t("cpt_total")}</td>
             <td style={{ textAlign: "right" }}>{f(data.totalDebit)} $</td>
             <td style={{ textAlign: "right" }}>{f(data.totalCredit)} $</td>
             <td></td>
@@ -453,14 +442,15 @@ function BalanceTable({ data }: { data: Balance | null }) {
 }
 
 function CompteDeResultatTable({ data }: { data: CompteDeResultat | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
   if (data.charges.length === 0 && data.produits.length === 0) {
-    return <p>Aucune charge ni aucun produit sur cette période.</p>;
+    return <p>{t("cpt_aucuneChargeProduitPeriode")}</p>;
   }
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
       <div>
-        <h3>Charges</h3>
+        <h3>{t("cpt_charges")}</h3>
         <table className={styles.tableau}>
           <tbody>
             {data.charges.map((l) => (
@@ -474,14 +464,14 @@ function CompteDeResultatTable({ data }: { data: CompteDeResultat | null }) {
           </tbody>
           <tfoot>
             <tr style={{ fontWeight: 700 }}>
-              <td>Total charges</td>
+              <td>{t("cpt_totalCharges")}</td>
               <td style={{ textAlign: "right" }}>{f(data.totalCharges)} $</td>
             </tr>
           </tfoot>
         </table>
       </div>
       <div>
-        <h3>Produits</h3>
+        <h3>{t("cpt_produits")}</h3>
         <table className={styles.tableau}>
           <tbody>
             {data.produits.map((l) => (
@@ -495,40 +485,39 @@ function CompteDeResultatTable({ data }: { data: CompteDeResultat | null }) {
           </tbody>
           <tfoot>
             <tr style={{ fontWeight: 700 }}>
-              <td>Total produits</td>
+              <td>{t("cpt_totalProduits")}</td>
               <td style={{ textAlign: "right" }}>{f(data.totalProduits)} $</td>
             </tr>
           </tfoot>
         </table>
       </div>
       <p style={{ gridColumn: "1 / -1", fontWeight: 700, fontSize: "1.1rem" }}>
-        Résultat net de la période : {f(data.resultatNet)} $ (
-        {data.resultatNet >= 0 ? "bénéfice" : "perte"})
+        {t("cpt_resultatNetPeriode")} {f(data.resultatNet)} $ (
+        {data.resultatNet >= 0 ? t("cpt_benefice") : t("cpt_perte")})
       </p>
     </div>
   );
 }
 
 function BilanTable({ data }: { data: Bilan | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
   if (data.actif.length === 0 && data.passif.length === 0) {
-    return <p>Aucun solde à cette date.</p>;
+    return <p>{t("cpt_aucunSoldeDate")}</p>;
   }
   return (
     <div>
       {!data.equilibre && (
         <div className={styles.erreur}>
-          Anomalie : le total actif ne correspond pas au total passif sur ce bilan — à signaler, ne pas ignorer.
+          {t("cpt_anomalieBilan")}
         </div>
       )}
       <p style={{ fontSize: "0.75rem", color: "#888", marginBottom: "8px" }}>
-        Convention : des totaux négatifs ici signifient une perte cumulée
-        depuis l&apos;origine — le bilan reste équilibré (actif = passif),
-        seul le signe du résultat change.
+        {t("cpt_noteConventionTotauxNegatifs")}
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
         <div>
-          <h3>Actif</h3>
+          <h3>{t("cpt_actif")}</h3>
           <table className={styles.tableau}>
             <tbody>
               {data.actif.map((l) => (
@@ -542,14 +531,14 @@ function BilanTable({ data }: { data: Bilan | null }) {
             </tbody>
             <tfoot>
               <tr style={{ fontWeight: 700 }}>
-                <td>Total actif</td>
+                <td>{t("cpt_totalActif")}</td>
                 <td style={{ textAlign: "right" }}>{f(data.totalActif)} $</td>
               </tr>
             </tfoot>
           </table>
         </div>
         <div>
-          <h3>Passif</h3>
+          <h3>{t("cpt_passif")}</h3>
           <table className={styles.tableau}>
             <tbody>
               {data.passif.map((l) => (
@@ -563,7 +552,7 @@ function BilanTable({ data }: { data: Bilan | null }) {
             </tbody>
             <tfoot>
               <tr style={{ fontWeight: 700 }}>
-                <td>Total passif</td>
+                <td>{t("cpt_totalPassif")}</td>
                 <td style={{ textAlign: "right" }}>{f(data.totalPassif)} $</td>
               </tr>
             </tfoot>
@@ -575,11 +564,12 @@ function BilanTable({ data }: { data: Bilan | null }) {
 }
 
 function LigneEtatTable({ titre, lignes, total }: { titre: string; lignes: LigneEtat[]; total: number }) {
+  const { t } = useLocale();
   return (
     <div>
       <h4 style={{ marginBottom: "6px" }}>{titre}</h4>
       {lignes.length === 0 ? (
-        <p style={{ color: "#888", fontSize: "0.8rem" }}>Aucun solde.</p>
+        <p style={{ color: "#888", fontSize: "0.8rem" }}>{t("cpt_aucunSolde")}</p>
       ) : (
         <table className={styles.tableau}>
           <tbody>
@@ -594,7 +584,7 @@ function LigneEtatTable({ titre, lignes, total }: { titre: string; lignes: Ligne
           </tbody>
           <tfoot>
             <tr style={{ fontWeight: 700 }}>
-              <td>Sous-total</td>
+              <td>{t("cpt_sousTotal")}</td>
               <td style={{ textAlign: "right" }}>{f(total)} $</td>
             </tr>
           </tfoot>
@@ -604,24 +594,23 @@ function LigneEtatTable({ titre, lignes, total }: { titre: string; lignes: Ligne
   );
 }
 
-const AVERTISSEMENT_SYSCOHADA = (
-  <p style={{ fontSize: "0.75rem", color: "#b08900", marginTop: "16px", lineHeight: 1.5 }}>
-    État normalisé SYSCOHADA généré automatiquement à partir des mêmes
-    écritures que ci-dessus, présenté &laquo;&nbsp;avant impôt sur les
-    bénéfices&nbsp;&raquo; (aucune charge d&apos;impôt n&apos;est encore
-    comptabilisée). Il reste une estimation de pilotage interne : seul un
-    expert-comptable habilité peut établir et certifier une liasse
-    SYSCOHADA/OHADA officielle.
-  </p>
-);
+function AvertissementSyscohada() {
+  const { t } = useLocale();
+  return (
+    <p style={{ fontSize: "0.75rem", color: "#b08900", marginTop: "16px", lineHeight: 1.5 }}>
+      {t("cpt_avertissementSyscohada")}
+    </p>
+  );
+}
 
 function BilanNormaliseTable({ data }: { data: BilanNormalise | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
   const totalActifLignes = data.actif.immobilise.length + data.actif.circulant.length + data.actif.tresorerie.length;
   const totalPassifLignes =
     data.passif.capitauxPropres.length + data.passif.dettesFinancieres.length + data.passif.circulant.length;
   if (totalActifLignes === 0 && totalPassifLignes === 0) {
-    return <p>Aucun solde à cette date.</p>;
+    return <p>{t("cpt_aucunSoldeDate")}</p>;
   }
   const totalActifImmo = data.actif.immobilise.reduce((s, l) => s + l.montant, 0);
   const totalActifCirc = data.actif.circulant.reduce((s, l) => s + l.montant, 0);
@@ -633,36 +622,37 @@ function BilanNormaliseTable({ data }: { data: BilanNormalise | null }) {
     <div>
       {!data.equilibre && (
         <div className={styles.erreur}>
-          Anomalie : le total actif ne correspond pas au total passif sur ce bilan normalisé — à signaler, ne pas ignorer.
+          {t("cpt_anomalieBilanNormalise")}
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
         <div>
-          <h3>Actif</h3>
+          <h3>{t("cpt_actif")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <LigneEtatTable titre="Actif immobilisé" lignes={data.actif.immobilise} total={totalActifImmo} />
-            <LigneEtatTable titre="Actif circulant" lignes={data.actif.circulant} total={totalActifCirc} />
-            <LigneEtatTable titre="Trésorerie — actif" lignes={data.actif.tresorerie} total={totalTresorerie} />
+            <LigneEtatTable titre={t("cpt_actifImmobilise")} lignes={data.actif.immobilise} total={totalActifImmo} />
+            <LigneEtatTable titre={t("cpt_actifCirculant")} lignes={data.actif.circulant} total={totalActifCirc} />
+            <LigneEtatTable titre={t("cpt_tresorerieActif")} lignes={data.actif.tresorerie} total={totalTresorerie} />
           </div>
-          <p style={{ marginTop: "10px", fontWeight: 700 }}>Total actif : {f(data.totalActif)} $</p>
+          <p style={{ marginTop: "10px", fontWeight: 700 }}>{t("cpt_totalActif")} : {f(data.totalActif)} $</p>
         </div>
         <div>
-          <h3>Passif</h3>
+          <h3>{t("cpt_passif")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <LigneEtatTable titre="Capitaux propres" lignes={data.passif.capitauxPropres} total={totalCapitaux} />
-            <LigneEtatTable titre="Dettes financières" lignes={data.passif.dettesFinancieres} total={totalDettesFin} />
-            <LigneEtatTable titre="Passif circulant" lignes={data.passif.circulant} total={totalPassifCirc} />
+            <LigneEtatTable titre={t("cpt_capitauxPropres")} lignes={data.passif.capitauxPropres} total={totalCapitaux} />
+            <LigneEtatTable titre={t("cpt_dettesFinancieres")} lignes={data.passif.dettesFinancieres} total={totalDettesFin} />
+            <LigneEtatTable titre={t("cpt_passifCirculant")} lignes={data.passif.circulant} total={totalPassifCirc} />
           </div>
-          <p style={{ marginTop: "10px", fontWeight: 700 }}>Total passif : {f(data.totalPassif)} $</p>
+          <p style={{ marginTop: "10px", fontWeight: 700 }}>{t("cpt_totalPassif")} : {f(data.totalPassif)} $</p>
         </div>
       </div>
-      {AVERTISSEMENT_SYSCOHADA}
+      <AvertissementSyscohada />
     </div>
   );
 }
 
 function CompteDeResultatNormaliseTable({ data }: { data: CompteDeResultatNormalise | null }) {
-  if (!data) return <p>Aucune donnée.</p>;
+  const { t } = useLocale();
+  if (!data) return <p>{t("cpt_aucuneDonnee")}</p>;
   const vide =
     data.exploitation.produits.length === 0 &&
     data.exploitation.charges.length === 0 &&
@@ -670,7 +660,7 @@ function CompteDeResultatNormaliseTable({ data }: { data: CompteDeResultatNormal
     data.financier.charges.length === 0 &&
     data.hao.produits.length === 0 &&
     data.hao.charges.length === 0;
-  if (vide) return <p>Aucune charge ni aucun produit sur cette période.</p>;
+  if (vide) return <p>{t("cpt_aucuneChargeProduitPeriode")}</p>;
 
   const totalProduitsExploitation = data.exploitation.produits.reduce((s, l) => s + l.montant, 0);
   const totalChargesExploitation = data.exploitation.charges.reduce((s, l) => s + l.montant, 0);
@@ -683,41 +673,41 @@ function CompteDeResultatNormaliseTable({ data }: { data: CompteDeResultatNormal
     <div>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <section>
-          <h3>Exploitation</h3>
+          <h3>{t("cpt_exploitation")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <LigneEtatTable titre="Produits d'exploitation" lignes={data.exploitation.produits} total={totalProduitsExploitation} />
-            <LigneEtatTable titre="Charges d'exploitation" lignes={data.exploitation.charges} total={totalChargesExploitation} />
+            <LigneEtatTable titre={t("cpt_produitsExploitation")} lignes={data.exploitation.produits} total={totalProduitsExploitation} />
+            <LigneEtatTable titre={t("cpt_chargesExploitation")} lignes={data.exploitation.charges} total={totalChargesExploitation} />
           </div>
           <p style={{ marginTop: "8px", fontWeight: 700 }}>
-            Résultat d&apos;exploitation : {f(data.exploitation.resultat)} $
+            {t("cpt_resultatExploitation")} {f(data.exploitation.resultat)} $
           </p>
         </section>
         <section>
-          <h3>Financier</h3>
+          <h3>{t("cpt_financier")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <LigneEtatTable titre="Produits financiers" lignes={data.financier.produits} total={totalProduitsFinanciers} />
-            <LigneEtatTable titre="Charges financières" lignes={data.financier.charges} total={totalChargesFinancieres} />
+            <LigneEtatTable titre={t("cpt_produitsFinanciers")} lignes={data.financier.produits} total={totalProduitsFinanciers} />
+            <LigneEtatTable titre={t("cpt_chargesFinancieres")} lignes={data.financier.charges} total={totalChargesFinancieres} />
           </div>
-          <p style={{ marginTop: "8px", fontWeight: 700 }}>Résultat financier : {f(data.financier.resultat)} $</p>
+          <p style={{ marginTop: "8px", fontWeight: 700 }}>{t("cpt_resultatFinancier")} {f(data.financier.resultat)} $</p>
         </section>
         <p style={{ fontWeight: 700 }}>
-          Résultat des activités ordinaires : {f(data.resultatActivitesOrdinaires)} $
+          {t("cpt_resultatActivitesOrdinaires")} {f(data.resultatActivitesOrdinaires)} $
         </p>
         <section>
-          <h3>Hors activités ordinaires (HAO)</h3>
+          <h3>{t("cpt_horsActivitesOrdinaires")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <LigneEtatTable titre="Produits HAO" lignes={data.hao.produits} total={totalProduitsHAO} />
-            <LigneEtatTable titre="Charges HAO" lignes={data.hao.charges} total={totalChargesHAO} />
+            <LigneEtatTable titre={t("cpt_produitsHao")} lignes={data.hao.produits} total={totalProduitsHAO} />
+            <LigneEtatTable titre={t("cpt_chargesHao")} lignes={data.hao.charges} total={totalChargesHAO} />
           </div>
-          <p style={{ marginTop: "8px", fontWeight: 700 }}>Résultat HAO : {f(data.hao.resultat)} $</p>
+          <p style={{ marginTop: "8px", fontWeight: 700 }}>{t("cpt_resultatHao")} {f(data.hao.resultat)} $</p>
         </section>
       </div>
       <p style={{ marginTop: "16px", fontWeight: 700, fontSize: "1.1rem" }}>
-        Résultat net avant impôt : {f(data.resultatNetAvantImpot)} $ (
-        {data.resultatNetAvantImpot >= 0 ? "bénéfice" : "perte"})
+        {t("cpt_resultatNetAvantImpot")} {f(data.resultatNetAvantImpot)} $ (
+        {data.resultatNetAvantImpot >= 0 ? t("cpt_benefice") : t("cpt_perte")})
       </p>
       <p style={{ fontSize: "0.8rem", color: "#888", marginTop: "4px" }}>{data.statut}</p>
-      {AVERTISSEMENT_SYSCOHADA}
+      <AvertissementSyscohada />
     </div>
   );
 }
