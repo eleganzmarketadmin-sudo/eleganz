@@ -3,7 +3,26 @@ import { createHash } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { AccountingQueryService } from "./accounting-query.service";
+import { BusinessPlanService } from "./business-plan.service";
 import { FiscalRuleScope, StockMovementType } from "@eleganz/database";
+
+export interface DossierCreditBoutiqueBusinessPlan {
+  resumeExecutif: string | null;
+  descriptionActivite: string | null;
+  marcheEtClientele: string | null;
+  strategieCroissance: string | null;
+  utilisationFonds: string | null;
+  risquesMitigation: string | null;
+  scenarios: {
+    id: string;
+    label: string;
+    montant: number;
+    tauxAnnuel: number;
+    dureeMois: number;
+    objetFinancement: string | null;
+    mensualite: number;
+  }[];
+}
 
 export interface DossierCreditBoutique {
   shopId: string;
@@ -19,6 +38,7 @@ export interface DossierCreditBoutique {
   bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
   dettesFournisseurs: number;
   creditClientAccorde: number;
+  businessPlan: DossierCreditBoutiqueBusinessPlan;
   genereLe: string;
   codeVerification: string;
 }
@@ -35,6 +55,7 @@ export class FinanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accountingQuery: AccountingQueryService,
+    private readonly businessPlan: BusinessPlanService,
   ) {}
 
   fiscalIdentity(shopId: string) {
@@ -187,13 +208,14 @@ export class FinanceService {
    * joindre à une demande de crédit auprès d'une institution financière.
    */
   async dossierCredit(shopId: string, nombreMois = 6): Promise<DossierCreditBoutique> {
-    const [shop, identite, historiqueMensuel, bilan, supplier, customers] = await Promise.all([
+    const [shop, identite, historiqueMensuel, bilan, supplier, customers, planAffaires] = await Promise.all([
       this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { name: true, createdAt: true } }),
       this.fiscalIdentity(shopId),
       this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, Math.min(Math.max(nombreMois, 1), 24)),
       this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, new Date()),
       this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
       this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
+      this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId),
     ]);
 
     const genereLe = new Date().toISOString();
@@ -217,6 +239,15 @@ export class FinanceService {
       bilan: { totalActif: bilan.totalActif, totalPassif: bilan.totalPassif, equilibre: bilan.equilibre },
       dettesFournisseurs: Number(supplier._sum.balanceOwed ?? 0),
       creditClientAccorde: Number(customers._sum.creditBalance ?? 0),
+      businessPlan: {
+        resumeExecutif: planAffaires.resumeExecutif,
+        descriptionActivite: planAffaires.descriptionActivite,
+        marcheEtClientele: planAffaires.marcheEtClientele,
+        strategieCroissance: planAffaires.strategieCroissance,
+        utilisationFonds: planAffaires.utilisationFonds,
+        risquesMitigation: planAffaires.risquesMitigation,
+        scenarios: planAffaires.scenarios,
+      },
       genereLe,
       codeVerification,
     };

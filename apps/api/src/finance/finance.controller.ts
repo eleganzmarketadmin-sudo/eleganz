@@ -6,9 +6,11 @@ import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { DossierValidationService } from "./dossier-validation.service";
+import { BusinessPlanService } from "./business-plan.service";
 import { renderDossierCreditPdf } from "./dossier-credit-pdf-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
+import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -34,6 +36,7 @@ export class FinanceController {
     private readonly closureService: ClosureService,
     private readonly fiscalSimulation: FiscalSimulationService,
     private readonly dossierValidation: DossierValidationService,
+    private readonly businessPlan: BusinessPlanService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -229,6 +232,48 @@ export class FinanceController {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="dossier-credit-${shopId}.pdf"`);
     return doc.pipe(res);
+  }
+
+  // Business plan et scénarios de prêt (16 oct. 2026, point 1) — alimentent
+  // le dossier crédit ci-dessus (section business plan) et le futur rapport
+  // annuel. OWNER/MANAGER/ACCOUNTANT uniquement : contenu stratégique de la
+  // boutique, pas une simple lecture de chiffres déjà publics en interne.
+  @Get("business-plan")
+  @RequiresGestionFeature("financeAvancee")
+  businessPlanObtenir(@Param("shopId") shopId: string) {
+    return this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId);
+  }
+
+  @Patch("business-plan")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  businessPlanEnregistrer(@Param("shopId") shopId: string, @Body() dto: UpdateBusinessPlanDto) {
+    return this.businessPlan.enregistrer(FiscalRuleScope.SHOP, shopId, dto);
+  }
+
+  @Post("business-plan/scenarios")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  scenarioAjouter(@Param("shopId") shopId: string, @Body() dto: CreateLoanScenarioDto) {
+    return this.businessPlan.ajouterScenario(FiscalRuleScope.SHOP, shopId, dto);
+  }
+
+  @Patch("business-plan/scenarios/:scenarioId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  scenarioModifier(
+    @Param("shopId") shopId: string,
+    @Param("scenarioId") scenarioId: string,
+    @Body() dto: UpdateLoanScenarioDto,
+  ) {
+    return this.businessPlan.modifierScenario(FiscalRuleScope.SHOP, shopId, scenarioId, dto);
+  }
+
+  @Delete("business-plan/scenarios/:scenarioId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  scenarioSupprimer(@Param("shopId") shopId: string, @Param("scenarioId") scenarioId: string) {
+    return this.businessPlan.supprimerScenario(FiscalRuleScope.SHOP, shopId, scenarioId);
   }
 
   @Get("fiscal-rules")
