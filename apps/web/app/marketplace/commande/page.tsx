@@ -72,6 +72,25 @@ export default function CommandePage() {
       });
   }, [user]);
 
+  // Pré-remplissage du téléphone/WhatsApp (demande du 16 oct. 2026, point 3)
+  // — depuis le numéro déjà enregistré sur le compte, pour ne pas le ressaisir
+  // à chaque commande ; reste modifiable, et n'écrase jamais une saisie déjà
+  // commencée.
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get<{ phone: string | null }>("/auth/me")
+      .then((compte) => {
+        if (compte.phone) {
+          setTelephone((valeur) => valeur || compte.phone!);
+          setWhatsapp((valeur) => valeur || compte.phone!);
+        }
+      })
+      .catch(() => {
+        // Non bloquant : sans numéro enregistré, la saisie libre reste disponible.
+      });
+  }, [user]);
+
   function choisirAdresseEnregistree(id: string) {
     setAdresseChoisieId(id);
     const adresse = adressesEnregistrees.find((a) => a.id === id);
