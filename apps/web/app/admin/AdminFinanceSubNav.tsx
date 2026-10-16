@@ -14,6 +14,7 @@ const ONGLETS = [
   { href: "/admin/finance", cle: "admfinnav_tableauBord" },
   { href: "/admin/finance/comptabilite", cle: "admfinnav_comptabilite" },
   { href: "/admin/finance/dossier-credit", cle: "admfinnav_dossierCredit" },
+  { href: "/admin/finance/rapport-annuel", cle: "admfinnav_rapportAnnuel" },
   { href: "/admin/finance/regles-fiscales", cle: "admfinnav_reglesFiscales" },
 ];
 
