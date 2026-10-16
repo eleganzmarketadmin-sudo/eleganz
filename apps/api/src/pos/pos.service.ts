@@ -142,9 +142,13 @@ export class PosService {
     // de comptabilisation ne doit jamais annuler une vente dont l'argent a
     // réellement été encaissé : elle est journalisée, pas propagée. Le
     // marqueur ACCOUNTING_POSTING_FAILED permet de grepper ces échecs dans
-    // les logs (incident du 16 oct. 2026 : une période clôturée par erreur
-    // avait fait disparaître silencieusement tout un mois de ventes du
-    // Rapport annuel — voir docs/ARCHITECTURE_FINANCE.md §8quinquies).
+    // les logs — par exemple une période clôturée par erreur (voir
+    // docs/ARCHITECTURE_FINANCE.md §8quinquies), mais aussi toute autre
+    // cause. Rappel distinct, confirmé le 16 oct. 2026 sur ELEGANZ STORE :
+    // une vente antérieure à la mise en service de ce câblage comptable
+    // (avant le commit qui l'a introduit) n'a et n'aura jamais d'écriture —
+    // ce n'est ni une erreur ni un cas que ce marqueur peut détecter, car
+    // aucune tentative de comptabilisation n'a jamais eu lieu pour elle.
     await this.accounting.postPosSale(sale).catch((err) => {
       this.logger.error(this.describePostingFailure("vente", sale.id, shopId, err), err);
     });
@@ -164,11 +168,18 @@ export class PosService {
   /**
    * Message de log greppable (marqueur `ACCOUNTING_POSTING_FAILED`) pour un
    * échec de comptabilisation volontairement avalé ci-dessus. Distingue le
-   * cas d'une période clôturée par erreur (`ConflictException` levée par
+   * cas d'une période clôturée (`ConflictException` levée par
    * `AccountingService.enregistrer` — voir accounting.service.ts) de toute
-   * autre erreur, pour que ce cas précis — déjà survenu une fois en
-   * production (16 oct. 2026, ELEGANZ STORE, octobre 2026) — soit repérable
-   * sans avoir à lire la stack trace complète.
+   * autre erreur, pour que ce cas précis soit repérable sans avoir à lire la
+   * stack trace complète. Ce marqueur ne couvre que les tentatives de
+   * comptabilisation qui ont réellement eu lieu et échoué : une vente
+   * enregistrée avant la mise en service de ce câblage (voir l'historique
+   * Git de ce fichier) n'a jamais déclenché d'appel ici, donc rien à
+   * grepper pour elle — vérifié le 16 oct. 2026 sur ELEGANZ STORE, où le
+   * Rapport annuel 2026 à $0 s'est avéré dû à des ventes du 12 oct. 2026,
+   * antérieures de plus d'une journée au premier commit câblant
+   * `postPosSale` (cc06305, 13 oct. 2026 22h10), et non à une période
+   * clôturée.
    */
   private describePostingFailure(nature: string, saleId: string, shopId: string, err: unknown): string {
     if (err instanceof ConflictException) {
