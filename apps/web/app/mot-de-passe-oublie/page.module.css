@@ -1,0 +1,75 @@
+.cadre {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--espace-7) var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+}
+
+.champ {
+  display: block;
+  margin-bottom: var(--espace-4);
+}
+
+.champ label {
+  display: block;
+  margin-bottom: var(--espace-1);
+  font-weight: 500;
+}
+
+.champ input,
+.champ textarea {
+  width: 100%;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  min-height: var(--touche-min);
+  font-family: inherit;
+}
+
+.champ textarea {
+  min-height: 80px;
+}
+
+.bouton {
+  width: 100%;
+  min-height: var(--touche-min);
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-4);
+}
+
+.optionsIndisponibles {
+  border: 1px solid var(--color-border);
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-5);
+  font-size: 0.875rem;
+  color: var(--color-texte-muted);
+}

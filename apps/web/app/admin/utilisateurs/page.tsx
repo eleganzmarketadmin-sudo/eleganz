@@ -22,6 +22,20 @@ interface UtilisateurDetail extends UtilisateurListe {
   _count: { orders: number; reviews: number };
 }
 
+// Demandes "solliciter l'admin de la plateforme" (16 oct. 2026, point 1) —
+// voie de secours pour un mot de passe oublié tant qu'aucun fournisseur
+// d'envoi de code par email/WhatsApp n'est branché (voir
+// PasswordResetService). `user` est nul si l'identifiant tapé ne
+// correspond à aucun compte ELEGANZ.
+interface DemandeReinitialisation {
+  id: string;
+  identifiant: string;
+  message: string | null;
+  status: "PENDING" | "RESOLVED" | "REJECTED";
+  createdAt: string;
+  user: { id: string; fullName: string; email: string | null; phone: string | null; role: string } | null;
+}
+
 const CLES_ROLE: Record<string, string> = {
   BUYER: "gcmd_acheteurFallback",
   SHOP_OWNER: "admutil_roleProprietaireBoutique",
@@ -49,6 +63,52 @@ function UtilisateursContent() {
   const [enCours, setEnCours] = useState<string | null>(null);
   const [motDePasseGenere, setMotDePasseGenere] = useState<string | null>(null);
   const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
+
+  // Demandes "solliciter l'admin" (16 oct. 2026, point 1).
+  const [demandes, setDemandes] = useState<DemandeReinitialisation[]>([]);
+  const [demandeEnCours, setDemandeEnCours] = useState<string | null>(null);
+  const [motsDePasseGeneresParDemande, setMotsDePasseGeneresParDemande] = useState<Record<string, string>>({});
+
+  function rechargerDemandes() {
+    api
+      .get<DemandeReinitialisation[]>("/admin/password-reset-requests?status=PENDING")
+      .then(setDemandes)
+      .catch(() => setDemandes([]));
+  }
+
+  useEffect(rechargerDemandes, []);
+
+  async function resoudreDemande(demande: DemandeReinitialisation) {
+    setDemandeEnCours(demande.id);
+    setErreur(null);
+    try {
+      const resultat = await api.post<{ motDePasseTemporaire?: string }>(
+        `/admin/password-reset-requests/${demande.id}/resoudre`,
+      );
+      if (resultat.motDePasseTemporaire) {
+        setMotsDePasseGeneresParDemande((actuel) => ({ ...actuel, [demande.id]: resultat.motDePasseTemporaire! }));
+      }
+      rechargerDemandes();
+      rechercher();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admutil_reinitialisationImpossible"));
+    } finally {
+      setDemandeEnCours(null);
+    }
+  }
+
+  async function rejeterDemande(demandeId: string) {
+    setDemandeEnCours(demandeId);
+    setErreur(null);
+    try {
+      await api.post(`/admin/password-reset-requests/${demandeId}/rejeter`);
+      rechargerDemandes();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
+    } finally {
+      setDemandeEnCours(null);
+    }
+  }
 
   function rechercher() {
     setChargement(true);
@@ -119,6 +179,49 @@ function UtilisateursContent() {
       <h1 className={styles.titre}>{t("admutil_titre")}</h1>
       <p className={styles.sousTitre}>{t("admutil_sousTitre")}</p>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
+
+      {demandes.length > 0 && (
+        <div className={styles.section} style={{ marginTop: 0, borderTop: "none", paddingTop: 0 }}>
+          <strong>{t("admutil_demandesReinitTitre")}</strong>
+          <p className={styles.note}>{t("admutil_demandesReinitNote")}</p>
+          {demandes.map((d) => (
+            <div key={d.id} style={{ border: "1px solid var(--color-border)", padding: "12px", marginBottom: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                <div>
+                  <strong>{d.user?.fullName ?? d.identifiant}</strong>
+                  <span className={styles.note} style={{ margin: 0, display: "block" }}>
+                    {d.identifiant} · {new Date(d.createdAt).toLocaleString()}
+                  </span>
+                  {d.message && <p style={{ margin: "4px 0 0" }}>{d.message}</p>}
+                  {!d.user && <p className={styles.note} style={{ margin: "4px 0 0" }}>{t("admutil_demandeSansCompte")}</p>}
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                  <button
+                    className={styles.boutonAction}
+                    disabled={!d.user || demandeEnCours === d.id}
+                    onClick={() => resoudreDemande(d)}
+                  >
+                    {demandeEnCours === d.id ? "…" : t("admutil_reinitialiser")}
+                  </button>
+                  <button
+                    className={styles.boutonSuspendre}
+                    disabled={demandeEnCours === d.id}
+                    onClick={() => rejeterDemande(d.id)}
+                  >
+                    {t("admutil_rejeterDemande")}
+                  </button>
+                </div>
+              </div>
+              {motsDePasseGeneresParDemande[d.id] && (
+                <p className={styles.motDePasseResultat}>
+                  {t("admutil_nouveauMotDePasseLabel")} <code>{motsDePasseGeneresParDemande[d.id]}</code>{" "}
+                  {t("admutil_noteCommuniquerMotDePasse")}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <form
         className={styles.formRecherche}

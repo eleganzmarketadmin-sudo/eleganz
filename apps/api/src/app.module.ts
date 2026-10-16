@@ -15,6 +15,7 @@ import { BillingModule } from "./billing/billing.module";
 import { AdminCockpitModule } from "./admin-cockpit/admin-cockpit.module";
 import { AdminTeamModule } from "./admin-team/admin-team.module";
 import { AdminUsersModule } from "./admin-users/admin-users.module";
+import { PasswordResetModule } from "./password-reset/password-reset.module";
 import { AdminSettingsModule } from "./admin-settings/admin-settings.module";
 import { ImportExportModule } from "./import-export/import-export.module";
 import { ReviewsModule } from "./reviews/reviews.module";
@@ -48,6 +49,7 @@ import { ExpertsModule } from "./experts/experts.module";
     AdminCockpitModule,
     AdminTeamModule,
     AdminUsersModule,
+    PasswordResetModule,
     AdminSettingsModule,
     ImportExportModule,
     ReviewsModule,

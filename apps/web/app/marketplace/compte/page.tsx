@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, ApiError } from "../../lib/auth";
 import { useLocale } from "../../lib/i18n/LocaleContext";
@@ -111,6 +112,11 @@ function ComptePageContenu() {
               ? t("compte_seConnecter")
               : t("compte_creerMonCompte")}
         </button>
+        {onglet === "connexion" && (
+          <p style={{ marginTop: "12px", fontSize: "0.875rem" }}>
+            <Link href="/mot-de-passe-oublie">{t("compte_motDePasseOublie")}</Link>
+          </p>
+        )}
       </form>
     </div>
   );

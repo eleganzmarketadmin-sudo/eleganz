@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
@@ -65,6 +66,9 @@ export default function AdminConnexionPage() {
           <button className={styles.bouton} type="submit" disabled={enCours}>
             {enCours ? t("lconnexion_enCours") : t("compte_seConnecter")}
           </button>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem" }}>
+            <Link href="/mot-de-passe-oublie">{t("compte_motDePasseOublie")}</Link>
+          </p>
         </form>
       </div>
     </div>

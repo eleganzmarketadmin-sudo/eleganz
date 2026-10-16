@@ -66,7 +66,10 @@ export default function ConnexionPage() {
           <button className={styles.bouton} type="submit" disabled={enCours}>
             {enCours ? t("gconnexion_enCours") : t("compte_seConnecter")}
           </button>
-          <p style={{ marginTop: "16px", fontSize: "0.875rem" }}>
+          <p style={{ marginTop: "12px", fontSize: "0.875rem" }}>
+            <Link href="/mot-de-passe-oublie">{t("compte_motDePasseOublie")}</Link>
+          </p>
+          <p style={{ marginTop: "8px", fontSize: "0.875rem" }}>
             {t("gconnexion_pasDeCompte")} <Link href="/inscription">{t("gconnexion_ouvrirBoutique")}</Link>
           </p>
         </form>
