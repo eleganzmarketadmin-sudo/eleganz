@@ -175,6 +175,28 @@ enum StaffRole {
   EXTERNAL_ACCOUNTANT
 }
 
+// Écrans du menu ELEGANZ Gestion, un par entrée de GestionShell.LIENS (16
+// oct. 2026, point 2 des propositions du 16 oct. 2026 — "le rôle accordé
+// aux équipes ne restreint pas le menu") — utilisé pour le choix à cocher/
+// décocher par profil d'équipe (ShopStaff.menuItemsOverride ci-dessous),
+// jamais pour remplacer @ShopRoles sur les actions déjà sensibles : c'est
+// une couche de visibilité en plus, pas un remplacement de la barrière
+// existante.
+enum MenuGestion {
+  CAISSE
+  TABLEAU_DE_BORD
+  CATALOGUE
+  COMMANDES
+  FACTURES
+  RELEVES
+  LITIGES
+  FINANCE
+  LIVREURS
+  MESSAGERIE
+  EQUIPE
+  PARAMETRES
+}
+
 model User {
   id            String   @id @default(uuid())
   email         String?  @unique
@@ -403,6 +425,17 @@ model ShopStaff {
   role     StaffRole
   active   Boolean   @default(true)
   createdAt DateTime @default(now())
+
+  // Écrans du menu Gestion accordés à CE membre précisément (16 oct. 2026,
+  // point 2 des propositions du 16 oct. 2026). Tableau vide (valeur de
+  // départ pour toute ligne existante avant cette fonctionnalité, et valeur
+  // par défaut tant que le propriétaire/gérant n'a rien choisi explicitement)
+  // = « pas de choix explicite » : BillingService/ShopsService retombent
+  // alors sur la liste par défaut du rôle (voir
+  // ShopsService.menuGestionParDefaut) plutôt que sur une liste vide — donc
+  // aucun membre existant ne perd d'accès tant que son profil n'est pas
+  // explicitement modifié.
+  menuItemsOverride MenuGestion[] @default([])
 
   @@unique([shopId, userId])
 }
