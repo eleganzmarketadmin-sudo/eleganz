@@ -6,6 +6,7 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { ZonesLivraison } from "../../components/ZonesLivraison";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { formatMoney, formatDate } from "../../lib/money";
 import styles from "./page.module.css";
 
 interface ShopDetails {
@@ -23,6 +24,27 @@ interface Compte {
   fullName: string;
   email: string | null;
   phone: string | null;
+}
+
+interface BouquetGestion {
+  id: string;
+  name: string;
+  monthlyPrice: number;
+  maxActiveProducts: number | null;
+  commissionRate: number | null;
+  active: boolean;
+}
+
+interface StatutAbonnementGestion {
+  planActuel: BouquetGestion | null;
+  cycle: { debut: string; renouvellement: string; statut: string } | null;
+  catalogue: BouquetGestion[];
+}
+
+interface ResultatChangementBouquet {
+  nouveauPlan: { id: string; name: string; monthlyPrice: number };
+  complement: number;
+  renouvellement: string;
 }
 
 function ParametresContent() {
@@ -74,6 +96,53 @@ function ParametresContent() {
       setErreurCompte(err instanceof ApiError ? err.message : t("profil_erreurEnregistrement"));
     } finally {
       setEnregistrementCompte(false);
+    }
+  }
+
+  // Abonnement Gestion en libre-service (16 oct. 2026, demande du
+  // propriétaire ELEGANZ, point 1 des propositions du 16 oct. 2026) —
+  // volontairement limité au bouquet GESTION ; voir
+  // ShopSubscriptionController/BillingService.changerBouquetGestion côté API.
+  const [abonnement, setAbonnement] = useState<StatutAbonnementGestion | null>(null);
+  const [chargementAbonnement, setChargementAbonnement] = useState(true);
+  const [erreurAbonnement, setErreurAbonnement] = useState<string | null>(null);
+  const [bouquetEnChangement, setBouquetEnChangement] = useState<string | null>(null);
+  const [resultatChangement, setResultatChangement] = useState<ResultatChangementBouquet | null>(null);
+
+  useEffect(() => {
+    if (!currentShop) return;
+    setChargementAbonnement(true);
+    setErreurAbonnement(null);
+    api
+      .get<StatutAbonnementGestion>(`/shops/${currentShop.id}/subscription/gestion`)
+      .then(setAbonnement)
+      .catch((err) =>
+        setErreurAbonnement(err instanceof ApiError ? err.message : t("abonnement_erreurChargement")),
+      )
+      .finally(() => setChargementAbonnement(false));
+  }, [currentShop]);
+
+  async function changerBouquet(plan: BouquetGestion) {
+    if (!currentShop) return;
+    const confirmation = window.confirm(
+      `${t("abonnement_confirmationPrefix")} ${plan.name} ${t("abonnement_confirmationSuffix")}`,
+    );
+    if (!confirmation) return;
+    setBouquetEnChangement(plan.id);
+    setErreurAbonnement(null);
+    setResultatChangement(null);
+    try {
+      const resultat = await api.post<ResultatChangementBouquet>(
+        `/shops/${currentShop.id}/subscription/gestion/change`,
+        { planId: plan.id },
+      );
+      setResultatChangement(resultat);
+      const statut = await api.get<StatutAbonnementGestion>(`/shops/${currentShop.id}/subscription/gestion`);
+      setAbonnement(statut);
+    } catch (err) {
+      setErreurAbonnement(err instanceof ApiError ? err.message : t("abonnement_erreurChangement"));
+    } finally {
+      setBouquetEnChangement(null);
     }
   }
 
@@ -236,6 +305,107 @@ function ParametresContent() {
           </button>
         </form>
       </section>
+
+      {currentShop && (
+        <section className={styles.section}>
+          <h2 className={styles.sousTitre}>{t("nav_abonnement")}</h2>
+
+          {chargementAbonnement ? (
+            <p className={styles.note}>{t("abonnement_chargement")}</p>
+          ) : (
+            <>
+              {erreurAbonnement && <div className={styles.erreur}>{erreurAbonnement}</div>}
+
+              {resultatChangement && (
+                <div className={styles.confirmation}>
+                  <strong>{t("abonnement_resultatTitre")}</strong> — {resultatChangement.nouveauPlan.name}
+                  <br />
+                  {resultatChangement.complement > 0 && (
+                    <span>{t("abonnement_resultatComplementDu")} : {formatMoney(resultatChangement.complement)}</span>
+                  )}
+                  {resultatChangement.complement < 0 && (
+                    <span>{t("abonnement_resultatCredit")} : {formatMoney(Math.abs(resultatChangement.complement))}</span>
+                  )}
+                  {resultatChangement.complement === 0 && <span>{t("abonnement_resultatAucunComplement")}</span>}
+                  <br />
+                  <button
+                    className={styles.bouton}
+                    type="button"
+                    onClick={() => setResultatChangement(null)}
+                    style={{ marginTop: "var(--espace-3)" }}
+                  >
+                    {t("abonnement_fermer")}
+                  </button>
+                </div>
+              )}
+
+              {abonnement?.planActuel && (
+                <div className={styles.champ}>
+                  <span>
+                    {t("abonnement_planActuel")} : <strong>{abonnement.planActuel.name}</strong> —{" "}
+                    {formatMoney(Number(abonnement.planActuel.monthlyPrice))}
+                    {t("abonnement_parMois")}
+                  </span>
+                </div>
+              )}
+              <div className={styles.champ}>
+                <span>
+                  {t("abonnement_renouvellement")} :{" "}
+                  {abonnement?.cycle ? formatDate(abonnement.cycle.renouvellement) : t("abonnement_aucunCycle")}
+                </span>
+              </div>
+
+              <h3 className={styles.sousTitre} style={{ marginTop: "var(--espace-4)" }}>
+                {t("abonnement_catalogueTitre")}
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--espace-3)" }}>
+                {abonnement?.catalogue.map((plan) => {
+                  const estActuel = plan.id === abonnement.planActuel?.id;
+                  return (
+                    <div
+                      key={plan.id}
+                      className={styles.champ}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "8px",
+                        padding: "var(--espace-3)",
+                      }}
+                    >
+                      <span>
+                        <strong>{plan.name}</strong> — {formatMoney(Number(plan.monthlyPrice))}
+                        {t("abonnement_parMois")}
+                        {plan.maxActiveProducts != null && (
+                          <> · {t("abonnement_produitsMax")} : {plan.maxActiveProducts}</>
+                        )}
+                        {plan.commissionRate != null && (
+                          <> · {t("abonnement_tauxCommission")} : {Number(plan.commissionRate)}%</>
+                        )}
+                      </span>
+                      {estActuel ? (
+                        <span className={styles.note}>{t("abonnement_bouquetActuelBadge")}</span>
+                      ) : (
+                        <button
+                          className={styles.bouton}
+                          type="button"
+                          disabled={bouquetEnChangement !== null}
+                          onClick={() => changerBouquet(plan)}
+                        >
+                          {bouquetEnChangement === plan.id
+                            ? t("abonnement_changementEnCours")
+                            : t("abonnement_choisirBouquet")}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
+      )}
 
       {currentShop && (
         <section className={styles.section}>

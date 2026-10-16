@@ -1,7 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { OrderStatus, ShopStatus } from "@eleganz/database";
+import { OrderStatus, PlanCategory, Prisma, ShopStatus } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
+
+// Durée d'un cycle d'abonnement Gestion quand aucun cycle n'est encore
+// suivi pour la boutique (ShopSubscription jamais encore créée pour elle) —
+// voir changerBouquetGestion ci-dessous.
+const DUREE_CYCLE_GESTION_JOURS = 30;
 
 // Frais d'ouverture appliqué à une boutique sans bouquet Gestion rattaché —
 // ne devrait plus jamais arriver en pratique depuis que
@@ -198,6 +203,164 @@ export class BillingService {
     });
 
     return resultats;
+  }
+
+  /**
+   * État de l'abonnement Gestion d'une boutique, pour l'écran libre-service
+   * "Abonnement" de Gestion (16 oct. 2026, point 1 des propositions du 16
+   * oct. 2026) — jamais le bouquet Marketplace, volontairement laissé de
+   * côté à ce stade (voir changerBouquetGestion). `cycle` vaut `null` tant
+   * qu'aucun changement de bouquet n'est encore passé par
+   * changerBouquetGestion pour cette boutique (ShopSubscription jamais
+   * encore créée) : ce n'est pas une anomalie, juste l'état de départ.
+   */
+  async getStatutAbonnementGestion(shopId: string) {
+    const shop = await this.prisma.shop.findUniqueOrThrow({
+      where: { id: shopId },
+      include: { gestionBouquet: true },
+    });
+
+    const abonnementActuel = await this.prisma.shopSubscription.findFirst({
+      where: { shopId, plan: { category: PlanCategory.GESTION } },
+      orderBy: { startedAt: "desc" },
+    });
+
+    const catalogue = await this.prisma.subscriptionPlan.findMany({
+      where: { category: PlanCategory.GESTION, active: true },
+      orderBy: { monthlyPrice: "asc" },
+    });
+
+    return {
+      planActuel: shop.gestionBouquet,
+      cycle: abonnementActuel
+        ? { debut: abonnementActuel.startedAt, renouvellement: abonnementActuel.renewsAt, statut: abonnementActuel.status }
+        : null,
+      catalogue,
+    };
+  }
+
+  /**
+   * Changement de bouquet Gestion en libre-service, déclenché par le
+   * propriétaire de la boutique à tout moment (16 oct. 2026, demande du
+   * propriétaire ELEGANZ) — jamais le bouquet Marketplace, qui reste un
+   * changement réservé à l'administration (ShopsService.adminSetPlan,
+   * /admin/boutiques) à ce stade.
+   *
+   * Calcule un complément au prorata du temps restant dans le cycle en
+   * cours plutôt que de facturer (ou créditer) un mois plein à chaque
+   * changement :
+   *   - jours restants = date de renouvellement − aujourd'hui (bornés à
+   *     [0, durée du cycle])
+   *   - avoir sur l'ancien bouquet = ancien prix mensuel × (jours restants
+   *     ÷ durée du cycle)
+   *   - dû sur le nouveau bouquet = nouveau prix mensuel × (jours restants
+   *     ÷ durée du cycle)
+   *   - complément = dû nouveau bouquet − avoir ancien bouquet
+   *
+   * Aucun `ShopSubscription` n'existe encore dans ce projet avant le tout
+   * premier appel à cette méthode pour une boutique donnée (le modèle
+   * existait en base mais n'était lu/écrit nulle part) : ce premier appel
+   * démarre un cycle de `DUREE_CYCLE_GESTION_JOURS` jours à partir
+   * d'aujourd'hui, donc avec jours restants = durée du cycle (fraction = 1)
+   * — le tout premier changement facture ou crédite l'écart de prix complet,
+   * ce qui est le comportement attendu en l'absence de tout cycle déjà en
+   * cours. La date de renouvellement n'est JAMAIS réinitialisée par un
+   * changement de bouquet : seul le prix facturé pour le reste du cycle
+   * change, le rythme de facturation reste le même.
+   *
+   * Un complément positif (montée en gamme) crée une facture `PENDING`
+   * classique. Un complément négatif (descente en gamme) crée un avoir déjà
+   * `PAID` (rien n'est jamais remboursé en espèces ni viré automatiquement —
+   * voir le principe déjà appliqué ailleurs sur la plateforme) : il reste
+   * visible dans l'historique de facturation de la boutique
+   * (`GET /shops/:shopId/invoices`), mais n'est pas encore déduit
+   * automatiquement d'une facture future — cette consolidation n'existe pas
+   * encore dans `runMonthlyBilling`, à construire séparément si besoin.
+   */
+  async changerBouquetGestion(shopId: string, nouveauPlanId: string) {
+    const shop = await this.prisma.shop.findUniqueOrThrow({
+      where: { id: shopId },
+      include: { gestionBouquet: true },
+    });
+
+    const nouveauPlan = await this.prisma.subscriptionPlan.findUniqueOrThrow({ where: { id: nouveauPlanId } });
+    if (nouveauPlan.category !== PlanCategory.GESTION) {
+      throw new BadRequestException("Ce bouquet n'est pas un bouquet Gestion.");
+    }
+    if (!nouveauPlan.active) {
+      throw new BadRequestException("Ce bouquet n'est plus proposé à la souscription.");
+    }
+    if (shop.gestionBouquetId === nouveauPlanId) {
+      throw new ConflictException("La boutique est déjà sur ce bouquet.");
+    }
+
+    const ancienPlan = shop.gestionBouquet;
+    const maintenant = new Date();
+
+    const abonnementActuel = await this.prisma.shopSubscription.findFirst({
+      where: { shopId, plan: { category: PlanCategory.GESTION } },
+      orderBy: { startedAt: "desc" },
+    });
+
+    let finCycle: Date;
+    let dureeCycleJours: number;
+    if (abonnementActuel?.renewsAt && abonnementActuel.renewsAt > maintenant) {
+      finCycle = abonnementActuel.renewsAt;
+      dureeCycleJours = Math.max(
+        1,
+        Math.round((finCycle.getTime() - abonnementActuel.startedAt.getTime()) / (24 * 60 * 60 * 1000)),
+      );
+    } else {
+      finCycle = new Date(maintenant.getTime() + DUREE_CYCLE_GESTION_JOURS * 24 * 60 * 60 * 1000);
+      dureeCycleJours = DUREE_CYCLE_GESTION_JOURS;
+    }
+
+    const joursRestants = Math.min(
+      dureeCycleJours,
+      Math.max(0, Math.round((finCycle.getTime() - maintenant.getTime()) / (24 * 60 * 60 * 1000))),
+    );
+    const fraction = joursRestants / dureeCycleJours;
+
+    const ancienPrix = ancienPlan ? Number(ancienPlan.monthlyPrice) : 0;
+    const nouveauPrix = Number(nouveauPlan.monthlyPrice);
+    const avoirAncien = Math.round(ancienPrix * fraction * 100) / 100;
+    const duNouveau = Math.round(nouveauPrix * fraction * 100) / 100;
+    const complement = Math.round((duNouveau - avoirAncien) * 100) / 100;
+
+    const operations: Prisma.PrismaPromise<unknown>[] = [
+      this.prisma.shop.update({ where: { id: shopId }, data: { gestionBouquetId: nouveauPlanId } }),
+      this.prisma.shopSubscription.create({
+        data: { shopId, planId: nouveauPlanId, startedAt: maintenant, renewsAt: finCycle, status: "ACTIVE" },
+      }),
+    ];
+    let indexFacture = -1;
+    if (complement !== 0) {
+      indexFacture = operations.length;
+      operations.push(
+        this.prisma.invoice.create({
+          data: {
+            shopId,
+            amount: Math.abs(complement),
+            dueAt: complement > 0 ? new Date(maintenant.getTime() + 7 * 24 * 60 * 60 * 1000) : maintenant,
+            status: complement > 0 ? "PENDING" : "PAID",
+            paidAt: complement > 0 ? null : maintenant,
+            kind: complement > 0 ? "subscription_complement" : "subscription_credit",
+          },
+        }),
+      );
+    }
+
+    const resultats = await this.prisma.$transaction(operations);
+
+    return {
+      ancienPlan: ancienPlan ? { id: ancienPlan.id, name: ancienPlan.name, monthlyPrice: ancienPlan.monthlyPrice } : null,
+      nouveauPlan: { id: nouveauPlan.id, name: nouveauPlan.name, monthlyPrice: nouveauPlan.monthlyPrice },
+      joursRestants,
+      dureeCycleJours,
+      complement,
+      facture: indexFacture >= 0 ? resultats[indexFacture] : null,
+      renouvellement: finCycle,
+    };
   }
 
   listInvoices(shopId: string) {
