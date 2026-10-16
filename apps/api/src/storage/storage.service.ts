@@ -69,6 +69,34 @@ export class StorageService {
 
     return { uploadUrl, publicUrl };
   }
+
+  /**
+   * Même principe que `creerUrlUploadImage`, généralisé à n'importe quel
+   * préfixe de clé (module Experts, 16 oct. 2026, point 3 : photo de
+   * profil, CV, diplômes, certifications). `prefix` est fourni par
+   * l'appelant et doit déjà être sûr (jamais construit depuis une entrée
+   * utilisateur non validée) — ex. `experts/<userId>/documents`.
+   */
+  async creerUrlUpload(prefix: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string }> {
+    if (!this.client || !this.bucket || !this.publicBaseUrl) {
+      throw new InternalServerErrorException(
+        "Le stockage de fichiers n'est pas encore configuré sur ce serveur (variables R2_* manquantes).",
+      );
+    }
+
+    const extension = extensionPourType(contentType);
+    const key = `${prefix}/${randomUUID()}${extension}`;
+
+    const uploadUrl = await getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      { expiresIn: 300 },
+    );
+
+    const publicUrl = `${this.publicBaseUrl.replace(/\/$/, "")}/${key}`;
+
+    return { uploadUrl, publicUrl };
+  }
 }
 
 function extensionPourType(contentType: string): string {
@@ -79,6 +107,8 @@ function extensionPourType(contentType: string): string {
       return ".webp";
     case "image/gif":
       return ".gif";
+    case "application/pdf":
+      return ".pdf";
     case "image/jpeg":
     default:
       return ".jpg";

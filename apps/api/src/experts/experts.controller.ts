@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ExpertsService } from "./experts.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -6,7 +6,18 @@ import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
 import { StaffRole } from "@eleganz/database";
-import { CandidaterExpertDto, InviteExpertDto, ModererExpertDto } from "./dto/expert.dto";
+import {
+  AjouterDocumentExpertDto,
+  AjouterReferenceExpertDto,
+  CandidaterExpertDto,
+  DefinirPhotoExpertDto,
+  InviteExpertDto,
+  ModererExpertDto,
+  RequestExpertDocumentUploadDto,
+  RequestExpertUploadDto,
+  TEMPLATES_EXPERT,
+} from "./dto/expert.dto";
+import { ExpertProfileTemplate } from "@eleganz/database";
 
 function requireAdmin(user: AuthenticatedUser) {
   if (!user.role.startsWith("ADMIN_")) {
@@ -51,6 +62,72 @@ export class ExpertsController {
   @UseGuards(JwtAuthGuard)
   candidater(@CurrentUser() user: AuthenticatedUser, @Body() dto: CandidaterExpertDto) {
     return this.experts.candidater(user.id, dto);
+  }
+
+  // Gabarit de présentation du profil public — changement purement visuel,
+  // ne repasse pas le profil en modération (voir ExpertsService.definirTemplate).
+  @Patch("moi/template")
+  @UseGuards(JwtAuthGuard)
+  definirTemplate(@CurrentUser() user: AuthenticatedUser, @Body("template") template: string) {
+    if (!TEMPLATES_EXPERT.includes(template as ExpertProfileTemplate)) {
+      throw new BadRequestException("Gabarit inconnu.");
+    }
+    return this.experts.definirTemplate(user.id, template as ExpertProfileTemplate);
+  }
+
+  @Post("moi/photo/upload-url")
+  @UseGuards(JwtAuthGuard)
+  creerUrlUploadPhoto(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestExpertUploadDto) {
+    return this.experts.creerUrlUploadPhoto(user.id, dto.contentType);
+  }
+
+  @Post("moi/photo")
+  @UseGuards(JwtAuthGuard)
+  definirPhoto(@CurrentUser() user: AuthenticatedUser, @Body() dto: DefinirPhotoExpertDto) {
+    return this.experts.definirPhoto(user.id, dto.url);
+  }
+
+  // --- Pièces de la candidature : CV, diplômes, certifications, autres ---
+  // (demande du 16 oct. 2026, point 3)
+
+  @Post("moi/documents/upload-url")
+  @UseGuards(JwtAuthGuard)
+  creerUrlUploadDocument(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestExpertDocumentUploadDto) {
+    return this.experts.creerUrlUploadDocument(user.id, dto.contentType);
+  }
+
+  @Post("moi/documents")
+  @UseGuards(JwtAuthGuard)
+  ajouterDocument(@CurrentUser() user: AuthenticatedUser, @Body() dto: AjouterDocumentExpertDto) {
+    return this.experts.ajouterDocument(user.id, dto);
+  }
+
+  @Delete("moi/documents/:documentId")
+  @UseGuards(JwtAuthGuard)
+  supprimerDocument(@CurrentUser() user: AuthenticatedUser, @Param("documentId") documentId: string) {
+    return this.experts.supprimerDocument(user.id, documentId);
+  }
+
+  // Suggestion de contenu extraite du CV — "si cela est possible" (demande
+  // du 16 oct. 2026, point 2) : best-effort, l'expert valide ou corrige.
+  @Post("moi/documents/:documentId/extraire-cv")
+  @UseGuards(JwtAuthGuard)
+  extraireSuggestionCv(@CurrentUser() user: AuthenticatedUser, @Param("documentId") documentId: string) {
+    return this.experts.extraireSuggestionCv(user.id, documentId);
+  }
+
+  // --- Personnes de référence (demande du 16 oct. 2026, point 3) ---------
+
+  @Post("moi/references")
+  @UseGuards(JwtAuthGuard)
+  ajouterReference(@CurrentUser() user: AuthenticatedUser, @Body() dto: AjouterReferenceExpertDto) {
+    return this.experts.ajouterReference(user.id, dto);
+  }
+
+  @Delete("moi/references/:referenceId")
+  @UseGuards(JwtAuthGuard)
+  supprimerReference(@CurrentUser() user: AuthenticatedUser, @Param("referenceId") referenceId: string) {
+    return this.experts.supprimerReference(user.id, referenceId);
   }
 
   @Get("moi/engagements")

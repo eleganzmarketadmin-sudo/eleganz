@@ -4,6 +4,7 @@ import { ExpertsController, ShopExpertsController } from "./experts.controller";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { AuthModule } from "../auth/auth.module";
 import { ShopsModule } from "../shops/shops.module";
+import { StorageModule } from "../storage/storage.module";
 
 // Module EXPERTS (16 oct. 2026, point 2). AuthModule ET ShopsModule importés
 // directement : ExpertsController pose son propre @UseGuards(JwtAuthGuard)
@@ -12,7 +13,7 @@ import { ShopsModule } from "../shops/shops.module";
 // docs/MAINTENANCE.md (incident AuthModule) pour tout contrôleur qui pose
 // ses guards directement plutôt que d'hériter d'un module global.
 @Module({
-  imports: [NotificationsModule, AuthModule, ShopsModule],
+  imports: [NotificationsModule, AuthModule, ShopsModule, StorageModule],
   providers: [ExpertsService],
   controllers: [ExpertsController, ShopExpertsController],
   exports: [ExpertsService],

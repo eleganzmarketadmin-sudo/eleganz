@@ -2,8 +2,16 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { randomBytes } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { ExpertStatus, NotificationType, ShopExpertEngagementStatus, ShopExpertInviteStatus, ShopExpertScope } from "@eleganz/database";
-import type { CandidaterExpertDto, InviteExpertDto } from "./dto/expert.dto";
+import { StorageService } from "../storage/storage.service";
+import {
+  ExpertProfileTemplate,
+  ExpertStatus,
+  NotificationType,
+  ShopExpertEngagementStatus,
+  ShopExpertInviteStatus,
+  ShopExpertScope,
+} from "@eleganz/database";
+import type { AjouterDocumentExpertDto, AjouterReferenceExpertDto, CandidaterExpertDto, InviteExpertDto } from "./dto/expert.dto";
 
 // Module EXPERTS (16 oct. 2026, point 2) — voir packages/database/prisma/
 // schema.prisma pour le détail du schéma et les 4 décisions verrouillées
@@ -16,7 +24,21 @@ export class ExpertsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly storage: StorageService,
   ) {}
+
+  // Toute action qui modifie son propre profil doit d'abord s'assurer
+  // qu'il existe — évite un message Prisma opaque si quelqu'un appelle
+  // /experts/moi/photo ou /experts/moi/documents avant d'avoir postulé.
+  private async profilOuEchec(userId: string) {
+    const profil = await this.prisma.expertProfile.findUnique({ where: { userId } });
+    if (!profil) {
+      throw new BadRequestException(
+        "Complétez d'abord votre candidature expert (rubrique « Devenir expert ») avant d'ajouter des documents.",
+      );
+    }
+    return profil;
+  }
 
   // --- Candidature / profil personnel -------------------------------------
 
@@ -36,6 +58,7 @@ export class ExpertsService {
         bio: dto.bio,
         domaines: dto.domaines,
         conditions: dto.conditions,
+        template: dto.template ?? ExpertProfileTemplate.MODERNE,
         status: ExpertStatus.PENDING_REVIEW,
       },
       update: {
@@ -43,6 +66,7 @@ export class ExpertsService {
         bio: dto.bio,
         domaines: dto.domaines,
         conditions: dto.conditions,
+        ...(dto.template ? { template: dto.template } : {}),
         status: ExpertStatus.PENDING_REVIEW,
         statusNote: null,
         reviewedById: null,
@@ -52,7 +76,130 @@ export class ExpertsService {
   }
 
   monProfil(userId: string) {
-    return this.prisma.expertProfile.findUnique({ where: { userId } });
+    return this.prisma.expertProfile.findUnique({
+      where: { userId },
+      include: { documents: true, references: true, user: { select: { fullName: true } } },
+    });
+  }
+
+  // Changer uniquement le gabarit de présentation ne remet pas le profil en
+  // modération : c'est une préférence purement visuelle, pas un changement
+  // de contenu (voir ExpertProfileTemplate dans schema.prisma).
+  async definirTemplate(userId: string, template: ExpertProfileTemplate) {
+    await this.profilOuEchec(userId);
+    return this.prisma.expertProfile.update({ where: { userId }, data: { template } });
+  }
+
+  // --- Photo de profil ------------------------------------------------------
+
+  async creerUrlUploadPhoto(userId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`experts/${userId}/photo`, contentType);
+  }
+
+  async definirPhoto(userId: string, url: string) {
+    await this.profilOuEchec(userId);
+    return this.prisma.expertProfile.update({ where: { userId }, data: { photoUrl: url } });
+  }
+
+  // --- Pièces de la candidature : CV, diplômes, certifications, autres ------
+  // (demande du 16 oct. 2026, point 3)
+
+  async creerUrlUploadDocument(userId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`experts/${userId}/documents`, contentType);
+  }
+
+  async ajouterDocument(userId: string, dto: AjouterDocumentExpertDto) {
+    const profil = await this.profilOuEchec(userId);
+    return this.prisma.expertDocument.create({
+      data: { expertProfileId: profil.id, type: dto.type, label: dto.label, url: dto.url },
+    });
+  }
+
+  async supprimerDocument(userId: string, documentId: string) {
+    const profil = await this.profilOuEchec(userId);
+    const document = await this.prisma.expertDocument.findUnique({ where: { id: documentId } });
+    if (!document || document.expertProfileId !== profil.id) {
+      throw new NotFoundException("Document introuvable.");
+    }
+    return this.prisma.expertDocument.delete({ where: { id: documentId } });
+  }
+
+  // Extraction best-effort du texte d'un CV (PDF) pour suggérer un titre et
+  // une présentation — l'expert reste libre d'accepter, de corriger ou
+  // d'ignorer la suggestion : ce n'est pas une réécriture intelligente,
+  // juste une extraction de texte brut qui évite de tout retaper à la main.
+  async extraireSuggestionCv(userId: string, documentId: string) {
+    const profil = await this.profilOuEchec(userId);
+    const document = await this.prisma.expertDocument.findUnique({ where: { id: documentId } });
+    if (!document || document.expertProfileId !== profil.id) {
+      throw new NotFoundException("Document introuvable.");
+    }
+    if (!document.url.toLowerCase().endsWith(".pdf")) {
+      throw new BadRequestException("Seuls les CV au format PDF peuvent être analysés automatiquement.");
+    }
+
+    let buffer: ArrayBuffer;
+    try {
+      const reponse = await fetch(document.url);
+      if (!reponse.ok) throw new Error("fetch échoué");
+      buffer = await reponse.arrayBuffer();
+    } catch {
+      throw new BadRequestException("Impossible de récupérer ce document pour l'analyser.");
+    }
+
+    let texte: string;
+    try {
+      // Import différé : pdf-parse ne sert qu'à cette seule fonctionnalité,
+      // pas la peine d'alourdir le démarrage de toute l'API pour ça.
+      const { PDFParse } = await import("pdf-parse");
+      const parseur = new PDFParse({ data: Buffer.from(buffer) });
+      const resultat = await parseur.getText();
+      await parseur.destroy();
+      texte = resultat.text;
+    } catch {
+      throw new BadRequestException(
+        "Ce PDF n'a pas pu être analysé (document scanné en image, protégé, ou corrompu). Vous pouvez renseigner votre profil manuellement.",
+      );
+    }
+
+    const lignes = texte
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    // Heuristique simple : la première ligne "normale" (ni trop courte, ni
+    // une suite de majuscules isolées comme un titre de section) devient la
+    // suggestion de titre ; le reste du texte, nettoyé des lignes très
+    // courtes (souvent des puces ou dates isolées), devient la suggestion
+    // de présentation — toujours affichée comme un brouillon à corriger.
+    const titreSuggere = lignes.find((l) => l.length >= 5 && l.length <= 120) ?? "";
+    const corpsSuggere = lignes
+      .filter((l) => l !== titreSuggere && l.length >= 15)
+      .join(" ")
+      .slice(0, 3500);
+
+    return {
+      headlineSuggestion: titreSuggere.slice(0, 120),
+      bioSuggestion: corpsSuggere,
+    };
+  }
+
+  // --- Personnes de référence (demande du 16 oct. 2026, point 3) ------------
+
+  async ajouterReference(userId: string, dto: AjouterReferenceExpertDto) {
+    const profil = await this.profilOuEchec(userId);
+    return this.prisma.expertReference.create({
+      data: { expertProfileId: profil.id, fullName: dto.fullName, role: dto.role, contact: dto.contact, note: dto.note },
+    });
+  }
+
+  async supprimerReference(userId: string, referenceId: string) {
+    const profil = await this.profilOuEchec(userId);
+    const reference = await this.prisma.expertReference.findUnique({ where: { id: referenceId } });
+    if (!reference || reference.expertProfileId !== profil.id) {
+      throw new NotFoundException("Référence introuvable.");
+    }
+    return this.prisma.expertReference.delete({ where: { id: referenceId } });
   }
 
   // Boutiques où cette personne est actuellement engagée comme expert — vue
@@ -89,6 +236,8 @@ export class ExpertsService {
         bio: true,
         domaines: true,
         conditions: true,
+        template: true,
+        photoUrl: true,
         createdAt: true,
         user: { select: { fullName: true } },
       },
@@ -97,6 +246,9 @@ export class ExpertsService {
     return experts;
   }
 
+  // Jamais les documents (CV, diplômes...) ni les références : réservés à
+  // l'expert lui-même et à la modération admin (données personnelles —
+  // décision verrouillée, voir schema.prisma).
   async profilPublic(id: string) {
     const expert = await this.prisma.expertProfile.findFirst({
       where: { id, status: ExpertStatus.APPROVED },
@@ -107,6 +259,8 @@ export class ExpertsService {
         bio: true,
         domaines: true,
         conditions: true,
+        template: true,
+        photoUrl: true,
         createdAt: true,
         user: { select: { fullName: true } },
       },
@@ -119,10 +273,17 @@ export class ExpertsService {
 
   // --- Modération admin -----------------------------------------------------
 
+  // Vue complète pour la modération (demande du 16 oct. 2026, point 3) :
+  // l'admin doit pouvoir juger CV, diplômes, certifications et personnes de
+  // référence avant d'approuver, pas seulement le texte de présentation.
   listerEnAttente() {
     return this.prisma.expertProfile.findMany({
       where: { status: ExpertStatus.PENDING_REVIEW },
-      include: { user: { select: { id: true, fullName: true, email: true, phone: true } } },
+      include: {
+        user: { select: { id: true, fullName: true, email: true, phone: true } },
+        documents: true,
+        references: true,
+      },
       orderBy: { createdAt: "asc" },
     });
   }
