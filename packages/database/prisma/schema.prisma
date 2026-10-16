@@ -197,6 +197,29 @@ enum MenuGestion {
   PARAMETRES
 }
 
+// Écrans du menu Centre de pilotage, un par entrée de AdminShell.LIENS (16
+// oct. 2026 — "donner la main aux super administrateurs : accès au menu
+// équipe et possibilité de choisir par des coches les menus auxquels
+// l'utilisateur aura accès") — même principe que MenuGestion/ShopStaff,
+// transposé au Centre de pilotage : User.adminMenuItemsOverride ci-dessous.
+enum MenuAdmin {
+  PILOTAGE
+  BOUTIQUES
+  LIVREURS
+  COMPTABLE
+  FINANCE
+  SUIVI_COMMANDES
+  UTILISATEURS
+  TARIFS
+  FACTURES
+  RELEVES
+  LITIGES
+  EXPERTS
+  MESSAGERIE
+  EQUIPE_ADMIN
+  PARAMETRES_PLATEFORME
+}
+
 model User {
   id            String   @id @default(uuid())
   email         String?  @unique
@@ -211,6 +234,16 @@ model User {
   isSuspended   Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  // Écrans du Centre de pilotage accordés à CE compte admin précisément (16
+  // oct. 2026 — "possibilité de choisir par des coches les menus auxquels
+  // l'utilisateur aura accès"). Tableau vide (tout compte non-admin, et
+  // tout admin existant avant cette fonctionnalité) = pas de choix
+  // explicite : AdminTeamService retombe alors sur la liste par défaut du
+  // rôle admin (voir AdminTeamService.menuAdminParDefaut) plutôt que sur
+  // une liste vide — aucun admin existant ne perd d'accès tant que son
+  // profil n'est pas explicitement modifié par un ADMIN_SUPER.
+  adminMenuItemsOverride MenuAdmin[] @default([])
 
   shopMemberships ShopStaff[]
   ownedShops      Shop[]        @relation("ShopOwner")
