@@ -1,6 +1,10 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { PasswordResetService } from "./password-reset.service";
-import { DemanderReinitialisationDto, ResoudreReinitialisationDto } from "./dto/password-reset.dto";
+import {
+  DemanderReinitialisationDto,
+  ResoudreReinitialisationDto,
+  VerifierCodeReinitialisationDto,
+} from "./dto/password-reset.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -22,6 +26,13 @@ export class PasswordResetController {
   @Post()
   demander(@Body() dto: DemanderReinitialisationDto) {
     return this.passwordReset.demanderReinitialisation(dto.identifiant, dto.message);
+  }
+
+  // Auto-service complet (16 oct. 2026) : code reçu par email/WhatsApp +
+  // nouveau mot de passe en un seul appel, sans admin.
+  @Post("verifier")
+  verifier(@Body() dto: VerifierCodeReinitialisationDto) {
+    return this.passwordReset.verifierCode(dto.identifiant, dto.code, dto.newPassword);
   }
 }
 

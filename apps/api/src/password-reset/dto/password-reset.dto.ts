@@ -22,3 +22,22 @@ export class ResoudreReinitialisationDto {
   newPassword?: string;
 }
 
+// Vérification du code reçu par email/WhatsApp (16 oct. 2026) — l'auto-
+// service complet : code + nouveau mot de passe en un seul appel, sans
+// passer par un admin.
+export class VerifierCodeReinitialisationDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(255)
+  identifiant!: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(6)
+  code!: string;
+
+  @IsString()
+  @MinLength(8, { message: "Le mot de passe doit contenir au moins 8 caractères." })
+  newPassword!: string;
+}
+
