@@ -111,6 +111,17 @@ model PlatformSettings {
   notificationsEmailEnabled Boolean @default(false)
   notificationsSmsEnabled   Boolean @default(false)
 
+  // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, point 2) —
+  // même esprit que Shop.fiscalLegalName/fiscalIdNumber/fiscalAddress/
+  // fiscalRegime, pour le dossier crédit et le rapport annuel de la
+  // plateforme elle-même. Tous facultatifs : tant que l'admin ne les
+  // renseigne pas, rien n'est déduit ni affiché à leur place.
+  platformFiscalLegalName String?
+  platformFiscalIdNumber  String?
+  platformFiscalAddress   String?
+  platformFiscalRegime    String?
+  platformFoundedAt       DateTime?
+
   updatedAt     DateTime @updatedAt
 }
 
