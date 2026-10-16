@@ -378,6 +378,9 @@ model Shop {
   // Module Experts (16 oct. 2026, point 2)
   expertInvites      ShopExpertInvite[]
   expertEngagements  ShopExpertEngagement[]
+
+  // Business plan / dossier crédit (16 oct. 2026, point 1)
+  businessPlans BusinessPlan[]
 }
 
 model ShopStaff {
@@ -1651,6 +1654,53 @@ model Account {
 
   @@unique([scope, shopId, code])
   @@index([scope, shopId])
+}
+
+// Business plan et scénarios de prêt (16 oct. 2026). Reprend le patron déjà
+// validé pour FiscalRule/Account : un seul jeu de modèles, séparé par scope
+// (SHOP/PLATFORM) + shopId nullable, isolation imposée côté service/contrôleur
+// (jamais seulement par l'affichage). scope=SHOP, shopId défini → business
+// plan d'une boutique ; scope=PLATFORM, shopId=null → business plan
+// d'ELEGANZ elle-même en tant que société (singleton applicatif : le service
+// vérifie toujours l'existence avant création, Postgres n'empêche pas à lui
+// seul plusieurs lignes à shopId NULL sur un index unique nullable).
+// Alimente le dossier crédit (boutique et plateforme) et le futur rapport
+// annuel (section business plan / perspectives).
+model BusinessPlan {
+  id                  String          @id @default(uuid())
+  scope               FiscalRuleScope
+  shopId              String?
+  shop                Shop?           @relation(fields: [shopId], references: [id])
+  resumeExecutif      String?         @db.Text
+  descriptionActivite String?         @db.Text
+  marcheEtClientele   String?         @db.Text
+  strategieCroissance String?         @db.Text
+  utilisationFonds    String?         @db.Text
+  risquesMitigation   String?         @db.Text
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  scenarios LoanScenario[]
+
+  @@unique([scope, shopId])
+}
+
+// Scénario de sollicitation de prêt attaché à un business plan (boutique ou
+// plateforme). Plusieurs scénarios peuvent coexister (ex. "Expansion
+// stock" vs "Equipement logistique") ; chacun porte son propre montant,
+// taux et durée pour comparer plusieurs hypothèses de financement.
+model LoanScenario {
+  id               String       @id @default(uuid())
+  businessPlanId   String
+  businessPlan     BusinessPlan @relation(fields: [businessPlanId], references: [id], onDelete: Cascade)
+  label            String
+  montant          Decimal      @db.Decimal(14, 2)
+  tauxAnnuel       Decimal      @db.Decimal(5, 2)
+  dureeMois        Int
+  objetFinancement String?
+  createdAt        DateTime     @default(now())
+
+  @@index([businessPlanId])
 }
 
 enum JournalEntrySource {
