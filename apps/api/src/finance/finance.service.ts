@@ -1,8 +1,27 @@
 import { Injectable } from "@nestjs/common";
+import { createHash } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { AccountingQueryService } from "./accounting-query.service";
 import { FiscalRuleScope, StockMovementType } from "@eleganz/database";
+
+export interface DossierCreditBoutique {
+  shopId: string;
+  shopName: string;
+  boutiqueDepuis: string;
+  identiteFiscale: {
+    fiscalLegalName: string | null;
+    fiscalIdNumber: string | null;
+    fiscalAddress: string | null;
+    fiscalRegime: string | null;
+  };
+  historiqueMensuel: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[];
+  bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
+  dettesFournisseurs: number;
+  creditClientAccorde: number;
+  genereLe: string;
+  codeVerification: string;
+}
 
 /**
  * Tableau de bord financier boutique (prompt du 13 oct. 2026, §7) —
@@ -154,6 +173,52 @@ export class FinanceService {
         creancesMarketplace411:
           "solde cumulé du compte 411 — ne se solde jamais automatiquement tant qu'aucun reversement réel de fonds par la plateforme n'est modélisé",
       },
+    };
+  }
+
+  /**
+   * Dossier de crédit boutique (demande du 16 oct. 2026, point 1) — même
+   * esprit que le "Dossier de financement" d'ELEGANZ Mon assistant
+   * (comptable-export.service.ts), mais assemblé à partir des ÉCRITURES
+   * COMPTABLES réelles de la boutique (plus fiable qu'une simple
+   * déclaration) plutôt que des activités/dépenses déclaratives d'un
+   * indépendant. Toujours calculé à la volée, jamais persisté : ce n'est
+   * pas un état financier certifié, seulement un dossier préparatoire à
+   * joindre à une demande de crédit auprès d'une institution financière.
+   */
+  async dossierCredit(shopId: string, nombreMois = 6): Promise<DossierCreditBoutique> {
+    const [shop, identite, historiqueMensuel, bilan, supplier, customers] = await Promise.all([
+      this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { name: true, createdAt: true } }),
+      this.fiscalIdentity(shopId),
+      this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, Math.min(Math.max(nombreMois, 1), 24)),
+      this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, new Date()),
+      this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
+      this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
+    ]);
+
+    const genereLe = new Date().toISOString();
+    const codeVerification = createHash("sha256")
+      .update([shopId, genereLe, JSON.stringify(historiqueMensuel), bilan.totalActif, bilan.totalPassif].join("|"))
+      .digest("hex")
+      .slice(0, 12)
+      .toUpperCase();
+
+    return {
+      shopId,
+      shopName: shop.name,
+      boutiqueDepuis: shop.createdAt.toISOString(),
+      identiteFiscale: {
+        fiscalLegalName: identite.fiscalLegalName,
+        fiscalIdNumber: identite.fiscalIdNumber,
+        fiscalAddress: identite.fiscalAddress,
+        fiscalRegime: identite.fiscalRegime,
+      },
+      historiqueMensuel,
+      bilan: { totalActif: bilan.totalActif, totalPassif: bilan.totalPassif, equilibre: bilan.equilibre },
+      dettesFournisseurs: Number(supplier._sum.balanceOwed ?? 0),
+      creditClientAccorde: Number(customers._sum.creditBalance ?? 0),
+      genereLe,
+      codeVerification,
     };
   }
 }

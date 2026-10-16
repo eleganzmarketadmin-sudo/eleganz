@@ -6,6 +6,7 @@ import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { DossierValidationService } from "./dossier-validation.service";
+import { renderDossierCreditPdf } from "./dossier-credit-pdf-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -204,6 +205,30 @@ export class FinanceController {
     const toDate = to ? new Date(to) : new Date();
     const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), toDate.getMonth(), 1);
     return this.financeService.dashboardForShop(shopId, fromDate, toDate);
+  }
+
+  // Dossier de crédit (demande du 16 oct. 2026, point 1) — regroupe états
+  // financiers, historique et dettes/créances pour appuyer une demande de
+  // crédit auprès d'une institution financière. Jamais persisté, toujours
+  // recalculé depuis les écritures réelles de la boutique.
+  @Get("dossier-credit")
+  @RequiresGestionFeature("financeAvancee")
+  dossierCredit(@Param("shopId") shopId: string, @Query("mois") mois?: string) {
+    return this.financeService.dossierCredit(shopId, mois ? Number(mois) : undefined);
+  }
+
+  @Get("export/dossier-credit")
+  @RequiresGestionFeature("financeAvancee")
+  async exportDossierCredit(
+    @Param("shopId") shopId: string,
+    @Res() res: Response,
+    @Query("mois") mois?: string,
+  ) {
+    const dossier = await this.financeService.dossierCredit(shopId, mois ? Number(mois) : undefined);
+    const doc = renderDossierCreditPdf(dossier);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="dossier-credit-${shopId}.pdf"`);
+    return doc.pipe(res);
   }
 
   @Get("fiscal-rules")

@@ -24,6 +24,9 @@ const GESTION_COURANTE = [
   { href: "/finance/creances-dettes", label: "Créances & dettes" },
   { href: "/finance/tresorerie", label: "Trésorerie" },
   { href: "/finance/stock", label: "Stock & CMV" },
+  // Dossier de crédit (demande du 16 oct. 2026, point 1) — états financiers,
+  // demande de crédit et simulation réunis au même endroit.
+  { href: "/finance/dossier-credit", label: "Dossier de crédit" },
 ];
 
 const COMPTABILITE_SYSCOHADA = [
