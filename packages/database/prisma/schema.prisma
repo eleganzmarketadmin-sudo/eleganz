@@ -194,6 +194,13 @@ model User {
   notifications               Notification[]
   conversationParticipations  ConversationParticipant[]
   sentMessages                Message[]
+
+  // Module Experts (16 oct. 2026, point 2) — tout utilisateur ELEGANZ peut
+  // postuler comme expert (candidature → modération admin), d'où une relation
+  // optionnelle 1-1 plutôt qu'un nouveau rôle dans UserRole.
+  expertProfile          ExpertProfile?
+  expertInvitesCreated   ShopExpertInvite[]      @relation("ExpertInviteCreatedBy")
+  expertEngagementsGiven ShopExpertEngagement[]  @relation("ExpertEngagementInvitedBy")
 }
 
 model Address {
@@ -367,6 +374,10 @@ model Shop {
   receptionsStock ReceptionStock[]
   conversations  Conversation[]
   deliveryZones  ShopDeliveryZone[]
+
+  // Module Experts (16 oct. 2026, point 2)
+  expertInvites      ShopExpertInvite[]
+  expertEngagements  ShopExpertEngagement[]
 }
 
 model ShopStaff {
@@ -380,6 +391,110 @@ model ShopStaff {
   createdAt DateTime @default(now())
 
   @@unique([shopId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// MODULE EXPERTS — demande du 16 oct. 2026, point 2 : offrir au secteur
+// informel un accès à de l'expertise/contre-expertise freelance (montage de
+// dossier crédit, risque, compliance, analyste crédit, etc.), modéré par un
+// admin avant d'apparaître dans l'annuaire public, invité par lien (compte
+// ELEGANZ existant requis — décision verrouillée), avec des accès à la
+// plateforme de la boutique accordés par périmètre choisi au cas par cas
+// (jamais un accès fixe identique pour tous — décision verrouillée) et
+// révocables à tout moment depuis la gestion d'équipe. Conditions d'exercice
+// de l'expert affichées à titre informatif uniquement, aucune passerelle de
+// paiement (décision verrouillée).
+// ---------------------------------------------------------------------------
+
+enum ExpertStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+// Profil de candidature/expert — tout utilisateur ELEGANZ peut postuler,
+// quel que soit son rôle ; seul un statut APPROVED est visible dans
+// l'annuaire public (/experts).
+model ExpertProfile {
+  id           String       @id @default(uuid())
+  userId       String       @unique
+  user         User         @relation(fields: [userId], references: [id])
+  headline     String
+  bio          String       @db.Text
+  domaines     String[] // ex. ["Montage dossier crédit", "Risque", "Compliance"]
+  conditions   String?      @db.Text // informatif seulement, jamais de paiement en ligne
+  status       ExpertStatus @default(PENDING_REVIEW)
+  statusNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  engagements ShopExpertEngagement[]
+  invites     ShopExpertInvite[]
+
+  @@index([status])
+}
+
+// Périmètres d'accès qu'une boutique peut accorder à un expert — un accès
+// toujours choisi par la boutique, jamais déduit automatiquement du domaine
+// déclaré par l'expert (décision verrouillée du 16 oct. 2026).
+enum ShopExpertScope {
+  FINANCE
+  COMMANDES
+  CATALOGUE
+}
+
+enum ShopExpertInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+// Lien d'invitation généré par une boutique (gestion d'équipe) — l'expert
+// doit déjà avoir un compte ELEGANZ pour l'accepter (décision verrouillée :
+// pas de création de compte à la volée depuis ce lien).
+model ShopExpertInvite {
+  id              String                 @id @default(uuid())
+  token           String                 @unique
+  shopId          String
+  shop            Shop                   @relation(fields: [shopId], references: [id])
+  createdByUserId String
+  createdBy       User                   @relation("ExpertInviteCreatedBy", fields: [createdByUserId], references: [id])
+  scopes          ShopExpertScope[]
+  status          ShopExpertInviteStatus @default(PENDING)
+  expertProfileId String?
+  expertProfile   ExpertProfile?         @relation(fields: [expertProfileId], references: [id])
+  expiresAt       DateTime
+  createdAt       DateTime               @default(now())
+
+  @@index([shopId])
+}
+
+enum ShopExpertEngagementStatus {
+  ACTIVE
+  REVOKED
+}
+
+// Accès effectivement accordé une fois l'invitation acceptée — révocable à
+// tout moment depuis la gestion d'équipe de la boutique.
+model ShopExpertEngagement {
+  id              String                     @id @default(uuid())
+  shopId          String
+  shop            Shop                       @relation(fields: [shopId], references: [id])
+  expertProfileId String
+  expertProfile   ExpertProfile              @relation(fields: [expertProfileId], references: [id])
+  scopes          ShopExpertScope[]
+  status          ShopExpertEngagementStatus @default(ACTIVE)
+  invitedByUserId String
+  invitedBy       User                       @relation("ExpertEngagementInvitedBy", fields: [invitedByUserId], references: [id])
+  createdAt       DateTime                   @default(now())
+  revokedAt       DateTime?
+
+  @@unique([shopId, expertProfileId])
+  @@index([shopId])
 }
 
 // ---------------------------------------------------------------------------
