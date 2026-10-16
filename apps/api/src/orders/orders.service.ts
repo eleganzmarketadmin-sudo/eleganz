@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
-import { NotificationType, OrderStatus, StockMovementType } from "@eleganz/database";
+import { NotificationType, OrderStatus, Prisma, StockMovementType } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
 import { NotificationsService } from "../notifications/notifications.service";
 
@@ -238,7 +238,12 @@ export class OrdersService {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
 
-    const operations = [
+    // Typé explicitement en Prisma.PrismaPromise<any>[] (plutôt que laissé à
+    // l'inférence) car des opérations de types différents (variant.update,
+    // stockMovement.create) y sont ajoutées plus bas selon le cas — sans
+    // cette annotation, le tableau serait figé au type des deux premiers
+    // éléments et le push suivant échouerait à la compilation.
+    const operations: Prisma.PrismaPromise<any>[] = [
       this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: newStatus } }),
       this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: newStatus } }),
     ];
