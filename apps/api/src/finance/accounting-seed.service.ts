@@ -155,9 +155,20 @@ export class AccountingSeedService {
         select: { id: true },
       });
       if (!existant) {
-        await this.prisma.account.create({
-          data: { scope, shopId, code: compte.code, label: compte.label, normalSide: compte.normalSide },
-        });
+        // findFirst + create n'est pas atomique : deux ventes concurrentes
+        // sur une boutique qui n'a encore aucun compte peuvent toutes deux
+        // passer le findFirst (null) avant que l'une des deux n'ait fini de
+        // créer le compte. La seconde création viole alors la contrainte
+        // unique [scope, shopId, code] (schema.prisma) — ignoré
+        // volontairement : le compte existe déjà, c'est le résultat voulu.
+        await this.prisma.account
+          .create({
+            data: { scope, shopId, code: compte.code, label: compte.label, normalSide: compte.normalSide },
+          })
+          .catch((err: unknown) => {
+            if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") return;
+            throw err;
+          });
       }
     }
     for (const journal of JOURNAUX) {
@@ -166,9 +177,15 @@ export class AccountingSeedService {
         select: { id: true },
       });
       if (!existant) {
-        await this.prisma.journal.create({
-          data: { scope, shopId, code: journal.code, label: journal.label },
-        });
+        // Même course possible que pour les comptes ci-dessus.
+        await this.prisma.journal
+          .create({
+            data: { scope, shopId, code: journal.code, label: journal.label },
+          })
+          .catch((err: unknown) => {
+            if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") return;
+            throw err;
+          });
       }
     }
   }

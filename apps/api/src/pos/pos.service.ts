@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateSaleDto } from "./dto/create-sale.dto";
 import { PaymentMethod, StockMovementType } from "@eleganz/database";
@@ -140,9 +140,13 @@ export class PosService {
     // Comptabilisation après la transaction métier (jamais avant, jamais en
     // la réécrivant) — voir docs/ARCHITECTURE_FINANCE.md §8bis. Une erreur
     // de comptabilisation ne doit jamais annuler une vente dont l'argent a
-    // réellement été encaissé : elle est journalisée, pas propagée.
+    // réellement été encaissé : elle est journalisée, pas propagée. Le
+    // marqueur ACCOUNTING_POSTING_FAILED permet de grepper ces échecs dans
+    // les logs (incident du 16 oct. 2026 : une période clôturée par erreur
+    // avait fait disparaître silencieusement tout un mois de ventes du
+    // Rapport annuel — voir docs/ARCHITECTURE_FINANCE.md §8quinquies).
     await this.accounting.postPosSale(sale).catch((err) => {
-      this.logger.error(`Comptabilisation de la vente ${sale.id} échouée`, err);
+      this.logger.error(this.describePostingFailure("vente", sale.id, shopId, err), err);
     });
 
     // Écriture CMV séparée (chantier SYSCOHADA phase 4b) — seulement si au
@@ -150,11 +154,31 @@ export class PosService {
     // non plus annuler la vente déjà encaissée (même garde que ci-dessus).
     if (cmvTotal > 0) {
       await this.accounting.postSortieStockVente(sale, cmvTotal).catch((err) => {
-        this.logger.error(`Comptabilisation du CMV de la vente ${sale.id} échouée`, err);
+        this.logger.error(this.describePostingFailure("CMV", sale.id, shopId, err), err);
       });
     }
 
     return sale;
+  }
+
+  /**
+   * Message de log greppable (marqueur `ACCOUNTING_POSTING_FAILED`) pour un
+   * échec de comptabilisation volontairement avalé ci-dessus. Distingue le
+   * cas d'une période clôturée par erreur (`ConflictException` levée par
+   * `AccountingService.enregistrer` — voir accounting.service.ts) de toute
+   * autre erreur, pour que ce cas précis — déjà survenu une fois en
+   * production (16 oct. 2026, ELEGANZ STORE, octobre 2026) — soit repérable
+   * sans avoir à lire la stack trace complète.
+   */
+  private describePostingFailure(nature: string, saleId: string, shopId: string, err: unknown): string {
+    if (err instanceof ConflictException) {
+      return (
+        `ACCOUNTING_POSTING_FAILED période clôturée : comptabilisation du ${nature} de la vente ${saleId} ` +
+        `(boutique ${shopId}) refusée — vérifier /finance/cloture pour cette boutique et rouvrir la période si ` +
+        `elle a été clôturée par erreur, puis rejouer cette écriture.`
+      );
+    }
+    return `ACCOUNTING_POSTING_FAILED comptabilisation du ${nature} de la vente ${saleId} (boutique ${shopId}) échouée`;
   }
 
   /**
