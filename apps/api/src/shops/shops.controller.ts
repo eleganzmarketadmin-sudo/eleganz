@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@n
 import { ShopsService } from "./shops.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
+import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
@@ -55,8 +56,14 @@ export class ShopsController {
     return this.shopsService.updateInvoiceSettings(shopId, dto);
   }
 
+  // Correctif de sécurité (16 oct. 2026, point 2 des propositions du 16 oct.
+  // 2026) : cette route n'avait AUCUN @ShopRoles jusqu'ici — n'importe quel
+  // membre actif (caissier, magasinier...) pouvait lire la liste complète de
+  // l'équipe (emails, téléphones). Alignée sur les mêmes rôles que l'invitation
+  // et la suppression ci-dessous.
   @Get(":shopId/staff")
   @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   listStaff(@Param("shopId") shopId: string) {
     return this.shopsService.listStaff(shopId);
   }
@@ -66,6 +73,22 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   inviteStaff(@Param("shopId") shopId: string, @Body() dto: InviteStaffDto) {
     return this.shopsService.inviteStaff(shopId, dto);
+  }
+
+  // Modification d'un profil d'équipe déjà actif (16 oct. 2026, point 2 des
+  // propositions du 16 oct. 2026) — n'existait pas avant : seules
+  // l'invitation (création) et la suppression étaient possibles. Permet de
+  // changer le rôle et/ou les écrans de menu accordés ("décocher/cocher ou
+  // modifier plus tard").
+  @Patch(":shopId/staff/:staffId")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  updateStaff(
+    @Param("shopId") shopId: string,
+    @Param("staffId") staffId: string,
+    @Body() dto: UpdateStaffDto,
+  ) {
+    return this.shopsService.updateStaff(shopId, staffId, dto);
   }
 
   @Delete(":shopId/staff/:staffId")

@@ -14,6 +14,12 @@ export interface Shop {
   // uniquement (filtrer les onglets visibles pour un comptable externe en
   // lecture seule) ; la vraie barrière reste ShopMembershipGuard côté API.
   myRole?: string | null;
+  // Écrans de menu Gestion accordés à ce membre pour cette boutique (16 oct.
+  // 2026, point 2 des propositions du 16 oct. 2026) — calculé côté API
+  // (ShopsService.ecransEffectifs) à partir du rôle et d'un éventuel choix
+  // explicite ; GestionShell filtre ses liens avec, toujours un confort de
+  // navigation, jamais la vraie barrière (ShopMembershipGuard côté API).
+  menuItems?: string[];
 }
 
 interface ShopContextValue {

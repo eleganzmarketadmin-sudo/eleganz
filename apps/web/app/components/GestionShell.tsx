@@ -23,27 +23,32 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   const { nombreEnAttente, synchroniser } = useOfflineSync();
   const { t } = useLocale();
 
+  // `menu` = la clé MenuGestion (API) correspondant à chaque lien — sert au
+  // filtrage ci-dessous (16 oct. 2026, point 2 des propositions du 16 oct.
+  // 2026 : "le rôle accordé aux équipes ne restreint pas le menu").
   const LIENS = [
-    { href: "/caisse", label: t("nav_caisse") },
-    { href: "/tableau-de-bord", label: t("nav_tableauDeBord") },
-    { href: "/catalogue", label: t("nav_catalogue") },
-    { href: "/commandes", label: t("nav_commandes") },
-    { href: "/factures", label: t("nav_mesFactures") },
-    { href: "/releves", label: t("nav_releves") },
-    { href: "/litiges", label: t("nav_litiges") },
-    { href: "/finance", label: t("nav_finance") },
-    { href: "/livreurs", label: t("nav_livreurs") },
-    { href: "/messagerie", label: t("nav_messagerie") },
-    { href: "/equipe", label: t("nav_equipe") },
-    { href: "/parametres", label: t("nav_parametres") },
+    { href: "/caisse", label: t("nav_caisse"), menu: "CAISSE" },
+    { href: "/tableau-de-bord", label: t("nav_tableauDeBord"), menu: "TABLEAU_DE_BORD" },
+    { href: "/catalogue", label: t("nav_catalogue"), menu: "CATALOGUE" },
+    { href: "/commandes", label: t("nav_commandes"), menu: "COMMANDES" },
+    { href: "/factures", label: t("nav_mesFactures"), menu: "FACTURES" },
+    { href: "/releves", label: t("nav_releves"), menu: "RELEVES" },
+    { href: "/litiges", label: t("nav_litiges"), menu: "LITIGES" },
+    { href: "/finance", label: t("nav_finance"), menu: "FINANCE" },
+    { href: "/livreurs", label: t("nav_livreurs"), menu: "LIVREURS" },
+    { href: "/messagerie", label: t("nav_messagerie"), menu: "MESSAGERIE" },
+    { href: "/equipe", label: t("nav_equipe"), menu: "EQUIPE" },
+    { href: "/parametres", label: t("nav_parametres"), menu: "PARAMETRES" },
   ];
 
-  // Un comptable externe (StaffRole.EXTERNAL_ACCOUNTANT) n'a, côté API, accès
-  // qu'en lecture seule à Finance & Comptabilité (docs/ARCHITECTURE_FINANCE.md
-  // §8sexies) — masquer les autres onglets évite de lui montrer un lien qui
-  // échouerait systématiquement avec une erreur 403.
-  const LIEN_FINANCE_SEUL = LIENS.filter((l) => l.href === "/finance");
-  const liens = currentShop?.myRole === "EXTERNAL_ACCOUNTANT" ? LIEN_FINANCE_SEUL : LIENS;
+  // Filtre générique par écran accordé (remplace l'ancien cas particulier
+  // unique réservé au comptable externe) — `currentShop.menuItems` vient de
+  // GET /shops/mine, calculé côté API (ShopsService.ecransEffectifs) à
+  // partir du rôle et d'un éventuel choix explicite du propriétaire/gérant.
+  // Tant que la boutique n'a pas encore chargé, on affiche tout (rien
+  // derrière ce menu n'est accessible sans la vraie barrière API de toute
+  // façon) ; une fois chargée, la liste reçue fait foi, y compris vide.
+  const liens = currentShop?.menuItems ? LIENS.filter((l) => currentShop.menuItems!.includes(l.menu)) : LIENS;
 
   return (
     <div className={styles.cadre}>

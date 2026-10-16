@@ -2,10 +2,11 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
+import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
-import { PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
+import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
 
 function slugify(name: string): string {
   return name
@@ -14,6 +15,54 @@ function slugify(name: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+const TOUS_LES_ECRANS_GESTION: MenuGestion[] = Object.values(MenuGestion);
+
+/**
+ * Écrans de menu accordés à un rôle par défaut, tant que le profil n'a pas
+ * reçu de choix explicite (16 oct. 2026, point 2 des propositions du 16
+ * oct. 2026 — "le rôle accordé aux équipes ne restreint pas le menu").
+ * Équipe et Paramètres restent réservés à OWNER/MANAGER par défaut, comme
+ * demandé ; le propriétaire ou le gérant peut toujours ajuster au cas par
+ * cas via PATCH :shopId/staff/:staffId.
+ */
+function menuGestionParDefaut(role: StaffRole): MenuGestion[] {
+  switch (role) {
+    case StaffRole.OWNER:
+    case StaffRole.MANAGER:
+      return TOUS_LES_ECRANS_GESTION;
+    case StaffRole.CASHIER:
+      return [MenuGestion.CAISSE, MenuGestion.TABLEAU_DE_BORD];
+    case StaffRole.STOCK_KEEPER:
+      return [MenuGestion.CATALOGUE, MenuGestion.COMMANDES, MenuGestion.LIVREURS];
+    case StaffRole.SALES_LEAD:
+      return [
+        MenuGestion.CAISSE,
+        MenuGestion.TABLEAU_DE_BORD,
+        MenuGestion.CATALOGUE,
+        MenuGestion.COMMANDES,
+        MenuGestion.LITIGES,
+        MenuGestion.MESSAGERIE,
+      ];
+    case StaffRole.ACCOUNTANT:
+      return [MenuGestion.FINANCE, MenuGestion.FACTURES, MenuGestion.RELEVES];
+    case StaffRole.EXTERNAL_ACCOUNTANT:
+      // Déjà restreint en lecture seule à Finance & Comptabilité par
+      // ShopMembershipGuard (docs/ARCHITECTURE_FINANCE.md §8sexies) — on
+      // garde le menu cohérent avec cette barrière existante.
+      return [MenuGestion.FINANCE];
+    default:
+      return [];
+  }
+}
+
+// Tableau vide sur la ligne (valeur de départ, ou remise à zéro explicite
+// via PATCH) = pas de choix explicite → liste par défaut du rôle ; sinon le
+// choix du propriétaire/gérant fait foi tel quel, même s'il réduit le rôle
+// en-dessous de son propre défaut.
+function ecransEffectifs(staff: { role: StaffRole; menuItemsOverride: MenuGestion[] }): MenuGestion[] {
+  return staff.menuItemsOverride.length > 0 ? staff.menuItemsOverride : menuGestionParDefaut(staff.role);
 }
 
 @Injectable()
@@ -72,16 +121,27 @@ export class ShopsService {
         OR: [{ ownerId: userId }, { staff: { some: { userId, active: true } } }],
       },
       orderBy: { createdAt: "desc" },
-      include: { staff: { where: { userId }, select: { role: true } } },
+      include: { staff: { where: { userId }, select: { role: true, menuItemsOverride: true } } },
     });
     // `myRole` permet au front de masquer la navigation hors Finance &
     // Comptabilité pour un StaffRole.EXTERNAL_ACCOUNTANT (voir
     // docs/ARCHITECTURE_FINANCE.md §8sexies) — la vraie barrière reste
     // ShopMembershipGuard côté API, ceci n'est qu'un confort de navigation.
-    return boutiques.map(({ staff, ...boutique }) => ({
-      ...boutique,
-      myRole: boutique.ownerId === userId ? "OWNER" : (staff[0]?.role ?? null),
-    }));
+    // `menuItems` (16 oct. 2026, point 2 des propositions du 16 oct. 2026)
+    // généralise ce confort de navigation : la liste effective des écrans
+    // accordés à CE membre pour CETTE boutique, calculée par
+    // ecransEffectifs — GestionShell filtre son menu avec, au lieu du seul
+    // cas particulier EXTERNAL_ACCOUNTANT d'avant.
+    return boutiques.map(({ staff, ...boutique }) => {
+      const monRole = boutique.ownerId === userId ? StaffRole.OWNER : staff[0]?.role;
+      return {
+        ...boutique,
+        myRole: monRole ?? null,
+        menuItems: monRole
+          ? ecransEffectifs({ role: monRole, menuItemsOverride: staff[0]?.menuItemsOverride ?? [] })
+          : [],
+      };
+    });
   }
 
   async findOne(shopId: string) {
@@ -165,20 +225,51 @@ export class ShopsService {
       // Déjà membre mais désactivé : on réactive plutôt que de dupliquer la ligne.
       return this.prisma.shopStaff.update({
         where: { id: existing.id },
-        data: { active: true, role: dto.role },
+        data: { active: true, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
       });
     }
 
     return this.prisma.shopStaff.create({
-      data: { shopId, userId: utilisateur.id, role: dto.role },
+      data: { shopId, userId: utilisateur.id, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
     });
   }
 
-  listStaff(shopId: string) {
-    return this.prisma.shopStaff.findMany({
+  async listStaff(shopId: string) {
+    const membres = await this.prisma.shopStaff.findMany({
       where: { shopId },
       include: { user: { select: { id: true, fullName: true, email: true, phone: true } } },
     });
+    // Liste effective des écrans accordés par membre (16 oct. 2026, point 2
+    // des propositions du 16 oct. 2026) — calculée ici plutôt que recalculée
+    // côté front, pour que GestionShell/équipe affichent toujours la même
+    // vérité que ShopMembershipGuard.
+    return membres.map((membre) => ({ ...membre, menuItems: ecransEffectifs(membre) }));
+  }
+
+  /**
+   * Modification d'un profil d'équipe déjà actif (16 oct. 2026, point 2 des
+   * propositions du 16 oct. 2026) — n'existait pas avant (seules
+   * l'invitation et la suppression). `menuItems` envoyé explicitement
+   * (même `[]`) remplace le choix du membre ; absent = ne touche pas aux
+   * permissions de menu existantes.
+   */
+  async updateStaff(shopId: string, staffId: string, dto: UpdateStaffDto) {
+    const staff = await this.prisma.shopStaff.findUniqueOrThrow({ where: { id: staffId } });
+    if (staff.shopId !== shopId) {
+      throw new NotFoundException("Ce membre ne fait pas partie de cette boutique.");
+    }
+    if (staff.role === StaffRole.OWNER) {
+      throw new ConflictException("Le profil du propriétaire ne peut pas être modifié par ce chemin.");
+    }
+    const mis_a_jour = await this.prisma.shopStaff.update({
+      where: { id: staffId },
+      data: {
+        ...(dto.role !== undefined && { role: dto.role }),
+        ...(dto.menuItems !== undefined && { menuItemsOverride: dto.menuItems }),
+      },
+      include: { user: { select: { id: true, fullName: true, email: true, phone: true } } },
+    });
+    return { ...mis_a_jour, menuItems: ecransEffectifs(mis_a_jour) };
   }
 
   async deactivateStaff(shopId: string, staffId: string) {

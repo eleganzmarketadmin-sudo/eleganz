@@ -1,5 +1,5 @@
-import { IsEnum, IsString } from "class-validator";
-import { StaffRole } from "@eleganz/database";
+import { IsArray, IsEnum, IsOptional, IsString } from "class-validator";
+import { MenuGestion, StaffRole } from "@eleganz/database";
 
 export class InviteStaffDto {
   // L'utilisateur doit déjà avoir un compte ELEGANZ (inscription séparée) —
@@ -21,4 +21,14 @@ export class InviteStaffDto {
     StaffRole.EXTERNAL_ACCOUNTANT,
   ])
   role!: Exclude<StaffRole, typeof StaffRole.OWNER>;
+
+  // Écrans de menu choisis à la création du profil (16 oct. 2026, point 2
+  // des propositions du 16 oct. 2026) — optionnel : si absent, le membre
+  // démarre sur la liste par défaut de son rôle (voir
+  // ShopsService.menuGestionParDefaut), modifiable ensuite via
+  // PATCH :shopId/staff/:staffId.
+  @IsOptional()
+  @IsArray()
+  @IsEnum(MenuGestion, { each: true })
+  menuItems?: MenuGestion[];
 }
