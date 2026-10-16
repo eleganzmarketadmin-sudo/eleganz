@@ -229,16 +229,67 @@ export class OrdersService {
   }
 
   async transitionStatus(shopOrderId: string, newStatus: OrderStatus) {
-    const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({ where: { id: shopOrderId } });
+    const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
+      where: { id: shopOrderId },
+      include: { lines: true },
+    });
     const allowed = ALLOWED_TRANSITIONS[shopOrder.status] ?? [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
-    const [updated] = await this.prisma.$transaction([
+
+    const operations = [
       this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: newStatus } }),
       this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: newStatus } }),
-    ]);
+    ];
+
+    // Annulation (demande du 16 oct. 2026, point 4) — le stock avait été
+    // décompté dès la création de la commande (ONLINE_SALE_RESERVED), qu'elle
+    // soit annulée par la boutique ou par l'acheteur ; sans restitution ici,
+    // l'article resterait indisponible à la vente alors qu'aucune commande
+    // réelle ne le retient plus.
+    if (newStatus === OrderStatus.CANCELLED) {
+      for (const line of shopOrder.lines) {
+        operations.push(
+          this.prisma.variant.update({
+            where: { id: line.variantId },
+            data: { stockQty: { increment: line.quantity } },
+          }),
+        );
+        operations.push(
+          this.prisma.stockMovement.create({
+            data: {
+              shopId: shopOrder.shopId,
+              variantId: line.variantId,
+              type: StockMovementType.RETURN_IN,
+              quantity: line.quantity,
+            },
+          }),
+        );
+      }
+    }
+
+    const [updated] = await this.prisma.$transaction(operations);
     return updated;
+  }
+
+  /**
+   * Annulation côté acheteur (demande du 16 oct. 2026, point 4) — jusqu'ici
+   * seule la boutique pouvait annuler depuis Gestion ; l'acheteur n'avait
+   * aucun moyen d'annuler sa propre commande. Mêmes règles de transition que
+   * côté boutique (ALLOWED_TRANSITIONS), donc impossible une fois la
+   * préparation commencée (PREPARING et au-delà) — à ce stade, seule la
+   * boutique peut encore agir.
+   */
+  async cancelByBuyer(shopOrderId: string, buyerId: string) {
+    const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
+      where: { id: shopOrderId },
+      include: { order: true },
+    });
+    if (shopOrder.order.buyerId !== buyerId) {
+      throw new ForbiddenException("Cette commande ne vous appartient pas.");
+    }
+    return this.transitionStatus(shopOrderId, OrderStatus.CANCELLED);
   }
 
   /**

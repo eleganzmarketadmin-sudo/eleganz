@@ -113,6 +113,25 @@ export default function CommandesPage() {
     }
   }
 
+  // Annulation côté acheteur (demande du 16 oct. 2026, point 4) — n'est
+  // proposée que tant que la boutique n'a pas commencé la préparation, les
+  // mêmes statuts que le bouton d'annulation déjà existant côté Gestion
+  // (voir ALLOWED_TRANSITIONS dans orders.service.ts).
+  async function annulerCommande(shopOrderId: string) {
+    if (!window.confirm(t("cmd_confirmerAnnulation"))) return;
+    setEnCours(shopOrderId);
+    try {
+      await api.post(`/marketplace/orders/${shopOrderId}/cancel`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cmd_annulationImpossible"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  const STATUTS_ANNULABLES = ["CREATED", "PAYMENT_PENDING", "PAYMENT_CONFIRMED", "ACCEPTED"];
+
   function ouvrirAvis(so: ShopOrder) {
     setAvisPour(so);
     setNoteAvis(0);
@@ -193,6 +212,22 @@ export default function CommandesPage() {
                       }}
                     >
                       {t("cmd_confirmerReception")}
+                    </button>
+                  )}
+                  {STATUTS_ANNULABLES.includes(so.status) && (
+                    <button
+                      disabled={enCours === so.id}
+                      onClick={() => annulerCommande(so.id)}
+                      style={{
+                        border: "2px solid var(--color-flamme)",
+                        color: "var(--color-flamme)",
+                        background: "none",
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {t("cmd_annulerCommande")}
                     </button>
                   )}
                   {["RECEIVED_CONFIRMED", "CLOSED"].includes(so.status) &&

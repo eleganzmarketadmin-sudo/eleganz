@@ -24,4 +24,11 @@ export class BuyerOrdersController {
   confirmReceipt(@CurrentUser() user: AuthenticatedUser, @Param("shopOrderId") shopOrderId: string) {
     return this.ordersService.confirmReceipt(shopOrderId, user.id);
   }
+
+  // Annulation côté acheteur (demande du 16 oct. 2026, point 4) — symétrique
+  // au bouton d'annulation déjà existant côté boutique dans Gestion.
+  @Post(":shopOrderId/cancel")
+  cancel(@CurrentUser() user: AuthenticatedUser, @Param("shopOrderId") shopOrderId: string) {
+    return this.ordersService.cancelByBuyer(shopOrderId, user.id);
+  }
 }
