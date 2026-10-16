@@ -44,6 +44,54 @@
   color: var(--color-ink);
 }
 
+.barreFiltres {
+  padding: var(--espace-3) var(--espace-5);
+  border-bottom: 2px solid var(--color-ink);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: center;
+}
+
+.barreFiltres select,
+.barreFiltres input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: var(--touche-min);
+  font: inherit;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.barreFiltres input {
+  width: 120px;
+}
+
+.boutonFiltre {
+  padding: var(--espace-2) var(--espace-4);
+  min-height: var(--touche-min);
+  border: 2px solid var(--color-ink);
+  background: var(--color-ink);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.boutonFiltre:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.boutonFiltreTexte {
+  border: none;
+  background: none;
+  color: var(--color-magenta);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: var(--espace-2) 0;
+}
+
 .grille {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

@@ -4,6 +4,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
+import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -111,5 +112,29 @@ export class VariantOptionsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   remove(@Param("shopId") shopId: string, @Param("optionId") optionId: string) {
     return this.catalogService.deleteVariantOption(shopId, optionId);
+  }
+}
+
+/**
+ * Référentiel global des catégories d'articles (16 oct. 2026) — partagé
+ * entre toutes les boutiques, à l'inverse de /shops/:shopId/variant-options
+ * qui reste propre à chaque boutique. La lecture est publique (nécessaire
+ * au filtre catégorie du Marketplace, qui n'authentifie pas l'acheteur) ;
+ * l'ajout exige d'être connecté (staff d'une boutique quelconque), sans
+ * guard de boutique précise puisque la valeur n'appartient à aucune.
+ */
+@Controller("categories")
+export class ProductCategoriesController {
+  constructor(private readonly catalogService: CatalogService) {}
+
+  @Get()
+  list() {
+    return this.catalogService.listProductCategories();
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  create(@Body() dto: CreateProductCategoryDto) {
+    return this.catalogService.createProductCategory(dto);
   }
 }

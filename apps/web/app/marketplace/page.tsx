@@ -37,6 +37,11 @@ interface Ville {
   name: string;
 }
 
+interface Categorie {
+  id: string;
+  name: string;
+}
+
 export default function MarketplacePage() {
   const { t } = useLocale();
   const [recherche, setRecherche] = useState("");
@@ -52,12 +57,29 @@ export default function MarketplacePage() {
   const [paysChoisiId, setPaysChoisiId] = useState("");
   const [villeChoisieId, setVilleChoisieId] = useState("");
 
+  // Filtres catégorie/prix (16 oct. 2026, demande client) — la catégorie
+  // s'applique aussitôt choisie (liste fermée, référentiel global
+  // ProductCategory) ; le prix exige "Appliquer" pour éviter une requête à
+  // chaque frappe sur les deux champs.
+  const [categories, setCategories] = useState<Categorie[]>([]);
+  const [categorieChoisie, setCategorieChoisie] = useState("");
+  const [prixMinSaisi, setPrixMinSaisi] = useState("");
+  const [prixMaxSaisi, setPrixMaxSaisi] = useState("");
+  const [prixMinActif, setPrixMinActif] = useState("");
+  const [prixMaxActif, setPrixMaxActif] = useState("");
+
   useEffect(() => {
     api
       .get<Pays[]>("/geo/pays", false)
       .then(setPays)
       .catch(() => {
         // Non bloquant : sans liste de pays, le filtre par ville reste simplement caché.
+      });
+    api
+      .get<Categorie[]>("/categories", false)
+      .then(setCategories)
+      .catch(() => {
+        // Non bloquant : sans liste, le filtre catégorie reste simplement caché.
       });
   }, []);
 
@@ -88,6 +110,9 @@ export default function MarketplacePage() {
     const parametres = new URLSearchParams();
     if (requeteActive) parametres.set("q", requeteActive);
     if (villeChoisieId) parametres.set("cityId", villeChoisieId);
+    if (categorieChoisie) parametres.set("category", categorieChoisie);
+    if (prixMinActif) parametres.set("minPrice", prixMinActif);
+    if (prixMaxActif) parametres.set("maxPrice", prixMaxActif);
     const chaine = parametres.toString();
     api
       .get<Produit[]>(`/marketplace/products${chaine ? `?${chaine}` : ""}`, false)
@@ -103,7 +128,18 @@ export default function MarketplacePage() {
     return () => {
       annule = true;
     };
-  }, [requeteActive, villeChoisieId]);
+  }, [requeteActive, villeChoisieId, categorieChoisie, prixMinActif, prixMaxActif]);
+
+  const filtresPrixModifies = prixMinSaisi !== prixMinActif || prixMaxSaisi !== prixMaxActif;
+  const filtresActifs = Boolean(categorieChoisie || prixMinActif || prixMaxActif);
+
+  function reinitialiserFiltres() {
+    setCategorieChoisie("");
+    setPrixMinSaisi("");
+    setPrixMaxSaisi("");
+    setPrixMinActif("");
+    setPrixMaxActif("");
+  }
 
   return (
     <div className={styles.cadre}>
@@ -151,6 +187,55 @@ export default function MarketplacePage() {
           ))}
         </select>
       </form>
+
+      <div className={styles.barreFiltres}>
+        <select
+          aria-label={t("market_filtreCategorie")}
+          value={categorieChoisie}
+          onChange={(e) => setCategorieChoisie(e.target.value)}
+        >
+          <option value="">{t("market_toutesCategories")}</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={0}
+          inputMode="decimal"
+          aria-label={t("market_prixMin")}
+          placeholder={t("market_prixMin")}
+          value={prixMinSaisi}
+          onChange={(e) => setPrixMinSaisi(e.target.value)}
+        />
+        <input
+          type="number"
+          min={0}
+          inputMode="decimal"
+          aria-label={t("market_prixMax")}
+          placeholder={t("market_prixMax")}
+          value={prixMaxSaisi}
+          onChange={(e) => setPrixMaxSaisi(e.target.value)}
+        />
+        <button
+          type="button"
+          className={styles.boutonFiltre}
+          disabled={!filtresPrixModifies}
+          onClick={() => {
+            setPrixMinActif(prixMinSaisi);
+            setPrixMaxActif(prixMaxSaisi);
+          }}
+        >
+          {t("market_appliquerPrix")}
+        </button>
+        {filtresActifs && (
+          <button type="button" className={styles.boutonFiltreTexte} onClick={reinitialiserFiltres}>
+            {t("market_reinitialiserFiltres")}
+          </button>
+        )}
+      </div>
 
       {chargement ? (
         <p className={styles.messageVide}>{t("market_chargement")}</p>

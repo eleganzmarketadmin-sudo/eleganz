@@ -211,7 +211,17 @@ function ImagesProduit({
       }
       await sauvegarder([...produit.images, publicUrl]);
     } catch (err) {
-      setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("cat_erreurEnvoiPhoto"));
+      // `fetch` vers le stockage objet (étape 2, hors domaine ELEGANZ) lève
+      // un simple `TypeError: Failed to fetch` dès que la requête n'atteint
+      // jamais le serveur — CORS du bucket non configuré pour ce site,
+      // réseau coupé, ou URL signée expirée (16 oct. 2026, diagnostic
+      // "failed to fetch" systématique) — un message générique ne dirait
+      // rien d'actionnable, on distingue donc ce cas précis.
+      if (err instanceof TypeError) {
+        setErreur(t("cat_erreurEnvoiPhotoReseau"));
+      } else {
+        setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("cat_erreurEnvoiPhoto"));
+      }
     } finally {
       setEnCours(false);
     }
@@ -366,6 +376,134 @@ function SelecteurMultiple({
   );
 }
 
+interface CategorieProduit {
+  id: string;
+  name: string;
+}
+
+/**
+ * Combobox filtrable pour la catégorie (16 oct. 2026, demande client :
+ * remplacer la saisie libre par une liste déroulante qui filtre selon la
+ * saisie, pour que le filtre catégorie du Marketplace reste exploitable).
+ * Référentiel GLOBAL (voir ProductCategory), pas propre à la boutique —
+ * contrairement à `SelecteurMultiple` (tailles/couleurs). Taper filtre la
+ * liste ; une valeur inédite propose de l'ajouter au référentiel partagé,
+ * comme pour les tailles/couleurs.
+ */
+function SelecteurCategorie({ valeur, onChange }: { valeur: string; onChange: (v: string) => void }) {
+  const { t } = useLocale();
+  const [categories, setCategories] = useState<CategorieProduit[]>([]);
+  const [ouvert, setOuvert] = useState(false);
+  const [enCours, setEnCours] = useState(false);
+  const conteneurRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    api
+      .get<CategorieProduit[]>("/categories", false)
+      .then(setCategories)
+      .catch(() => {
+        // Non bloquant : la liste reste vide, le champ se comporte alors
+        // comme une saisie libre classique (pas de blocage de la création).
+      });
+  }, []);
+
+  useEffect(() => {
+    function surClicExterieur(e: MouseEvent) {
+      if (conteneurRef.current && !conteneurRef.current.contains(e.target as Node)) setOuvert(false);
+    }
+    document.addEventListener("mousedown", surClicExterieur);
+    return () => document.removeEventListener("mousedown", surClicExterieur);
+  }, []);
+
+  const requete = valeur.trim().toLowerCase();
+  const correspondances = requete ? categories.filter((c) => c.name.toLowerCase().includes(requete)) : categories;
+  const correspondanceExacte = categories.some((c) => c.name.toLowerCase() === requete);
+
+  async function ajouterCategorie() {
+    const nom = valeur.trim();
+    if (!nom) return;
+    setEnCours(true);
+    try {
+      const liste = await api.post<CategorieProduit[]>("/categories", { name: nom });
+      setCategories(liste);
+      onChange(nom);
+      setOuvert(false);
+    } catch {
+      // Non bloquant : l'article garde cette valeur en texte simple même si
+      // l'ajout au référentiel partagé échoue (ex. hors ligne).
+      setOuvert(false);
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div ref={conteneurRef} style={{ position: "relative" }}>
+      <input
+        id="categorie"
+        placeholder={t("cat_placeholderCategorie")}
+        value={valeur}
+        autoComplete="off"
+        onFocus={() => setOuvert(true)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOuvert(true);
+        }}
+      />
+      {ouvert && (categories.length > 0 || requete) && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            maxHeight: "220px",
+            overflowY: "auto",
+          }}
+        >
+          {correspondances.map((c) => (
+            <div
+              key={c.id}
+              style={{ padding: "8px 10px", cursor: "pointer" }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(c.name);
+                setOuvert(false);
+              }}
+            >
+              {c.name}
+            </div>
+          ))}
+          {correspondances.length === 0 && !requete && (
+            <div style={{ padding: "8px 10px", color: "var(--color-texte-muted)" }}>
+              {t("cat_aucuneCategorieListe")}
+            </div>
+          )}
+          {requete && !correspondanceExacte && (
+            <div
+              style={{
+                padding: "8px 10px",
+                cursor: enCours ? "default" : "pointer",
+                color: "var(--color-cobalt)",
+                borderTop: correspondances.length > 0 ? "1px solid var(--color-border)" : "none",
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                if (!enCours) ajouterCategorie();
+              }}
+            >
+              {enCours ? "…" : `${t("cat_ajouterCategorie")} « ${valeur.trim()} »`}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
   const { currentShop } = useShop();
   const { t } = useLocale();
@@ -497,6 +635,7 @@ function CatalogueContent() {
   const [nomNouveau, setNomNouveau] = useState("");
   const [categorieNouveau, setCategorieNouveau] = useState("");
   const [creationEnCours, setCreationEnCours] = useState(false);
+  const [creationConfirmee, setCreationConfirmee] = useState(false);
   const [recherche, setRecherche] = useState("");
 
   function recharger() {
@@ -536,6 +675,7 @@ function CatalogueContent() {
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
+    setCreationConfirmee(false);
     setErreur(null);
     try {
       await api.post(`/shops/${currentShop.id}/products`, {
@@ -545,6 +685,12 @@ function CatalogueContent() {
       setNomNouveau("");
       setCategorieNouveau("");
       recharger();
+      // Confirmation explicite (16 oct. 2026) : auparavant, rien ne
+      // distinguait "enregistré" de "pas encore cliqué" une fois le
+      // formulaire vidé — message transitoire, effacé dès la prochaine
+      // action pour ne pas s'accumuler à l'écran.
+      setCreationConfirmee(true);
+      setTimeout(() => setCreationConfirmee(false), 4000);
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cat_creationImpossible"));
     } finally {
@@ -591,16 +737,12 @@ function CatalogueContent() {
         </div>
         <div className={styles.champ}>
           <label htmlFor="categorie">{t("cat_categorie")}</label>
-          <input
-            id="categorie"
-            placeholder={t("cat_placeholderCategorie")}
-            value={categorieNouveau}
-            onChange={(e) => setCategorieNouveau(e.target.value)}
-          />
+          <SelecteurCategorie valeur={categorieNouveau} onChange={setCategorieNouveau} />
         </div>
         <button className={styles.bouton} onClick={creerProduit} disabled={creationEnCours || !nomNouveau}>
-          {t("cat_creerArticle")}
+          {creationEnCours ? t("cat_creationEnCours") : t("cat_creerArticle")}
         </button>
+        {creationConfirmee && <div className={styles.confirmation}>{t("cat_creationReussie")}</div>}
       </div>
 
       {chargement ? (

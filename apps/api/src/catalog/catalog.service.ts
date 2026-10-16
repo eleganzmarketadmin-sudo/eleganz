@@ -1,19 +1,88 @@
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
+import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { StockMovementType, VariantOptionKind } from "@eleganz/database";
 import { StorageService } from "../storage/storage.service";
 
+/**
+ * Catégories majeures proposées à la création de l'API (16 oct. 2026) — un
+ * point de départ raisonnable pour un marché généraliste à forte dominante
+ * mode/habillement (cohérent avec les variantes taille/couleur déjà en
+ * place). Chaque boutique peut en ajouter d'autres depuis l'écran
+ * catalogue ; cette liste ne sert qu'à amorcer le référentiel partagé s'il
+ * est encore vide, jamais à l'écraser ensuite.
+ */
+const CATEGORIES_PAR_DEFAUT = [
+  "Mode femme",
+  "Mode homme",
+  "Mode enfant",
+  "Chaussures",
+  "Sacs & Maroquinerie",
+  "Bijoux & Accessoires",
+  "Beauté & Cosmétiques",
+  "Électronique & Téléphonie",
+  "Maison & Décoration",
+  "Alimentation & Boissons",
+  "Sport & Loisirs",
+  "Autre",
+];
+
 @Injectable()
-export class CatalogService {
+export class CatalogService implements OnModuleInit {
+  private readonly logger = new Logger(CatalogService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
+
+  /**
+   * Amorce le référentiel ProductCategory s'il est encore vide (premier
+   * déploiement après la migration, ou base neuve). Idempotent : ne fait
+   * rien si des catégories existent déjà, pour ne jamais écraser des
+   * valeurs renommées ou ajoutées entre-temps.
+   */
+  async onModuleInit() {
+    try {
+      const nombre = await this.prisma.productCategory.count();
+      if (nombre > 0) return;
+      await this.prisma.productCategory.createMany({
+        data: CATEGORIES_PAR_DEFAUT.map((name, index) => ({ name, order: index })),
+        skipDuplicates: true,
+      });
+      this.logger.log(`Référentiel de catégories amorcé (${CATEGORIES_PAR_DEFAUT.length} valeurs par défaut).`);
+    } catch (err) {
+      // Non bloquant pour le démarrage de l'API — au pire la liste reste
+      // vide et les boutiques peuvent encore en ajouter manuellement.
+      this.logger.error("Amorçage du référentiel de catégories échoué", err as Error);
+    }
+  }
+
+  /**
+   * Référentiel global des catégories (voir ProductCategory dans
+   * schema.prisma) — partagé entre toutes les boutiques, à l'inverse de
+   * `listVariantOptions` qui reste propre à chaque boutique.
+   */
+  listProductCategories() {
+    return this.prisma.productCategory.findMany({ orderBy: [{ order: "asc" }, { name: "asc" }] });
+  }
+
+  async createProductCategory(dto: CreateProductCategoryDto) {
+    const nom = dto.name.trim();
+    try {
+      await this.prisma.productCategory.create({ data: { name: nom } });
+    } catch (err: any) {
+      // Déjà présente (contrainte @@unique) : idempotent, pas une erreur —
+      // une boutique peut proposer une catégorie qu'une autre a déjà créée.
+      if (err?.code !== "P2002") throw err;
+    }
+    return this.listProductCategories();
+  }
 
   /**
    * Étape 1 de l'upload réel d'image (remplace le simple collage d'URL) :
