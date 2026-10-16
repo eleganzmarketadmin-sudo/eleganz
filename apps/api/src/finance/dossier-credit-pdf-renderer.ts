@@ -2,18 +2,7 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { DossierCreditBoutique } from "./finance.service";
-
-function formaterMontant(montant: number): string {
-  return `${Math.round(montant).toLocaleString("fr-FR")}`;
-}
-
-function formaterDate(iso: string): string {
-  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(iso));
-}
-
-function formaterDateHeure(iso: string): string {
-  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
-}
+import { formaterMontant, formaterDate, formaterDateHeure, dessinerSectionBusinessPlan } from "./dossier-credit-pdf-shared";
 
 /**
  * Dossier de crédit boutique (demande du 16 oct. 2026, point 1) — pendant
@@ -107,100 +96,9 @@ export function renderDossierCreditPdf(dossier: DossierCreditBoutique): PDFKit.P
   doc.text(`Dettes fournisseurs (solde cumulé) : ${formaterMontant(dossier.dettesFournisseurs)}`);
   doc.text(`Crédit accordé aux clients (solde cumulé) : ${formaterMontant(dossier.creditClientAccorde)}`);
 
-  // Business plan et scénarios de prêt (16 oct. 2026, point 1) — sur une
-  // nouvelle page : contenu narratif potentiellement long, distinct des
-  // tableaux chiffrés ci-dessus.
-  const bp = dossier.businessPlan;
-  const aDuContenu =
-    bp.resumeExecutif || bp.descriptionActivite || bp.marcheEtClientele || bp.strategieCroissance || bp.utilisationFonds || bp.risquesMitigation || bp.scenarios.length > 0;
-  if (aDuContenu) {
-    doc.addPage();
-    doc.font("Helvetica-Bold").fontSize(14).text("Business plan");
-    doc.moveDown(0.4);
-
-    function section(titre: string, contenu: string | null) {
-      if (!contenu) return;
-      doc.font("Helvetica-Bold").fontSize(10).text(titre);
-      doc.font("Helvetica").fontSize(9).text(contenu, { width: largeurPage });
-      doc.moveDown(0.5);
-    }
-    section("Résumé exécutif", bp.resumeExecutif);
-    section("Description de l'activité", bp.descriptionActivite);
-    section("Marché et clientèle", bp.marcheEtClientele);
-    section("Stratégie de croissance", bp.strategieCroissance);
-    section("Utilisation des fonds sollicités", bp.utilisationFonds);
-    section("Risques et mitigation", bp.risquesMitigation);
-
-    if (bp.scenarios.length > 0) {
-      doc.moveDown(0.3);
-      doc.font("Helvetica-Bold").fontSize(11).text("Scénarios de sollicitation de prêt");
-      doc.moveDown(0.2);
-
-      const colonnesScenario = ["Scénario", "Montant", "Taux annuel", "Durée", "Mensualité", "Objet"];
-      const largeursScenario = [
-        largeurPage * 0.18,
-        largeurPage * 0.14,
-        largeurPage * 0.12,
-        largeurPage * 0.1,
-        largeurPage * 0.14,
-        largeurPage * 0.32,
-      ];
-      function ligneScenario(cellules: string[], opts: { gras?: boolean; fond?: string } = {}) {
-        const hauteur = 20;
-        const yDepart = doc.y;
-        if (opts.fond) {
-          doc.rect(margeGauche, yDepart, largeurPage, hauteur).fill(opts.fond);
-          doc.fillColor("#000");
-        }
-        doc.font(opts.gras ? "Helvetica-Bold" : "Helvetica").fontSize(7.5);
-        let x = margeGauche;
-        cellules.forEach((texte, i) => {
-          doc.text(texte, x + 4, yDepart + 5, { width: largeursScenario[i] - 8, align: i === 0 || i === 5 ? "left" : "right" });
-          x += largeursScenario[i];
-        });
-        doc.moveTo(margeGauche, yDepart + hauteur).lineTo(margeGauche + largeurPage, yDepart + hauteur).strokeColor("#ccc").stroke();
-        doc.strokeColor("#000");
-        doc.y = yDepart + hauteur;
-      }
-      ligneScenario(colonnesScenario, { gras: true, fond: "#eee" });
-      for (const s of bp.scenarios) {
-        ligneScenario([
-          s.label,
-          formaterMontant(s.montant),
-          `${s.tauxAnnuel.toLocaleString("fr-FR")} %`,
-          `${s.dureeMois} mois`,
-          formaterMontant(s.mensualite),
-          s.objetFinancement ?? "—",
-        ]);
-      }
-
-      // Graphique vectoriel (barres) comparant la mensualité de chaque
-      // scénario — pas de dépendance d'image/canvas, dessiné à la main avec
-      // les primitives pdfkit (voir decision 16 oct. 2026 : pas de canvas
-      // natif, risque de compilation sur Railway).
-      doc.moveDown(0.6);
-      doc.font("Helvetica-Bold").fontSize(10).text("Comparaison des mensualités");
-      doc.moveDown(0.2);
-      const hauteurGraphe = 90;
-      const yGraphe = doc.y;
-      const maxMensualite = Math.max(...bp.scenarios.map((s) => s.mensualite), 1);
-      const largeurBarre = Math.min(60, (largeurPage - 20) / bp.scenarios.length - 12);
-      let xBarre = margeGauche + 10;
-      doc.font("Helvetica").fontSize(7);
-      for (const s of bp.scenarios) {
-        const h = Math.max(2, (s.mensualite / maxMensualite) * (hauteurGraphe - 20));
-        doc.rect(xBarre, yGraphe + (hauteurGraphe - 20) - h, largeurBarre, h).fill("#9333ea");
-        doc.fillColor("#000").text(formaterMontant(s.mensualite), xBarre - 6, yGraphe + (hauteurGraphe - 20) - h - 10, {
-          width: largeurBarre + 12,
-          align: "center",
-        });
-        doc.text(s.label, xBarre - 6, yGraphe + hauteurGraphe - 18, { width: largeurBarre + 12, align: "center" });
-        xBarre += largeurBarre + 12;
-      }
-      doc.y = yGraphe + hauteurGraphe;
-      doc.fillColor("#000");
-    }
-  }
+  // Business plan et scénarios de prêt (16 oct. 2026, point 1) — section
+  // partagée avec le dossier crédit plateforme, voir dossier-credit-pdf-shared.ts.
+  dessinerSectionBusinessPlan(doc, margeGauche, largeurPage, dossier.businessPlan);
 
   doc.moveDown(1);
   doc.font("Helvetica").fontSize(7.5).fillColor("#555");

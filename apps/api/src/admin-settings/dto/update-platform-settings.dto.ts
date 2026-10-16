@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength } from "class-validator";
+import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength } from "class-validator";
 
 /**
  * Coordonnées officielles de la plateforme ELEGANZ, modifiables depuis le
@@ -137,4 +137,30 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsBoolean()
   chatWidgetEnabled?: boolean;
+
+  // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, point 2) —
+  // alimente le dossier crédit et le rapport annuel de la plateforme.
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  platformFiscalLegalName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  platformFiscalIdNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  platformFiscalAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  platformFiscalRegime?: string;
+
+  @IsOptional()
+  @IsDateString()
+  platformFoundedAt?: string;
 }

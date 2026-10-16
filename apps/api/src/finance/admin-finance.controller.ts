@@ -5,7 +5,10 @@ import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { DossierValidationService } from "./dossier-validation.service";
+import { BusinessPlanService } from "./business-plan.service";
+import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
+import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -32,6 +35,7 @@ export class AdminFinanceController {
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
     private readonly dossierValidation: DossierValidationService,
+    private readonly businessPlan: BusinessPlanService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -162,6 +166,62 @@ export class AdminFinanceController {
     const toDate = to ? new Date(to) : new Date();
     const fromDate = from ? new Date(from) : new Date(toDate.getFullYear(), toDate.getMonth(), 1);
     return this.adminFinanceService.dashboard(fromDate, toDate);
+  }
+
+  // Dossier de crédit d'ELEGANZ elle-même (demande du 16 oct. 2026, point 2)
+  // — pendant plateforme du dossier crédit boutique. Jamais persisté,
+  // toujours recalculé depuis les écritures réelles (scope PLATFORM).
+  @Get("dossier-credit")
+  dossierCredit(@CurrentUser() user: AuthenticatedUser, @Query("mois") mois?: string) {
+    requireAdmin(user);
+    return this.adminFinanceService.dossierCredit(mois ? Number(mois) : undefined);
+  }
+
+  @Get("export/dossier-credit")
+  async exportDossierCredit(@CurrentUser() user: AuthenticatedUser, @Res() res: Response, @Query("mois") mois?: string) {
+    requireAdmin(user);
+    const dossier = await this.adminFinanceService.dossierCredit(mois ? Number(mois) : undefined);
+    const doc = renderDossierCreditPlateformePdf(dossier);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="dossier-credit-eleganz.pdf"`);
+    return doc.pipe(res);
+  }
+
+  // Business plan et scénarios de prêt d'ELEGANZ elle-même (16 oct. 2026,
+  // point 2) — mêmes routes que côté boutique (finance.controller.ts),
+  // scope PLATFORM/shopId null.
+  @Get("business-plan")
+  businessPlanObtenir(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.businessPlan.obtenir(FiscalRuleScope.PLATFORM, null);
+  }
+
+  @Patch("business-plan")
+  businessPlanEnregistrer(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateBusinessPlanDto) {
+    requireAdmin(user);
+    return this.businessPlan.enregistrer(FiscalRuleScope.PLATFORM, null, dto);
+  }
+
+  @Post("business-plan/scenarios")
+  scenarioAjouter(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateLoanScenarioDto) {
+    requireAdmin(user);
+    return this.businessPlan.ajouterScenario(FiscalRuleScope.PLATFORM, null, dto);
+  }
+
+  @Patch("business-plan/scenarios/:scenarioId")
+  scenarioModifier(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("scenarioId") scenarioId: string,
+    @Body() dto: UpdateLoanScenarioDto,
+  ) {
+    requireAdmin(user);
+    return this.businessPlan.modifierScenario(FiscalRuleScope.PLATFORM, null, scenarioId, dto);
+  }
+
+  @Delete("business-plan/scenarios/:scenarioId")
+  scenarioSupprimer(@CurrentUser() user: AuthenticatedUser, @Param("scenarioId") scenarioId: string) {
+    requireAdmin(user);
+    return this.businessPlan.supprimerScenario(FiscalRuleScope.PLATFORM, null, scenarioId);
   }
 
   @Get("fiscal-rules")
