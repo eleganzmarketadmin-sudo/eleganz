@@ -64,3 +64,17 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.bouton {
+  padding: var(--espace-3) var(--espace-5);
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  min-height: var(--touche-min);
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "../../AdminShell";
+import { AdminFinanceSubNav } from "../../AdminFinanceSubNav";
 import { api, ApiError } from "../../../lib/api";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
@@ -83,6 +84,7 @@ function ReglesFiscalesAdminContenu() {
   return (
     <div>
       <h1 className={styles.titre}>{t("admrfi_titre")}</h1>
+      <AdminFinanceSubNav />
       <p style={{ color: "var(--color-texte-muted)", marginBottom: "16px" }}>
         {t("admrfi_description")}
       </p>

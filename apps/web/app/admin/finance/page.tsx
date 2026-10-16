@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { AdminShell } from "../AdminShell";
+import { AdminFinanceSubNav } from "../AdminFinanceSubNav";
 import { api, ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
@@ -50,10 +50,7 @@ function FinanceAdminContenu() {
   return (
     <div>
       <h1 className={styles.titre}>{t("nav_finance")} ELEGANZ</h1>
-      <p style={{ marginBottom: "16px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
-        <Link href="/admin/finance/regles-fiscales">{t("admfinance_lienReglesFiscales")} →</Link>
-        <Link href="/admin/finance/comptabilite">{t("admfinance_lienComptabilite")} →</Link>
-      </p>
+      <AdminFinanceSubNav />
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (

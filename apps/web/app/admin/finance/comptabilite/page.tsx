@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import Link from "next/link";
 import { AdminShell } from "../../AdminShell";
+import { AdminFinanceSubNav } from "../../AdminFinanceSubNav";
 import { api, ApiError } from "../../../lib/api";
 import { telechargerFichier } from "../../../lib/telecharger-fichier";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
@@ -194,9 +194,7 @@ function ComptabiliteAdminContenu() {
   return (
     <div>
       <h1 className={styles.titre}>{t("admfinct_titre")}</h1>
-      <p style={{ marginBottom: "16px" }}>
-        <Link href="/admin/finance">{t("admfinct_lienTableauBord")}</Link>
-      </p>
+      <AdminFinanceSubNav />
       <p style={{ color: "var(--color-texte-muted)", marginBottom: "16px" }}>{t("admfinct_description")}</p>
 
       <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap", alignItems: "flex-end" }}>

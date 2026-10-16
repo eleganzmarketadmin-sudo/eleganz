@@ -1654,6 +1654,13 @@ const fr: Dictionnaire = {
   credit_bpColObjet: "Objet du financement",
   credit_bpAjouterScenario: "Ajouter le scénario",
   credit_listeBusinessPlan: "Business plan et scénarios de sollicitation de prêt",
+  admfinnav_tableauBord: "Tableau de bord",
+  admfinnav_comptabilite: "Comptabilité",
+  admfinnav_dossierCredit: "Dossier de crédit",
+  admfinnav_reglesFiscales: "Règles fiscales",
+  admcredit_titre: "Dossier de crédit — ELEGANZ",
+  admcredit_sousTitre: "Dossier préparatoire pour une demande de financement d'ELEGANZ en tant que société, assemblé à partir des écritures comptables réelles de la plateforme.",
+  admcredit_listeRevenus: "Revenus propres à ELEGANZ par source (abonnements boutique, frais livreur, abonnements Secourable)",
 };
 
 const en: Dictionnaire = {
@@ -3269,6 +3276,13 @@ const en: Dictionnaire = {
   credit_bpColObjet: "Purpose of financing",
   credit_bpAjouterScenario: "Add scenario",
   credit_listeBusinessPlan: "Business plan and loan request scenarios",
+  admfinnav_tableauBord: "Dashboard",
+  admfinnav_comptabilite: "Accounting",
+  admfinnav_dossierCredit: "Credit file",
+  admfinnav_reglesFiscales: "Tax rules",
+  admcredit_titre: "Credit file — ELEGANZ",
+  admcredit_sousTitre: "Preparatory file for a financing request by ELEGANZ as a company, assembled from the platform's real accounting entries.",
+  admcredit_listeRevenus: "ELEGANZ's own revenue by source (shop subscriptions, driver fees, Secourable subscriptions)",
 };
 
 const es: Dictionnaire = {
@@ -4883,6 +4897,13 @@ const es: Dictionnaire = {
   credit_bpColObjet: "Objeto del financiamiento",
   credit_bpAjouterScenario: "Agregar el escenario",
   credit_listeBusinessPlan: "Plan de negocio y escenarios de solicitud de préstamo",
+  admfinnav_tableauBord: "Panel de control",
+  admfinnav_comptabilite: "Contabilidad",
+  admfinnav_dossierCredit: "Expediente de crédito",
+  admfinnav_reglesFiscales: "Reglas fiscales",
+  admcredit_titre: "Expediente de crédito — ELEGANZ",
+  admcredit_sousTitre: "Expediente preparatorio para una solicitud de financiamiento de ELEGANZ como sociedad, elaborado a partir de los asientos contables reales de la plataforma.",
+  admcredit_listeRevenus: "Ingresos propios de ELEGANZ por fuente (suscripciones de tienda, tarifas de repartidor, suscripciones Secourable)",
 };
 
 const ar: Dictionnaire = {
@@ -6495,6 +6516,13 @@ const ar: Dictionnaire = {
   credit_bpColObjet: "الغرض من التمويل",
   credit_bpAjouterScenario: "إضافة السيناريو",
   credit_listeBusinessPlan: "خطة العمل وسيناريوهات طلب القرض",
+  admfinnav_tableauBord: "لوحة التحكم",
+  admfinnav_comptabilite: "المحاسبة",
+  admfinnav_dossierCredit: "ملف الائتمان",
+  admfinnav_reglesFiscales: "القواعد الضريبية",
+  admcredit_titre: "ملف الائتمان — ELEGANZ",
+  admcredit_sousTitre: "ملف تحضيري لطلب تمويل لشركة ELEGANZ، تم تجميعه من القيود المحاسبية الحقيقية للمنصة.",
+  admcredit_listeRevenus: "عائدات ELEGANZ الخاصة حسب المصدر (اشتراكات المتجر، رسوم السائق، اشتراكات Secourable)",
 };
 
 const pt: Dictionnaire = {
@@ -8109,6 +8137,13 @@ const pt: Dictionnaire = {
   credit_bpColObjet: "Objetivo do financiamento",
   credit_bpAjouterScenario: "Adicionar cenário",
   credit_listeBusinessPlan: "Plano de negócios e cenários de solicitação de empréstimo",
+  admfinnav_tableauBord: "Painel de controle",
+  admfinnav_comptabilite: "Contabilidade",
+  admfinnav_dossierCredit: "Dossiê de crédito",
+  admfinnav_reglesFiscales: "Regras fiscais",
+  admcredit_titre: "Dossiê de crédito — ELEGANZ",
+  admcredit_sousTitre: "Dossiê preparatório para um pedido de financiamento da ELEGANZ como empresa, montado a partir dos lançamentos contábeis reais da plataforma.",
+  admcredit_listeRevenus: "Receitas próprias da ELEGANZ por fonte (assinaturas de loja, taxas de entregador, assinaturas Secourable)",
 };
 
 const sw: Dictionnaire = {
@@ -9722,6 +9757,13 @@ const sw: Dictionnaire = {
   credit_bpColObjet: "Lengo la ufadhili",
   credit_bpAjouterScenario: "Ongeza tukio",
   credit_listeBusinessPlan: "Mpango wa biashara na matukio ya maombi ya mkopo",
+  admfinnav_tableauBord: "Dashibodi",
+  admfinnav_comptabilite: "Uhasibu",
+  admfinnav_dossierCredit: "Faili la mkopo",
+  admfinnav_reglesFiscales: "Kanuni za kodi",
+  admcredit_titre: "Faili la mkopo — ELEGANZ",
+  admcredit_sousTitre: "Faili la maandalizi kwa ombi la ufadhili la ELEGANZ kama kampuni, lililojengwa kutoka kwenye kumbukumbu halisi za uhasibu za jukwaa.",
+  admcredit_listeRevenus: "Mapato ya ELEGANZ yenyewe kwa chanzo (usajili wa duka, ada za dereva, usajili wa Secourable)",
 };
 
 // Lingala, kikongo et tshiluba : effort de traduction raisonnable pour les
@@ -11332,6 +11374,13 @@ const ln: Dictionnaire = {
   credit_bpColObjet: "Tina ya mbongo",
   credit_bpAjouterScenario: "Kobakisa likanisi",
   credit_listeBusinessPlan: "Mwango ya mombongo mpe makanisi ya kosɛnga nyongo",
+  admfinnav_tableauBord: "Tablo ya bokambi",
+  admfinnav_comptabilite: "Mosala ya mitango",
+  admfinnav_dossierCredit: "Dosye ya nyongo",
+  admfinnav_reglesFiscales: "Mibeko ya mpako",
+  admcredit_titre: "Dosye ya nyongo — ELEGANZ",
+  admcredit_sousTitre: "Dosye ya libongisi mpo na kosɛnga mbongo ya ELEGANZ lokola kompanyi, esalemi na makomi ya mitango ya solo ya plateforme.",
+  admcredit_listeRevenus: "Mbongo ya ELEGANZ moko na moko na etuka na yango (abonema ya duka, mbongo ya motambwisi, abonema ya Secourable)",
 };
 
 const kg: Dictionnaire = {
@@ -12937,6 +12986,13 @@ const kg: Dictionnaire = {
   credit_bpColObjet: "Kuma kia nzinga",
   credit_bpAjouterScenario: "Dikila ngenyi",
   credit_listeBusinessPlan: "Mwango ya mombongo ye mabanza ma kulomba nzinga",
+  admfinnav_tableauBord: "Tableau ya kiyekudulu",
+  admfinnav_comptabilite: "Kisalu kia bitalu",
+  admfinnav_dossierCredit: "Dosie ya nzinga",
+  admfinnav_reglesFiscales: "Minsiku mia impozi",
+  admcredit_titre: "Dosie ya nzinga — ELEGANZ",
+  admcredit_sousTitre: "Dosie ya nkubukulu mu kulomba nzinga ya ELEGANZ bu kompani, iyibakilu mu bisono bia nzaccu biakieleka bia plateforme.",
+  admcredit_listeRevenus: "Mbongo ya ELEGANZ kaka mu lutumu luandi (abonema ya duka, nzinga ya kuendesa, abonema ya Secourable)",
 };
 
 const lu: Dictionnaire = {
@@ -14542,6 +14598,13 @@ const lu: Dictionnaire = {
   credit_bpColObjet: "Kuma ka difuta",
   credit_bpAjouterScenario: "Longeja ngenyi",
   credit_listeBusinessPlan: "Mpango wa bizinesi ne ngenyi ya dilomba difuta",
+  admfinnav_tableauBord: "Tabelo wa bulombodi",
+  admfinnav_comptabilite: "Mudimu wa mibadu",
+  admfinnav_dossierCredit: "Dosye wa difuta",
+  admfinnav_reglesFiscales: "Mikenji ya mishobo",
+  admcredit_titre: "Dosye wa difuta — ELEGANZ",
+  admcredit_sousTitre: "Dosye wa dilongolola bua dilomba difuta dia ELEGANZ bu tshisumbu, udi mufundilua ku miandu ya mibadu ya bushuwa ya mbelu.",
+  admcredit_listeRevenus: "Difuta dia ELEGANZ divuadi pa tshiabulu (misuedi ya duka, mishobo ya mutwadishi, misuedi ya Secourable)",
 };
 
 export const TRANSLATIONS: Record<Locale, Dictionnaire> = { fr, en, es, ar, pt, sw, ln, kg, lu };
