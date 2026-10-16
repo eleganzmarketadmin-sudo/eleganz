@@ -699,6 +699,16 @@ model PasswordResetRequest {
   resolvedAt       DateTime?
   createdAt        DateTime                   @default(now())
 
+  // Auto-service par code (16 oct. 2026 — "je veux que la réception d'un
+  // code par email/WhatsApp soit branché") : rempli seulement quand un
+  // canal d'envoi est disponible (RESEND_API_KEY / TWILIO_*) — sinon la
+  // demande reste sans code, et retombe sur l'escalade admin existante.
+  // Jamais stocké en clair : seul le hash du code à 6 chiffres est gardé.
+  codeHash        String?
+  codeExpiresAt   DateTime?
+  codeEnvoyeCanal String? // "EMAIL" ou "WHATSAPP", informatif seulement
+  tentativesCode  Int     @default(0)
+
   @@index([status])
 }
 
