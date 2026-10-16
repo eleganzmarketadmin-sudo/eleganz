@@ -269,6 +269,10 @@ model User {
   expertEngagementsGiven ShopExpertEngagement[]  @relation("ExpertEngagementInvitedBy")
   platformExpertInvitesCreated   PlatformExpertInvite[]     @relation("PlatformExpertInviteCreatedBy")
   platformExpertEngagementsGiven PlatformExpertEngagement[] @relation("PlatformExpertEngagementInvitedBy")
+  // Demandes de réinitialisation de mot de passe "solliciter l'admin de la
+  // plateforme" (16 oct. 2026, point 1) — voir PasswordResetRequest.
+  passwordResetRequests         PasswordResetRequest[]
+  passwordResetRequestsTraitees PasswordResetRequest[] @relation("PasswordResetRequestTraiteePar")
 }
 
 model Address {
@@ -671,6 +675,37 @@ model PlatformExpertEngagement {
   revokedAt       DateTime?
 
   @@unique([expertProfileId])
+}
+
+// Mot de passe oublié (16 oct. 2026, point 1 — "donner la possibilité en
+// cas de mot de passe oublié à l'utilisateur de réinitialiser et recevoir
+// le code (par email ou SMS) et l'option alternative de solliciter l'admin
+// de la plateforme") : seule l'option "solliciter l'admin" est construite
+// pour l'instant — recevoir un code par email ou WhatsApp suppose de
+// brancher un fournisseur d'envoi (ni compte ni clé API fournis à ce jour),
+// décision qui reste à prendre avec le choix du fournisseur. `identifiant`
+// est conservé tel que tapé même si aucun compte ne correspond (aide
+// l'admin à comprendre la demande) ; `userId` reste nul dans ce cas plutôt
+// que de révéler côté public si un compte existe ou non.
+model PasswordResetRequest {
+  id               String                     @id @default(uuid())
+  identifiant      String
+  userId           String?
+  user             User?                      @relation(fields: [userId], references: [id])
+  message          String?                    @db.Text
+  status           PasswordResetRequestStatus @default(PENDING)
+  resolvedByUserId String?
+  resolvedBy       User?                      @relation("PasswordResetRequestTraiteePar", fields: [resolvedByUserId], references: [id])
+  resolvedAt       DateTime?
+  createdAt        DateTime                   @default(now())
+
+  @@index([status])
+}
+
+enum PasswordResetRequestStatus {
+  PENDING
+  RESOLVED
+  REJECTED
 }
 
 // ---------------------------------------------------------------------------
