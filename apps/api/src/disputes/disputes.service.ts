@@ -1,9 +1,17 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { OrdersService } from "../orders/orders.service";
+import { OrderStatus } from "@eleganz/database";
+
+export const ISSUES_LITIGE = ["REFUND", "REJECTED"] as const;
+export type IssueLitige = (typeof ISSUES_LITIGE)[number];
 
 @Injectable()
 export class DisputesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly orders: OrdersService,
+  ) {}
 
   /**
    * Un litige peut être ouvert par l'acheteur (produit non reçu, colis
@@ -71,13 +79,35 @@ export class DisputesService {
   /**
    * Décision administrative (prompt §47 : « l'administration doit pouvoir
    * examiner le dossier, enregistrer une décision et assurer le suivi »).
-   * TODO : brancher sur un guard ADMIN_* dédié une fois le Centre de
-   * pilotage développé — pour l'instant vérifié inline dans le contrôleur.
+   *
+   * Correctif audit du 16 oct. 2026 : jusqu'ici, resolve() ne faisait
+   * avancer QUE Dispute.status — ShopOrder.status restait bloqué sur
+   * DISPUTED indéfiniment même une fois le litige tranché, puisque rien
+   * n'appelait jamais OrdersService.transitionStatus(..., REFUNDED). Un
+   * `outcome` est désormais obligatoire : REFUND fait avancer la commande
+   * vers REFUNDED (restitue le stock — voir OrdersService.transitionStatus)
+   * ; REJECTED la fait revenir à RECEIVED_CONFIRMED (réception confirmée
+   * maintenue, la commande peut suivre son cours normal — retour produit,
+   * clôture...). Les deux transitions existent déjà dans
+   * ALLOWED_TRANSITIONS[DISPUTED].
    */
-  async resolve(disputeId: string, resolution: string) {
+  async resolve(disputeId: string, outcome: IssueLitige, resolution: string) {
+    const litige = await this.prisma.dispute.findUnique({ where: { id: disputeId } });
+    if (!litige) {
+      throw new NotFoundException("Litige introuvable.");
+    }
+    if (litige.status === "RESOLVED") {
+      throw new BadRequestException("Ce litige a déjà été tranché.");
+    }
+
+    await this.orders.transitionStatus(
+      litige.shopOrderId,
+      outcome === "REFUND" ? OrderStatus.REFUNDED : OrderStatus.RECEIVED_CONFIRMED,
+    );
+
     return this.prisma.dispute.update({
       where: { id: disputeId },
-      data: { status: "RESOLVED", resolution },
+      data: { status: "RESOLVED", resolution: `[${outcome}] ${resolution}` },
     });
   }
 }

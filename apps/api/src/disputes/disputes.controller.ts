@@ -1,5 +1,5 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { DisputesService } from "./disputes.service";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { DisputesService, ISSUES_LITIGE, type IssueLitige } from "./disputes.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -47,11 +47,15 @@ export class DisputesController {
   resolve(
     @CurrentUser() user: AuthenticatedUser,
     @Param("disputeId") disputeId: string,
+    @Body("outcome") outcome: IssueLitige,
     @Body("resolution") resolution: string,
   ) {
     if (!user.role.startsWith("ADMIN_")) {
       throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
     }
-    return this.disputesService.resolve(disputeId, resolution);
+    if (!ISSUES_LITIGE.includes(outcome)) {
+      throw new BadRequestException(`outcome doit être l'un de : ${ISSUES_LITIGE.join(", ")}.`);
+    }
+    return this.disputesService.resolve(disputeId, outcome, resolution);
   }
 }

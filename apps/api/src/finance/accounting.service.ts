@@ -138,6 +138,34 @@ export class AccountingService {
   }
 
   /**
+   * Règlement d'une dette fournisseur (correctif audit du 16 oct. 2026) —
+   * jusqu'ici settleDebt() décrémentait Supplier.balanceOwed sans jamais
+   * poser d'écriture : la dette (401) restait affichée au bilan même après
+   * paiement réel, et la sortie de caisse n'était jamais constatée. Même
+   * principe que postPurchase (comptes 401/caisse), en sens inverse —
+   * sourceId doit être unique par règlement (ReglementFournisseur.id si
+   * lettré à un achat précis, sinon un id généré côté appelant), jamais
+   * Purchase.id : un même achat peut faire l'objet de plusieurs règlements
+   * partiels, chacun avec sa propre écriture.
+   */
+  async postSupplierPayment(params: { sourceId: string; shopId: string; amount: number }) {
+    await this.seed.ensureShopChartOfAccounts(params.shopId);
+    await this.enregistrer({
+      scope: FiscalRuleScope.SHOP,
+      shopId: params.shopId,
+      journalCode: "TR",
+      entryDate: new Date(),
+      label: `Règlement fournisseur ${params.sourceId.slice(0, 8)}`,
+      sourceType: JournalEntrySource.SUPPLIER_PAYMENT,
+      sourceId: params.sourceId,
+      lignes: [
+        { accountCode: "401", debit: params.amount },
+        { accountCode: compteCaisse("USD"), credit: params.amount },
+      ],
+    });
+  }
+
+  /**
    * Comptabilisée une seule fois, à la réception confirmée par l'acheteur
    * (RECEIVED_CONFIRMED) ou à la clôture — jamais à la simple création de la
    * commande. Débit 411 (créance envers la plateforme) : rien ne modélise

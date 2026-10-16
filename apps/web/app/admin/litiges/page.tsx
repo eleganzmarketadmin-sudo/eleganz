@@ -21,6 +21,10 @@ function LitigesContent() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [resolutions, setResolutions] = useState<Record<string, string>>({});
+  // Correctif audit du 16 oct. 2026 : resolve() exige désormais une
+  // décision explicite (rembourser ou rejeter), sans quoi la commande
+  // restait bloquée sur DISPUTED même une fois le litige "tranché".
+  const [issues, setIssues] = useState<Record<string, "REFUND" | "REJECTED">>({});
   const [enCours, setEnCours] = useState<string | null>(null);
 
   function recharger() {
@@ -35,10 +39,11 @@ function LitigesContent() {
 
   async function resoudre(disputeId: string) {
     const resolution = resolutions[disputeId];
-    if (!resolution) return;
+    const outcome = issues[disputeId];
+    if (!resolution || !outcome) return;
     setEnCours(disputeId);
     try {
-      await api.patch(`/admin/disputes/${disputeId}/resolve`, { resolution });
+      await api.patch(`/admin/disputes/${disputeId}/resolve`, { outcome, resolution });
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admlitiges_resolutionImpossible"));
@@ -64,7 +69,15 @@ function LitigesContent() {
               <span>{formatDate(l.createdAt)}</span>
             </div>
             <p className={styles.motif}>{l.reason}</p>
-            <div className={styles.resolution}>
+            <div className={styles.resolution} style={{ flexWrap: "wrap", gap: "8px" }}>
+              <select
+                value={issues[l.id] ?? ""}
+                onChange={(e) => setIssues((prev) => ({ ...prev, [l.id]: e.target.value as "REFUND" | "REJECTED" }))}
+              >
+                <option value="">{t("admlitiges_choisirDecision")}</option>
+                <option value="REFUND">{t("admlitiges_decisionRembourser")}</option>
+                <option value="REJECTED">{t("admlitiges_decisionRejeter")}</option>
+              </select>
               <input
                 placeholder={t("admlitiges_placeholderDecision")}
                 value={resolutions[l.id] ?? ""}
@@ -72,7 +85,7 @@ function LitigesContent() {
               />
               <button
                 className={styles.bouton}
-                disabled={enCours === l.id || !resolutions[l.id]}
+                disabled={enCours === l.id || !resolutions[l.id] || !issues[l.id]}
                 onClick={() => resoudre(l.id)}
               >
                 {t("admlitiges_resoudre")}

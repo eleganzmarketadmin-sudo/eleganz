@@ -1,4 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import * as crypto from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateSupplierDto, RecordPurchaseDto, SettleDebtDto } from "./dto/supplier.dto";
 import { AccountingService } from "../finance/accounting.service";
@@ -58,8 +59,23 @@ export class SuppliersService {
    * (lettrage par saisie explicite) en plus de la décrémentation du solde
    * cumulé — qui reste la seule source de vérité pour le solde affiché,
    * comme avant ce chantier.
+   *
+   * Correctifs audit du 16 oct. 2026 :
+   *  1. Un règlement ne peut plus dépasser le solde dû (plus de
+   *     balanceOwed négatif silencieux faute de validation).
+   *  2. Le règlement pose désormais une écriture comptable réelle (401 /
+   *     caisse, voir AccountingService.postSupplierPayment) — jusqu'ici
+   *     le solde baissait sans que la dette ni la sortie de caisse soient
+   *     jamais constatées en comptabilité.
    */
   async settleDebt(supplierId: string, dto: SettleDebtDto) {
+    const supplier = await this.prisma.supplier.findUniqueOrThrow({ where: { id: supplierId } });
+    if (dto.amount > Number(supplier.balanceOwed)) {
+      throw new BadRequestException(
+        `Le règlement (${dto.amount}) dépasse le solde dû (${supplier.balanceOwed}) pour ce fournisseur.`,
+      );
+    }
+
     if (dto.purchaseId) {
       await this.prisma.reglementFournisseur.create({
         data: {
@@ -70,10 +86,18 @@ export class SuppliersService {
         },
       });
     }
-    return this.prisma.supplier.update({
+    const resultat = await this.prisma.supplier.update({
       where: { id: supplierId },
       data: { balanceOwed: { decrement: dto.amount } },
     });
+
+    await this.accounting
+      .postSupplierPayment({ sourceId: dto.purchaseId ?? crypto.randomUUID(), shopId: supplier.shopId, amount: dto.amount })
+      .catch((err) => {
+        this.logger.error(`Comptabilisation du règlement fournisseur ${supplierId} échouée`, err);
+      });
+
+    return resultat;
   }
 
   /**

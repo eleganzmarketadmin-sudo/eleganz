@@ -231,7 +231,7 @@ export class OrdersService {
   async transitionStatus(shopOrderId: string, newStatus: OrderStatus) {
     const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
       where: { id: shopOrderId },
-      include: { lines: true },
+      include: { lines: true, order: true, shop: { select: { name: true } } },
     });
     const allowed = ALLOWED_TRANSITIONS[shopOrder.status] ?? [];
     if (!allowed.includes(newStatus)) {
@@ -253,7 +253,13 @@ export class OrdersService {
     // soit annulée par la boutique ou par l'acheteur ; sans restitution ici,
     // l'article resterait indisponible à la vente alors qu'aucune commande
     // réelle ne le retient plus.
-    if (newStatus === OrderStatus.CANCELLED) {
+    //
+    // Correctif audit du 16 oct. 2026 : un remboursement (REFUNDED) décompte
+    // le même stock qu'une annulation — l'article revient réellement au
+    // vendeur — mais ne restituait rien jusqu'ici, laissant l'article
+    // indisponible à la vente alors qu'il n'a jamais quitté la boutique
+    // (ou y est revenu). Même restitution que CANCELLED.
+    if (newStatus === OrderStatus.CANCELLED || newStatus === OrderStatus.REFUNDED) {
       for (const line of shopOrder.lines) {
         operations.push(
           this.prisma.variant.update({
@@ -275,6 +281,39 @@ export class OrdersService {
     }
 
     const [updated] = await this.prisma.$transaction(operations);
+
+    // Correctif audit du 16 oct. 2026 : jusqu'ici, seule la boutique était
+    // notifiée (notifierBoutiquesCommandeRecue, à la création) — l'acheteur
+    // n'apprenait jamais qu'une boutique avait fait avancer sa commande
+    // (acceptée, en préparation, en route, livrée, annulée, remboursée...)
+    // autrement qu'en revenant manuellement sur /marketplace/commandes.
+    const ETAPES_NOTIFIEES_ACHETEUR = new Set<OrderStatus>([
+      OrderStatus.ACCEPTED,
+      OrderStatus.PREPARING,
+      OrderStatus.PICKED_UP,
+      OrderStatus.IN_TRANSIT,
+      OrderStatus.DELIVERED_DECLARED,
+      OrderStatus.CANCELLED,
+      OrderStatus.REFUNDED,
+    ]);
+    if (ETAPES_NOTIFIEES_ACHETEUR.has(newStatus) && shopOrder.order?.buyerId) {
+      const LIBELLES: Partial<Record<OrderStatus, string>> = {
+        [OrderStatus.ACCEPTED]: "a accepté votre commande",
+        [OrderStatus.PREPARING]: "prépare votre commande",
+        [OrderStatus.PICKED_UP]: "a confié votre commande au livreur",
+        [OrderStatus.IN_TRANSIT]: "— votre commande est en route",
+        [OrderStatus.DELIVERED_DECLARED]: "a déclaré votre commande livrée — confirmez la réception dès qu'elle vous parvient",
+        [OrderStatus.CANCELLED]: "a annulé votre commande",
+        [OrderStatus.REFUNDED]: "— votre commande a été remboursée",
+      };
+      await this.notifications.notifierUtilisateurs([shopOrder.order.buyerId], {
+        type: NotificationType.AUTRE,
+        title: `Commande ${shopOrder.shop.name}`,
+        body: `${shopOrder.shop.name} ${LIBELLES[newStatus]}.`,
+        link: "/marketplace/commandes",
+      });
+    }
+
     return updated;
   }
 
