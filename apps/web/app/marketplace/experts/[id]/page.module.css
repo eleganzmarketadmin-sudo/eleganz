@@ -1,21 +1,42 @@
+/* Gabarits de présentation (demande du 16 oct. 2026, point 2) — un seul
+   balisage, trois habillages choisis par l'expert via l'attribut
+   data-template posé sur .cadre. Toujours le même contenu, jamais de texte
+   différent selon le gabarit (voir ExpertProfileTemplate, schema.prisma). */
+
 .cadre {
   max-width: 760px;
   margin: 0 auto;
-  padding: var(--espace-5);
+  padding-bottom: var(--espace-6);
 }
 
 .entete {
-  margin-bottom: var(--espace-5);
+  padding: var(--espace-6) var(--espace-5) var(--espace-5);
+  display: flex;
+  align-items: center;
+  gap: var(--espace-4);
+}
+
+.avatar {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--color-toile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-texte-muted);
 }
 
 .nom {
-  font-family: var(--font-display), serif;
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
 }
 
 .headline {
   color: var(--color-texte-muted);
-  margin-top: var(--espace-1);
+  margin-top: 4px;
 }
 
 .domaines {
@@ -27,14 +48,16 @@
 
 .domaine {
   font-size: 0.75rem;
-  padding: 2px 8px;
-  border: 1px solid var(--color-border);
-  color: var(--color-texte-muted);
+  padding: 2px 10px;
+}
+
+.corps {
+  padding: 0 var(--espace-5);
 }
 
 .section {
   padding: var(--espace-5) 0;
-  border-top: 2px solid var(--color-ink);
+  border-top: 1px solid var(--color-border);
 }
 
 .titreSection {
@@ -54,10 +77,9 @@
 
 .boutonEnvoyer {
   padding: var(--espace-3) var(--espace-5);
-  background: var(--color-magenta);
-  color: #fff;
   border: none;
   min-height: var(--touche-min);
+  font-weight: 600;
 }
 
 .boutonEnvoyer:disabled {
@@ -65,7 +87,6 @@
 }
 
 .lien {
-  color: var(--color-magenta);
   text-decoration: underline;
 }
 
@@ -80,4 +101,126 @@
 
 .confirmation {
   color: var(--color-texte-muted);
+}
+
+/* --- CLASSIQUE : sobre, typographie serif, noir et blanc --- */
+
+.cadre[data-template="CLASSIQUE"] {
+  font-family: var(--font-display), serif;
+  background: var(--color-surface);
+}
+
+.cadre[data-template="CLASSIQUE"] .entete {
+  border-bottom: 2px solid var(--color-ink);
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.cadre[data-template="CLASSIQUE"] .avatar {
+  border-radius: 0;
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-3);
+}
+
+.cadre[data-template="CLASSIQUE"] .nom {
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.cadre[data-template="CLASSIQUE"] .domaine {
+  border: 1px solid var(--color-ink);
+  color: var(--color-ink);
+  border-radius: 0;
+}
+
+.cadre[data-template="CLASSIQUE"] .boutonEnvoyer {
+  background: var(--color-ink);
+  color: #fff;
+  border-radius: 0;
+}
+
+.cadre[data-template="CLASSIQUE"] .lien {
+  color: var(--color-ink);
+}
+
+/* --- MODERNE : bandeau d'accent, chips arrondies, sans-serif --- */
+
+.cadre[data-template="MODERNE"] .entete {
+  background: linear-gradient(135deg, var(--color-cobalt), var(--color-magenta));
+  color: #fff;
+  border-radius: 0 0 24px 24px;
+}
+
+.cadre[data-template="MODERNE"] .headline {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cadre[data-template="MODERNE"] .avatar {
+  border-radius: 50%;
+  border: 3px solid #fff;
+}
+
+.cadre[data-template="MODERNE"] .domaine {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.cadre[data-template="MODERNE"] .corps .domaine {
+  background: var(--color-toile);
+  color: var(--color-ink);
+}
+
+.cadre[data-template="MODERNE"] .boutonEnvoyer {
+  background: var(--color-magenta);
+  color: #fff;
+  border-radius: 999px;
+}
+
+.cadre[data-template="MODERNE"] .lien {
+  color: var(--color-magenta);
+}
+
+/* --- CRÉATIF : bloc diagonal coloré, chips rotatives, grand nom --- */
+
+.cadre[data-template="CREATIF"] .entete {
+  position: relative;
+  background: var(--color-or);
+  overflow: hidden;
+  clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%);
+  padding-bottom: var(--espace-7);
+}
+
+.cadre[data-template="CREATIF"] .nom {
+  font-family: var(--font-display), serif;
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.cadre[data-template="CREATIF"] .avatar {
+  border-radius: 24px;
+  transform: rotate(-4deg);
+  border: 3px solid var(--color-ink);
+}
+
+.cadre[data-template="CREATIF"] .domaine {
+  background: var(--color-ink);
+  color: var(--color-or);
+  border-radius: 4px;
+  transform: rotate(-2deg);
+}
+
+.cadre[data-template="CREATIF"] .domaine:nth-child(even) {
+  transform: rotate(2deg);
+}
+
+.cadre[data-template="CREATIF"] .boutonEnvoyer {
+  background: var(--color-flamme);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.cadre[data-template="CREATIF"] .lien {
+  color: var(--color-flamme);
+  font-weight: 700;
 }

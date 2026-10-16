@@ -7,14 +7,38 @@ import { formatDate } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
+interface DocumentCandidature {
+  id: string;
+  type: "CV" | "DIPLOME" | "CERTIFICATION" | "AUTRE";
+  label: string;
+  url: string;
+}
+
+interface ReferenceCandidature {
+  id: string;
+  fullName: string;
+  role: string | null;
+  contact: string;
+}
+
 interface CandidatureExpert {
   id: string;
   headline: string;
   bio: string;
   domaines: string[];
+  photoUrl: string | null;
   createdAt: string;
   user: { fullName: string; email?: string | null; phone?: string | null };
+  documents: DocumentCandidature[];
+  references: ReferenceCandidature[];
 }
+
+const CLE_TYPE_DOCUMENT: Record<string, string> = {
+  CV: "experts_typeCv",
+  DIPLOME: "experts_typeDiplome",
+  CERTIFICATION: "experts_typeCertification",
+  AUTRE: "experts_typeAutre",
+};
 
 // File de modération des candidatures Experts (module Experts, 16 oct.
 // 2026, point 2, décision verrouillée Q1 : validation admin avant annuaire
@@ -70,6 +94,10 @@ function AdminExpertsContent() {
               </span>
               <span>{formatDate(c.createdAt)}</span>
             </div>
+            {c.photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.photoUrl} alt="" style={{ width: "56px", height: "56px", borderRadius: "50%", objectFit: "cover", marginBottom: "8px" }} />
+            )}
             <p className={styles.headline}>{c.headline}</p>
             <p className={styles.bio}>{c.bio}</p>
             <div className={styles.domaines}>
@@ -79,7 +107,34 @@ function AdminExpertsContent() {
                 </span>
               ))}
             </div>
-            <div className={styles.actions}>
+
+            <p style={{ fontWeight: 600, margin: "12px 0 4px" }}>{t("admexperts_documentsTitre")}</p>
+            {c.documents.length === 0 ? (
+              <p className={styles.messageVide} style={{ padding: 0, textAlign: "left" }}>{t("admexperts_aucunDocument")}</p>
+            ) : (
+              c.documents.map((d) => (
+                <div key={d.id} style={{ fontSize: "0.875rem", marginBottom: "4px" }}>
+                  <strong>{t(CLE_TYPE_DOCUMENT[d.type] ?? "experts_typeAutre")}</strong> — {d.label} —{" "}
+                  <a href={d.url} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
+                    {t("experts_voirDocument")}
+                  </a>
+                </div>
+              ))
+            )}
+
+            <p style={{ fontWeight: 600, margin: "12px 0 4px" }}>{t("admexperts_referencesTitre")}</p>
+            {c.references.length === 0 ? (
+              <p className={styles.messageVide} style={{ padding: 0, textAlign: "left" }}>{t("admexperts_aucuneReference")}</p>
+            ) : (
+              c.references.map((r) => (
+                <div key={r.id} style={{ fontSize: "0.875rem", marginBottom: "4px" }}>
+                  <strong>{r.fullName}</strong>
+                  {r.role ? ` — ${r.role}` : ""} — {r.contact}
+                </div>
+              ))
+            )}
+
+            <div className={styles.actions} style={{ marginTop: "12px" }}>
               <input
                 placeholder={t("admexperts_placeholderNote")}
                 value={notes[c.id] ?? ""}

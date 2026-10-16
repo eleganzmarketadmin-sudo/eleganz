@@ -18,6 +18,7 @@ interface ExpertAnnuaire {
   headline: string;
   bio: string;
   domaines: string[];
+  photoUrl: string | null;
   user: { fullName: string };
 }
 
@@ -89,7 +90,15 @@ export default function ExpertsPage() {
         <div className={styles.liste}>
           {experts.map((expert) => (
             <Link className={styles.carte} href={`/marketplace/experts/${expert.id}`} key={expert.id}>
-              <div className={styles.nomExpert}>{expert.user.fullName}</div>
+              <div className={styles.enteteCarte}>
+                {expert.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={expert.photoUrl} alt={expert.user.fullName} className={styles.avatarCarte} />
+                ) : (
+                  <div className={styles.avatarCarte}>{expert.user.fullName.trim().charAt(0).toUpperCase() || "?"}</div>
+                )}
+                <div className={styles.nomExpert}>{expert.user.fullName}</div>
+              </div>
               <div className={styles.headline}>{expert.headline}</div>
               <div className={styles.domaines}>
                 {expert.domaines.map((d) => (

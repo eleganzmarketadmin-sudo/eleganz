@@ -96,7 +96,7 @@ export function MarketplaceHeader() {
         <nav className={styles.liens}>
           <AccueilLien />
           <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>
-          <Link href="/marketplace/experts">{t("experts_navLien")}</Link>
+          <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
           <LanguageSwitcher />
           <ThemeToggle clair />
           <Link href="/marketplace/panier" className={styles.panier}>

@@ -25,6 +25,7 @@ export function SiteHeader() {
     { href: "/", label: t("nav_accueil") },
     { href: "/connexion", label: t("nom_gestion") },
     { href: "/marketplace", label: t("nom_market") },
+    { href: "/marketplace/experts", label: t("accueil_trouverUnExpert") },
     { href: "/comptable", label: t("titre_accueil") },
     { href: "/a-propos", label: t("nav_aPropos") },
   ];

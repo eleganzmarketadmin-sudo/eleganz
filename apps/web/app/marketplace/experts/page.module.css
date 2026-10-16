@@ -65,9 +65,29 @@
   border-color: var(--color-magenta);
 }
 
+.enteteCarte {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-2);
+}
+
+.avatarCarte {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-toile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-texte-muted);
+  flex-shrink: 0;
+}
+
 .nomExpert {
   font-weight: 700;
-  margin-bottom: var(--espace-1);
 }
 
 .headline {
