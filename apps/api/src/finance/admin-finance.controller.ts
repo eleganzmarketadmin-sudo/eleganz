@@ -1,6 +1,20 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import type { Response } from "express";
 import { AdminFinanceService } from "./admin-finance.service";
+import { AccountingService } from "./accounting.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
@@ -41,6 +55,7 @@ export class AdminFinanceController {
     private readonly dossierValidation: DossierValidationService,
     private readonly businessPlan: BusinessPlanService,
     private readonly rapportAnnuel: RapportAnnuelService,
+    private readonly accountingService: AccountingService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -151,6 +166,25 @@ export class AdminFinanceController {
   listClotures(@CurrentUser() user: AuthenticatedUser) {
     requireAdmin(user);
     return this.closureService.list(FiscalRuleScope.PLATFORM, null);
+  }
+
+  /**
+   * Rattrapage ponctuel, réservé à l'administration ELEGANZ : comptabilise
+   * a posteriori les ventes d'une boutique antérieures à la mise en service
+   * du moteur comptable (voir AccountingService.backfillMissingSalesRevenue
+   * et docs/ARCHITECTURE_FINANCE.md §8bis). Action manuelle, exécutée au cas
+   * par cas avec l'accord explicite du propriétaire de la boutique concernée
+   * — jamais appelée automatiquement. Idempotent : relancer sur une boutique
+   * déjà rattrapée ne recrée rien (voir la contrainte d'unicité
+   * JournalEntry).
+   */
+  @Post("backfill-shop-sales-revenue")
+  async backfillShopSalesRevenue(@CurrentUser() user: AuthenticatedUser, @Body("shopId") shopId: string) {
+    requireAdmin(user);
+    if (!shopId) {
+      throw new BadRequestException("shopId requis.");
+    }
+    return this.accountingService.backfillMissingSalesRevenue(shopId);
   }
 
   @Post("clotures")

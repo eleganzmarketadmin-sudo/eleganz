@@ -307,6 +307,115 @@ export class AccountingService {
     });
   }
 
+  /**
+   * Rattrapage ponctuel d'une boutique dont des ventes réelles n'ont jamais
+   * généré d'écriture comptable parce qu'elles sont antérieures à la mise en
+   * service de ce moteur comptable dans le code déployé (jamais un bug de
+   * calcul du Rapport annuel — voir docs/ARCHITECTURE_FINANCE.md §8bis et
+   * l'historique Git de PosService.createSale/OrdersService.confirmReceipt).
+   * Confirmé le 16 oct. 2026 sur ELEGANZ STORE. Exécuté manuellement, une
+   * fois, avec l'accord explicite du propriétaire — jamais automatique.
+   *
+   * Ne couvre que le chiffre d'affaires (VE/701 pour la caisse, VE/7012 pour
+   * le Marketplace) : la sortie de stock (CMV, 603/311) est volontairement
+   * laissée de côté ici — la valoriser aujourd'hui utiliserait le CUMP
+   * courant des variantes, pas celui en vigueur au moment réel de la vente,
+   * ce qui fausserait la marge plutôt que de la corriger.
+   *
+   * Idempotent comme le reste de ce service (contrainte unique
+   * [scope, shopId, sourceType, sourceId] sur JournalEntry) : relancer cette
+   * méthode sur une boutique déjà rattrapée ne recrée aucune écriture.
+   */
+  async backfillMissingSalesRevenue(shopId: string): Promise<{
+    posSales: { total: number; created: number; alreadyPosted: number; saleIds: string[] };
+    shopOrders: { total: number; created: number; alreadyPosted: number; orderIds: string[] };
+  }> {
+    await this.seed.ensureShopChartOfAccounts(shopId);
+
+    const sales = await this.prisma.posSale.findMany({
+      where: { shopId, status: { not: "CANCELLED" } },
+      select: { id: true, totalAmount: true, currency: true, createdAt: true },
+    });
+    const existingSaleEntries = await this.prisma.journalEntry.findMany({
+      where: {
+        scope: FiscalRuleScope.SHOP,
+        shopId,
+        sourceType: JournalEntrySource.POS_SALE,
+        sourceId: { in: sales.map((s) => s.id) },
+      },
+      select: { sourceId: true },
+    });
+    const alreadyPostedSaleIds = new Set(existingSaleEntries.map((e) => e.sourceId));
+    const createdSaleIds: string[] = [];
+    for (const sale of sales) {
+      if (alreadyPostedSaleIds.has(sale.id)) continue;
+      const montant = Number(sale.totalAmount);
+      await this.enregistrer({
+        scope: FiscalRuleScope.SHOP,
+        shopId,
+        journalCode: "VE",
+        entryDate: sale.createdAt,
+        label: `Vente caisse ${sale.id.slice(0, 8)} (rattrapage du 16 oct. 2026 — vente du ${sale.createdAt.toISOString().slice(0, 10)})`,
+        sourceType: JournalEntrySource.POS_SALE,
+        sourceId: sale.id,
+        lignes: [
+          { accountCode: compteCaisse(sale.currency), debit: montant },
+          { accountCode: "701", credit: montant },
+        ],
+      });
+      createdSaleIds.push(sale.id);
+    }
+
+    const shopOrders = await this.prisma.shopOrder.findMany({
+      where: { shopId, status: "RECEIVED_CONFIRMED" },
+      include: { order: true },
+    });
+    const existingOrderEntries = await this.prisma.journalEntry.findMany({
+      where: {
+        scope: FiscalRuleScope.SHOP,
+        shopId,
+        sourceType: JournalEntrySource.SHOP_ORDER,
+        sourceId: { in: shopOrders.map((o) => o.id) },
+      },
+      select: { sourceId: true },
+    });
+    const alreadyPostedOrderIds = new Set(existingOrderEntries.map((e) => e.sourceId));
+    const createdOrderIds: string[] = [];
+    for (const shopOrder of shopOrders) {
+      if (alreadyPostedOrderIds.has(shopOrder.id)) continue;
+      const event = await this.prisma.orderStatusEvent.findFirst({
+        where: { shopOrderId: shopOrder.id, status: "RECEIVED_CONFIRMED" },
+        orderBy: { occurredAt: "asc" },
+      });
+      const entryDate = event?.occurredAt ?? shopOrder.order.createdAt;
+      const montant = Number(shopOrder.subtotal);
+      await this.enregistrer({
+        scope: FiscalRuleScope.SHOP,
+        shopId,
+        journalCode: "VE",
+        entryDate,
+        label: `Vente Marketplace ${shopOrder.id.slice(0, 8)} (rattrapage du 16 oct. 2026 — reçue le ${entryDate.toISOString().slice(0, 10)})`,
+        sourceType: JournalEntrySource.SHOP_ORDER,
+        sourceId: shopOrder.id,
+        lignes: [
+          { accountCode: "411", debit: montant },
+          { accountCode: "7012", credit: montant },
+        ],
+      });
+      createdOrderIds.push(shopOrder.id);
+    }
+
+    return {
+      posSales: { total: sales.length, created: createdSaleIds.length, alreadyPosted: alreadyPostedSaleIds.size, saleIds: createdSaleIds },
+      shopOrders: {
+        total: shopOrders.length,
+        created: createdOrderIds.length,
+        alreadyPosted: alreadyPostedOrderIds.size,
+        orderIds: createdOrderIds,
+      },
+    };
+  }
+
   private async enregistrer(params: {
     scope: FiscalRuleScope;
     shopId: string | null;
