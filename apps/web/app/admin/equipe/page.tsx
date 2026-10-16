@@ -14,6 +14,10 @@ interface Admin {
   phone: string | null;
   role: string;
   createdAt: string;
+  // Écrans du Centre de pilotage effectivement accordés (16 oct. 2026 —
+  // "possibilité de choisir par des coches les menus auxquels
+  // l'utilisateur aura accès") — calculés côté API, jamais recalculés ici.
+  menuItems: string[];
 }
 
 const CLES_RÔLES = [
@@ -26,6 +30,28 @@ const CLES_RÔLES = [
   { value: "ADMIN_SUPPORT", labelKey: "admequipe_roleAdminSupport" },
   { value: "ADMIN_AUDITOR", labelKey: "admequipe_roleAdminAuditor" },
 ];
+
+// Écrans du Centre de pilotage disponibles (mêmes clés que MenuAdmin côté
+// API et que AdminShell.LIENS) — 16 oct. 2026 : "donner la main aux users
+// super administrateur l'accès au menu équipe et la possibilité de choisir
+// par des coches les menus auxquel l'utilisateur aura accès".
+const ECRANS_MENU_ADMIN = [
+  { valeur: "PILOTAGE", cle: "nav_tableauDeBord" },
+  { valeur: "BOUTIQUES", cle: "nav_boutiques" },
+  { valeur: "LIVREURS", cle: "nav_livreurs" },
+  { valeur: "COMPTABLE", cle: "titre_accueil" },
+  { valeur: "FINANCE", cle: "nav_finance" },
+  { valeur: "SUIVI_COMMANDES", cle: "nav_suiviCommandes" },
+  { valeur: "UTILISATEURS", cle: "nav_utilisateurs" },
+  { valeur: "TARIFS", cle: "nav_tarifs" },
+  { valeur: "FACTURES", cle: "nav_factures" },
+  { valeur: "RELEVES", cle: "nav_releves" },
+  { valeur: "LITIGES", cle: "nav_litiges" },
+  { valeur: "EXPERTS", cle: "nav_experts" },
+  { valeur: "MESSAGERIE", cle: "nav_messagerie" },
+  { valeur: "EQUIPE_ADMIN", cle: "nav_equipeAdmin" },
+  { valeur: "PARAMETRES_PLATEFORME", cle: "nav_parametresPlateforme" },
+] as const;
 
 function libelleRole(role: string, t: (key: string) => string): string {
   const cle = CLES_RÔLES.find((r) => r.value === role)?.labelKey;
@@ -42,6 +68,23 @@ function EquipeContent() {
   const [identifiant, setIdentifiant] = useState("");
   const [role, setRole] = useState(CLES_RÔLES[1].value);
 
+  // Écrans par défaut de chaque rôle (GET /admin/team/defauts-menu), pour
+  // pré-remplir les cases à cocher — la vraie valeur par défaut si rien
+  // n'est envoyé reste calculée côté API (menuAdminParDefaut).
+  const [defautsParRole, setDefautsParRole] = useState<Record<string, string[]>>({});
+  const [menuItemsChoisis, setMenuItemsChoisis] = useState<string[]>([]);
+
+  // Édition d'un admin déjà promu (16 oct. 2026) — n'existait pas avant
+  // (seules la promotion et la révocation étaient possibles).
+  const [editionId, setEditionId] = useState<string | null>(null);
+  const [roleEdite, setRoleEdite] = useState<string>("ADMIN_SALES");
+  const [menuItemsEdites, setMenuItemsEdites] = useState<string[]>([]);
+  const [modificationEnCours, setModificationEnCours] = useState(false);
+
+  function basculerMenuItem(valeur: string, liste: string[], definir: (v: string[]) => void) {
+    definir(liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur]);
+  }
+
   function recharger() {
     api
       .get<Admin[]>("/admin/team")
@@ -52,18 +95,54 @@ function EquipeContent() {
 
   useEffect(recharger, []);
 
+  useEffect(() => {
+    api
+      .get<Record<string, string[]>>("/admin/team/defauts-menu")
+      .then((defauts) => {
+        setDefautsParRole(defauts);
+        setMenuItemsChoisis(defauts[role] ?? []);
+      })
+      .catch(() => {
+        // Non bloquant : sans ces valeurs par défaut, les cases partent
+        // simplement toutes décochées plutôt que pré-remplies.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function promouvoir(e: React.FormEvent) {
     e.preventDefault();
     setEnCours("formulaire");
     setErreur(null);
     try {
-      await api.post("/admin/team/grant", { identifiant, role });
+      await api.post("/admin/team/grant", { identifiant, role, menuItems: menuItemsChoisis });
       setIdentifiant("");
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admequipe_promotionImpossible"));
     } finally {
       setEnCours(null);
+    }
+  }
+
+  function ouvrirEdition(a: Admin) {
+    setEditionId(a.id);
+    setRoleEdite(a.role);
+    setMenuItemsEdites(a.menuItems);
+    setErreur(null);
+  }
+
+  async function enregistrerEdition() {
+    if (!editionId) return;
+    setModificationEnCours(true);
+    setErreur(null);
+    try {
+      await api.patch(`/admin/team/${editionId}`, { role: roleEdite, menuItems: menuItemsEdites });
+      setEditionId(null);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admequipe_modificationImpossible"));
+    } finally {
+      setModificationEnCours(false);
     }
   }
 
@@ -95,7 +174,14 @@ function EquipeContent() {
           onChange={(e) => setIdentifiant(e.target.value)}
           required
         />
-        <select value={role} onChange={(e) => setRole(e.target.value)}>
+        <select
+          value={role}
+          onChange={(e) => {
+            const nouveauRole = e.target.value;
+            setRole(nouveauRole);
+            setMenuItemsChoisis(defautsParRole[nouveauRole] ?? []);
+          }}
+        >
           {CLES_RÔLES.map((r) => (
             <option key={r.value} value={r.value}>
               {t(r.labelKey)}
@@ -107,24 +193,76 @@ function EquipeContent() {
         </button>
       </form>
 
+      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", margin: "8px 0 20px" }}>
+        {ECRANS_MENU_ADMIN.map((ecran) => (
+          <label key={ecran.valeur} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <input
+              type="checkbox"
+              checked={menuItemsChoisis.includes(ecran.valeur)}
+              onChange={() => basculerMenuItem(ecran.valeur, menuItemsChoisis, setMenuItemsChoisis)}
+            />
+            {t(ecran.cle)}
+          </label>
+        ))}
+      </div>
+
       {admins.map((a) => (
-        <div className={styles.admin} key={a.id}>
-          <div>
-            <span className={styles.nom}>{a.fullName}</span>
-            <span className={styles.contact}> — {a.email ?? a.phone}</span>
+        <div key={a.id}>
+          <div className={styles.admin}>
+            <div>
+              <span className={styles.nom}>{a.fullName}</span>
+              <span className={styles.contact}> — {a.email ?? a.phone}</span>
+            </div>
+            <div className={styles.droite}>
+              <span className={styles.role}>{libelleRole(a.role, t)}</span>
+              <span style={{ fontSize: "0.85em", color: "var(--color-texte-muted)" }}>
+                {a.menuItems.length === ECRANS_MENU_ADMIN.length
+                  ? t("admequipe_ecransTous")
+                  : a.menuItems.map((e) => t(ECRANS_MENU_ADMIN.find((x) => x.valeur === e)?.cle ?? e)).join(", ") || "—"}
+              </span>
+              {user?.id !== a.id && (
+                <button className={styles.boutonAjouter} type="button" onClick={() => ouvrirEdition(a)}>
+                  {t("admequipe_modifier")}
+                </button>
+              )}
+              {user?.id !== a.id && (
+                <button className={styles.boutonRetirer} disabled={enCours === a.id} onClick={() => retirer(a.id)}>
+                  {t("admequipe_boutonRetirerAcces")}
+                </button>
+              )}
+            </div>
           </div>
-          <div className={styles.droite}>
-            <span className={styles.role}>{libelleRole(a.role, t)}</span>
-            {user?.id !== a.id && (
-              <button
-                className={styles.boutonRetirer}
-                disabled={enCours === a.id}
-                onClick={() => retirer(a.id)}
-              >
-                {t("admequipe_boutonRetirerAcces")}
-              </button>
-            )}
-          </div>
+          {editionId === a.id && (
+            <div className={styles.formulaire} style={{ flexDirection: "column", alignItems: "flex-start" }}>
+              <select value={roleEdite} onChange={(e) => setRoleEdite(e.target.value)}>
+                {CLES_RÔLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {t(r.labelKey)}
+                  </option>
+                ))}
+              </select>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", margin: "8px 0" }}>
+                {ECRANS_MENU_ADMIN.map((ecran) => (
+                  <label key={ecran.valeur} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <input
+                      type="checkbox"
+                      checked={menuItemsEdites.includes(ecran.valeur)}
+                      onChange={() => basculerMenuItem(ecran.valeur, menuItemsEdites, setMenuItemsEdites)}
+                    />
+                    {t(ecran.cle)}
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button className={styles.boutonAjouter} type="button" disabled={modificationEnCours} onClick={enregistrerEdition}>
+                  {modificationEnCours ? t("admequipe_modificationEnCours") : t("action_enregistrer")}
+                </button>
+                <button className={styles.boutonRetirer} type="button" onClick={() => setEditionId(null)}>
+                  {t("action_annuler")}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

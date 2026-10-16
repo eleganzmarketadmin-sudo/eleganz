@@ -1,5 +1,5 @@
-import { IsEnum, IsString } from "class-validator";
-import { UserRole } from "@eleganz/database";
+import { IsArray, IsEnum, IsOptional, IsString } from "class-validator";
+import { MenuAdmin, UserRole } from "@eleganz/database";
 
 // Rôles qu'un administrateur peut attribuer depuis cet écran — jamais BUYER,
 // SHOP_OWNER, SHOP_STAFF ou DRIVER, qui s'attribuent par leurs propres
@@ -24,4 +24,30 @@ export class GrantAdminRoleDto {
 
   @IsEnum(ROLES_ADMIN)
   role!: (typeof ROLES_ADMIN)[number];
+
+  // Écrans du Centre de pilotage choisis à l'attribution du rôle (16 oct.
+  // 2026 — "possibilité de choisir par des coches les menus auxquels
+  // l'utilisateur aura accès") — optionnel : si absent, le compte démarre
+  // sur la liste par défaut du rôle (AdminTeamService.menuAdminParDefaut),
+  // modifiable ensuite via PATCH /admin/team/:userId.
+  @IsOptional()
+  @IsArray()
+  @IsEnum(MenuAdmin, { each: true })
+  menuItems?: MenuAdmin[];
+}
+
+/**
+ * Modification d'un compte admin déjà promu (16 oct. 2026) — changer le
+ * rôle et/ou les écrans accordés, réservé aux ADMIN_SUPER (voir
+ * AdminTeamController.requireSuperAdmin).
+ */
+export class UpdateAdminDto {
+  @IsOptional()
+  @IsEnum(ROLES_ADMIN)
+  role?: (typeof ROLES_ADMIN)[number];
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(MenuAdmin, { each: true })
+  menuItems?: MenuAdmin[];
 }

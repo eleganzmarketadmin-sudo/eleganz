@@ -5,6 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { ecransAdminEffectifs } from "../admin-team/menu-admin.util";
 
 @Injectable()
 export class AuthService {
@@ -83,12 +84,21 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, fullName: true, email: true, phone: true, role: true },
+      select: { id: true, fullName: true, email: true, phone: true, role: true, adminMenuItemsOverride: true },
     });
     if (!user) {
       throw new UnauthorizedException("Compte introuvable.");
     }
-    return user;
+    const { adminMenuItemsOverride, ...reste } = user;
+    // `adminMenuItems` (16 oct. 2026 — permissions de menu par compte admin)
+    // : calculé seulement pour un compte ADMIN_*, pour qu'AdminShell filtre
+    // son menu sur la vraie valeur effective plutôt que sur sa seule table
+    // de secours par rôle (confort de navigation uniquement — la vraie
+    // barrière reste à construire contrôleur par contrôleur côté API).
+    return {
+      ...reste,
+      adminMenuItems: user.role.startsWith("ADMIN_") ? ecransAdminEffectifs({ role: user.role, adminMenuItemsOverride }) : undefined,
+    };
   }
 
   // Mise à jour du profil personnel (demande du 16 oct. 2026, point 2) —
