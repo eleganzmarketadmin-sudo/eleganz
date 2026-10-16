@@ -38,6 +38,28 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/parametres", label: t("nav_parametresPlateforme") },
   ];
 
+  // Menus accordés par rôle admin (16 oct. 2026 — "le menu équipe ne donne
+  // pas toujours les menus pour une sélection d'attribution") : jusqu'ici
+  // TOUT compte ADMIN_* voyait et pouvait ouvrir l'intégralité du menu,
+  // quel que soit le rôle attribué depuis Équipe admin (Ventes, Finance,
+  // Opérations...) — seul `role.startsWith("ADMIN_")` était vérifié, aussi
+  // bien ici que dans chaque contrôleur admin côté API (requireAdmin()).
+  // Ceci ne corrige que l'affichage du menu : la vraie barrière còté API
+  // reste à construire contrôleur par contrôleur (signalé séparément).
+  // Équipe admin et Paramètres plateforme restent réservés à ADMIN_SUPER.
+  const MENUS_PAR_ROLE_ADMIN: Record<string, string[]> = {
+    ADMIN_SUPER: LIENS.map((l) => l.href),
+    ADMIN_SALES: ["/admin/pilotage", "/admin/boutiques", "/admin/suivi-commandes", "/admin/tarifs", "/admin/litiges"],
+    ADMIN_FINANCE: ["/admin/pilotage", "/admin/finance", "/admin/factures", "/admin/tarifs", "/admin/releves"],
+    ADMIN_OPS: ["/admin/pilotage", "/admin/suivi-commandes", "/admin/litiges", "/admin/releves", "/admin/boutiques"],
+    ADMIN_LOGISTICS: ["/admin/pilotage", "/admin/livreurs", "/admin/suivi-commandes"],
+    ADMIN_MARKETING: ["/admin/pilotage", "/admin/boutiques", "/admin/messagerie"],
+    ADMIN_SUPPORT: ["/admin/pilotage", "/admin/utilisateurs", "/admin/litiges", "/admin/messagerie", "/admin/suivi-commandes", "/admin/experts"],
+    ADMIN_AUDITOR: ["/admin/pilotage", "/admin/finance", "/admin/factures", "/admin/releves"],
+  };
+  const hrefsAutorises = user?.role ? (MENUS_PAR_ROLE_ADMIN[user.role] ?? LIENS.map((l) => l.href)) : LIENS.map((l) => l.href);
+  const liens = LIENS.filter((l) => hrefsAutorises.includes(l.href));
+
   useEffect(() => {
     if (!loading && !user) router.replace("/admin/connexion");
   }, [loading, user, router]);
@@ -77,7 +99,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </header>
       <BandeMarque />
       <nav className={styles.nav}>
-        {LIENS.map((lien) => (
+        {liens.map((lien) => (
           <Link
             key={lien.href}
             href={lien.href}
