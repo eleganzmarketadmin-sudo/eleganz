@@ -1,0 +1,86 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.candidature {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+  padding: var(--espace-4);
+}
+
+.entete {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--espace-2);
+  font-size: 0.875rem;
+  color: var(--color-texte-muted);
+}
+
+.headline {
+  font-weight: 600;
+  margin-bottom: var(--espace-2);
+}
+
+.bio {
+  margin-bottom: var(--espace-2);
+  white-space: pre-wrap;
+}
+
+.domaines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-1);
+  margin-bottom: var(--espace-3);
+}
+
+.domaine {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+}
+
+.actions {
+  display: flex;
+  gap: var(--espace-2);
+  flex-wrap: wrap;
+}
+
+.actions input {
+  flex: 1;
+  min-width: 160px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.boutonApprouver {
+  background: #0f5132;
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonRejeter {
+  background: #842029;
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonApprouver:disabled,
+.boutonRejeter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}

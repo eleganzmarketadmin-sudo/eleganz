@@ -14,6 +14,28 @@ interface MembreEquipe {
   user: { id: string; fullName: string; email?: string | null; phone?: string | null };
 }
 
+// --- Module Experts (16 oct. 2026, point 2) ---------------------------
+interface InviteExpert {
+  id: string;
+  token: string;
+  status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+  scopes: string[];
+  expiresAt: string;
+}
+
+interface EngagementExpert {
+  id: string;
+  status: "ACTIVE" | "REVOKED";
+  scopes: string[];
+  expertProfile: { id: string; headline: string; user: { fullName: string; email?: string | null; phone?: string | null } };
+}
+
+const SCOPES_EXPERT = [
+  { valeur: "FINANCE", cle: "experts_scopeFinance" },
+  { valeur: "COMMANDES", cle: "experts_scopeCommandes" },
+  { valeur: "CATALOGUE", cle: "experts_scopeCatalogue" },
+] as const;
+
 const ROLES = [
   { valeur: "MANAGER", cle: "eq_roleGerant" },
   { valeur: "CASHIER", cle: "eq_roleCaissier" },
@@ -46,6 +68,71 @@ function EquipeContent() {
   const [identifiant, setIdentifiant] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]["valeur"]>("CASHIER");
   const [invitationEnCours, setInvitationEnCours] = useState(false);
+
+  const [invitesExpert, setInvitesExpert] = useState<InviteExpert[]>([]);
+  const [engagementsExpert, setEngagementsExpert] = useState<EngagementExpert[]>([]);
+  const [scopesChoisis, setScopesChoisis] = useState<string[]>(["FINANCE"]);
+  const [creationInviteEnCours, setCreationInviteEnCours] = useState(false);
+  const [lienInviteGenere, setLienInviteGenere] = useState<string | null>(null);
+  const [erreurExperts, setErreurExperts] = useState<string | null>(null);
+
+  const peutGererExperts = currentShop?.myRole === "OWNER" || currentShop?.myRole === "MANAGER";
+
+  function rechargerExperts() {
+    if (!currentShop) return;
+    api
+      .get<EngagementExpert[]>(`/shops/${currentShop.id}/experts`)
+      .then(setEngagementsExpert)
+      .catch(() => setEngagementsExpert([]));
+    if (peutGererExperts) {
+      api
+        .get<InviteExpert[]>(`/shops/${currentShop.id}/experts/invitations`)
+        .then(setInvitesExpert)
+        .catch(() => setInvitesExpert([]));
+    }
+  }
+
+  useEffect(rechargerExperts, [currentShop, peutGererExperts]);
+
+  async function creerInviteExpert() {
+    if (!currentShop || scopesChoisis.length === 0) return;
+    setCreationInviteEnCours(true);
+    setErreurExperts(null);
+    setLienInviteGenere(null);
+    try {
+      const invite = await api.post<InviteExpert>(`/shops/${currentShop.id}/experts/invitations`, { scopes: scopesChoisis });
+      setLienInviteGenere(`${window.location.origin}/marketplace/experts/invitations/${invite.token}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_invitationImpossible"));
+    } finally {
+      setCreationInviteEnCours(false);
+    }
+  }
+
+  async function revoquerInviteExpert(inviteId: string) {
+    if (!currentShop) return;
+    try {
+      await api.delete(`/shops/${currentShop.id}/experts/invitations/${inviteId}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_suppressionImpossible"));
+    }
+  }
+
+  async function revoquerEngagementExpert(engagementId: string) {
+    if (!currentShop) return;
+    try {
+      await api.delete(`/shops/${currentShop.id}/experts/${engagementId}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_suppressionImpossible"));
+    }
+  }
+
+  function basculerScope(valeur: string) {
+    setScopesChoisis((actuel) => (actuel.includes(valeur) ? actuel.filter((s) => s !== valeur) : [...actuel, valeur]));
+  }
 
   function recharger() {
     if (!currentShop) return;
@@ -160,6 +247,108 @@ function EquipeContent() {
           </tbody>
         </table>
       )}
+
+      {/* Module Experts (16 oct. 2026, point 2) — lien d'invitation avec */}
+      {/* périmètres choisis au cas par cas, et liste des accès en cours. */}
+      <div style={{ marginTop: "40px", paddingTop: "24px", borderTop: "1px solid var(--color-border)" }}>
+        <h2 style={{ marginBottom: "8px" }}>{t("experts_titreEquipe")}</h2>
+        <p style={{ color: "var(--color-texte-muted)", fontSize: "0.875rem", marginBottom: "16px" }}>
+          {t("experts_sousTitreEquipe")}
+        </p>
+
+        {erreurExperts && <div className={styles.erreur}>{erreurExperts}</div>}
+
+        {peutGererExperts && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ fontWeight: 600, marginBottom: "8px" }}>{t("experts_choisirPerimetres")}</p>
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "12px" }}>
+              {SCOPES_EXPERT.map((s) => (
+                <label key={s.valeur} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <input
+                    type="checkbox"
+                    checked={scopesChoisis.includes(s.valeur)}
+                    onChange={() => basculerScope(s.valeur)}
+                  />
+                  {t(s.cle)}
+                </label>
+              ))}
+            </div>
+            <button
+              className={styles.bouton}
+              onClick={creerInviteExpert}
+              disabled={creationInviteEnCours || scopesChoisis.length === 0}
+            >
+              {creationInviteEnCours ? t("experts_generationEnCours") : t("experts_genererLien")}
+            </button>
+            {lienInviteGenere && (
+              <p style={{ marginTop: "12px", wordBreak: "break-all" }}>
+                <code>{lienInviteGenere}</code>
+              </p>
+            )}
+
+            {invitesExpert.filter((i) => i.status === "PENDING").length > 0 && (
+              <table className={styles.tableau} style={{ marginTop: "16px" }}>
+                <thead>
+                  <tr>
+                    <th>{t("experts_colPerimetres")}</th>
+                    <th>{t("experts_colExpiration")}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitesExpert
+                    .filter((i) => i.status === "PENDING")
+                    .map((i) => (
+                      <tr key={i.id}>
+                        <td>{i.scopes.join(", ")}</td>
+                        <td>{new Date(i.expiresAt).toLocaleDateString()}</td>
+                        <td>
+                          <button className={styles.retirer} onClick={() => revoquerInviteExpert(i.id)}>
+                            {t("eq_retirer")}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        <p style={{ fontWeight: 600, marginBottom: "8px" }}>{t("experts_accesEnCours")}</p>
+        {engagementsExpert.filter((e) => e.status === "ACTIVE").length === 0 ? (
+          <p style={{ color: "var(--color-texte-muted)" }}>{t("experts_aucunAcces")}</p>
+        ) : (
+          <table className={styles.tableau}>
+            <thead>
+              <tr>
+                <th>{t("eq_colNom")}</th>
+                <th>{t("eq_colContact")}</th>
+                <th>{t("experts_colPerimetres")}</th>
+                {peutGererExperts && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {engagementsExpert
+                .filter((e) => e.status === "ACTIVE")
+                .map((e) => (
+                  <tr key={e.id}>
+                    <td>{e.expertProfile.user.fullName}</td>
+                    <td>{e.expertProfile.user.email ?? e.expertProfile.user.phone ?? "—"}</td>
+                    <td>{e.scopes.join(", ")}</td>
+                    {peutGererExperts && (
+                      <td>
+                        <button className={styles.retirer} onClick={() => revoquerEngagementExpert(e.id)}>
+                          {t("eq_retirer")}
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

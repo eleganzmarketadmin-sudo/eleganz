@@ -60,6 +60,9 @@ function MenuCompte() {
           <Link href="/marketplace/messagerie" onClick={() => setOuvert(false)}>
             {t("nav_messagerie")}
           </Link>
+          <Link href="/marketplace/experts/moi" onClick={() => setOuvert(false)}>
+            {t("experts_monProfilLien")}
+          </Link>
           <button
             type="button"
             className={styles.menuCompteDeconnexion}
@@ -93,6 +96,7 @@ export function MarketplaceHeader() {
         <nav className={styles.liens}>
           <AccueilLien />
           <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>
+          <Link href="/marketplace/experts">{t("experts_navLien")}</Link>
           <LanguageSwitcher />
           <ThemeToggle clair />
           <Link href="/marketplace/panier" className={styles.panier}>

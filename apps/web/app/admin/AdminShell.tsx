@@ -32,6 +32,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/factures", label: t("nav_factures") },
     { href: "/admin/releves", label: t("nav_releves") },
     { href: "/admin/litiges", label: t("nav_litiges") },
+    { href: "/admin/experts", label: t("nav_experts") },
     { href: "/admin/messagerie", label: t("nav_messagerie") },
     { href: "/admin/equipe", label: t("nav_equipeAdmin") },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme") },

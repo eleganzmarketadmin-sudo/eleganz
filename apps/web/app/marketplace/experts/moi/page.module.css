@@ -1,0 +1,101 @@
+.cadre {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: var(--espace-4);
+}
+
+.badgeEnAttente {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.badgeApprouve {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.badgeRejete,
+.badgeSuspendu {
+  background: #f8d7da;
+  color: #842029;
+}
+
+.champ {
+  margin-bottom: var(--espace-4);
+}
+
+.champ label {
+  display: block;
+  margin-bottom: var(--espace-1);
+  font-weight: 600;
+}
+
+.champ input,
+.champ textarea {
+  width: 100%;
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+}
+
+.aide {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-top: var(--espace-1);
+}
+
+.bouton {
+  padding: var(--espace-3) var(--espace-5);
+  background: var(--color-magenta);
+  color: #fff;
+  border: none;
+  min-height: var(--touche-min);
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+}
+
+.erreur {
+  color: var(--color-erreur, #b00020);
+  margin-bottom: var(--espace-3);
+}
+
+.confirmation {
+  color: #0f5132;
+  margin-bottom: var(--espace-3);
+}
+
+.section {
+  margin-top: var(--espace-6);
+  padding-top: var(--espace-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.vide {
+  color: var(--color-texte-muted);
+}
