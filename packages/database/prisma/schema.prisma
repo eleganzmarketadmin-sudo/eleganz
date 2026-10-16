@@ -267,6 +267,8 @@ model User {
   expertProfile          ExpertProfile?
   expertInvitesCreated   ShopExpertInvite[]      @relation("ExpertInviteCreatedBy")
   expertEngagementsGiven ShopExpertEngagement[]  @relation("ExpertEngagementInvitedBy")
+  platformExpertInvitesCreated   PlatformExpertInvite[]     @relation("PlatformExpertInviteCreatedBy")
+  platformExpertEngagementsGiven PlatformExpertEngagement[] @relation("PlatformExpertEngagementInvitedBy")
 }
 
 model Address {
@@ -528,6 +530,14 @@ model ExpertProfile {
   documents   ExpertDocument[]
   references  ExpertReference[]
 
+  // Pendant côté plateforme (16 oct. 2026, point 2 — "ajouter le bloc
+  // d'invitation Experts externes... comme déjà actif dans eleganz
+  // gestion") des deux relations ShopExpert* ci-dessus : mêmes modèles,
+  // mais invités par un ADMIN_SUPER pour des périmètres MenuAdmin plutôt
+  // que par une boutique pour des ShopExpertScope.
+  platformInvites     PlatformExpertInvite[]
+  platformEngagements PlatformExpertEngagement[]
+
   @@index([status])
 }
 
@@ -627,6 +637,40 @@ model ShopExpertEngagement {
 
   @@unique([shopId, expertProfileId])
   @@index([shopId])
+}
+
+// Équivalent plateforme de ShopExpertInvite/ShopExpertEngagement ci-dessus
+// (16 oct. 2026, point 2 — "ajouter le bloc d'invitation Experts externes...
+// comme déjà actif dans eleganz gestion") : même principe de lien
+// d'invitation à périmètres choisis au cas par cas, mais sans shopId — les
+// périmètres sont des écrans MenuAdmin (Centre de pilotage) plutôt que des
+// ShopExpertScope, et seul un ADMIN_SUPER peut inviter ou révoquer (voir
+// requireSuperAdmin, admin-team.controller.ts).
+model PlatformExpertInvite {
+  id              String                 @id @default(uuid())
+  token           String                 @unique
+  createdByUserId String
+  createdBy       User                   @relation("PlatformExpertInviteCreatedBy", fields: [createdByUserId], references: [id])
+  scopes          MenuAdmin[]
+  status          ShopExpertInviteStatus @default(PENDING)
+  expertProfileId String?
+  expertProfile   ExpertProfile?         @relation(fields: [expertProfileId], references: [id])
+  expiresAt       DateTime
+  createdAt       DateTime               @default(now())
+}
+
+model PlatformExpertEngagement {
+  id              String                     @id @default(uuid())
+  expertProfileId String
+  expertProfile   ExpertProfile              @relation(fields: [expertProfileId], references: [id])
+  scopes          MenuAdmin[]
+  status          ShopExpertEngagementStatus @default(ACTIVE)
+  invitedByUserId String
+  invitedBy       User                       @relation("PlatformExpertEngagementInvitedBy", fields: [invitedByUserId], references: [id])
+  createdAt       DateTime                   @default(now())
+  revokedAt       DateTime?
+
+  @@unique([expertProfileId])
 }
 
 // ---------------------------------------------------------------------------
