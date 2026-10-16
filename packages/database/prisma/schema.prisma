@@ -738,6 +738,24 @@ model Product {
   reviews  Review[]
 }
 
+// Référentiel global des catégories d'articles (16 oct. 2026, demande
+// client : "lister les catégories majeures des ventes disponibles pour un
+// marché" pour éviter la saisie libre qui complique les filtres du
+// Marketplace). Contrairement à VariantOption (taille/couleur), ce
+// référentiel est PARTAGÉ entre toutes les boutiques — le filtre catégorie
+// du Marketplace doit retrouver les mêmes valeurs quelle que soit la
+// boutique qui a publié l'article. `Product.category` reste un simple
+// `String?` (aucune migration de données existantes nécessaire) : le
+// formulaire Gestion choisit désormais parmi ce référentiel au lieu de
+// laisser taper n'importe quoi, mais une valeur déjà enregistrée avant ce
+// chantier continue de s'afficher telle quelle.
+model ProductCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 enum VariantOptionKind {
   SIZE
   COLOR
