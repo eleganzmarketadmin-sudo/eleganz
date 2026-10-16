@@ -1586,6 +1586,9 @@ const fr: Dictionnaire = {
   admexperts_approuver: "Approuver",
   admexperts_rejeter: "Rejeter",
   admexperts_moderationImpossible: "L'action n'a pas pu être enregistrée.",
+  accueil_questionExperts: "Vous avez besoin d'un avis ou d'une expertise ?",
+  accueil_trouverUnExpert: "Trouver un expert",
+  accueil_descExperts: "— un annuaire d'experts freelance (crédit, risque, compliance, et bien d'autres domaines) que vous contactez directement, en fonction de leur présentation et de leur profil.",
 };
 
 const en: Dictionnaire = {
@@ -3133,6 +3136,9 @@ const en: Dictionnaire = {
   admexperts_approuver: "Approve",
   admexperts_rejeter: "Reject",
   admexperts_moderationImpossible: "The action could not be saved.",
+  accueil_questionExperts: "Do you need an expert opinion?",
+  accueil_trouverUnExpert: "Find an expert",
+  accueil_descExperts: "— a directory of freelance experts (credit, risk, compliance, and many other fields) you contact directly, based on their presentation and profile.",
 };
 
 const es: Dictionnaire = {
@@ -4679,6 +4685,9 @@ const es: Dictionnaire = {
   admexperts_approuver: "Aprobar",
   admexperts_rejeter: "Rechazar",
   admexperts_moderationImpossible: "La acción no pudo registrarse.",
+  accueil_questionExperts: "¿Necesita una opinión o una experticia?",
+  accueil_trouverUnExpert: "Encontrar un experto",
+  accueil_descExperts: "— un directorio de expertos independientes (crédito, riesgo, cumplimiento y muchos otros ámbitos) a los que contacta directamente, según su presentación y perfil.",
 };
 
 const ar: Dictionnaire = {
@@ -6223,6 +6232,9 @@ const ar: Dictionnaire = {
   admexperts_approuver: "قبول",
   admexperts_rejeter: "رفض",
   admexperts_moderationImpossible: "تعذّر تسجيل الإجراء.",
+  accueil_questionExperts: "هل تحتاج إلى رأي خبير أو خبرة متخصصة؟",
+  accueil_trouverUnExpert: "البحث عن خبير",
+  accueil_descExperts: "— دليل خبراء مستقلين (قرض، مخاطر، امتثال ومجالات أخرى كثيرة) تتواصل معهم مباشرة، حسب تقديمهم وملفهم الشخصي.",
 };
 
 const pt: Dictionnaire = {
@@ -7769,6 +7781,9 @@ const pt: Dictionnaire = {
   admexperts_approuver: "Aprovar",
   admexperts_rejeter: "Rejeitar",
   admexperts_moderationImpossible: "A ação não pôde ser registada.",
+  accueil_questionExperts: "Precisa de uma opinião ou de uma especialidade?",
+  accueil_trouverUnExpert: "Encontrar um especialista",
+  accueil_descExperts: "— um diretório de especialistas freelancers (crédito, risco, conformidade e muitas outras áreas) que você contacta diretamente, conforme a apresentação e o perfil deles.",
 };
 
 const sw: Dictionnaire = {
@@ -9314,6 +9329,9 @@ const sw: Dictionnaire = {
   admexperts_approuver: "Kubali",
   admexperts_rejeter: "Kataa",
   admexperts_moderationImpossible: "Hatua haikuweza kuhifadhiwa.",
+  accueil_questionExperts: "Unahitaji ushauri au utaalamu?",
+  accueil_trouverUnExpert: "Pata mtaalamu",
+  accueil_descExperts: "— orodha ya wataalamu huru (mkopo, hatari, uzingatiaji na maeneo mengine mengi) unaowasiliana nao moja kwa moja, kulingana na uwasilishaji na wasifu wao.",
 };
 
 // Lingala, kikongo et tshiluba : effort de traduction raisonnable pour les
@@ -10856,6 +10874,9 @@ const ln: Dictionnaire = {
   admexperts_approuver: "Ndima",
   admexperts_rejeter: "Boya",
   admexperts_moderationImpossible: "Action ekokisamaki te.",
+  accueil_questionExperts: "Olingi toli to expertise ya moto oyo ayebi?",
+  accueil_trouverUnExpert: "Luka expert",
+  accueil_descExperts: "— liste ya ba-expert ya libre (crédit, risque, compliance, na mikili mingi mosusu) oyo obengaka yo moko, na kotalela lakisi na bango na profil na bango.",
 };
 
 const kg: Dictionnaire = {
@@ -12393,6 +12414,9 @@ const kg: Dictionnaire = {
   admexperts_approuver: "Yitika",
   admexperts_rejeter: "Buisa",
   admexperts_moderationImpossible: "Action yina kusalamene ve.",
+  accueil_questionExperts: "Nge ke lomba ndinga to expertise ya expert?",
+  accueil_trouverUnExpert: "Tomba expert",
+  accueil_descExperts: "— mukanda ya ba-expert ya libre (crédit, risque, compliance, ye mambu mankaka) kuna nge ke tela nge mosi, na kutala luyanzikusu na bau ye mfunu na bau.",
 };
 
 const lu: Dictionnaire = {
@@ -13930,6 +13954,9 @@ const lu: Dictionnaire = {
   admexperts_approuver: "Witaba",
   admexperts_rejeter: "Pela",
   admexperts_moderationImpossible: "Tshikenu katshienzeki to.",
+  accueil_questionExperts: "Udi ne lonyengelo lua mudimu wa expert?",
+  accueil_trouverUnExpert: "Tangila expert",
+  accueil_descExperts: "— lutalu lua ba-expert ba kudiyitabela (credit, bipupu, compliance, ne malawa makuabu) udi usombela nyuma, bilondeshi mukandu ne mufuanu wabu.",
 };
 
 export const TRANSLATIONS: Record<Locale, Dictionnaire> = { fr, en, es, ar, pt, sw, ln, kg, lu };

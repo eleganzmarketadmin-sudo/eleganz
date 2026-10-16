@@ -75,6 +75,16 @@ export default function HomePage() {
               {t("accueil_parcourirVitrine")}
             </Link>
           </div>
+
+          <div className={`${styles.carte} ${styles.experts}`}>
+            <h3>{t("accueil_questionExperts")}</h3>
+            <p>
+              <strong>{t("accueil_trouverUnExpert")}</strong> {t("accueil_descExperts")}
+            </p>
+            <Link className={styles.lienCarte} href="/marketplace/experts">
+              {t("accueil_trouverUnExpert")}
+            </Link>
+          </div>
         </div>
       </section>
 

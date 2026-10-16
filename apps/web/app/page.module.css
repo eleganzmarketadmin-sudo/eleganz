@@ -143,7 +143,13 @@
 
 @media (min-width: 760px) {
   .grille {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1040px) {
+  .grille {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -180,6 +186,10 @@
 
 .marketplace {
   border-top-color: var(--color-magenta);
+}
+
+.experts {
+  border-top-color: var(--color-or);
 }
 
 .lienCarte {
