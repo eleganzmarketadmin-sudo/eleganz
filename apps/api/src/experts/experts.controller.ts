@@ -1,0 +1,137 @@
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ExpertsService } from "./experts.service";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
+import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { ShopMembershipGuard } from "../shops/shop-membership.guard";
+import { ShopRoles } from "../shops/roles.decorator";
+import { StaffRole } from "@eleganz/database";
+import { CandidaterExpertDto, InviteExpertDto, ModererExpertDto } from "./dto/expert.dto";
+
+function requireAdmin(user: AuthenticatedUser) {
+  if (!user.role.startsWith("ADMIN_")) {
+    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
+  }
+}
+
+// Module EXPERTS (16 oct. 2026, point 2). Routes publiques (annuaire,
+// profil, aperçu de lien) déclarées AVANT les routes privées pour éviter
+// toute confusion d'ordre de résolution Nest — même précaution que
+// marketplace-shops.controller.ts.
+@Controller("experts")
+export class ExpertsController {
+  constructor(private readonly experts: ExpertsService) {}
+
+  // --- Public (sans authentification) ---------------------------------
+
+  @Get()
+  rechercher(@Query("q") q?: string) {
+    return this.experts.rechercher(q);
+  }
+
+  @Get("invitations/:token")
+  apercuInvite(@Param("token") token: string) {
+    return this.experts.apercuInvite(token);
+  }
+
+  @Get(":id")
+  profilPublic(@Param("id") id: string) {
+    return this.experts.profilPublic(id);
+  }
+
+  // --- Compte connecté (n'importe quel rôle) ---------------------------
+
+  @Get("moi/profil")
+  @UseGuards(JwtAuthGuard)
+  monProfil(@CurrentUser() user: AuthenticatedUser) {
+    return this.experts.monProfil(user.id);
+  }
+
+  @Post("moi/profil")
+  @UseGuards(JwtAuthGuard)
+  candidater(@CurrentUser() user: AuthenticatedUser, @Body() dto: CandidaterExpertDto) {
+    return this.experts.candidater(user.id, dto);
+  }
+
+  @Get("moi/engagements")
+  @UseGuards(JwtAuthGuard)
+  mesEngagements(@CurrentUser() user: AuthenticatedUser) {
+    return this.experts.mesEngagements(user.id);
+  }
+
+  @Post("invitations/:token/accepter")
+  @UseGuards(JwtAuthGuard)
+  accepterInvite(@CurrentUser() user: AuthenticatedUser, @Param("token") token: string) {
+    return this.experts.accepterInvite(token, user.id);
+  }
+
+  // --- Admin : modération de l'annuaire ---------------------------------
+
+  @Get("admin/en-attente")
+  @UseGuards(JwtAuthGuard)
+  listerEnAttente(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.experts.listerEnAttente();
+  }
+
+  @Patch("admin/:id/approuver")
+  @UseGuards(JwtAuthGuard)
+  approuver(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: ModererExpertDto) {
+    requireAdmin(user);
+    return this.experts.approuver(id, user.id, dto.note);
+  }
+
+  @Patch("admin/:id/rejeter")
+  @UseGuards(JwtAuthGuard)
+  rejeter(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: ModererExpertDto) {
+    requireAdmin(user);
+    return this.experts.rejeter(id, user.id, dto.note);
+  }
+
+  @Patch("admin/:id/suspendre")
+  @UseGuards(JwtAuthGuard)
+  suspendre(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: ModererExpertDto) {
+    requireAdmin(user);
+    return this.experts.suspendre(id, user.id, dto.note);
+  }
+}
+
+// --- Boutique : inviter / lister / révoquer les accès experts -----------
+//
+// Déclaré dans un contrôleur distinct (préfixe shops/:shopId/experts) pour
+// que ShopMembershipGuard s'applique via le même mécanisme que toutes les
+// autres routes de gestion de boutique (lecture de :shopId dans l'URL).
+@Controller("shops/:shopId/experts")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
+export class ShopExpertsController {
+  constructor(private readonly experts: ExpertsService) {}
+
+  @Get()
+  lister(@Param("shopId") shopId: string) {
+    return this.experts.listEngagementsBoutique(shopId);
+  }
+
+  @Get("invitations")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  listerInvites(@Param("shopId") shopId: string) {
+    return this.experts.listInvitesBoutique(shopId);
+  }
+
+  @Post("invitations")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  creerInvite(@CurrentUser() user: AuthenticatedUser, @Param("shopId") shopId: string, @Body() dto: InviteExpertDto) {
+    return this.experts.creerInvite(shopId, user.id, dto);
+  }
+
+  @Delete("invitations/:inviteId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  revoquerInvite(@Param("shopId") shopId: string, @Param("inviteId") inviteId: string) {
+    return this.experts.revoquerInvite(shopId, inviteId);
+  }
+
+  @Delete(":engagementId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  revoquerEngagement(@Param("shopId") shopId: string, @Param("engagementId") engagementId: string) {
+    return this.experts.revoquerEngagement(shopId, engagementId);
+  }
+}

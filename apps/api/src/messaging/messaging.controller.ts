@@ -3,7 +3,7 @@ import { MessagingService } from "./messaging.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
-import { ContacterBoutiqueDto, DemarrerConversationDto, EnvoyerMessageDto } from "./dto/messaging.dto";
+import { ContacterBoutiqueDto, ContacterExpertDto, DemarrerConversationDto, EnvoyerMessageDto } from "./dto/messaging.dto";
 
 @Controller("messagerie")
 @UseGuards(JwtAuthGuard)
@@ -34,6 +34,17 @@ export class MessagingController {
     @Body() dto: ContacterBoutiqueDto,
   ) {
     return this.messaging.contacterBoutique(user.id, shopId, dto.subject, dto.message);
+  }
+
+  // "Contacter l'expert" depuis son profil public /experts/:id (module
+  // Experts, 16 oct. 2026, point 2) — même logique que contacterBoutique.
+  @Post("conversations/expert/:expertProfileId")
+  contacterExpert(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("expertProfileId") expertProfileId: string,
+    @Body() dto: ContacterExpertDto,
+  ) {
+    return this.messaging.contacterExpert(user.id, expertProfileId, dto.subject, dto.message);
   }
 
   @Post("conversations/:id/messages")

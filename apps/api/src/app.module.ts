@@ -28,6 +28,7 @@ import { MessagingModule } from "./messaging/messaging.module";
 import { EcheancierModule } from "./echeancier/echeancier.module";
 import { GeoModule } from "./geo/geo.module";
 import { AddressesModule } from "./addresses/addresses.module";
+import { ExpertsModule } from "./experts/experts.module";
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { AddressesModule } from "./addresses/addresses.module";
     EcheancierModule,
     GeoModule,
     AddressesModule,
+    ExpertsModule,
   ],
 })
 export class AppModule {}

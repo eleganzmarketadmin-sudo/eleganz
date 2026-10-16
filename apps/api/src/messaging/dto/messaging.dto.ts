@@ -33,3 +33,13 @@ export class ContacterBoutiqueDto {
   @MinLength(1)
   message!: string;
 }
+
+export class ContacterExpertDto {
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsString()
+  @MinLength(1)
+  message!: string;
+}

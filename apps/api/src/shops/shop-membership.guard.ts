@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { SHOP_ROLES_KEY } from "./roles.decorator";
 import { GESTION_FEATURE_KEY } from "./gestion-feature.decorator";
-import { StaffRole } from "@eleganz/database";
+import { StaffRole, ShopExpertScope } from "@eleganz/database";
 
 // Préfixes de routes Finance & Comptabilité — seuls accessibles, et
 // seulement en lecture (GET), à un StaffRole.EXTERNAL_ACCOUNTANT (voir
@@ -15,6 +15,26 @@ import { StaffRole } from "@eleganz/database";
 // ces préfixes est automatiquement couvert, sans liste à maintenir route
 // par route.
 const PREFIXES_COMPTABLE_EXTERNE = [/^\/shops\/[^/]+\/finance(\/|$)/, /^\/shops\/[^/]+\/assets(\/|$)/, /^\/shops\/[^/]+\/expenses(\/|$)/];
+
+// Préfixes par périmètre pour le module Experts (16 oct. 2026, point 2) — une
+// boutique choisit, par expert engagé, lequel de ces périmètres lui ouvrir
+// (jamais un accès identique pour tous : voir ShopExpertEngagement.scopes).
+// Comme pour le comptable externe, l'accès accordé est en lecture seule : un
+// expert consulte pour conseiller, il n'agit pas à la place de la boutique.
+const PREFIXES_PAR_SCOPE_EXPERT: Record<ShopExpertScope, RegExp[]> = {
+  [ShopExpertScope.FINANCE]: [
+    /^\/shops\/[^/]+\/finance(\/|$)/,
+    /^\/shops\/[^/]+\/assets(\/|$)/,
+    /^\/shops\/[^/]+\/expenses(\/|$)/,
+    /^\/shops\/[^/]+\/suppliers(\/|$)/,
+    /^\/shops\/[^/]+\/relances(\/|$)/,
+    /^\/shops\/[^/]+\/tresorerie(\/|$)/,
+    /^\/shops\/[^/]+\/stock(\/|$)/,
+    /^\/shops\/[^/]+\/reports(\/|$)/,
+  ],
+  [ShopExpertScope.COMMANDES]: [/^\/shops\/[^/]+\/orders(\/|$)/, /^\/shops\/[^/]+\/customers(\/|$)/],
+  [ShopExpertScope.CATALOGUE]: [/^\/shops\/[^/]+\/products(\/|$)/, /^\/shops\/[^/]+\/variant-options(\/|$)/],
+};
 
 // À utiliser APRÈS JwtAuthGuard. Vérifie que l'utilisateur authentifié est
 // bien staff de la boutique ciblée par :shopId dans l'URL — c'est ce qui
@@ -46,7 +66,25 @@ export class ShopMembershipGuard implements CanActivate {
     });
 
     if (!membership?.active) {
-      throw new ForbiddenException("Vous n'avez pas accès à cette boutique.");
+      // Pas membre du staff : peut-être un expert engagé par cette boutique
+      // (module Experts, 16 oct. 2026) — accès en lecture seule, limité aux
+      // périmètres (scopes) que la boutique lui a explicitement accordés.
+      const engagement = await this.prisma.shopExpertEngagement.findFirst({
+        where: { shopId, expertProfile: { userId: request.user.id }, status: "ACTIVE" },
+      });
+      if (!engagement) {
+        throw new ForbiddenException("Vous n'avez pas accès à cette boutique.");
+      }
+      const chemin = request.path;
+      const autorise =
+        request.method === "GET" &&
+        engagement.scopes.some((scope) => PREFIXES_PAR_SCOPE_EXPERT[scope].some((p) => p.test(chemin)));
+      if (!autorise) {
+        throw new ForbiddenException(
+          "Votre accès expert à cette boutique est en lecture seule et limité aux périmètres qui vous ont été accordés.",
+        );
+      }
+      return true;
     }
 
     if (membership.role === StaffRole.EXTERNAL_ACCOUNTANT) {

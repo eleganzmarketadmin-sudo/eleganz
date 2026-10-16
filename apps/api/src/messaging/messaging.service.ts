@@ -154,4 +154,43 @@ export class MessagingService {
 
     return this.demarrerConversation(userId, boutique.ownerId, subject, message, shopId);
   }
+
+  /**
+   * "Contacter l'expert" depuis son profil public de l'annuaire /experts
+   * (module Experts, 16 oct. 2026, point 2) — même logique que
+   * contacterBoutique, mais sans `shopId` (un expert n'appartient à aucune
+   * boutique précise) : on dédoublonne simplement sur la paire de
+   * participants, jamais de nouveau fil à chaque visite du profil.
+   */
+  async contacterExpert(userId: string, expertProfileId: string, subject: string | undefined, message: string) {
+    const expert = await this.prisma.expertProfile.findUnique({
+      where: { id: expertProfileId },
+      select: { userId: true, status: true },
+    });
+    if (!expert || expert.status !== "APPROVED") {
+      throw new BadRequestException("Profil expert introuvable.");
+    }
+    if (expert.userId === userId) {
+      throw new BadRequestException("Impossible de vous contacter vous-même.");
+    }
+
+    const conversationExistante = await this.prisma.conversation.findFirst({
+      where: {
+        shopId: null,
+        participants: { every: { userId: { in: [userId, expert.userId] } } },
+        AND: [{ participants: { some: { userId } } }, { participants: { some: { userId: expert.userId } } }],
+      },
+      select: { id: true },
+    });
+
+    if (conversationExistante) {
+      await this.envoyerMessage(userId, conversationExistante.id, message);
+      return this.prisma.conversation.findUnique({
+        where: { id: conversationExistante.id },
+        include: { messages: true, participants: true },
+      });
+    }
+
+    return this.demarrerConversation(userId, expert.userId, subject, message);
+  }
 }
