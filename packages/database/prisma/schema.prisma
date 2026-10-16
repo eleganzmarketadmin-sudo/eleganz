@@ -1889,6 +1889,13 @@ enum JournalEntrySource {
   // même sourceType+sourceId pour les deux aurait fait ignorer la seconde
   // comme "déjà comptabilisée" via la contrainte d'unicité existante.
   COGS_VENTE
+  // Ajouté le 16 oct. 2026 (correctif audit) — SuppliersService.settleDebt
+  // ne postait jusqu'ici AUCUNE écriture : le solde fournisseur
+  // (Supplier.balanceOwed) diminuait sans que la dette (401) ni la sortie
+  // de caisse ne soient jamais constatées en comptabilité, faussant
+  // durablement le bilan. sourceId = ReglementFournisseur.id (ou un id
+  // généré quand aucun achat précis n'est lettré), jamais Purchase.id.
+  SUPPLIER_PAYMENT
 }
 
 model Journal {
