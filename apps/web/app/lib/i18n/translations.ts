@@ -1498,6 +1498,12 @@ const fr: Dictionnaire = {
   param_copierLien: "Copier le lien",
   param_lienCopie: "Lien copié !",
   param_boutiqueNonPubliee: "Votre boutique n'est pas encore publiée sur le Marketplace — aucun lien public à partager pour l'instant.",
+  profil_placeholderTelephone: "Ex. +243 81 234 5678",
+  profil_nonRenseigne: "Non renseigné",
+  cmd_annulerCommande: "Annuler la commande",
+  cmd_confirmerAnnulation: "Confirmer l'annulation de cette commande ?",
+  cmd_annulationImpossible: "Impossible d'annuler cette commande pour le moment.",
+  fin_inviterComptableExterne: "Besoin d'un comptable externe ? Invitez-le en lecture seule depuis Équipe →",
 };
 
 const en: Dictionnaire = {
@@ -2957,6 +2963,12 @@ const en: Dictionnaire = {
   param_copierLien: "Copy link",
   param_lienCopie: "Link copied!",
   param_boutiqueNonPubliee: "Your shop isn't published on the Marketplace yet — no public link to share for now.",
+  profil_placeholderTelephone: "Ex. +243 81 234 5678",
+  profil_nonRenseigne: "Not provided",
+  cmd_annulerCommande: "Cancel order",
+  cmd_confirmerAnnulation: "Confirm cancelling this order?",
+  cmd_annulationImpossible: "This order cannot be cancelled right now.",
+  fin_inviterComptableExterne: "Need an external accountant? Invite them as read-only from Team →",
 };
 
 const es: Dictionnaire = {
@@ -4415,6 +4427,12 @@ const es: Dictionnaire = {
   param_copierLien: "Copiar enlace",
   param_lienCopie: "¡Enlace copiado!",
   param_boutiqueNonPubliee: "Su tienda aún no está publicada en el Marketplace — no hay enlace público para compartir por ahora.",
+  profil_placeholderTelephone: "Ej. +243 81 234 5678",
+  profil_nonRenseigne: "No indicado",
+  cmd_annulerCommande: "Cancelar pedido",
+  cmd_confirmerAnnulation: "¿Confirmar la cancelación de este pedido?",
+  cmd_annulationImpossible: "No se puede cancelar este pedido en este momento.",
+  fin_inviterComptableExterne: "¿Necesita un contador externo? Invítelo en modo solo lectura desde Equipo →",
 };
 
 const ar: Dictionnaire = {
@@ -5871,6 +5889,12 @@ const ar: Dictionnaire = {
   param_copierLien: "نسخ الرابط",
   param_lienCopie: "تم نسخ الرابط!",
   param_boutiqueNonPubliee: "متجرك غير منشور في السوق بعد — لا يوجد رابط عام لمشاركته الآن.",
+  profil_placeholderTelephone: "مثال: +243 81 234 5678",
+  profil_nonRenseigne: "غير محدد",
+  cmd_annulerCommande: "إلغاء الطلب",
+  cmd_confirmerAnnulation: "تأكيد إلغاء هذا الطلب؟",
+  cmd_annulationImpossible: "لا يمكن إلغاء هذا الطلب في الوقت الحالي.",
+  fin_inviterComptableExterne: "هل تحتاج محاسبًا خارجيًا؟ ادعه بصلاحية القراءة فقط من صفحة الفريق →",
 };
 
 const pt: Dictionnaire = {
@@ -7329,6 +7353,12 @@ const pt: Dictionnaire = {
   param_copierLien: "Copiar link",
   param_lienCopie: "Link copiado!",
   param_boutiqueNonPubliee: "Sua loja ainda não está publicada no Marketplace — nenhum link público para compartilhar por enquanto.",
+  profil_placeholderTelephone: "Ex. +243 81 234 5678",
+  profil_nonRenseigne: "Não indicado",
+  cmd_annulerCommande: "Cancelar pedido",
+  cmd_confirmerAnnulation: "Confirmar o cancelamento deste pedido?",
+  cmd_annulationImpossible: "Não é possível cancelar este pedido no momento.",
+  fin_inviterComptableExterne: "Precisa de um contabilista externo? Convide-o em modo só leitura em Equipa →",
 };
 
 const sw: Dictionnaire = {
@@ -8786,6 +8816,12 @@ const sw: Dictionnaire = {
   param_copierLien: "Nakili kiungo",
   param_lienCopie: "Kiungo kimenakiliwa!",
   param_boutiqueNonPubliee: "Duka lako halijachapishwa kwenye Soko bado — hakuna kiungo cha umma kushiriki kwa sasa.",
+  profil_placeholderTelephone: "Mf. +243 81 234 5678",
+  profil_nonRenseigne: "Haijaelezwa",
+  cmd_annulerCommande: "Ghairi oda",
+  cmd_confirmerAnnulation: "Thibitisha kughairi oda hii?",
+  cmd_annulationImpossible: "Haiwezekani kughairi oda hii kwa sasa.",
+  fin_inviterComptableExterne: "Unahitaji mhasibu wa nje? Mkaribishe kwa kusoma tu kutoka Timu →",
 };
 
 // Lingala, kikongo et tshiluba : effort de traduction raisonnable pour les
@@ -10240,6 +10276,12 @@ const ln: Dictionnaire = {
   param_copierLien: "Kokopia lien",
   param_lienCopie: "Lien ekopiami !",
   param_boutiqueNonPubliee: "Boutique na yo ebimisami naino te na Marketplace — lien ya bomoko ezali naino te mpo na kokabola.",
+  profil_placeholderTelephone: "Nd. +243 81 234 5678",
+  profil_nonRenseigne: "Ekomonisama te",
+  cmd_annulerCommande: "Boya mposa",
+  cmd_confirmerAnnulation: "Kondima koboya mposa oyo?",
+  cmd_annulationImpossible: "Ekoki te koboya mposa oyo sik'oyo.",
+  fin_inviterComptableExterne: "Osengeli na comptable ya libanda? Benga ye na kotanga kaka na Ekipi →",
 };
 
 const kg: Dictionnaire = {
@@ -11689,6 +11731,12 @@ const kg: Dictionnaire = {
   param_copierLien: "Kopia lien",
   param_lienCopie: "Lien me kopama !",
   param_boutiqueNonPubliee: "Boutique na nge me monika ve na Marketplace — lien ya bonsono kele ve mu kukabula mpasi.",
+  profil_placeholderTelephone: "Nd. +243 81 234 5678",
+  profil_nonRenseigne: "Ekomonisama te",
+  cmd_annulerCommande: "Boya mposa",
+  cmd_confirmerAnnulation: "Kondima koboya mposa oyo?",
+  cmd_annulationImpossible: "Ekoki te koboya mposa oyo sik'oyo.",
+  fin_inviterComptableExterne: "Osengeli na comptable ya libanda? Benga ye na kotanga kaka na Ekipi →",
 };
 
 const lu: Dictionnaire = {
@@ -13138,6 +13186,12 @@ const lu: Dictionnaire = {
   param_copierLien: "Kopesha lien",
   param_lienCopie: "Lien mukopeshibue !",
   param_boutiqueNonPubliee: "Boutique webe kayiyi muleja pa Marketplace to — kakuyi lien wa bonsonso bua kuabanya pa tshikondo etshi.",
+  profil_placeholderTelephone: "Nd. +243 81 234 5678",
+  profil_nonRenseigne: "Ekilumbulwilwe te",
+  cmd_annulerCommande: "Kukana mukanda",
+  cmd_confirmerAnnulation: "Kuyitiya kukana mukanda uu?",
+  cmd_annulationImpossible: "Kakukonki kukana mukanda uu mpindji yiyi.",
+  fin_inviterComptableExterne: "Mudiata comptable wa panja? Mulombi mu kubala kaka ku Tshiota →",
 };
 
 export const TRANSLATIONS: Record<Locale, Dictionnaire> = { fr, en, es, ar, pt, sw, ln, kg, lu };

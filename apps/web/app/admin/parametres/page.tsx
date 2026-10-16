@@ -79,6 +79,12 @@ const CLES_CHAMPS: { cle: ChampTexte; labelCle: string; placeholder: string }[] 
   { cle: "instagramUrl", labelCle: "admparam_labelInstagram", placeholder: "https://instagram.com/eleganz" },
 ];
 
+interface Compte {
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+}
+
 function ParametresContent() {
   const { t } = useLocale();
   const [valeurs, setValeurs] = useState<PlatformSettings>({});
@@ -86,6 +92,50 @@ function ParametresContent() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
+
+  // Mon compte personnel (demande du 16 oct. 2026, point 2) — identité de
+  // l'administrateur connecté, distincte des paramètres de la plateforme
+  // ci-dessous.
+  const [compte, setCompte] = useState<Compte | null>(null);
+  const [editionCompte, setEditionCompte] = useState(false);
+  const [nomEdite, setNomEdite] = useState("");
+  const [emailEdite, setEmailEdite] = useState("");
+  const [telephoneEdite, setTelephoneEdite] = useState("");
+  const [enregistrementCompte, setEnregistrementCompte] = useState(false);
+  const [erreurCompte, setErreurCompte] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<Compte>("/auth/me").then(setCompte).catch(() => {
+      // Non bloquant : sans ces infos, les autres sections restent utilisables.
+    });
+  }, []);
+
+  function ouvrirEditionCompte() {
+    setNomEdite(compte?.fullName ?? "");
+    setEmailEdite(compte?.email ?? "");
+    setTelephoneEdite(compte?.phone ?? "");
+    setErreurCompte(null);
+    setEditionCompte(true);
+  }
+
+  async function enregistrerCompte(e: React.FormEvent) {
+    e.preventDefault();
+    setEnregistrementCompte(true);
+    setErreurCompte(null);
+    try {
+      const miseAJour = await api.patch<Compte>("/auth/me", {
+        fullName: nomEdite.trim() || undefined,
+        email: emailEdite.trim() || undefined,
+        phone: telephoneEdite.trim() || undefined,
+      });
+      setCompte(miseAJour);
+      setEditionCompte(false);
+    } catch (err) {
+      setErreurCompte(err instanceof ApiError ? err.message : t("profil_erreurEnregistrement"));
+    } finally {
+      setEnregistrementCompte(false);
+    }
+  }
 
   useEffect(() => {
     api
@@ -117,6 +167,46 @@ function ParametresContent() {
     <div>
       <h1 className={styles.titre}>{t("admparam_titre")}</h1>
       <p className={styles.sousTitre}>{t("admparam_sousTitre")}</p>
+
+      <h2 className={styles.titreSection}>{t("profil_informationsCompte")}</h2>
+      {editionCompte ? (
+        <form
+          className={styles.formulaire}
+          onSubmit={enregistrerCompte}
+          style={{ marginBottom: "var(--espace-5)" }}
+        >
+          <div className={styles.champ}>
+            <label>{t("activites_nom")}</label>
+            <input value={nomEdite} onChange={(e) => setNomEdite(e.target.value)} />
+          </div>
+          <div className={styles.champ}>
+            <label>{t("profil_email")}</label>
+            <input type="email" value={emailEdite} onChange={(e) => setEmailEdite(e.target.value)} />
+          </div>
+          <div className={styles.champ}>
+            <label>{t("profil_telephone")}</label>
+            <input value={telephoneEdite} onChange={(e) => setTelephoneEdite(e.target.value)} placeholder={t("profil_placeholderTelephone")} />
+          </div>
+          {erreurCompte && <p className={styles.erreur}>{erreurCompte}</p>}
+          <div style={{ display: "flex", gap: "var(--espace-3)" }}>
+            <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrementCompte}>
+              {enregistrementCompte ? t("profil_enregistrementEnCours") : t("action_enregistrer")}
+            </button>
+            <button className={styles.boutonEnregistrer} type="button" onClick={() => setEditionCompte(false)}>
+              {t("action_annuler")}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div style={{ marginBottom: "var(--espace-5)" }}>
+          <p>{t("activites_nom")} : {compte?.fullName ?? "…"}</p>
+          <p>{t("profil_email")} : {compte?.email ?? t("profil_nonRenseigne")}</p>
+          <p>{t("profil_telephone")} : {compte?.phone ?? t("profil_nonRenseigne")}</p>
+          <button className={styles.boutonEnregistrer} onClick={ouvrirEditionCompte}>
+            {t("profil_modifier")}
+          </button>
+        </div>
+      )}
 
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {confirmation && <p className={styles.confirmation}>{confirmation}</p>}

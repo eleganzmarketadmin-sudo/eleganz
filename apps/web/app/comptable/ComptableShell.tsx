@@ -76,6 +76,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
     },
     {
       liens: [
+        { href: "/comptable/profil", label: t("market_monCompte"), icone: "👤" },
         { href: "/comptable/messagerie", label: t("nav_messagerie"), icone: "💬" },
         { href: "/comptable/abonnement", label: t("nav_abonnement"), icone: "⭐" },
       ],

@@ -39,3 +39,36 @@
   padding: var(--espace-3);
   margin-bottom: var(--espace-4);
 }
+
+.champFormulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  padding: var(--espace-2) 0;
+}
+
+.champFormulaire input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  font: inherit;
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire {
+  background: none;
+  border: 1px solid var(--color-ink);
+  color: var(--color-ink);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+}

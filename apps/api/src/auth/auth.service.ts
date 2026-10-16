@@ -4,6 +4,7 @@ import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
+import { UpdateMeDto } from "./dto/update-me.dto";
 
 @Injectable()
 export class AuthService {
@@ -87,6 +88,37 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException("Compte introuvable.");
     }
+    return user;
+  }
+
+  // Mise à jour du profil personnel (demande du 16 oct. 2026, point 2) —
+  // disponible depuis n'importe quel espace (Marketplace, Gestion, Mon
+  // assistant, Livreur, Admin), puisque le compte ELEGANZ est commun à tous.
+  async updateMe(userId: string, dto: UpdateMeDto) {
+    if (dto.email || dto.phone) {
+      const conflit = await this.prisma.user.findFirst({
+        where: {
+          id: { not: userId },
+          OR: [
+            dto.email ? { email: dto.email } : undefined,
+            dto.phone ? { phone: dto.phone } : undefined,
+          ].filter(Boolean) as object[],
+        },
+      });
+      if (conflit) {
+        throw new ConflictException("Un autre compte utilise déjà cet email ou ce numéro.");
+      }
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.fullName !== undefined ? { fullName: dto.fullName } : {}),
+        ...(dto.email !== undefined ? { email: dto.email } : {}),
+        ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
+      },
+      select: { id: true, fullName: true, email: true, phone: true, role: true },
+    });
     return user;
   }
 }

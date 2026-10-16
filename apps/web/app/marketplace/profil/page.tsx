@@ -36,11 +36,47 @@ function ProfilContent() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  // Édition des informations de compte (demande du 16 oct. 2026, point 2 :
+  // le téléphone doit être modifiable, pas seulement affiché).
+  const [editionCompte, setEditionCompte] = useState(false);
+  const [nomEdite, setNomEdite] = useState("");
+  const [emailEdite, setEmailEdite] = useState("");
+  const [telephoneEdite, setTelephoneEdite] = useState("");
+  const [enregistrementCompte, setEnregistrementCompte] = useState(false);
+  const [erreurCompte, setErreurCompte] = useState<string | null>(null);
+
   useEffect(() => {
     api.get<Compte>("/auth/me").then(setCompte).catch(() => {
       // Non bloquant : sans ces infos, la section "adresses" reste utilisable.
     });
   }, []);
+
+  function ouvrirEditionCompte() {
+    setNomEdite(compte?.fullName ?? "");
+    setEmailEdite(compte?.email ?? "");
+    setTelephoneEdite(compte?.phone ?? "");
+    setErreurCompte(null);
+    setEditionCompte(true);
+  }
+
+  async function enregistrerCompte(e: React.FormEvent) {
+    e.preventDefault();
+    setEnregistrementCompte(true);
+    setErreurCompte(null);
+    try {
+      const miseAJour = await api.patch<Compte>("/auth/me", {
+        fullName: nomEdite.trim() || undefined,
+        email: emailEdite.trim() || undefined,
+        phone: telephoneEdite.trim() || undefined,
+      });
+      setCompte(miseAJour);
+      setEditionCompte(false);
+    } catch (err) {
+      setErreurCompte(err instanceof ApiError ? err.message : t("profil_erreurEnregistrement"));
+    } finally {
+      setEnregistrementCompte(false);
+    }
+  }
 
   const [formOuvert, setFormOuvert] = useState(false);
   const [modificationId, setModificationId] = useState<string | null>(null);
@@ -123,22 +159,56 @@ function ProfilContent() {
       <h1 className={styles.titre}>{t("market_monProfil")}</h1>
 
       <section className={styles.section}>
-        <h2 className={styles.sousTitre}>{t("profil_informationsCompte")}</h2>
-        <div className={styles.champLecture}>
-          <span className={styles.champLabel}>{t("activites_nom")}</span>
-          <span>{compte?.fullName ?? "…"}</span>
+        <div className={styles.enteteSection}>
+          <h2 className={styles.sousTitre}>{t("profil_informationsCompte")}</h2>
+          {!editionCompte && (
+            <button className={styles.boutonSecondaire} onClick={ouvrirEditionCompte}>
+              {t("profil_modifier")}
+            </button>
+          )}
         </div>
-        {compte?.email && (
-          <div className={styles.champLecture}>
-            <span className={styles.champLabel}>{t("profil_email")}</span>
-            <span>{compte.email}</span>
-          </div>
-        )}
-        {compte?.phone && (
-          <div className={styles.champLecture}>
-            <span className={styles.champLabel}>{t("profil_telephone")}</span>
-            <span>{compte.phone}</span>
-          </div>
+
+        {editionCompte ? (
+          <form className={styles.formulaire} onSubmit={enregistrerCompte}>
+            <div className={styles.champs}>
+              <label className={styles.champ}>
+                <span>{t("activites_nom")}</span>
+                <input value={nomEdite} onChange={(e) => setNomEdite(e.target.value)} />
+              </label>
+              <label className={styles.champ}>
+                <span>{t("profil_email")}</span>
+                <input type="email" value={emailEdite} onChange={(e) => setEmailEdite(e.target.value)} />
+              </label>
+              <label className={styles.champ}>
+                <span>{t("profil_telephone")}</span>
+                <input value={telephoneEdite} onChange={(e) => setTelephoneEdite(e.target.value)} placeholder={t("profil_placeholderTelephone")} />
+              </label>
+            </div>
+            {erreurCompte && <div className={styles.erreur}>{erreurCompte}</div>}
+            <div className={styles.actionsFormulaire}>
+              <button className={styles.bouton} type="submit" disabled={enregistrementCompte}>
+                {enregistrementCompte ? t("profil_enregistrementEnCours") : t("action_enregistrer")}
+              </button>
+              <button className={styles.boutonSecondaire} type="button" onClick={() => setEditionCompte(false)}>
+                {t("action_annuler")}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className={styles.champLecture}>
+              <span className={styles.champLabel}>{t("activites_nom")}</span>
+              <span>{compte?.fullName ?? "…"}</span>
+            </div>
+            <div className={styles.champLecture}>
+              <span className={styles.champLabel}>{t("profil_email")}</span>
+              <span>{compte?.email ?? t("profil_nonRenseigne")}</span>
+            </div>
+            <div className={styles.champLecture}>
+              <span className={styles.champLabel}>{t("profil_telephone")}</span>
+              <span>{compte?.phone ?? t("profil_nonRenseigne")}</span>
+            </div>
+          </>
         )}
       </section>
 

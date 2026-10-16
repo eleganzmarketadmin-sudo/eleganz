@@ -27,6 +27,15 @@ function ProfilContent() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  // Édition du téléphone/email personnel (demande du 16 oct. 2026, point 2)
+  // — distincte des informations de livraison ci-dessous, qui restent gérées
+  // par /delivery/me.
+  const [editionCompte, setEditionCompte] = useState(false);
+  const [emailEdite, setEmailEdite] = useState("");
+  const [telephoneEdite, setTelephoneEdite] = useState("");
+  const [enregistrementCompte, setEnregistrementCompte] = useState(false);
+  const [erreurCompte, setErreurCompte] = useState<string | null>(null);
+
   useEffect(() => {
     api
       .get<DriverProfile>("/delivery/me")
@@ -34,6 +43,34 @@ function ProfilContent() {
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }, [t]);
+
+  function ouvrirEditionCompte() {
+    setEmailEdite(profil?.user.email ?? "");
+    setTelephoneEdite(profil?.user.phone ?? "");
+    setErreurCompte(null);
+    setEditionCompte(true);
+  }
+
+  async function enregistrerCompte(e: React.FormEvent) {
+    e.preventDefault();
+    setEnregistrementCompte(true);
+    setErreurCompte(null);
+    try {
+      const miseAJour = await api.patch<{ fullName: string; email: string | null; phone: string | null }>(
+        "/auth/me",
+        {
+          email: emailEdite.trim() || undefined,
+          phone: telephoneEdite.trim() || undefined,
+        },
+      );
+      setProfil((p) => (p ? { ...p, user: { ...p.user, email: miseAJour.email, phone: miseAJour.phone } } : p));
+      setEditionCompte(false);
+    } catch (err) {
+      setErreurCompte(err instanceof ApiError ? err.message : t("profil_erreurEnregistrement"));
+    } finally {
+      setEnregistrementCompte(false);
+    }
+  }
 
   if (chargement) return <p>{t("commun_chargement")}</p>;
 
@@ -47,10 +84,45 @@ function ProfilContent() {
             <span className={styles.champLabel}>{t("activites_nom")}</span>
             <span>{profil.user.fullName}</span>
           </div>
-          <div className={styles.champ}>
-            <span className={styles.champLabel}>{t("livr_contact")}</span>
-            <span>{profil.user.email ?? profil.user.phone}</span>
-          </div>
+
+          {editionCompte ? (
+            <form onSubmit={enregistrerCompte}>
+              <label className={styles.champFormulaire}>
+                <span className={styles.champLabel}>{t("profil_email")}</span>
+                <input type="email" value={emailEdite} onChange={(e) => setEmailEdite(e.target.value)} />
+              </label>
+              <label className={styles.champFormulaire}>
+                <span className={styles.champLabel}>{t("profil_telephone")}</span>
+                <input value={telephoneEdite} onChange={(e) => setTelephoneEdite(e.target.value)} placeholder={t("profil_placeholderTelephone")} />
+              </label>
+              {erreurCompte && <p className={styles.erreur}>{erreurCompte}</p>}
+              <div style={{ display: "flex", gap: "var(--espace-2)", marginTop: "var(--espace-3)" }}>
+                <button className={styles.bouton} type="submit" disabled={enregistrementCompte}>
+                  {enregistrementCompte ? t("profil_enregistrementEnCours") : t("action_enregistrer")}
+                </button>
+                <button className={styles.boutonSecondaire} type="button" onClick={() => setEditionCompte(false)}>
+                  {t("action_annuler")}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className={styles.champ}>
+                <span className={styles.champLabel}>{t("profil_email")}</span>
+                <span>{profil.user.email ?? t("profil_nonRenseigne")}</span>
+              </div>
+              <div className={styles.champ}>
+                <span className={styles.champLabel}>{t("profil_telephone")}</span>
+                <span>{profil.user.phone ?? t("profil_nonRenseigne")}</span>
+              </div>
+              <div style={{ marginTop: "var(--espace-2)" }}>
+                <button className={styles.boutonSecondaire} onClick={ouvrirEditionCompte}>
+                  {t("profil_modifier")}
+                </button>
+              </div>
+            </>
+          )}
+
           <div className={styles.champ}>
             <span className={styles.champLabel}>{t("livr_zone")}</span>
             <span>{profil.zone ?? t("livr_zoneNonPrecisee")}</span>
