@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useShop } from "../lib/shop-context";
+import { useLocale } from "../lib/i18n/LocaleContext";
 
 // Sous-navigation du menu "Finance & Comptabilité" (prompt du 13 oct. 2026) —
 // un seul lien dans la nav principale de GestionShell (déjà chargée en
@@ -47,6 +48,7 @@ function modeParDefaut(role: string | null | undefined): Mode {
 export function FinanceSubNav() {
   const pathname = usePathname();
   const { currentShop } = useShop();
+  const { t } = useLocale();
   const [mode, setMode] = useState<Mode>("GESTIONNAIRE");
   const [initialise, setInitialise] = useState(false);
 
@@ -81,8 +83,23 @@ export function FinanceSubNav() {
         ? COMPTABILITE_SYSCOHADA
         : [...GESTION_COURANTE, ...COMPTABILITE_SYSCOHADA];
 
+  // Raccourci "inviter un comptable externe" (demande du 16 oct. 2026, point
+  // 6) — le rôle EXTERNAL_ACCOUNTANT existe déjà côté invitation d'équipe
+  // (/equipe), mais rien dans Finance n'en parlait jusqu'ici : masqué pour
+  // l'externe lui-même (qui n'inviterait pas son propre remplaçant) et pour
+  // le staff sans droit d'invitation (seuls OWNER/MANAGER invitent, voir
+  // shops.controller.ts).
+  const peutInviter = currentShop?.myRole === "OWNER" || currentShop?.myRole === "MANAGER";
+
   return (
     <div style={{ marginBottom: "24px" }}>
+      {peutInviter && (
+        <p style={{ fontSize: "0.8125rem", marginBottom: "10px" }}>
+          <Link href="/equipe" style={{ textDecoration: "underline" }}>
+            {t("fin_inviterComptableExterne")}
+          </Link>
+        </p>
+      )}
       <div style={{ display: "flex", gap: "6px", marginBottom: "8px", fontSize: "0.8rem" }}>
         <button
           onClick={() => changerMode("GESTIONNAIRE")}
