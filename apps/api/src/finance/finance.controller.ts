@@ -7,7 +7,11 @@ import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
+import { RapportAnnuelService } from "./rapport-annuel.service";
 import { renderDossierCreditPdf } from "./dossier-credit-pdf-renderer";
+import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
+import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
+import { renderRapportAnnuelPptx } from "./rapport-annuel-pptx-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
@@ -37,6 +41,7 @@ export class FinanceController {
     private readonly fiscalSimulation: FiscalSimulationService,
     private readonly dossierValidation: DossierValidationService,
     private readonly businessPlan: BusinessPlanService,
+    private readonly rapportAnnuel: RapportAnnuelService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -274,6 +279,46 @@ export class FinanceController {
   @RequiresGestionFeature("financeAvancee")
   scenarioSupprimer(@Param("shopId") shopId: string, @Param("scenarioId") scenarioId: string) {
     return this.businessPlan.supprimerScenario(FiscalRuleScope.SHOP, shopId, scenarioId);
+  }
+
+  // Rapport annuel (16 oct. 2026, point 3) — aux normes professionnelles
+  // SYSCOHADA/OHADA, exportable en PDF/Word/PowerPoint. Jamais persisté,
+  // toujours recalculé depuis les écritures réelles de l'année demandée.
+  @Get("rapport-annuel")
+  @RequiresGestionFeature("financeAvancee")
+  rapportAnnuelDonnees(@Param("shopId") shopId: string, @Query("annee") annee?: string) {
+    return this.rapportAnnuel.assembler(FiscalRuleScope.SHOP, shopId, annee ? Number(annee) : new Date().getFullYear());
+  }
+
+  @Get("export/rapport-annuel")
+  @RequiresGestionFeature("financeAvancee")
+  async exportRapportAnnuel(
+    @Param("shopId") shopId: string,
+    @Res() res: Response,
+    @Query("annee") annee?: string,
+    @Query("format") format?: string,
+  ) {
+    const donnees = await this.rapportAnnuel.assembler(
+      FiscalRuleScope.SHOP,
+      shopId,
+      annee ? Number(annee) : new Date().getFullYear(),
+    );
+    if (format === "docx") {
+      const buffer = await renderRapportAnnuelDocx(donnees);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="rapport-annuel-${donnees.annee}.docx"`);
+      return res.send(buffer);
+    }
+    if (format === "pptx") {
+      const buffer = await renderRapportAnnuelPptx(donnees);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+      res.setHeader("Content-Disposition", `attachment; filename="rapport-annuel-${donnees.annee}.pptx"`);
+      return res.send(buffer);
+    }
+    const doc = renderRapportAnnuelPdf(donnees);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="rapport-annuel-${donnees.annee}.pdf"`);
+    return doc.pipe(res);
   }
 
   @Get("fiscal-rules")

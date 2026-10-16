@@ -18,6 +18,7 @@ import { StockValorisationService } from "./stock-valorisation.service";
 import { StockValorisationController } from "./stock-valorisation.controller";
 import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
+import { RapportAnnuelService } from "./rapport-annuel.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -41,6 +42,7 @@ import { BusinessPlanService } from "./business-plan.service";
     StockValorisationService,
     DossierValidationService,
     BusinessPlanService,
+    RapportAnnuelService,
   ],
   controllers: [
     FinanceController,

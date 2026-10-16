@@ -12,8 +12,17 @@ import type { DossierCreditBoutiqueBusinessPlan } from "./finance.service";
  * pas dupliquer le dessin pdfkit.
  */
 
+// `toLocaleString("fr-FR")` sépare les milliers par une espace fine
+// insécable (U+202F, pas U+00A0 — vérifié par les codes de caractères)
+// qu'Helvetica standard de pdfkit ne sait pas afficher (glyphe de
+// remplacement affiché comme "/" — trouvé en testant le rendu du rapport
+// annuel, 16 oct. 2026) : remplacée par une espace normale pour un rendu
+// PDF correct, sans toucher au formatage Word/PowerPoint (docx/pptxgenjs
+// embarquent leurs propres polices, pas de problème là-bas).
 export function formaterMontant(montant: number): string {
-  return `${Math.round(montant).toLocaleString("fr-FR")}`;
+  return Math.round(montant)
+    .toLocaleString("fr-FR")
+    .replace(/[  ]/g, " ");
 }
 
 export function formaterDate(iso: string): string {

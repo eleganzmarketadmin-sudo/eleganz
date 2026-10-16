@@ -6,7 +6,11 @@ import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
+import { RapportAnnuelService } from "./rapport-annuel.service";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
+import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
+import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
+import { renderRapportAnnuelPptx } from "./rapport-annuel-pptx-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -36,6 +40,7 @@ export class AdminFinanceController {
     private readonly closureService: ClosureService,
     private readonly dossierValidation: DossierValidationService,
     private readonly businessPlan: BusinessPlanService,
+    private readonly rapportAnnuel: RapportAnnuelService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -222,6 +227,45 @@ export class AdminFinanceController {
   scenarioSupprimer(@CurrentUser() user: AuthenticatedUser, @Param("scenarioId") scenarioId: string) {
     requireAdmin(user);
     return this.businessPlan.supprimerScenario(FiscalRuleScope.PLATFORM, null, scenarioId);
+  }
+
+  // Rapport annuel d'ELEGANZ elle-même (16 oct. 2026, point 3) — mêmes
+  // routes et mêmes formats d'export que côté boutique.
+  @Get("rapport-annuel")
+  rapportAnnuelDonnees(@CurrentUser() user: AuthenticatedUser, @Query("annee") annee?: string) {
+    requireAdmin(user);
+    return this.rapportAnnuel.assembler(FiscalRuleScope.PLATFORM, null, annee ? Number(annee) : new Date().getFullYear());
+  }
+
+  @Get("export/rapport-annuel")
+  async exportRapportAnnuel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+    @Query("annee") annee?: string,
+    @Query("format") format?: string,
+  ) {
+    requireAdmin(user);
+    const donnees = await this.rapportAnnuel.assembler(
+      FiscalRuleScope.PLATFORM,
+      null,
+      annee ? Number(annee) : new Date().getFullYear(),
+    );
+    if (format === "docx") {
+      const buffer = await renderRapportAnnuelDocx(donnees);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      res.setHeader("Content-Disposition", `attachment; filename="rapport-annuel-eleganz-${donnees.annee}.docx"`);
+      return res.send(buffer);
+    }
+    if (format === "pptx") {
+      const buffer = await renderRapportAnnuelPptx(donnees);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+      res.setHeader("Content-Disposition", `attachment; filename="rapport-annuel-eleganz-${donnees.annee}.pptx"`);
+      return res.send(buffer);
+    }
+    const doc = renderRapportAnnuelPdf(donnees);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="rapport-annuel-eleganz-${donnees.annee}.pdf"`);
+    return doc.pipe(res);
   }
 
   @Get("fiscal-rules")
