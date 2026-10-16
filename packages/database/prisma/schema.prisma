@@ -413,28 +413,80 @@ enum ExpertStatus {
   SUSPENDED
 }
 
+// Présentation publique du profil (demande du 16 oct. 2026) — l'expert
+// choisit un gabarit visuel pour son profil public ; purement une question
+// d'affichage côté web (couleurs, mise en page), jamais de contenu différent
+// selon le gabarit.
+enum ExpertProfileTemplate {
+  CLASSIQUE
+  MODERNE
+  CREATIF
+}
+
 // Profil de candidature/expert — tout utilisateur ELEGANZ peut postuler,
 // quel que soit son rôle ; seul un statut APPROVED est visible dans
 // l'annuaire public (/experts).
 model ExpertProfile {
-  id           String       @id @default(uuid())
-  userId       String       @unique
-  user         User         @relation(fields: [userId], references: [id])
+  id           String                @id @default(uuid())
+  userId       String                @unique
+  user         User                  @relation(fields: [userId], references: [id])
   headline     String
-  bio          String       @db.Text
+  bio          String                @db.Text
   domaines     String[] // ex. ["Montage dossier crédit", "Risque", "Compliance"]
-  conditions   String?      @db.Text // informatif seulement, jamais de paiement en ligne
-  status       ExpertStatus @default(PENDING_REVIEW)
+  conditions   String?               @db.Text // informatif seulement, jamais de paiement en ligne
+  template     ExpertProfileTemplate @default(MODERNE)
+  photoUrl     String?
+  status       ExpertStatus          @default(PENDING_REVIEW)
   statusNote   String?
   reviewedById String?
   reviewedAt   DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
   engagements ShopExpertEngagement[]
   invites     ShopExpertInvite[]
+  documents   ExpertDocument[]
+  references  ExpertReference[]
 
   @@index([status])
+}
+
+// Pièces de la candidature (demande du 16 oct. 2026, point 3) — CV,
+// diplômes, certifications et tout autre document utile à la modération
+// admin. Non publiées dans l'annuaire public (données personnelles) : vues
+// uniquement par l'expert lui-même et par l'administration ELEGANZ.
+enum ExpertDocumentType {
+  CV
+  DIPLOME
+  CERTIFICATION
+  AUTRE
+}
+
+model ExpertDocument {
+  id              String             @id @default(uuid())
+  expertProfileId String
+  expertProfile   ExpertProfile      @relation(fields: [expertProfileId], references: [id])
+  type            ExpertDocumentType
+  label           String
+  url             String
+  createdAt       DateTime           @default(now())
+
+  @@index([expertProfileId])
+}
+
+// Personnes de référence à contacter (demande du 16 oct. 2026, point 3) —
+// mêmes règles de confidentialité que ExpertDocument : jamais publiées.
+model ExpertReference {
+  id              String        @id @default(uuid())
+  expertProfileId String
+  expertProfile   ExpertProfile @relation(fields: [expertProfileId], references: [id])
+  fullName        String
+  role            String?
+  contact         String
+  note            String?       @db.Text
+  createdAt       DateTime      @default(now())
+
+  @@index([expertProfileId])
 }
 
 // Périmètres d'accès qu'une boutique peut accorder à un expert — un accès
