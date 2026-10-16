@@ -12,7 +12,7 @@ import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 // admin" comme avant cette demande : un compte Ventes ou Finance ne doit
 // pas pouvoir, via cet écran, se donner à lui-même ou donner à un tiers un
 // rôle plus large que celui qu'on lui a confié.
-function requireSuperAdmin(user: AuthenticatedUser) {
+export function requireSuperAdmin(user: AuthenticatedUser) {
   if (user.role !== "ADMIN_SUPER") {
     throw new ForbiddenException("Réservé aux super administrateurs ELEGANZ.");
   }

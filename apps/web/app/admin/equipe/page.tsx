@@ -58,6 +58,27 @@ function libelleRole(role: string, t: (key: string) => string): string {
   return cle ? t(cle) : role;
 }
 
+// Module Experts externes, pendant plateforme (16 oct. 2026, point 2 —
+// "ajouter le bloc d'invitation Experts externes... comme déjà actif dans
+// eleganz gestion") du module déjà en place côté Gestion : même principe
+// (lien d'invitation à périmètres choisis au cas par cas, en lecture
+// seule), réservé ici à ADMIN_SUPER et portant sur les écrans
+// ECRANS_MENU_ADMIN plutôt que sur des ShopExpertScope.
+interface InviteExpertPlateforme {
+  id: string;
+  token: string;
+  status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+  scopes: string[];
+  expiresAt: string;
+}
+
+interface EngagementExpertPlateforme {
+  id: string;
+  status: "ACTIVE" | "REVOKED";
+  scopes: string[];
+  expertProfile: { id: string; headline: string; user: { fullName: string; email?: string | null; phone?: string | null } };
+}
+
 function EquipeContent() {
   const { t } = useLocale();
   const { user } = useAuth();
@@ -80,6 +101,64 @@ function EquipeContent() {
   const [roleEdite, setRoleEdite] = useState<string>("ADMIN_SALES");
   const [menuItemsEdites, setMenuItemsEdites] = useState<string[]>([]);
   const [modificationEnCours, setModificationEnCours] = useState(false);
+
+  // Module Experts externes, pendant plateforme (16 oct. 2026, point 2).
+  const estSuperAdmin = user?.role === "ADMIN_SUPER";
+  const [invitesExpert, setInvitesExpert] = useState<InviteExpertPlateforme[]>([]);
+  const [engagementsExpert, setEngagementsExpert] = useState<EngagementExpertPlateforme[]>([]);
+  const [scopesExpertChoisis, setScopesExpertChoisis] = useState<string[]>(["PILOTAGE"]);
+  const [creationInviteExpertEnCours, setCreationInviteExpertEnCours] = useState(false);
+  const [lienInviteExpertGenere, setLienInviteExpertGenere] = useState<string | null>(null);
+  const [erreurExperts, setErreurExperts] = useState<string | null>(null);
+
+  function rechargerExperts() {
+    api
+      .get<EngagementExpertPlateforme[]>("/admin/experts")
+      .then(setEngagementsExpert)
+      .catch(() => setEngagementsExpert([]));
+    if (estSuperAdmin) {
+      api
+        .get<InviteExpertPlateforme[]>("/admin/experts/invitations")
+        .then(setInvitesExpert)
+        .catch(() => setInvitesExpert([]));
+    }
+  }
+
+  useEffect(rechargerExperts, [estSuperAdmin]);
+
+  async function creerInviteExpert() {
+    if (scopesExpertChoisis.length === 0) return;
+    setCreationInviteExpertEnCours(true);
+    setErreurExperts(null);
+    setLienInviteExpertGenere(null);
+    try {
+      const invite = await api.post<InviteExpertPlateforme>("/admin/experts/invitations", { scopes: scopesExpertChoisis });
+      setLienInviteExpertGenere(`${window.location.origin}/marketplace/experts/invitations-plateforme/${invite.token}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_invitationImpossible"));
+    } finally {
+      setCreationInviteExpertEnCours(false);
+    }
+  }
+
+  async function revoquerInviteExpert(inviteId: string) {
+    try {
+      await api.delete(`/admin/experts/invitations/${inviteId}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_suppressionImpossible"));
+    }
+  }
+
+  async function revoquerEngagementExpert(engagementId: string) {
+    try {
+      await api.delete(`/admin/experts/${engagementId}`);
+      rechargerExperts();
+    } catch (err) {
+      setErreurExperts(err instanceof ApiError ? err.message : t("eq_suppressionImpossible"));
+    }
+  }
 
   function basculerMenuItem(valeur: string, liste: string[], definir: (v: string[]) => void) {
     definir(liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur]);
@@ -265,6 +344,89 @@ function EquipeContent() {
           )}
         </div>
       ))}
+
+      {/* Module Experts externes, pendant plateforme (16 oct. 2026, point 2 */}
+      {/* — "ajouter le bloc d'invitation Experts externes... comme déjà */}
+      {/* actif dans eleganz gestion") du module déjà en place côté Gestion. */}
+      <div style={{ marginTop: "40px", paddingTop: "24px", borderTop: "1px solid var(--color-border)" }}>
+        <h2 style={{ marginBottom: "8px" }}>{t("experts_titreEquipe")}</h2>
+        <p style={{ color: "var(--color-texte-muted)", fontSize: "0.875rem", marginBottom: "16px" }}>
+          {t("experts_sousTitreEquipe")}
+        </p>
+
+        {erreurExperts && <div className={styles.erreur}>{erreurExperts}</div>}
+
+        {estSuperAdmin && (
+          <div style={{ marginBottom: "24px" }}>
+            <p style={{ fontWeight: 600, marginBottom: "8px" }}>{t("experts_choisirPerimetres")}</p>
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "12px" }}>
+              {ECRANS_MENU_ADMIN.map((ecran) => (
+                <label key={ecran.valeur} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <input
+                    type="checkbox"
+                    checked={scopesExpertChoisis.includes(ecran.valeur)}
+                    onChange={() => basculerMenuItem(ecran.valeur, scopesExpertChoisis, setScopesExpertChoisis)}
+                  />
+                  {t(ecran.cle)}
+                </label>
+              ))}
+            </div>
+            <button
+              className={styles.boutonAjouter}
+              type="button"
+              onClick={creerInviteExpert}
+              disabled={creationInviteExpertEnCours || scopesExpertChoisis.length === 0}
+            >
+              {creationInviteExpertEnCours ? t("experts_generationEnCours") : t("experts_genererLien")}
+            </button>
+            {lienInviteExpertGenere && (
+              <p style={{ marginTop: "12px", wordBreak: "break-all" }}>
+                <code>{lienInviteExpertGenere}</code>
+              </p>
+            )}
+
+            {invitesExpert.filter((i) => i.status === "PENDING").length > 0 && (
+              <div style={{ marginTop: "16px" }}>
+                {invitesExpert
+                  .filter((i) => i.status === "PENDING")
+                  .map((i) => (
+                    <div key={i.id} className={styles.admin}>
+                      <div>
+                        <span>{i.scopes.join(", ")}</span>
+                        <span className={styles.contact}> — {t("experts_colExpiration")} {new Date(i.expiresAt).toLocaleDateString()}</span>
+                      </div>
+                      <button className={styles.boutonRetirer} type="button" onClick={() => revoquerInviteExpert(i.id)}>
+                        {t("eq_retirer")}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <p style={{ fontWeight: 600, marginBottom: "8px" }}>{t("experts_accesEnCours")}</p>
+        {engagementsExpert.filter((e) => e.status === "ACTIVE").length === 0 ? (
+          <p style={{ color: "var(--color-texte-muted)" }}>{t("experts_aucunAcces")}</p>
+        ) : (
+          engagementsExpert
+            .filter((e) => e.status === "ACTIVE")
+            .map((e) => (
+              <div key={e.id} className={styles.admin}>
+                <div>
+                  <span className={styles.nom}>{e.expertProfile.user.fullName}</span>
+                  <span className={styles.contact}> — {e.expertProfile.user.email ?? e.expertProfile.user.phone}</span>
+                  <span className={styles.contact}> — {e.scopes.join(", ")}</span>
+                </div>
+                {estSuperAdmin && (
+                  <button className={styles.boutonRetirer} type="button" onClick={() => revoquerEngagementExpert(e.id)}>
+                    {t("eq_retirer")}
+                  </button>
+                )}
+              </div>
+            ))
+        )}
+      </div>
     </div>
   );
 }
