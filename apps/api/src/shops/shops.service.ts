@@ -69,7 +69,27 @@ function ecransEffectifs(staff: { role: StaffRole; menuItemsOverride: MenuGestio
 export class ShopsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Un compte = une boutique (18 oct. 2026, demande explicite "éviter des
+   * multiples créations pour éviter les paiements"). Email et téléphone
+   * sont déjà uniques par compte (User.email/phone, contrainte en base) —
+   * ce correctif ferme la vraie faille : rien n'empêchait jusqu'ici le
+   * MÊME compte déjà propriétaire d'une boutique (même suspendue pour
+   * impayé, même fermée) de créer une nouvelle boutique et de repartir
+   * avec un essai gratuit neuf. Comptage sur TOUTE boutique dont ce compte
+   * est propriétaire, quel que soit son statut (FREE_PERIOD, SUSPENDED,
+   * CLOSED...) — volontairement sans exception : l'énoncé de la demande
+   * ("un compte ne peut posséder plus d'une boutique") ne distingue pas
+   * une fermeture propre d'une suspension.
+   */
   async create(ownerId: string, dto: CreateShopDto) {
+    const boutiqueExistante = await this.prisma.shop.count({ where: { ownerId } });
+    if (boutiqueExistante > 0) {
+      throw new ConflictException(
+        "Ce compte possède déjà une boutique. Un compte ne peut posséder qu'une seule boutique sur ELEGANZ.",
+      );
+    }
+
     const baseSlug = slugify(dto.name);
     const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
 
