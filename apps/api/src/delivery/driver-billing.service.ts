@@ -139,14 +139,23 @@ export class DriverBillingService {
     return results;
   }
 
+  /**
+   * Correctif du 18 oct. 2026 (même demande que BillingService) : ne
+   * réactive le livreur que si plus aucune facture PENDING ne reste.
+   */
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.driverInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+
+    const autresFacturesImpayees = await this.prisma.driverInvoice.count({
+      where: { driverId: invoice.driverId, status: "PENDING", id: { not: invoiceId } },
+    });
+    const reactivationComplete = autresFacturesImpayees === 0;
 
     const resultats = await this.prisma.$transaction([
       this.prisma.driverInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.driver.update({
         where: { id: invoice.driverId },
-        data: { billingStatus: DriverBillingStatus.ACTIVE },
+        data: { billingStatus: reactivationComplete ? DriverBillingStatus.ACTIVE : DriverBillingStatus.PAYMENT_DUE },
       }),
     ]);
 
@@ -154,7 +163,7 @@ export class DriverBillingService {
       this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture livreur ${invoiceId} échouée`, err);
     });
 
-    return resultats;
+    return { ...resultats[1], facturesRestantes: autresFacturesImpayees, reactivee: reactivationComplete };
   }
 
   listInvoices(driverId: string) {

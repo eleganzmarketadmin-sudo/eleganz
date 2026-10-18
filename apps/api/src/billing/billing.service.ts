@@ -187,13 +187,32 @@ export class BillingService {
    * Réactivation après paiement confirmé. Une boutique suspendue conserve
    * tout son historique (prompt §31) — la réactivation ne fait que changer
    * le statut et solder la facture.
+   *
+   * Correctif du 18 oct. 2026 (demande "payer ses arriérés avant
+   * réactivation") : jusqu'ici, régler UNE SEULE facture en retard
+   * réactivait immédiatement la boutique même s'il restait d'autres
+   * factures impayées à l'origine de la suspension — réglée ici en ne
+   * repassant le statut à ACTIVE que si plus aucune facture PENDING ne
+   * reste pour cette boutique. S'il en reste, la boutique est marquée
+   * PAYMENT_DUE (jamais laissée SUSPENDED alors qu'un paiement vient
+   * d'être reçu, pour qu'elle réapparaisse dans les relances de
+   * l'échéancier plutôt que de sembler toujours bloquée) et le solde
+   * restant est renvoyé à l'appelant.
    */
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
+    const autresFacturesImpayees = await this.prisma.invoice.count({
+      where: { shopId: invoice.shopId, status: "PENDING", id: { not: invoiceId } },
+    });
+    const reactivationComplete = autresFacturesImpayees === 0;
+
     const resultats = await this.prisma.$transaction([
       this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
-      this.prisma.shop.update({ where: { id: invoice.shopId }, data: { status: ShopStatus.ACTIVE } }),
+      this.prisma.shop.update({
+        where: { id: invoice.shopId },
+        data: { status: reactivationComplete ? ShopStatus.ACTIVE : ShopStatus.PAYMENT_DUE },
+      }),
     ]);
 
     // Revenu ELEGANZ reconnu au règlement effectif, jamais à la facturation
@@ -202,7 +221,7 @@ export class BillingService {
       this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture ${invoiceId} échouée`, err);
     });
 
-    return resultats;
+    return { ...resultats[1], facturesRestantes: autresFacturesImpayees, reactivee: reactivationComplete };
   }
 
   /**

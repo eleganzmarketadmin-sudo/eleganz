@@ -49,6 +49,16 @@ export class ShopsController {
     return this.shopsService.findOne(shopId);
   }
 
+  // Fermeture en libre-service (18 oct. 2026) — réservée au propriétaire
+  // (jamais un gérant ni un autre membre d'équipe), bloquée tant qu'il
+  // reste une facture ELEGANZ impayée (voir ShopsService.fermerBoutique).
+  @Post(":shopId/close")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER)
+  close(@Param("shopId") shopId: string) {
+    return this.shopsService.fermerBoutique(shopId);
+  }
+
   @Patch(":shopId/invoice-settings")
   @UseGuards(ShopMembershipGuard)
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)

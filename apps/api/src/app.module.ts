@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { ShopsModule } from "./shops/shops.module";
@@ -30,10 +31,15 @@ import { EcheancierModule } from "./echeancier/echeancier.module";
 import { GeoModule } from "./geo/geo.module";
 import { AddressesModule } from "./addresses/addresses.module";
 import { ExpertsModule } from "./experts/experts.module";
+import { CronModule } from "./cron/cron.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Active globalement le mécanisme @Cron utilisé par CronJobsService
+    // (18 oct. 2026, automatisation du cycle de facturation) — un seul
+    // ScheduleModule.forRoot() pour toute l'application.
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ShopsModule,
@@ -64,6 +70,7 @@ import { ExpertsModule } from "./experts/experts.module";
     GeoModule,
     AddressesModule,
     ExpertsModule,
+    CronModule,
   ],
 })
 export class AppModule {}

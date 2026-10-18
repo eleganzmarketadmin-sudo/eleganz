@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
@@ -435,5 +435,41 @@ export class ShopsService {
     // empêche une boutique de retirer la zone d'une autre boutique.
     await this.prisma.shopDeliveryZone.findFirstOrThrow({ where: { id: zoneId, shopId } });
     await this.prisma.shopDeliveryZone.delete({ where: { id: zoneId } });
+  }
+
+  // ---------------------------------------------------------------------
+  // Fermeture de boutique en libre-service (18 oct. 2026, demande "donner
+  // également la main dans le profil la possibilité de supprimer une
+  // boutique") — jusqu'ici, aucune boutique ne pouvait jamais être fermée
+  // ni par son propriétaire, ni même par un administrateur. Volontairement
+  // une fermeture logique (ShopStatus.CLOSED, qui existait déjà dans
+  // l'énum mais n'était écrite nulle part) et non une suppression
+  // physique : commandes, factures et historique restent consultables,
+  // cohérent avec le principe déjà appliqué partout ailleurs sur la
+  // plateforme (ex. BillingService.suspendOverdueShops) de ne jamais
+  // perdre de données financières.
+  // ---------------------------------------------------------------------
+
+  async fermerBoutique(shopId: string) {
+    const boutique = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    if (boutique.status === ShopStatus.CLOSED) {
+      throw new ConflictException("Cette boutique est déjà fermée.");
+    }
+
+    // On bloque la fermeture tant qu'il reste une facture ELEGANZ impayée —
+    // la boutique doit d'abord régler ses arriérés plutôt que de disparaître
+    // en les laissant ouverts (même principe que la réactivation après
+    // suspension, voir BillingService.markInvoicePaidAndReactivate).
+    const facturesImpayees = await this.prisma.invoice.count({ where: { shopId, status: "PENDING" } });
+    if (facturesImpayees > 0) {
+      throw new BadRequestException(
+        `Impossible de fermer la boutique : ${facturesImpayees} facture(s) ELEGANZ encore impayée(s). Réglez-les d'abord.`,
+      );
+    }
+
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: { status: ShopStatus.CLOSED, isPubliclyListed: false },
+    });
   }
 }

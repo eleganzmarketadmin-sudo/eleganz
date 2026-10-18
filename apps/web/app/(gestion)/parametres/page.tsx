@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
@@ -48,8 +49,9 @@ interface ResultatChangementBouquet {
 }
 
 function ParametresContent() {
-  const { currentShop } = useShop();
+  const { currentShop, reload } = useShop();
   const { t } = useLocale();
+  const router = useRouter();
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -153,6 +155,29 @@ function ParametresContent() {
   const [slug, setSlug] = useState("");
   const [publiee, setPubliee] = useState(false);
   const [lienCopie, setLienCopie] = useState(false);
+
+  // Fermeture de boutique en libre-service (18 oct. 2026) — confirmation
+  // par saisie exacte du nom de la boutique, même geste que les autres
+  // actions irréversibles de la plateforme, pour éviter un clic accidentel
+  // sur une action qu'on ne peut pas annuler.
+  const [confirmationNomFermeture, setConfirmationNomFermeture] = useState("");
+  const [fermetureEnCours, setFermetureEnCours] = useState(false);
+  const [erreurFermeture, setErreurFermeture] = useState<string | null>(null);
+
+  async function fermerBoutique() {
+    if (!currentShop) return;
+    setFermetureEnCours(true);
+    setErreurFermeture(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/close`);
+      reload();
+      router.push("/");
+    } catch (err) {
+      setErreurFermeture(err instanceof ApiError ? err.message : t("param_fermetureImpossible"));
+    } finally {
+      setFermetureEnCours(false);
+    }
+  }
 
   useEffect(() => {
     if (!currentShop) return;
@@ -449,6 +474,30 @@ function ParametresContent() {
           <h2 className={styles.sousTitre}>{t("zonesLivraison_titre")}</h2>
           <p className={styles.note}>{t("zonesLivraison_description")}</p>
           <ZonesLivraison shopId={currentShop.id} />
+        </section>
+      )}
+
+      {currentShop && currentShop.myRole === "OWNER" && (
+        <section className={`${styles.section} ${styles.zoneDanger}`}>
+          <h2 className={styles.sousTitre}>{t("param_zoneDangerTitre")}</h2>
+          <p className={styles.note}>{t("param_zoneDangerDescription")}</p>
+          {erreurFermeture && <p className={styles.erreur}>{erreurFermeture}</p>}
+          <div className={styles.champ}>
+            <label>{t("param_zoneDangerConfirmationLabel").replace("{{nom}}", currentShop.name)}</label>
+            <input
+              value={confirmationNomFermeture}
+              onChange={(e) => setConfirmationNomFermeture(e.target.value)}
+              placeholder={currentShop.name}
+            />
+          </div>
+          <button
+            className={styles.boutonDanger}
+            type="button"
+            disabled={fermetureEnCours || confirmationNomFermeture.trim() !== currentShop.name}
+            onClick={fermerBoutique}
+          >
+            {fermetureEnCours ? t("param_zoneDangerFermetureEnCours") : t("param_zoneDangerFermerBoutique")}
+          </button>
         </section>
       )}
     </div>

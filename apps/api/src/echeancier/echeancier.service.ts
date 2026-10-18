@@ -56,12 +56,28 @@ export class EcheancierService {
 
   async run() {
     const maintenant = new Date();
-    const resultats = { dettes: 0, loyers: 0, versements: 0, achatsFournisseur: 0 };
+    const resultats = {
+      dettes: 0,
+      loyers: 0,
+      versements: 0,
+      achatsFournisseur: 0,
+      facturesBoutiques: 0,
+      facturesLivreurs: 0,
+      facturesComptable: 0,
+    };
 
     resultats.dettes = await this.relancerDettesComptable(maintenant);
     resultats.loyers = await this.relancerLoyers(maintenant);
     resultats.versements = await this.relancerVersements(maintenant);
     resultats.achatsFournisseur = await this.relancerAchatsFournisseur(maintenant);
+    // Ajout du 18 oct. 2026 (automatisation du cycle de facturation, point 6
+    // de l'audit) : avant chaque suspension pour impayé (BillingService,
+    // DriverBillingService, ComptableBillingService), la boutique/le
+    // livreur/le compte comptable doit avoir reçu une relance — même
+    // fenêtre J-3→retard que les échéances déjà couvertes ci-dessus.
+    resultats.facturesBoutiques = await this.relancerFacturesBoutiques(maintenant);
+    resultats.facturesLivreurs = await this.relancerFacturesLivreurs(maintenant);
+    resultats.facturesComptable = await this.relancerFacturesComptable(maintenant);
 
     this.logger.log(`Échéancier exécuté : ${JSON.stringify(resultats)}`);
     return resultats;
@@ -170,6 +186,97 @@ export class EcheancierService {
         title: etat === "RETARD" ? "Dette fournisseur en retard" : "Dette fournisseur à venir",
         body: `${shop.name} : la dette envers ${achat.supplier.name} ${LIBELLE_ETAT[etat]} (${reste.toFixed(2)}).`,
         link: "/finance",
+      });
+      nombre += 1;
+    }
+    return nombre;
+  }
+
+  /**
+   * Factures d'abonnement/commission boutique (BillingService) — relance
+   * avant que `BillingService.suspendOverdueShops` (grâce de 7 jours après
+   * `dueAt`) ne suspende effectivement l'accès (18 oct. 2026, point 6).
+   * Destinataires : propriétaire + staff actif, comme pour les dettes
+   * fournisseur ci-dessus.
+   */
+  private async relancerFacturesBoutiques(maintenant: Date): Promise<number> {
+    const factures = await this.prisma.invoice.findMany({
+      where: { status: "PENDING" },
+      include: { shop: { select: { ownerId: true, name: true, staff: { where: { active: true }, select: { userId: true } } } } },
+    });
+
+    let nombre = 0;
+    for (const facture of factures) {
+      const etat = etatEcheance(facture.dueAt, maintenant);
+      if (!etat) continue;
+
+      const destinataires = [facture.shop.ownerId, ...facture.shop.staff.map((s) => s.userId)];
+      await this.notifications.notifierUtilisateurs(destinataires, {
+        type: etat === "RETARD" ? NotificationType.ECHEANCE_DEPASSEE : NotificationType.ECHEANCE_A_VENIR,
+        title: etat === "RETARD" ? "Facture ELEGANZ en retard" : "Facture ELEGANZ à venir",
+        body:
+          etat === "RETARD"
+            ? `${facture.shop.name} : une facture (${Number(facture.amount).toFixed(2)}) est en retard — la boutique sera suspendue si elle reste impayée.`
+            : `${facture.shop.name} : une facture (${Number(facture.amount).toFixed(2)}) ${LIBELLE_ETAT[etat]}.`,
+        link: "/parametres",
+      });
+      nombre += 1;
+    }
+    return nombre;
+  }
+
+  /**
+   * Factures livreur (DriverBillingService) — même logique, avant
+   * `DriverBillingService.suspendOverdueDrivers`.
+   */
+  private async relancerFacturesLivreurs(maintenant: Date): Promise<number> {
+    const factures = await this.prisma.driverInvoice.findMany({
+      where: { status: "PENDING" },
+      include: { driver: { select: { userId: true } } },
+    });
+
+    let nombre = 0;
+    for (const facture of factures) {
+      const etat = etatEcheance(facture.dueAt, maintenant);
+      if (!etat) continue;
+
+      await this.notifications.notifierUtilisateurs([facture.driver.userId], {
+        type: etat === "RETARD" ? NotificationType.ECHEANCE_DEPASSEE : NotificationType.ECHEANCE_A_VENIR,
+        title: etat === "RETARD" ? "Facture livreur en retard" : "Facture livreur à venir",
+        body:
+          etat === "RETARD"
+            ? `Votre facture (${Number(facture.amount).toFixed(2)}) est en retard — votre compte sera suspendu si elle reste impayée.`
+            : `Votre facture (${Number(facture.amount).toFixed(2)}) ${LIBELLE_ETAT[etat]}.`,
+        link: "/livreur/profil",
+      });
+      nombre += 1;
+    }
+    return nombre;
+  }
+
+  /**
+   * Factures ELEGANZ Mon Comptable (ComptableBillingService) — même
+   * logique, avant `ComptableBillingService.suspendOverdueSubscriptions`.
+   */
+  private async relancerFacturesComptable(maintenant: Date): Promise<number> {
+    const factures = await this.prisma.comptableInvoice.findMany({
+      where: { status: "PENDING" },
+      include: { subscription: { select: { userId: true } } },
+    });
+
+    let nombre = 0;
+    for (const facture of factures) {
+      const etat = etatEcheance(facture.dueAt, maintenant);
+      if (!etat) continue;
+
+      await this.notifications.notifierUtilisateurs([facture.subscription.userId], {
+        type: etat === "RETARD" ? NotificationType.ECHEANCE_DEPASSEE : NotificationType.ECHEANCE_A_VENIR,
+        title: etat === "RETARD" ? "Facture Mon Comptable en retard" : "Facture Mon Comptable à venir",
+        body:
+          etat === "RETARD"
+            ? `Votre facture (${Number(facture.amount).toFixed(2)}) est en retard — votre abonnement sera suspendu si elle reste impayée.`
+            : `Votre facture (${Number(facture.amount).toFixed(2)}) ${LIBELLE_ETAT[etat]}.`,
+        link: "/comptable",
       });
       nombre += 1;
     }

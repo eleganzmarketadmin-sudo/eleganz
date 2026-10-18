@@ -78,11 +78,25 @@ function FacturesContent() {
 
   useEffect(recharger, []);
 
+  // Correctif du 18 oct. 2026 : marquer une facture payée ne réactive plus
+  // automatiquement s'il reste d'autres factures impayées pour la même
+  // boutique/livreur/compte (voir BillingService.markInvoicePaidAndReactivate
+  // et équivalents) — on affiche ce solde restant plutôt que de le passer
+  // sous silence.
+  function messageApresPaiement(resultat: { reactivee: boolean; facturesRestantes: number }) {
+    if (resultat.reactivee) return t("admfact_paiementEtReactivation");
+    return t("admfact_paiementMaisFacturesRestantes").replace("{{n}}", String(resultat.facturesRestantes));
+  }
+
   async function marquerPayee(invoiceId: string) {
     setEnCours(invoiceId);
     setErreur(null);
+    setMessage(null);
     try {
-      await api.post(`/admin/billing/invoices/${invoiceId}/mark-paid`);
+      const resultat = await api.post<{ reactivee: boolean; facturesRestantes: number }>(
+        `/admin/billing/invoices/${invoiceId}/mark-paid`,
+      );
+      setMessage(messageApresPaiement(resultat));
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
@@ -94,8 +108,12 @@ function FacturesContent() {
   async function marquerPayeeLivreur(invoiceId: string) {
     setEnCours(invoiceId);
     setErreur(null);
+    setMessage(null);
     try {
-      await api.post(`/admin/driver-billing/invoices/${invoiceId}/mark-paid`);
+      const resultat = await api.post<{ reactivee: boolean; facturesRestantes: number }>(
+        `/admin/driver-billing/invoices/${invoiceId}/mark-paid`,
+      );
+      setMessage(messageApresPaiement(resultat));
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
@@ -107,8 +125,12 @@ function FacturesContent() {
   async function marquerPayeeComptable(invoiceId: string) {
     setEnCours(invoiceId);
     setErreur(null);
+    setMessage(null);
     try {
-      await api.post(`/admin/comptable/invoices/${invoiceId}/mark-paid`);
+      const resultat = await api.post<{ reactivee: boolean; facturesRestantes: number }>(
+        `/admin/comptable/invoices/${invoiceId}/mark-paid`,
+      );
+      setMessage(messageApresPaiement(resultat));
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));

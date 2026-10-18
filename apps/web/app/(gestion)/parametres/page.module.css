@@ -67,6 +67,26 @@
   margin-bottom: var(--espace-4);
 }
 
+.zoneDanger {
+  border-color: var(--color-flamme);
+}
+
+.boutonDanger {
+  align-self: flex-start;
+  background: var(--color-flamme);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3) var(--espace-5);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .confirmation {
   background: var(--color-vert-paiement);
   color: #fff;

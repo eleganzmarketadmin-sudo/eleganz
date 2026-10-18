@@ -122,9 +122,21 @@ export class ComptableBillingService {
     return results;
   }
 
+  /**
+   * Correctif du 18 oct. 2026 (même demande que BillingService) : ne
+   * réactive l'abonnement, et ne fait avancer `renewsAt`, que si plus
+   * aucune facture PENDING ne reste — sinon le cycle de renouvellement
+   * n'est pas vraiment soldé, seulement une facture parmi d'autres.
+   */
   async markInvoicePaidAndReactivate(invoiceId: string) {
     const invoice = await this.prisma.comptableInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
     const sub = await this.prisma.comptableSubscription.findUniqueOrThrow({ where: { id: invoice.subscriptionId } });
+
+    const autresFacturesImpayees = await this.prisma.comptableInvoice.count({
+      where: { subscriptionId: invoice.subscriptionId, status: "PENDING", id: { not: invoiceId } },
+    });
+    const reactivationComplete = autresFacturesImpayees === 0;
+
     const renewsAt = new Date();
     renewsAt.setMonth(renewsAt.getMonth() + (sub.plan === "YEARLY" ? 12 : 1));
 
@@ -132,7 +144,9 @@ export class ComptableBillingService {
       this.prisma.comptableInvoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
       this.prisma.comptableSubscription.update({
         where: { id: invoice.subscriptionId },
-        data: { billingStatus: ComptableBillingStatus.ACTIVE, renewsAt },
+        data: reactivationComplete
+          ? { billingStatus: ComptableBillingStatus.ACTIVE, renewsAt }
+          : { billingStatus: ComptableBillingStatus.PAYMENT_DUE },
       }),
     ]);
 
@@ -140,7 +154,7 @@ export class ComptableBillingService {
       this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture Secourable ${invoiceId} échouée`, err);
     });
 
-    return resultats;
+    return { ...resultats[1], facturesRestantes: autresFacturesImpayees, reactivee: reactivationComplete };
   }
 
   listInvoices(subscriptionId: string) {
