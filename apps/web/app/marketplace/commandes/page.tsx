@@ -83,6 +83,14 @@ export default function CommandesPage() {
   const [commentaireAvis, setCommentaireAvis] = useState("");
   const [avisEnvoyesPour, setAvisEnvoyesPour] = useState<Set<string>>(new Set());
   const [envoiAvisEnCours, setEnvoiAvisEnCours] = useState(false);
+  // Signalement d'un problème côté acheteur (audit du 18 oct. 2026) —
+  // POST /marketplace/orders/:id/dispute existait déjà côté API
+  // (DisputesController.openAsBuyer) mais aucun écran Marketplace ne
+  // l'appelait : l'acheteur ne pouvait ouvrir un litige qu'en écrivant à
+  // l'admin hors plateforme.
+  const [litigePour, setLitigePour] = useState<ShopOrder | null>(null);
+  const [motifLitige, setMotifLitige] = useState("");
+  const [envoiLitigeEnCours, setEnvoiLitigeEnCours] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -131,6 +139,38 @@ export default function CommandesPage() {
   }
 
   const STATUTS_ANNULABLES = ["CREATED", "PAYMENT_PENDING", "PAYMENT_CONFIRMED", "ACCEPTED"];
+
+  // Statuts où signaler un problème n'a pas de sens : déjà annulée, déjà en
+  // litige, déjà remboursée ou déjà en retour (un autre circuit prend le
+  // relais). Le backend (DisputesService.open) n'impose lui-même aucune
+  // restriction de statut — cette liste est une simple aide à la décision
+  // côté écran, pas une règle de sécurité.
+  const STATUTS_SANS_LITIGE_POSSIBLE = ["CANCELLED", "DISPUTED", "REFUNDED", "RETURN_REQUESTED"];
+
+  function ouvrirLitige(so: ShopOrder) {
+    setLitigePour(so);
+    setMotifLitige("");
+    setErreur(null);
+  }
+
+  async function envoyerLitige() {
+    if (!litigePour) return;
+    if (!motifLitige.trim()) {
+      setErreur(t("cmd_litigeMotifRequis"));
+      return;
+    }
+    setEnvoiLitigeEnCours(true);
+    setErreur(null);
+    try {
+      await api.post(`/marketplace/orders/${litigePour.id}/dispute`, { reason: motifLitige.trim() });
+      setLitigePour(null);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cmd_litigeEchec"));
+    } finally {
+      setEnvoiLitigeEnCours(false);
+    }
+  }
 
   function ouvrirAvis(so: ShopOrder) {
     setAvisPour(so);
@@ -248,6 +288,21 @@ export default function CommandesPage() {
                         {t("avis_laisserAvis")}
                       </button>
                     ))}
+                  {!STATUTS_SANS_LITIGE_POSSIBLE.includes(so.status) && (
+                    <button
+                      onClick={() => ouvrirLitige(so)}
+                      style={{
+                        border: "2px solid var(--color-texte-muted)",
+                        color: "var(--color-texte-muted)",
+                        background: "none",
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {t("cmd_signalerProbleme")}
+                    </button>
+                  )}
                 </span>
               </div>
             ))}
@@ -303,6 +358,44 @@ export default function CommandesPage() {
               </button>
               <button
                 onClick={() => setAvisPour(null)}
+                style={{ background: "none", border: "none", color: "var(--color-texte-muted)", cursor: "pointer" }}
+              >
+                {t("action_annuler")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {litigePour && (
+        <div className={styles.modaleFond} onClick={() => setLitigePour(null)}>
+          <div className={styles.modale} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginBottom: "12px" }}>{t("cmd_litigeTitre")}</h2>
+            <textarea
+              placeholder={t("cmd_litigePlaceholder")}
+              value={motifLitige}
+              onChange={(e) => setMotifLitige(e.target.value)}
+              rows={4}
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px", border: "1px solid var(--color-border)", marginBottom: "12px" }}
+            />
+            {erreur && <div className={styles.erreur}>{erreur}</div>}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={envoyerLitige}
+                disabled={envoiLitigeEnCours}
+                style={{
+                  background: "var(--color-flamme)",
+                  color: "#fff",
+                  border: "none",
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                {envoiLitigeEnCours ? t("cmd_envoiLitigeEnCours") : t("cmd_envoyerLitige")}
+              </button>
+              <button
+                onClick={() => setLitigePour(null)}
                 style={{ background: "none", border: "none", color: "var(--color-texte-muted)", cursor: "pointer" }}
               >
                 {t("action_annuler")}
