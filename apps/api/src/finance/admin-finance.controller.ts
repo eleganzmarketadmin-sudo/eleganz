@@ -29,6 +29,8 @@ import {
   CreateRapprochementDto,
   CreateTresorerieCompteDto,
 } from "./dto/tresorerie.dto";
+import { ExpensesService } from "../operations/expenses.service";
+import { CreateExpenseDto } from "../operations/dto/expense.dto";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
@@ -67,6 +69,7 @@ export class AdminFinanceController {
     private readonly fiscalSimulation: FiscalSimulationService,
     private readonly assetsService: AssetsService,
     private readonly tresorerieComptesService: TresorerieComptesService,
+    private readonly expensesService: ExpensesService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -298,6 +301,27 @@ export class AdminFinanceController {
   ) {
     requireAdmin(user);
     return this.tresorerieComptesService.creerRapprochementForPlatform(compteId, dto);
+  }
+
+  // --- Charges plateforme (18 oct. 2026, audit du 18 oct. 2026, point 7 :
+  // "Charges et créances/dettes plateforme") — pendant plateforme de
+  // /shops/:shopId/expenses. La partie "créances/dettes" du même point de
+  // l'audit n'a volontairement aucun pendant ici : les créances d'ELEGANZ
+  // sur les boutiques sont déjà suivies par la facturation/l'échéancier
+  // (voir le chantier anti-fraude facturation) et ELEGANZ n'a, à cette
+  // phase, aucun répertoire fournisseurs/dettes propre à mettre en place —
+  // construire un écran vide serait présenter comme livré quelque chose
+  // qui ne reflète aucun besoin réel actuel.
+  @Get("charges")
+  listCharges(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.expensesService.listForPlatform();
+  }
+
+  @Post("charges")
+  createCharge(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateExpenseDto) {
+    requireAdmin(user);
+    return this.expensesService.createForPlatform(dto);
   }
 
   @Get("dashboard")

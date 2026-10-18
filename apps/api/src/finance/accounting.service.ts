@@ -96,13 +96,24 @@ export class AccountingService {
     });
   }
 
-  async postExpense(expense: { id: string; shopId: string; amount: unknown; currency: string; category: string }) {
-    await this.seed.ensureShopChartOfAccounts(expense.shopId);
+  /**
+   * Généralisé au scope PLATFORM le 18 oct. 2026 (audit du 18 oct. 2026,
+   * point 7 : "Charges et créances/dettes plateforme") — `expense.shopId`
+   * est désormais nullable (voir Expense dans schema.prisma) ; `scope` est
+   * déduit de la présence de `shopId` plutôt que câblé en dur sur SHOP.
+   */
+  async postExpense(expense: { id: string; shopId: string | null; amount: unknown; currency: string; category: string }) {
+    const scope = expense.shopId ? FiscalRuleScope.SHOP : FiscalRuleScope.PLATFORM;
+    if (scope === FiscalRuleScope.SHOP && expense.shopId) {
+      await this.seed.ensureShopChartOfAccounts(expense.shopId);
+    } else {
+      await this.seed.ensurePlatformChartOfAccounts();
+    }
     const montant = Number(expense.amount);
     const famille = FAMILLE_PAR_CATEGORIE[expense.category] ?? "fonctionnement";
     const compteCharge = COMPTE_PAR_FAMILLE[famille] ?? COMPTE_PAR_FAMILLE.fonctionnement;
     await this.enregistrer({
-      scope: FiscalRuleScope.SHOP,
+      scope,
       shopId: expense.shopId,
       journalCode: "OD",
       entryDate: new Date(),

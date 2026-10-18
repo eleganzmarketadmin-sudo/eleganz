@@ -30,6 +30,9 @@ const ONGLETS = [
   // Ajout du 18 oct. 2026 (audit du 18 oct. 2026, point 6) — l'écran
   // Immobilisations plateforme n'existait pas du tout côté admin.
   { href: "/admin/finance/immobilisations", cle: "admfinnav_immobilisations" },
+  // Ajout du 18 oct. 2026 (audit du 18 oct. 2026, point 7) — idem pour les
+  // charges plateforme.
+  { href: "/admin/finance/charges", cle: "admfinnav_charges" },
 ];
 
 export function AdminFinanceSubNav() {

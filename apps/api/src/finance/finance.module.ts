@@ -19,6 +19,8 @@ import { StockValorisationController } from "./stock-valorisation.controller";
 import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { RapportAnnuelService } from "./rapport-annuel.service";
+import { ExpensesService } from "../operations/expenses.service";
+import { ExpensesController } from "../operations/expenses.controller";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -26,6 +28,14 @@ import { RapportAnnuelService } from "./rapport-annuel.service";
 // OperationsModule) — sans cet import, JwtAuthGuard ne résout pas ses
 // dépendances et l'API entière refuse de démarrer (leçon déjà documentée
 // dans docs/MAINTENANCE.md, incident AuthModule).
+//
+// ExpensesService/ExpensesController rapatriés depuis OperationsModule le
+// 18 oct. 2026 (audit du 18 oct. 2026, point 7) — AdminFinanceController a
+// besoin d'injecter ExpensesService pour les charges plateforme, et
+// OperationsModule importe déjà FinanceModule (pour AccountingService) :
+// l'inverse (FinanceModule → OperationsModule) créerait un import de
+// module circulaire. Même règle déjà appliquée à Assets/TresorerieComptes,
+// qui vivaient ici dès le départ malgré leurs routes shop-scoped.
 @Module({
   imports: [ShopsModule],
   providers: [
@@ -43,6 +53,7 @@ import { RapportAnnuelService } from "./rapport-annuel.service";
     DossierValidationService,
     BusinessPlanService,
     RapportAnnuelService,
+    ExpensesService,
   ],
   controllers: [
     FinanceController,
@@ -50,6 +61,7 @@ import { RapportAnnuelService } from "./rapport-annuel.service";
     AssetsController,
     TresorerieComptesController,
     StockValorisationController,
+    ExpensesController,
   ],
   exports: [AccountingService],
 })

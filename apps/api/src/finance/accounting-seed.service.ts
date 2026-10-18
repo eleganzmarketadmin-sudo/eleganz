@@ -95,6 +95,20 @@ const COMPTES_ELEGANZ: SeedAccount[] = [
   { code: "681", label: "Dotations aux amortissements", normalSide: AccountNormalSide.DEBIT },
   { code: "2848", label: "Amortissements des autres immobilisations", normalSide: AccountNormalSide.CREDIT },
 
+  // Ajoutés le 18 oct. 2026 (audit du 18 oct. 2026, point 7 : "Charges et
+  // créances/dettes plateforme") — AccountingService.postExpense (via
+  // COMPTE_PAR_FAMILLE) comptabilise toute dépense sur l'un de ces 6
+  // comptes génériques par famille ; ils existaient déjà dans
+  // COMPTES_BOUTIQUE mais jamais ici, alors que l'écran Charges plateforme
+  // en a besoin pour toute dépense qui n'a pas déjà un compte dédié
+  // (605/622/624/628/664 ci-dessous).
+  { code: "6220", label: "Charges de fonctionnement", normalSide: AccountNormalSide.DEBIT },
+  { code: "6221", label: "Charges administratives", normalSide: AccountNormalSide.DEBIT },
+  { code: "6222", label: "Charges commerciales", normalSide: AccountNormalSide.DEBIT },
+  { code: "661", label: "Charges de personnel", normalSide: AccountNormalSide.DEBIT },
+  { code: "641", label: "Impôts et taxes", normalSide: AccountNormalSide.DEBIT },
+  { code: "671", label: "Charges financières", normalSide: AccountNormalSide.DEBIT },
+
   // Comptes ajoutés le 14 oct. 2026 — mêmes principes que COMPTES_BOUTIQUE
   // ci-dessus, sans classe 3 (pas de stock de marchandises côté plateforme).
   { code: "101", label: "Capital social ELEGANZ", normalSide: AccountNormalSide.CREDIT },
