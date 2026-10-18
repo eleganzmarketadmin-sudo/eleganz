@@ -342,4 +342,17 @@ export class AdminFinanceController {
     requireAdmin(user);
     return this.fiscalRulesService.updateForPlatform(ruleId, user.id, dto);
   }
+
+  // Archivage (18 oct. 2026, audit du 18 oct. 2026, point 4) — jusqu'ici
+  // absent côté plateforme alors que la boutique l'avait déjà
+  // (FinanceController.archiveFiscalRule).
+  @Delete("fiscal-rules/:ruleId")
+  archiveFiscalRule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("ruleId") ruleId: string,
+    @Body("motif") motif: string,
+  ) {
+    requireAdmin(user);
+    return this.fiscalRulesService.archiveForPlatform(ruleId, user.id, motif || "Archivage");
+  }
 }

@@ -181,6 +181,20 @@ export class FiscalRulesService {
     });
   }
 
+  /**
+   * Archivage d'une règle fiscale plateforme (18 oct. 2026, audit du 18
+   * oct. 2026, point 4) — jusqu'ici, seule la règle d'une BOUTIQUE pouvait
+   * être archivée (`archiveForShop`) ; une règle plateforme obsolète
+   * restait affichée comme active indéfiniment, sans aucun moyen de la
+   * retirer proprement avec un motif tracé. Même logique, scope PLATFORM.
+   */
+  async archiveForPlatform(ruleId: string, authorId: string, motif: string) {
+    await this.prisma.fiscalRule.findFirstOrThrow({
+      where: { id: ruleId, scope: FiscalRuleScope.PLATFORM },
+    });
+    return this.setStatus(ruleId, FiscalRuleStatus.OBSOLETE, authorId, motif);
+  }
+
   versionsForPlatformRule(ruleId: string) {
     return this.prisma.fiscalRuleVersion.findMany({
       where: { ruleId, rule: { scope: FiscalRuleScope.PLATFORM } },
