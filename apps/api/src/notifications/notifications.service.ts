@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationType } from "@eleganz/database";
 
@@ -15,13 +15,27 @@ import { NotificationType } from "@eleganz/database";
  */
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async notifierUtilisateurs(
     userIds: string[],
     params: { type: NotificationType; title: string; body: string; link?: string },
   ) {
-    if (userIds.length === 0) return;
+    // Correctif audit du 18 oct. 2026 : un tableau vide (ex. zéro compte
+    // ADMIN_* trouvé pour une escalade — voir
+    // PasswordResetService.demanderReinitialisation) faisait disparaître la
+    // notification sans aucune trace, alors que l'appelant peut avoir déjà
+    // dit à la personne « votre demande a été transmise ». Ce marqueur
+    // greppable (NOTIFICATION_DESTINATAIRES_VIDE) rend ce cas repérable
+    // dans les logs sans changer le comportement (toujours un no-op, qui
+    // reste le bon choix générique pour un primitif partagé par une
+    // douzaine d'appelants).
+    if (userIds.length === 0) {
+      this.logger.warn(`NOTIFICATION_DESTINATAIRES_VIDE aucun destinataire pour la notification "${params.title}"`);
+      return;
+    }
     const uniques = [...new Set(userIds)];
 
     const settings = await this.prisma.platformSettings.findUnique({
