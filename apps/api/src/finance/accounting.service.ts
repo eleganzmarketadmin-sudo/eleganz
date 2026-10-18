@@ -217,12 +217,30 @@ export class AccountingService {
    * calculé). `sourceId` inclut le mois (AAAA-MM) pour que la contrainte
    * d'unicité sur JournalEntry empêche toute double comptabilisation du
    * même mois pour le même actif.
+   *
+   * Généralisé au scope PLATFORM le 18 oct. 2026 (audit du 18 oct. 2026,
+   * point 6) — jusqu'ici câblé en dur sur SHOP, alors que le modèle Asset
+   * supporte déjà scope=PLATFORM/shopId=null. Le compte de contrepartie
+   * (crédit) diffère par scope car le plan comptable ELEGANZ (COMPTES_ELEGANZ)
+   * n'a pas repris le code 2841 déjà utilisé côté boutique — voir 2848 dans
+   * accounting-seed.service.ts.
    */
-  async postAssetDepreciation(shopId: string, asset: { id: string; label: string }, periodDate: Date, montant: number) {
-    await this.seed.ensureShopChartOfAccounts(shopId);
+  async postAssetDepreciation(
+    scope: FiscalRuleScope,
+    shopId: string | null,
+    asset: { id: string; label: string },
+    periodDate: Date,
+    montant: number,
+  ) {
+    if (scope === FiscalRuleScope.SHOP && shopId) {
+      await this.seed.ensureShopChartOfAccounts(shopId);
+    } else {
+      await this.seed.ensurePlatformChartOfAccounts();
+    }
+    const compteAmortissement = scope === FiscalRuleScope.SHOP ? "2841" : "2848";
     const moisCle = periodDate.toISOString().slice(0, 7);
     await this.enregistrer({
-      scope: FiscalRuleScope.SHOP,
+      scope,
       shopId,
       journalCode: "OD",
       entryDate: periodDate,
@@ -231,7 +249,7 @@ export class AccountingService {
       sourceId: `asset:${asset.id}:${moisCle}`,
       lignes: [
         { accountCode: "681", debit: montant },
-        { accountCode: "2841", credit: montant },
+        { accountCode: compteAmortissement, credit: montant },
       ],
     });
   }

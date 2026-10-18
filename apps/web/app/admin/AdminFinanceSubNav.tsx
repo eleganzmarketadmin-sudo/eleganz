@@ -27,6 +27,9 @@ const ONGLETS = [
   { href: "/admin/finance/analytique", cle: "admfinnav_analytique" },
   { href: "/admin/finance/tresorerie", cle: "admfinnav_tresorerie" },
   { href: "/admin/finance/cloture", cle: "admfinnav_cloture" },
+  // Ajout du 18 oct. 2026 (audit du 18 oct. 2026, point 6) — l'écran
+  // Immobilisations plateforme n'existait pas du tout côté admin.
+  { href: "/admin/finance/immobilisations", cle: "admfinnav_immobilisations" },
 ];
 
 export function AdminFinanceSubNav() {

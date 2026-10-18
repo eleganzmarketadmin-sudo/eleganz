@@ -22,6 +22,12 @@ export type StatutDotation = "comptabilise" | "deja_comptabilise" | "termine";
  * l'utilisateur dans l'écran Immobilisations, jamais une tâche automatique
  * silencieuse — ce serait présenter comme construit quelque chose qui ne
  * tourne pas réellement.
+ *
+ * Généralisé au scope PLATFORM le 18 oct. 2026 (audit du 18 oct. 2026,
+ * point 6 : "Trésorerie multi-comptes et immobilisations plateforme
+ * absentes") — même pattern que FiscalRulesService : chaque méthode
+ * publique "ForShop"/"ForPlatform" filtre systématiquement sur son scope,
+ * jamais l'un ne peut lire/écrire l'autre.
  */
 @Injectable()
 export class AssetsService {
@@ -30,10 +36,48 @@ export class AssetsService {
     private readonly accounting: AccountingService,
   ) {}
 
+  // --- Boutique (scope=SHOP) ---------------------------------------------
+
   async create(shopId: string, dto: CreateAssetDto) {
+    return this.creer(FiscalRuleScope.SHOP, shopId, dto);
+  }
+
+  listForShop(shopId: string) {
+    return this.lister(FiscalRuleScope.SHOP, shopId);
+  }
+
+  async dispose(shopId: string, assetId: string) {
+    return this.mettreAuRebut(FiscalRuleScope.SHOP, shopId, assetId);
+  }
+
+  async runDepreciationForMonth(shopId: string, periodDate: Date) {
+    return this.comptabiliserDotations(FiscalRuleScope.SHOP, shopId, periodDate);
+  }
+
+  // --- ELEGANZ elle-même (scope=PLATFORM) --------------------------------
+
+  async createForPlatform(dto: CreateAssetDto) {
+    return this.creer(FiscalRuleScope.PLATFORM, null, dto);
+  }
+
+  listForPlatform() {
+    return this.lister(FiscalRuleScope.PLATFORM, null);
+  }
+
+  async disposeForPlatform(assetId: string) {
+    return this.mettreAuRebut(FiscalRuleScope.PLATFORM, null, assetId);
+  }
+
+  async runDepreciationForMonthPlatform(periodDate: Date) {
+    return this.comptabiliserDotations(FiscalRuleScope.PLATFORM, null, periodDate);
+  }
+
+  // --- Logique partagée ----------------------------------------------------
+
+  private async creer(scope: FiscalRuleScope, shopId: string | null, dto: CreateAssetDto) {
     return this.prisma.asset.create({
       data: {
-        scope: FiscalRuleScope.SHOP,
+        scope,
         shopId,
         label: dto.label,
         acquisitionDate: new Date(dto.acquisitionDate),
@@ -43,23 +87,25 @@ export class AssetsService {
     });
   }
 
-  listForShop(shopId: string) {
+  private lister(scope: FiscalRuleScope, shopId: string | null) {
     return this.prisma.asset.findMany({
-      where: { scope: FiscalRuleScope.SHOP, shopId },
+      where: { scope, shopId },
       include: { depreciations: { orderBy: { periodDate: "desc" } } },
       orderBy: { acquisitionDate: "desc" },
     });
   }
 
-  private async getOwned(shopId: string, assetId: string) {
+  private async getOwned(scope: FiscalRuleScope, shopId: string | null, assetId: string) {
     const asset = await this.prisma.asset.findUnique({ where: { id: assetId } });
     if (!asset) throw new NotFoundException("Immobilisation introuvable.");
-    if (asset.shopId !== shopId) throw new ForbiddenException("Cette immobilisation n'appartient pas à cette boutique.");
+    if (asset.scope !== scope || asset.shopId !== shopId) {
+      throw new ForbiddenException("Cette immobilisation n'appartient pas à ce périmètre.");
+    }
     return asset;
   }
 
-  async dispose(shopId: string, assetId: string) {
-    await this.getOwned(shopId, assetId);
+  private async mettreAuRebut(scope: FiscalRuleScope, shopId: string | null, assetId: string) {
+    await this.getOwned(scope, shopId, assetId);
     return this.prisma.asset.update({
       where: { id: assetId },
       data: { disposed: true, disposedAt: new Date() },
@@ -68,14 +114,15 @@ export class AssetsService {
 
   /**
    * Comptabilise la dotation aux amortissements du mois `periodDate` pour
-   * chaque immobilisation active de la boutique dont l'acquisition est
-   * antérieure et dont la durée n'est pas encore écoulée. Idempotent par
-   * actif et par mois (contrainte d'unicité sur AssetDepreciation).
+   * chaque immobilisation active du périmètre (boutique ou plateforme) dont
+   * l'acquisition est antérieure et dont la durée n'est pas encore écoulée.
+   * Idempotent par actif et par mois (contrainte d'unicité sur
+   * AssetDepreciation).
    */
-  async runDepreciationForMonth(shopId: string, periodDate: Date) {
+  private async comptabiliserDotations(scope: FiscalRuleScope, shopId: string | null, periodDate: Date) {
     const debut = debutDuMois(periodDate);
     const actifs = await this.prisma.asset.findMany({
-      where: { scope: FiscalRuleScope.SHOP, shopId, disposed: false, acquisitionDate: { lte: debut } },
+      where: { scope, shopId, disposed: false, acquisitionDate: { lte: debut } },
     });
 
     const resultats: { assetId: string; label: string; montant: number; statut: StatutDotation }[] = [];
@@ -96,13 +143,11 @@ export class AssetsService {
       // L'écriture comptable est posée AVANT la ligne de déduplication
       // (pas l'inverse) : si postAssetDepreciation échoue (période clôturée,
       // ou toute autre erreur), aucune ligne AssetDepreciation n'est créée et
-      // un nouvel essai reste possible. L'ordre inverse (corrigé le 14 oct.
-      // 2026) laissait une ligne de déduplication orpheline après un échec —
-      // un nouvel essai répondait alors "deja_comptabilise" sans qu'aucune
-      // écriture de journal n'ait jamais existé, perdant la dotation du mois
-      // de façon permanente et silencieuse (reproduit en conditions réelles,
-      // voir docs/PLAN_COMMERCIAL.md).
-      await this.accounting.postAssetDepreciation(shopId, actif, debut, montant);
+      // un nouvel essai reste possible. Voir le commentaire original
+      // (14 oct. 2026) sur l'incident déjà documenté dans
+      // docs/PLAN_COMMERCIAL.md pour l'ordre inverse qui perdait des
+      // dotations silencieusement.
+      await this.accounting.postAssetDepreciation(scope, shopId, actif, debut, montant);
       await this.prisma.assetDepreciation.create({
         data: { assetId: actif.id, periodDate: debut, amount: montant },
       });

@@ -85,6 +85,16 @@ const COMPTES_ELEGANZ: SeedAccount[] = [
   { code: "411", label: "Boutiques — sommes dues à ELEGANZ", normalSide: AccountNormalSide.DEBIT },
   { code: "706", label: "Produits des abonnements et services", normalSide: AccountNormalSide.CREDIT },
 
+  // Ajoutés le 18 oct. 2026 (audit du 18 oct. 2026, point 6 : "Trésorerie
+  // multi-comptes et immobilisations plateforme absentes") — la liste
+  // existante n'avait que des comptes d'amortissement spécifiques par
+  // catégorie (2811 incorporelles, 2818 agencements), alors que
+  // AssetsService (immobilisations plateforme) a besoin, comme côté
+  // boutique, d'une paire générique dotation/amortissement puisque le
+  // modèle Asset ne porte aucune catégorie.
+  { code: "681", label: "Dotations aux amortissements", normalSide: AccountNormalSide.DEBIT },
+  { code: "2848", label: "Amortissements des autres immobilisations", normalSide: AccountNormalSide.CREDIT },
+
   // Comptes ajoutés le 14 oct. 2026 — mêmes principes que COMPTES_BOUTIQUE
   // ci-dessus, sans classe 3 (pas de stock de marchandises côté plateforme).
   { code: "101", label: "Capital social ELEGANZ", normalSide: AccountNormalSide.CREDIT },

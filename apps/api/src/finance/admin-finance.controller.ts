@@ -21,6 +21,14 @@ import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { RapportAnnuelService } from "./rapport-annuel.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
+import { AssetsService } from "./assets.service";
+import { TresorerieComptesService } from "./tresorerie-comptes.service";
+import { CreateAssetDto } from "./dto/asset.dto";
+import {
+  CreateMouvementTresorerieDto,
+  CreateRapprochementDto,
+  CreateTresorerieCompteDto,
+} from "./dto/tresorerie.dto";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
@@ -57,6 +65,8 @@ export class AdminFinanceController {
     private readonly rapportAnnuel: RapportAnnuelService,
     private readonly accountingService: AccountingService,
     private readonly fiscalSimulation: FiscalSimulationService,
+    private readonly assetsService: AssetsService,
+    private readonly tresorerieComptesService: TresorerieComptesService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -210,6 +220,84 @@ export class AdminFinanceController {
   reouvrirPeriode(@CurrentUser() user: AuthenticatedUser, @Param("periode") periode: string) {
     requireAdmin(user);
     return this.closureService.reopen(FiscalRuleScope.PLATFORM, null, periode);
+  }
+
+  // --- Immobilisations plateforme (18 oct. 2026, audit du 18 oct. 2026,
+  // point 6 : "Trésorerie multi-comptes et immobilisations plateforme
+  // absentes") — pendant plateforme de /shops/:shopId/assets, scope
+  // PLATFORM, même isolation que le reste de ce contrôleur. -----------------
+
+  @Get("assets")
+  listAssets(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.assetsService.listForPlatform();
+  }
+
+  @Post("assets")
+  createAsset(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateAssetDto) {
+    requireAdmin(user);
+    return this.assetsService.createForPlatform(dto);
+  }
+
+  @Post("assets/:assetId/mise-au-rebut")
+  disposeAsset(@CurrentUser() user: AuthenticatedUser, @Param("assetId") assetId: string) {
+    requireAdmin(user);
+    return this.assetsService.disposeForPlatform(assetId);
+  }
+
+  // `period` au format AAAA-MM, mois courant par défaut.
+  @Post("assets/depreciation/run")
+  runAssetDepreciation(@CurrentUser() user: AuthenticatedUser, @Query("period") period?: string) {
+    requireAdmin(user);
+    const periodDate = period ? new Date(`${period}-01T00:00:00.000Z`) : new Date();
+    return this.assetsService.runDepreciationForMonthPlatform(periodDate);
+  }
+
+  // --- Trésorerie multi-comptes plateforme (même audit, même point) —
+  // pendant plateforme de /shops/:shopId/tresorerie/comptes. ----------------
+
+  @Get("tresorerie-comptes")
+  listTresorerieComptes(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.listForPlatform();
+  }
+
+  @Post("tresorerie-comptes")
+  createTresorerieCompte(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTresorerieCompteDto) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.createForPlatform(dto);
+  }
+
+  @Post("tresorerie-comptes/:compteId/desactiver")
+  desactiverTresorerieCompte(@CurrentUser() user: AuthenticatedUser, @Param("compteId") compteId: string) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.desactiverForPlatform(compteId);
+  }
+
+  @Post("tresorerie-comptes/:compteId/mouvements")
+  enregistrerMouvementTresorerie(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("compteId") compteId: string,
+    @Body() dto: CreateMouvementTresorerieDto,
+  ) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.enregistrerMouvementForPlatform(compteId, dto);
+  }
+
+  @Get("tresorerie-comptes/:compteId/rapprochements")
+  listerRapprochementsTresorerie(@CurrentUser() user: AuthenticatedUser, @Param("compteId") compteId: string) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.listerRapprochementsForPlatform(compteId);
+  }
+
+  @Post("tresorerie-comptes/:compteId/rapprochements")
+  creerRapprochementTresorerie(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("compteId") compteId: string,
+    @Body() dto: CreateRapprochementDto,
+  ) {
+    requireAdmin(user);
+    return this.tresorerieComptesService.creerRapprochementForPlatform(compteId, dto);
   }
 
   @Get("dashboard")
