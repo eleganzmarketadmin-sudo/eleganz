@@ -21,6 +21,17 @@ interface PlatformSettings {
   notificationsEmailEnabled?: boolean;
   notificationsSmsEnabled?: boolean;
   chatWidgetEnabled?: boolean;
+  // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, commit
+  // c819cb8) — champs déjà en base et déjà consommés par le dossier crédit
+  // plateforme et le rapport annuel (admin-finance.service.ts,
+  // rapport-annuel.service.ts), mais sans AUCUN formulaire pour les
+  // renseigner jusqu'ici (audit du 18 oct. 2026, point 3). Le PATCH
+  // /admin/platform-settings les acceptait déjà — seul l'écran manquait.
+  platformFiscalLegalName?: string | null;
+  platformFiscalIdNumber?: string | null;
+  platformFiscalAddress?: string | null;
+  platformFiscalRegime?: string | null;
+  platformFoundedAt?: string | null;
 }
 
 const CLES_FONCTIONNALITES_IA: { cle: "photoSearchEnabled" | "adStudioEnabled"; labelCle: string; descriptionCle: string }[] = [
@@ -66,6 +77,17 @@ const CLES_CANAUX_NOTIFICATION: {
     labelCle: "admparam_canalSmsLabel",
     descriptionCle: "admparam_canalSmsDescription",
   },
+];
+
+// Champs texte de l'identité fiscale ELEGANZ (18 oct. 2026, audit du 18
+// oct. 2026, point 3) — formulaire séparé du bloc "Coordonnées & réseaux
+// sociaux" ci-dessous, avec son propre bouton d'enregistrement, pour ne
+// jamais mélanger les deux PATCH dans la même soumission.
+const CLES_CHAMPS_FISCAL: { cle: "platformFiscalLegalName" | "platformFiscalIdNumber" | "platformFiscalAddress" | "platformFiscalRegime"; labelCle: string; placeholder: string }[] = [
+  { cle: "platformFiscalLegalName", labelCle: "admparam_fiscalRaisonSociale", placeholder: "Ex. ELEGANZ SARL" },
+  { cle: "platformFiscalIdNumber", labelCle: "admparam_fiscalNumeroId", placeholder: "Ex. NIU / RCCM" },
+  { cle: "platformFiscalAddress", labelCle: "admparam_fiscalAdresse", placeholder: "Ex. Siège social — Kinshasa" },
+  { cle: "platformFiscalRegime", labelCle: "admparam_fiscalRegime", placeholder: "Ex. Régime du réel" },
 ];
 
 const CLES_CHAMPS: { cle: ChampTexte; labelCle: string; placeholder: string }[] = [
@@ -161,6 +183,35 @@ function ParametresContent() {
     }
   }
 
+  // Identité fiscale ELEGANZ (18 oct. 2026, audit du 18 oct. 2026, point 3)
+  // — formulaire et PATCH séparés du bloc "Coordonnées & réseaux sociaux"
+  // ci-dessus, pour ne jamais mélanger les deux soumissions.
+  const [enregistrementFiscal, setEnregistrementFiscal] = useState(false);
+  const [erreurFiscal, setErreurFiscal] = useState<string | null>(null);
+  const [confirmationFiscal, setConfirmationFiscal] = useState<string | null>(null);
+
+  async function enregistrerFiscal(e: React.FormEvent) {
+    e.preventDefault();
+    setEnregistrementFiscal(true);
+    setErreurFiscal(null);
+    setConfirmationFiscal(null);
+    try {
+      const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+        platformFiscalLegalName: valeurs.platformFiscalLegalName,
+        platformFiscalIdNumber: valeurs.platformFiscalIdNumber,
+        platformFiscalAddress: valeurs.platformFiscalAddress,
+        platformFiscalRegime: valeurs.platformFiscalRegime,
+        platformFoundedAt: valeurs.platformFoundedAt,
+      });
+      setValeurs(resultat);
+      setConfirmationFiscal(t("admparam_confirmationEnregistrement"));
+    } catch (err) {
+      setErreurFiscal(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
+    } finally {
+      setEnregistrementFiscal(false);
+    }
+  }
+
   if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
@@ -225,6 +276,36 @@ function ParametresContent() {
         ))}
         <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrement}>
           {enregistrement ? t("admparam_enregistrementEnCours") : t("action_enregistrer")}
+        </button>
+      </form>
+
+      <h2 className={styles.titreSection}>{t("admparam_titreFiscal")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_fiscalSousTitre")}</p>
+      {erreurFiscal && <p className={styles.erreur}>{erreurFiscal}</p>}
+      {confirmationFiscal && <p className={styles.confirmation}>{confirmationFiscal}</p>}
+      <form className={styles.formulaire} onSubmit={enregistrerFiscal}>
+        {CLES_CHAMPS_FISCAL.map((champ) => (
+          <div className={styles.champ} key={champ.cle}>
+            <label htmlFor={champ.cle}>{t(champ.labelCle)}</label>
+            <input
+              id={champ.cle}
+              value={valeurs[champ.cle] ?? ""}
+              onChange={(e) => setValeurs((v) => ({ ...v, [champ.cle]: e.target.value }))}
+              placeholder={champ.placeholder}
+            />
+          </div>
+        ))}
+        <div className={styles.champ}>
+          <label htmlFor="platformFoundedAt">{t("admparam_fiscalDateCreation")}</label>
+          <input
+            id="platformFoundedAt"
+            type="date"
+            value={valeurs.platformFoundedAt ? valeurs.platformFoundedAt.slice(0, 10) : ""}
+            onChange={(e) => setValeurs((v) => ({ ...v, platformFoundedAt: e.target.value || null }))}
+          />
+        </div>
+        <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrementFiscal}>
+          {enregistrementFiscal ? t("admparam_enregistrementEnCours") : t("action_enregistrer")}
         </button>
       </form>
 
