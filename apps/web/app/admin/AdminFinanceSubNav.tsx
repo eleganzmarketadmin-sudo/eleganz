@@ -20,6 +20,13 @@ const ONGLETS = [
   // ELEGANZ n'avait aucun moyen d'estimer sa propre charge fiscale, alors
   // que l'outil existait déjà côté boutique (FinanceSubNav).
   { href: "/admin/finance/simulation-fiscale", cle: "admfinnav_simulationFiscale" },
+  // Ajouts du 18 oct. 2026 (audit du 18 oct. 2026, point 5 : "Pages admin
+  // manquantes alors que l'API existe déjà") — les routes API existaient
+  // déjà pour l'analytique, la trésorerie et les clôtures plateforme, mais
+  // aucune page ni aucun onglet n'y menait.
+  { href: "/admin/finance/analytique", cle: "admfinnav_analytique" },
+  { href: "/admin/finance/tresorerie", cle: "admfinnav_tresorerie" },
+  { href: "/admin/finance/cloture", cle: "admfinnav_cloture" },
 ];
 
 export function AdminFinanceSubNav() {
