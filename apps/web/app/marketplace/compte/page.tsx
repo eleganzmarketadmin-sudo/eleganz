@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, ApiError } from "../../lib/auth";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { ChampMotDePasse } from "../../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 export default function ComptePage() {
@@ -96,9 +97,8 @@ function ComptePageContenu() {
         </div>
         <div className={styles.champ}>
           <label htmlFor="motDePasse">{t("compte_motDePasse")}</label>
-          <input
+          <ChampMotDePasse
             id="motDePasse"
-            type="password"
             minLength={onglet === "inscription" ? 8 : undefined}
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}

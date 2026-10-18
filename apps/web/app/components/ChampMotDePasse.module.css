@@ -1,0 +1,30 @@
+.conteneur {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.bouton {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-texte-muted, #666);
+}
+
+.bouton:hover {
+  color: var(--color-ink, #111);
+}
+
+.bouton:focus-visible {
+  outline: 2px solid var(--color-cobalt, #1d4ed8);
+  outline-offset: 2px;
+}

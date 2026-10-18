@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "../lib/api";
 import { useLocale } from "../lib/i18n/LocaleContext";
+import { ChampMotDePasse } from "../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 interface ReponseDemande {
@@ -116,9 +117,8 @@ export default function MotDePasseOubliePage() {
           </div>
           <div className={styles.champ}>
             <label htmlFor="nouveauMotDePasse">{t("mdpoublie_labelNouveauMotDePasse")}</label>
-            <input
+            <ChampMotDePasse
               id="nouveauMotDePasse"
-              type="password"
               minLength={8}
               value={nouveauMotDePasse}
               onChange={(e) => setNouveauMotDePasse(e.target.value)}

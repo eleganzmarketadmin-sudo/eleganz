@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { ChampMotDePasse } from "../../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 export default function InscriptionPage() {
@@ -70,9 +71,8 @@ export default function InscriptionPage() {
           </div>
           <div className={styles.champ}>
             <label htmlFor="motDePasse">{t("ginscription_labelMotDePasse")}</label>
-            <input
+            <ChampMotDePasse
               id="motDePasse"
-              type="password"
               autoComplete="new-password"
               minLength={8}
               value={motDePasse}

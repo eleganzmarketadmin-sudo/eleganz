@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { ChampMotDePasse } from "../../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 export default function AdminConnexionPage() {
@@ -54,9 +55,8 @@ export default function AdminConnexionPage() {
           </div>
           <div className={styles.champ}>
             <label htmlFor="motDePasse">{t("compte_motDePasse")}</label>
-            <input
+            <ChampMotDePasse
               id="motDePasse"
-              type="password"
               autoComplete="current-password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}

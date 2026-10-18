@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { api, ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { ChampMotDePasse } from "../../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 interface TarificationLivreur {
@@ -253,9 +254,8 @@ function _FormulaireInscriptionLivreurReserve() {
           </div>
           <div className={styles.champ}>
             <label htmlFor="motDePasse">Mot de passe (8 caractères minimum)</label>
-            <input
+            <ChampMotDePasse
               id="motDePasse"
-              type="password"
               autoComplete="new-password"
               minLength={8}
               value={motDePasse}
