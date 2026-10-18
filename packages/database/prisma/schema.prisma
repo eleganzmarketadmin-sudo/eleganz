@@ -1135,6 +1135,15 @@ model ShopOrder {
   // schéma pour ne pas invalider l'historique si le réseau plateforme rouvre.
   shopDriverId String?
   shopDriver   ShopDriver? @relation(fields: [shopDriverId], references: [id])
+  // Code de livraison à usage unique (18 oct. 2026, audit "preuve de
+  // livraison simulée/placeholder") : généré par OrdersService.transitionStatus
+  // au passage à IN_TRANSIT, communiqué à l'acheteur (notification +
+  // /marketplace/orders/mine), et exigé en retour pour faire passer la
+  // sous-commande à DELIVERED_DECLARED — remis à null une fois vérifié,
+  // pour ne jamais pouvoir être réutilisé. Avant ce champ, `proofCode` était
+  // accepté par l'API mais jamais stocké ni vérifié (voir
+  // DeliveryService.confirmDelivery).
+  deliveryCode String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
