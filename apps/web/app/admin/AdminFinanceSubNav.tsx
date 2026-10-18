@@ -16,6 +16,10 @@ const ONGLETS = [
   { href: "/admin/finance/dossier-credit", cle: "admfinnav_dossierCredit" },
   { href: "/admin/finance/rapport-annuel", cle: "admfinnav_rapportAnnuel" },
   { href: "/admin/finance/regles-fiscales", cle: "admfinnav_reglesFiscales" },
+  // Ajout du 18 oct. 2026 (audit du 18 oct. 2026, point 2) — jusqu'ici
+  // ELEGANZ n'avait aucun moyen d'estimer sa propre charge fiscale, alors
+  // que l'outil existait déjà côté boutique (FinanceSubNav).
+  { href: "/admin/finance/simulation-fiscale", cle: "admfinnav_simulationFiscale" },
 ];
 
 export function AdminFinanceSubNav() {

@@ -20,6 +20,7 @@ import { ClosureService } from "./closure.service";
 import { DossierValidationService } from "./dossier-validation.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { RapportAnnuelService } from "./rapport-annuel.service";
+import { FiscalSimulationService } from "./fiscal-simulation.service";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
@@ -55,6 +56,7 @@ export class AdminFinanceController {
     private readonly businessPlan: BusinessPlanService,
     private readonly rapportAnnuel: RapportAnnuelService,
     private readonly accountingService: AccountingService,
+    private readonly fiscalSimulation: FiscalSimulationService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -126,6 +128,18 @@ export class AdminFinanceController {
     requireAdmin(user);
     const { fromDate, toDate } = this.periode(from, to);
     return this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.PLATFORM, null, fromDate, toDate);
+  }
+
+  // Simulation fiscale d'ELEGANZ elle-même (18 oct. 2026, audit du 18 oct.
+  // 2026, point 2) — jusqu'ici réservée à une boutique précise
+  // (FinanceController.simulationFiscale) ; même avertissement : jamais une
+  // déclaration officielle, toujours un ordre de grandeur à partir des
+  // règles fiscales PLATFORM réellement configurées.
+  @Get("simulation-fiscale")
+  simulationFiscale(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.fiscalSimulation.simulerPlateforme(fromDate, toDate);
   }
 
   // Dossier de validation externe SYSCOHADA — ELEGANZ elle-même (chantier

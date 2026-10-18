@@ -39,9 +39,26 @@ export class FiscalSimulationService {
   ) {}
 
   async simulerShop(shopId: string, from: Date, to: Date) {
+    return this.simuler(FiscalRuleScope.SHOP, shopId, from, to);
+  }
+
+  /**
+   * Simulation fiscale d'ELEGANZ elle-même (18 oct. 2026, audit du 18 oct.
+   * 2026 — "fonctionnalités développées côté Gestion pas implémentées en
+   * détail au Centre de pilotage") : jusqu'ici, cette simulation n'existait
+   * QUE pour une boutique — ELEGANZ en tant que société ne pouvait estimer
+   * sa propre charge fiscale avec le même outil qu'elle impose aux
+   * boutiques. Même logique, scope PLATFORM, `shopId: null` (déjà supporté
+   * par AccountingQueryService.compteDeResultat).
+   */
+  async simulerPlateforme(from: Date, to: Date) {
+    return this.simuler(FiscalRuleScope.PLATFORM, null, from, to);
+  }
+
+  private async simuler(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
     const regles = await this.prisma.fiscalRule.findMany({
       where: {
-        scope: FiscalRuleScope.SHOP,
+        scope,
         shopId,
         status: { in: [FiscalRuleStatus.CONFIGUREE, FiscalRuleStatus.VERIFIEE] },
         effectiveFrom: { lte: to },
@@ -49,7 +66,7 @@ export class FiscalSimulationService {
       },
     });
 
-    const compteResultat = await this.accountingQuery.compteDeResultat(FiscalRuleScope.SHOP, shopId, from, to);
+    const compteResultat = await this.accountingQuery.compteDeResultat(scope, shopId, from, to);
     const ca = compteResultat.totalProduits;
     const resultatNet = compteResultat.resultatNet;
     const chargesPersonnel = compteResultat.charges.find((c) => c.code === "661")?.montant ?? 0;
