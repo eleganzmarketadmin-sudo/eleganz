@@ -1032,17 +1032,9 @@ model Relance {
 }
 
 model Expense {
-  id     String @id @default(uuid())
-  // scope/shopId ajoutés le 18 oct. 2026 (audit du 18 oct. 2026, point 7 :
-  // "Charges et créances/dettes plateforme") — même pattern que
-  // Asset/TresorerieCompte : shopId devient nullable pour permettre une
-  // dépense scope=PLATFORM/shopId=null (une charge d'ELEGANZ elle-même).
-  // `@default(SHOP)` sur `scope` pour que toutes les lignes déjà
-  // enregistrées (toutes des dépenses de boutique) restent valides sans
-  // backfill.
-  scope  FiscalRuleScope @default(SHOP)
-  shopId String?
-  shop   Shop?  @relation(fields: [shopId], references: [id])
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
   category  String   // loyer, transport, salaires, électricité, télécom, livraison, autre
   amount    Decimal  @db.Decimal(12, 2)
   // Devise de la dépense (Finance & Comptabilité, 13 oct. 2026) — absente
@@ -1051,8 +1043,6 @@ model Expense {
   currency  String   @default("USD")
   note      String?
   createdAt DateTime @default(now())
-
-  @@index([scope, shopId])
 }
 
 model ShopCustomer {
