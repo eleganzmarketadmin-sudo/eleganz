@@ -187,11 +187,15 @@ export class DeliveryService {
   /**
    * Déclaration de livraison par le livreur — un événement distinct de la
    * confirmation de réception par l'acheteur (prompt §46). `proofCode` est
-   * stocké tel quel pour l'instant ; le mécanisme de preuve définitif
-   * (QR code signé, signature) reste à spécifier (voir NEXT_ACTIONS.md).
+   * désormais vérifié contre ShopOrder.deliveryCode, généré au passage à
+   * IN_TRANSIT et communiqué à l'acheteur (18 oct. 2026, audit "preuve de
+   * livraison simulée/placeholder" — voir OrdersService.transitionStatus,
+   * seul endroit qui le vérifie réellement, pour que ce contrôleur réseau
+   * livreur et la transition déclenchée par le personnel boutique partagent
+   * exactement la même règle).
    */
-  async confirmDelivery(shopOrderId: string, userId: string, _proofCode?: string) {
+  async confirmDelivery(shopOrderId: string, userId: string, proofCode?: string) {
     await this.assertAssignedDriver(shopOrderId, userId);
-    return this.ordersService.transitionStatus(shopOrderId, OrderStatus.DELIVERED_DECLARED);
+    return this.ordersService.transitionStatus(shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
   }
 }

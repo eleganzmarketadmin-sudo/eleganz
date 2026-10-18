@@ -200,10 +200,22 @@ function CommandesContent() {
   }
 
   async function changerStatut(shopOrderId: string, cible: string) {
+    // Code de livraison (18 oct. 2026, audit "preuve de livraison
+    // simulée/placeholder") : exigé côté API uniquement pour cette
+    // transition précise — voir OrdersService.transitionStatus. On le
+    // demande ici au moment de l'action plutôt que d'ajouter un champ
+    // permanent au formulaire, qui ne servirait que sur cette seule
+    // transition parmi toutes celles de TRANSITIONS_STAFF.
+    let deliveryCode: string | undefined;
+    if (cible === "DELIVERED_DECLARED") {
+      const saisie = window.prompt(t("gcmd_demanderCodeLivraison"));
+      if (saisie === null) return;
+      deliveryCode = saisie.trim();
+    }
     setEnCours(shopOrderId);
     setErreur(null);
     try {
-      await api.patch(`/shops/${currentShop!.id}/orders/${shopOrderId}/status`, { status: cible });
+      await api.patch(`/shops/${currentShop!.id}/orders/${shopOrderId}/status`, { status: cible, deliveryCode });
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("gcmd_changementStatutImpossible"));

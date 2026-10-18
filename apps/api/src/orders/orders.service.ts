@@ -228,7 +228,18 @@ export class OrdersService {
     });
   }
 
-  async transitionStatus(shopOrderId: string, newStatus: OrderStatus) {
+  /**
+   * Preuve de livraison par code à usage unique (18 oct. 2026, audit
+   * "preuve de livraison simulée/placeholder" — avant ce correctif,
+   * `proofCode` était accepté par l'API mais jamais stocké ni vérifié).
+   * Généré au passage à IN_TRANSIT (donné à l'acheteur par notification et
+   * via /marketplace/orders/mine), exigé en `deliveryCode` pour faire
+   * passer la sous-commande à DELIVERED_DECLARED, puis remis à null pour ne
+   * jamais pouvoir être réutilisé. 4 chiffres : assez pour dissuader une
+   * déclaration de livraison sans l'accord de l'acheteur, pas un secret
+   * cryptographique — l'acheteur le communique de vive voix au livreur.
+   */
+  async transitionStatus(shopOrderId: string, newStatus: OrderStatus, deliveryCode?: string) {
     const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
       where: { id: shopOrderId },
       include: { lines: true, order: true, shop: { select: { name: true } } },
@@ -238,13 +249,39 @@ export class OrdersService {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
 
+    if (newStatus === OrderStatus.DELIVERED_DECLARED) {
+      if (!shopOrder.deliveryCode) {
+        // Commande antérieure à la mise en service de ce câblage (voir
+        // l'historique Git de ce fichier), ou IN_TRANSIT jamais traversé
+        // normalement — jamais bloquant pour ne pas empêcher une livraison
+        // réelle à cause d'un trou de données historique.
+        this.logger.warn(`Sous-commande ${shopOrderId} déclarée livrée sans code de livraison généré au préalable.`);
+      } else if (!deliveryCode || deliveryCode.trim() !== shopOrder.deliveryCode) {
+        throw new BadRequestException(
+          "Code de livraison incorrect ou manquant — demandez-le à l'acheteur avant de déclarer la livraison.",
+        );
+      }
+    }
+
     // Typé explicitement en Prisma.PrismaPromise<any>[] (plutôt que laissé à
     // l'inférence) car des opérations de types différents (variant.update,
     // stockMovement.create) y sont ajoutées plus bas selon le cas — sans
     // cette annotation, le tableau serait figé au type des deux premiers
     // éléments et le push suivant échouerait à la compilation.
     const operations: Prisma.PrismaPromise<any>[] = [
-      this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { status: newStatus } }),
+      this.prisma.shopOrder.update({
+        where: { id: shopOrderId },
+        data: {
+          status: newStatus,
+          // Généré à l'entrée en transit, consommé (remis à null) une fois
+          // la livraison déclarée — jamais régénéré après coup pour ne pas
+          // invalider un code déjà communiqué à l'acheteur.
+          ...(newStatus === OrderStatus.IN_TRANSIT
+            ? { deliveryCode: String(Math.floor(1000 + Math.random() * 9000)) }
+            : {}),
+          ...(newStatus === OrderStatus.DELIVERED_DECLARED ? { deliveryCode: null } : {}),
+        },
+      }),
       this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: newStatus } }),
     ];
 
@@ -306,10 +343,17 @@ export class OrdersService {
         [OrderStatus.CANCELLED]: "a annulé votre commande",
         [OrderStatus.REFUNDED]: "— votre commande a été remboursée",
       };
+      // Code de livraison ajouté au message IN_TRANSIT (voir le commentaire
+      // de transitionStatus ci-dessus) : c'est le seul canal par lequel
+      // l'acheteur l'apprend en dehors de /marketplace/orders/mine.
+      const suffixeCode =
+        newStatus === OrderStatus.IN_TRANSIT && updated.deliveryCode
+          ? ` Code de livraison à donner au livreur à la remise : ${updated.deliveryCode}.`
+          : "";
       await this.notifications.notifierUtilisateurs([shopOrder.order.buyerId], {
         type: NotificationType.AUTRE,
         title: `Commande ${shopOrder.shop.name}`,
-        body: `${shopOrder.shop.name} ${LIBELLES[newStatus]}.`,
+        body: `${shopOrder.shop.name} ${LIBELLES[newStatus]}.${suffixeCode}`,
         link: "/marketplace/commandes",
       });
     }

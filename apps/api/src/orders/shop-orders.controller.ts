@@ -42,9 +42,16 @@ export class ShopOrdersController {
     res.send(buffer);
   }
 
+  // `deliveryCode` n'est exigé que pour la transition vers
+  // DELIVERED_DECLARED (voir OrdersService.transitionStatus) — ignoré pour
+  // toute autre transition.
   @Patch(":shopOrderId/status")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
-  updateStatus(@Param("shopOrderId") shopOrderId: string, @Body("status") status: OrderStatus) {
-    return this.ordersService.transitionStatus(shopOrderId, status);
+  updateStatus(
+    @Param("shopOrderId") shopOrderId: string,
+    @Body("status") status: OrderStatus,
+    @Body("deliveryCode") deliveryCode?: string,
+  ) {
+    return this.ordersService.transitionStatus(shopOrderId, status, deliveryCode);
   }
 }

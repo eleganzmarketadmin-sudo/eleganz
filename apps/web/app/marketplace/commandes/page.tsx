@@ -24,6 +24,11 @@ interface ShopOrder {
   subtotal: string;
   lines: OrderLine[];
   driver: { user: { fullName: string } } | null;
+  // Preuve de livraison par code (18 oct. 2026) — généré côté API au
+  // passage à IN_TRANSIT, remis à null une fois la livraison déclarée ;
+  // présent ici seulement pendant la fenêtre où l'acheteur doit encore le
+  // communiquer au livreur.
+  deliveryCode: string | null;
 }
 
 interface Order {
@@ -230,6 +235,18 @@ export default function CommandesPage() {
                   {so.driver && (
                     <span style={{ display: "block", fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
                       {t("cmd_confieA").replace("{{nom}}", so.driver.user.fullName)}
+                    </span>
+                  )}
+                  {so.deliveryCode && (
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        color: "var(--color-vert-paiement)",
+                      }}
+                    >
+                      {t("cmd_codeLivraison").replace("{{code}}", so.deliveryCode)}
                     </span>
                   )}
                 </span>
