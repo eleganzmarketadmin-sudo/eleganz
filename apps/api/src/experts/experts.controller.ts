@@ -1,11 +1,12 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ExpertsService } from "./experts.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
-import { StaffRole } from "@eleganz/database";
+import { StaffRole, MenuAdmin } from "@eleganz/database";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 import {
   AjouterDocumentExpertDto,
   AjouterReferenceExpertDto,
@@ -19,10 +20,9 @@ import {
 } from "./dto/expert.dto";
 import { ExpertProfileTemplate } from "@eleganz/database";
 
+// Écran Experts (EXPERTS) — voir audit du 18 oct. 2026.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.EXPERTS);
 }
 
 // Module EXPERTS (16 oct. 2026, point 2). Routes publiques (annuaire,

@@ -1,13 +1,16 @@
-import { Controller, ForbiddenException, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { MenuAdmin } from "@eleganz/database";
 import { SupervisionService } from "./supervision.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
-function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+// comportementLivreurs est lu depuis l'écran Livreurs ET l'écran Suivi des
+// commandes — d'où le double menu accepté sur cette route précise (audit du
+// 18 oct. 2026).
+function requireAdmin(user: AuthenticatedUser, menu: MenuAdmin | MenuAdmin[]) {
+  requireAdminMenu(user, menu);
 }
 
 /**
@@ -23,19 +26,19 @@ export class AdminSupervisionController {
 
   @Get("commandes-en-cours")
   commandesEnCours(@CurrentUser() user: AuthenticatedUser, @Query("shopId") shopId?: string) {
-    requireAdmin(user);
+    requireAdmin(user, MenuAdmin.SUIVI_COMMANDES);
     return this.supervisionService.commandesEnCours(shopId || undefined);
   }
 
   @Get("boutiques")
   comportementBoutiques(@CurrentUser() user: AuthenticatedUser) {
-    requireAdmin(user);
+    requireAdmin(user, MenuAdmin.SUIVI_COMMANDES);
     return this.supervisionService.comportementBoutiques();
   }
 
   @Get("livreurs")
   comportementLivreurs(@CurrentUser() user: AuthenticatedUser) {
-    requireAdmin(user);
+    requireAdmin(user, [MenuAdmin.LIVREURS, MenuAdmin.SUIVI_COMMANDES]);
     return this.supervisionService.comportementLivreurs();
   }
 }

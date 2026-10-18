@@ -4,9 +4,10 @@ import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
-import { StaffRole } from "@eleganz/database";
+import { StaffRole, MenuAdmin } from "@eleganz/database";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
 @Controller("delivery")
 export class DeliveryController {
@@ -20,9 +21,8 @@ export class DeliveryController {
   @Post("zones")
   @UseGuards(JwtAuthGuard)
   createZone(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateDeliveryZoneDto) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Seule l'administration ELEGANZ peut créer une zone de livraison.");
-    }
+    // Écran Livreurs (LIVREURS) — voir audit du 18 oct. 2026.
+    requireAdminMenu(user, MenuAdmin.LIVREURS);
     return this.deliveryService.createZone(dto);
   }
 
@@ -63,9 +63,7 @@ export class DeliveryController {
   @Get("drivers")
   @UseGuards(JwtAuthGuard)
   listDrivers(@CurrentUser() user: AuthenticatedUser) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-    }
+    requireAdminMenu(user, MenuAdmin.LIVREURS);
     return this.deliveryService.adminListDrivers();
   }
 
@@ -76,9 +74,7 @@ export class DeliveryController {
     @Param("driverId") driverId: string,
     @Body("verified") verified: boolean,
   ) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-    }
+    requireAdminMenu(user, MenuAdmin.LIVREURS);
     return this.deliveryService.adminSetVerified(driverId, verified);
   }
 
@@ -89,9 +85,7 @@ export class DeliveryController {
     @Param("driverId") driverId: string,
     @Body("adminNote") adminNote: string,
   ) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-    }
+    requireAdminMenu(user, MenuAdmin.LIVREURS);
     return this.deliveryService.adminSetNote(driverId, adminNote);
   }
 

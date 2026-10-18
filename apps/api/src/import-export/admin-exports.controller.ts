@@ -1,14 +1,16 @@
-import { Controller, ForbiddenException, Get, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
+import { MenuAdmin } from "@eleganz/database";
 import { AdminExportsService } from "./admin-exports.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Ces exports sont proposés depuis l'écran Tableau de bord (PILOTAGE) —
+// voir audit du 18 oct. 2026 sur la granularité des rôles admin.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'équipe ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.PILOTAGE);
 }
 
 function envoyerXlsx(res: Response, buffer: Buffer, nomFichier: string) {

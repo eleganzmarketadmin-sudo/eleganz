@@ -1,17 +1,17 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { AiCreditsService } from "./ai-credits.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
-import { StaffRole } from "@eleganz/database";
+import { StaffRole, MenuAdmin } from "@eleganz/database";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { CreateAiServiceDto, UpdateAiServiceDto } from "./dto/ai-service.dto";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Géré depuis l'écran Tarifs (TARIFS) — voir audit du 18 oct. 2026.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.TARIFS);
 }
 
 @Controller()

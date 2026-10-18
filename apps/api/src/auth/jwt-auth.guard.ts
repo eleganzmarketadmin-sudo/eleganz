@@ -1,11 +1,19 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type { Request } from "express";
+import type { MenuAdmin } from "@eleganz/database";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface AuthenticatedUser {
   id: string;
   role: string;
+  // Écrans du Centre de pilotage explicitement accordés par un ADMIN_SUPER
+  // à ce compte (tableau vide = pas de choix explicite, voir
+  // admin-team/menu-admin.util.ts). Porté jusqu'ici pour que
+  // requireAdminMenu() puisse vérifier un accès fin par contrôleur sans
+  // requête DB supplémentaire (18 oct. 2026 — audit "un rôle admin
+  // restreint accède quand même à tous les écrans via l'API").
+  adminMenuItemsOverride: MenuAdmin[];
 }
 
 // Vérifie le JWT émis par AuthService et attache l'utilisateur authentifié à
@@ -48,7 +56,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const utilisateur = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, isSuspended: true },
+      select: { id: true, role: true, isSuspended: true, adminMenuItemsOverride: true },
     });
     if (!utilisateur) {
       throw new UnauthorizedException("Compte introuvable.");
@@ -57,7 +65,11 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException("Ce compte a été suspendu.");
     }
 
-    request.user = { id: utilisateur.id, role: utilisateur.role };
+    request.user = {
+      id: utilisateur.id,
+      role: utilisateur.role,
+      adminMenuItemsOverride: utilisateur.adminMenuItemsOverride,
+    };
     return true;
   }
 }

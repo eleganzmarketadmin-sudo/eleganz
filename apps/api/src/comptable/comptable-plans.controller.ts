@@ -1,14 +1,16 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { MenuAdmin } from "@eleganz/database";
 import { ComptablePlansService } from "./comptable-plans.service";
 import { CreateComptablePlanDto, UpdateComptablePlanDto } from "./dto/comptable-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Gestion des bouquets Secourable depuis l'écran Tarifs (TARIFS) — voir
+// audit du 18 oct. 2026.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.TARIFS);
 }
 
 @Controller()

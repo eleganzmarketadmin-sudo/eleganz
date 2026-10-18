@@ -1,15 +1,18 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { SubscriptionPlansService } from "./subscription-plans.service";
 import { CreateSubscriptionPlanDto, UpdateSubscriptionPlanDto } from "./dto/subscription-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
-import { PlanCategory } from "@eleganz/database";
+import { PlanCategory, MenuAdmin } from "@eleganz/database";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
-function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+// La lecture de la liste des bouquets est aussi utilisée en lecture depuis
+// l'écran Boutiques (pour afficher le plan d'une boutique) — d'où le double
+// menu accepté sur listAll. La création/modification reste propre à l'écran
+// Tarifs (audit du 18 oct. 2026).
+function requireAdmin(user: AuthenticatedUser, menu: MenuAdmin | MenuAdmin[]) {
+  requireAdminMenu(user, menu);
 }
 
 @Controller()
@@ -26,14 +29,14 @@ export class SubscriptionPlansController {
   @Get("admin/billing/plans")
   @UseGuards(JwtAuthGuard)
   listAll(@CurrentUser() user: AuthenticatedUser, @Query("category") category?: PlanCategory) {
-    requireAdmin(user);
+    requireAdmin(user, [MenuAdmin.TARIFS, MenuAdmin.BOUTIQUES]);
     return this.plansService.listAll(category);
   }
 
   @Post("admin/billing/plans")
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateSubscriptionPlanDto) {
-    requireAdmin(user);
+    requireAdmin(user, MenuAdmin.TARIFS);
     return this.plansService.create(dto);
   }
 
@@ -44,7 +47,7 @@ export class SubscriptionPlansController {
     @Param("planId") planId: string,
     @Body() dto: UpdateSubscriptionPlanDto,
   ) {
-    requireAdmin(user);
+    requireAdmin(user, MenuAdmin.TARIFS);
     return this.plansService.update(planId, dto);
   }
 }

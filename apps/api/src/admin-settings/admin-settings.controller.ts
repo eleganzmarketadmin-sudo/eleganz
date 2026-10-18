@@ -1,15 +1,20 @@
-import { Body, Controller, ForbiddenException, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { MenuAdmin } from "@eleganz/database";
 import { AdminSettingsService } from "./admin-settings.service";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
 import { UpdateExchangeRateDto } from "./dto/update-exchange-rate.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Ce contrôleur générique sert à la fois l'écran Paramètres plateforme
+// (PARAMETRES_PLATEFORME) et les champs tarifaires exposés depuis l'écran
+// Tarifs (TARIFS, ex. taux de change) — voir audit du 18 oct. 2026 : un seul
+// des deux suffit, pour ne pas retirer à un admin Tarifs un accès qu'il a
+// déjà aujourd'hui via cet écran.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, [MenuAdmin.PARAMETRES_PLATEFORME, MenuAdmin.TARIFS]);
 }
 
 /**

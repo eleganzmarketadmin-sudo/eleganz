@@ -1,9 +1,11 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { MenuAdmin } from "@eleganz/database";
 import { DisputesService, ISSUES_LITIGE, type IssueLitige } from "./disputes.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -37,9 +39,7 @@ export class DisputesController {
 
   @Get("admin/disputes")
   listOpen(@CurrentUser() user: AuthenticatedUser) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-    }
+    requireAdminMenu(user, MenuAdmin.LITIGES);
     return this.disputesService.listOpen();
   }
 
@@ -50,9 +50,7 @@ export class DisputesController {
     @Body("outcome") outcome: IssueLitige,
     @Body("resolution") resolution: string,
   ) {
-    if (!user.role.startsWith("ADMIN_")) {
-      throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-    }
+    requireAdminMenu(user, MenuAdmin.LITIGES);
     if (!ISSUES_LITIGE.includes(outcome)) {
       throw new BadRequestException(`outcome doit être l'un de : ${ISSUES_LITIGE.join(", ")}.`);
     }

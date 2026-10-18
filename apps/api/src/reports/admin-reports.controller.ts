@@ -1,16 +1,17 @@
-import { Controller, ForbiddenException, Get, Query, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
+import { MenuAdmin } from "@eleganz/database";
 import { ReportsService } from "./reports.service";
 import { renderReleveActivitePdf } from "./report-pdf-renderer";
 import { parseReleveQuery } from "./parse-releve-query";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Écran Relevés (RELEVES) — voir audit du 18 oct. 2026.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.RELEVES);
 }
 
 /**

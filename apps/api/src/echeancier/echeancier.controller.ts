@@ -1,13 +1,14 @@
-import { Controller, ForbiddenException, Post, UseGuards } from "@nestjs/common";
+import { Controller, Post, UseGuards } from "@nestjs/common";
+import { MenuAdmin } from "@eleganz/database";
 import { EcheancierService } from "./echeancier.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
+// Déclenché depuis l'écran Factures (FACTURES) — voir audit du 18 oct. 2026.
 function requireAdmin(user: AuthenticatedUser) {
-  if (!user.role.startsWith("ADMIN_")) {
-    throw new ForbiddenException("Réservé à l'administration ELEGANZ.");
-  }
+  requireAdminMenu(user, MenuAdmin.FACTURES);
 }
 
 @Controller("admin/echeancier")
