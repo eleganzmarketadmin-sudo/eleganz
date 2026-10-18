@@ -50,6 +50,46 @@ function DossierCreditPlateformeContenu() {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  // Simulateur de remboursement (18 oct. 2026, audit du 18 oct. 2026 —
+  // "fonctionnalités développées côté Gestion pas implémentées en détail au
+  // Centre de pilotage") : ce bloc existait déjà pour la boutique
+  // (/finance/dossier-credit) mais manquait entièrement ici — l'équipe
+  // ELEGANZ ne pouvait tester une hypothèse de prêt qu'en créant un
+  // scénario persisté, sans outil d'essai rapide. Même calcul, purement
+  // indicatif et jamais enregistré.
+  const [montant, setMontant] = useState("");
+  const [tauxAnnuel, setTauxAnnuel] = useState("");
+  const [dureeMois, setDureeMois] = useState("");
+
+  const p = Number(montant);
+  const n = Number(dureeMois);
+  const r = Number(tauxAnnuel) / 100 / 12;
+  const simulationValide = p > 0 && n > 0 && r > 0;
+  const mensualite = simulationValide ? (p * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : null;
+  const coutTotal = mensualite !== null ? mensualite * n : null;
+  const totalInterets = coutTotal !== null ? coutTotal - p : null;
+
+  // Échéancier détaillé mois par mois — même correctif que côté Gestion
+  // (voir (gestion)/finance/dossier-credit/page.tsx pour le commentaire
+  // complet sur le recalcul des intérêts sur solde réel et l'absorption de
+  // l'arrondi sur la dernière échéance).
+  const [echeancierVisible, setEcheancierVisible] = useState(false);
+  const echeancier =
+    simulationValide && mensualite !== null
+      ? (() => {
+          const lignes: { mois: number; interet: number; capital: number; solde: number }[] = [];
+          let solde = p;
+          for (let mois = 1; mois <= n; mois++) {
+            const interet = solde * r;
+            let capital = mensualite - interet;
+            if (mois === n) capital = solde;
+            solde = Math.max(0, solde - capital);
+            lignes.push({ mois, interet, capital, solde });
+          }
+          return lignes;
+        })()
+      : null;
+
   const [businessPlan, setBusinessPlan] = useState<BusinessPlanPlateforme | null>(null);
   const [chargementBp, setChargementBp] = useState(true);
   const [sauvegardeBp, setSauvegardeBp] = useState(false);
@@ -266,6 +306,75 @@ function DossierCreditPlateformeContenu() {
             </div>
           </>
         ) : null}
+      </div>
+
+      <div style={{ border: "2px solid var(--color-ink)", padding: "16px", marginTop: "20px" }}>
+        <h2 style={{ marginBottom: "8px" }}>{t("credit_simulateurTitre")}</h2>
+        <p style={{ color: "var(--color-texte-muted)", fontSize: "0.875rem", marginBottom: "12px" }}>
+          {t("credit_simulateurDescription")}
+        </p>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+          <div>
+            <label style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>{t("credit_labelMontant")}</label>
+            <input type="number" min="0" value={montant} onChange={(e) => setMontant(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>{t("credit_labelTaux")}</label>
+            <input type="number" min="0" step="0.1" value={tauxAnnuel} onChange={(e) => setTauxAnnuel(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>{t("credit_labelDuree")}</label>
+            <input type="number" min="0" value={dureeMois} onChange={(e) => setDureeMois(e.target.value)} />
+          </div>
+        </div>
+
+        {simulationValide && mensualite !== null && coutTotal !== null && totalInterets !== null && (
+          <>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td>{t("credit_resultatMensualite")}</td>
+                  <td style={{ textAlign: "right" }}>{mensualite.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>{t("credit_resultatTotalInterets")}</td>
+                  <td style={{ textAlign: "right" }}>{totalInterets.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>{t("credit_resultatCoutTotal")}</td>
+                  <td style={{ textAlign: "right" }}>{coutTotal.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <button type="button" className={styles.bouton} style={{ marginTop: "12px" }} onClick={() => setEcheancierVisible((v) => !v)}>
+              {echeancierVisible ? t("credit_masquerEcheancier") : t("credit_voirEcheancier")}
+            </button>
+
+            {echeancierVisible && echeancier && (
+              <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "12px" }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left" }}>{t("credit_echeancierMois")}</th>
+                    <th style={{ textAlign: "right" }}>{t("credit_echeancierInterets")}</th>
+                    <th style={{ textAlign: "right" }}>{t("credit_echeancierCapital")}</th>
+                    <th style={{ textAlign: "right" }}>{t("credit_echeancierSolde")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {echeancier.map((ligne) => (
+                    <tr key={ligne.mois}>
+                      <td>{ligne.mois}</td>
+                      <td style={{ textAlign: "right" }}>{ligne.interet.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                      <td style={{ textAlign: "right" }}>{ligne.capital.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                      <td style={{ textAlign: "right" }}>{ligne.solde.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

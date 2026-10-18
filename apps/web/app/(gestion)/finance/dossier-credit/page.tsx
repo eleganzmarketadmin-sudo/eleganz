@@ -168,6 +168,29 @@ function DossierCreditContenu() {
   const coutTotal = mensualite !== null ? mensualite * n : null;
   const totalInterets = coutTotal !== null ? coutTotal - p : null;
 
+  // Échéancier détaillé mois par mois (18 oct. 2026, audit du 18 oct. 2026 —
+  // jusqu'ici le simulateur ne donnait qu'une mensualité unique, sans le
+  // détail intérêts/capital/solde restant qu'une institution financière
+  // demande toujours à voir). Recalcul intérêts chaque mois sur le solde
+  // restant réel plutôt qu'une moyenne — un arrondi sur le dernier mois
+  // absorbe l'écart de centimes pour que le solde final tombe exactement à 0.
+  const [echeancierVisible, setEcheancierVisible] = useState(false);
+  const echeancier =
+    simulationValide && mensualite !== null
+      ? (() => {
+          const lignes: { mois: number; interet: number; capital: number; solde: number }[] = [];
+          let solde = p;
+          for (let mois = 1; mois <= n; mois++) {
+            const interet = solde * r;
+            let capital = mensualite - interet;
+            if (mois === n) capital = solde; // absorbe l'écart d'arrondi sur la dernière échéance
+            solde = Math.max(0, solde - capital);
+            lignes.push({ mois, interet, capital, solde });
+          }
+          return lignes;
+        })()
+      : null;
+
   return (
     <div>
       <h1 className={styles.titre}>{t("credit_titre")}</h1>
@@ -330,22 +353,56 @@ function DossierCreditContenu() {
           </div>
         </div>
         {simulationValide && mensualite !== null && coutTotal !== null && totalInterets !== null && (
-          <table className={styles.tableau}>
-            <tbody>
-              <tr>
-                <td>{t("credit_resultatMensualite")}</td>
-                <td className="chiffre">{mensualite.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
-              </tr>
-              <tr>
-                <td>{t("credit_resultatTotalInterets")}</td>
-                <td className="chiffre">{totalInterets.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
-              </tr>
-              <tr>
-                <td>{t("credit_resultatCoutTotal")}</td>
-                <td className="chiffre">{coutTotal.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
-              </tr>
-            </tbody>
-          </table>
+          <>
+            <table className={styles.tableau}>
+              <tbody>
+                <tr>
+                  <td>{t("credit_resultatMensualite")}</td>
+                  <td className="chiffre">{mensualite.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>{t("credit_resultatTotalInterets")}</td>
+                  <td className="chiffre">{totalInterets.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+                <tr>
+                  <td>{t("credit_resultatCoutTotal")}</td>
+                  <td className="chiffre">{coutTotal.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <button
+              type="button"
+              className={styles.bouton}
+              style={{ marginTop: "var(--espace-3)" }}
+              onClick={() => setEcheancierVisible((v) => !v)}
+            >
+              {echeancierVisible ? t("credit_masquerEcheancier") : t("credit_voirEcheancier")}
+            </button>
+
+            {echeancierVisible && echeancier && (
+              <table className={styles.tableau} style={{ marginTop: "var(--espace-3)" }}>
+                <thead>
+                  <tr>
+                    <th>{t("credit_echeancierMois")}</th>
+                    <th>{t("credit_echeancierInterets")}</th>
+                    <th>{t("credit_echeancierCapital")}</th>
+                    <th>{t("credit_echeancierSolde")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {echeancier.map((ligne) => (
+                    <tr key={ligne.mois}>
+                      <td>{ligne.mois}</td>
+                      <td className="chiffre">{ligne.interet.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                      <td className="chiffre">{ligne.capital.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                      <td className="chiffre">{ligne.solde.toLocaleString("fr-FR", { maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
         )}
       </div>
     </div>
