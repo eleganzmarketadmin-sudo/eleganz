@@ -199,7 +199,7 @@ export class BillingService {
     // Revenu ELEGANZ reconnu au règlement effectif, jamais à la facturation
     // (docs/ARCHITECTURE_FINANCE.md §8bis.3).
     await this.accounting.postPlatformInvoicePaid(resultats[0], "invoice").catch((err) => {
-      this.logger.error(`Comptabilisation de la facture ${invoiceId} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture ${invoiceId} échouée`, err);
     });
 
     return resultats;

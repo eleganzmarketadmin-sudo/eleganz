@@ -102,7 +102,7 @@ export class StockValorisationService {
     await this.accounting
       .postReceptionStock({ id: reception.id, shopId, montant, onCredit: !!dto.onCredit })
       .catch((err) => {
-        this.logger.error(`Comptabilisation de la réception ${reception.id} échouée`, err);
+        this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la réception ${reception.id} échouée`, err);
       });
 
     return { ...reception, nouveauCump: Math.round(nouveauCump * 10000) / 10000, nouvelleQte };

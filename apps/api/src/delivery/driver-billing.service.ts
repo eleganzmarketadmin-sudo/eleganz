@@ -151,7 +151,7 @@ export class DriverBillingService {
     ]);
 
     await this.accounting.postPlatformInvoicePaid(resultats[0], "driverInvoice").catch((err) => {
-      this.logger.error(`Comptabilisation de la facture livreur ${invoiceId} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture livreur ${invoiceId} échouée`, err);
     });
 
     return resultats;

@@ -149,7 +149,7 @@ export class AiCreditsService {
     await this.accounting.postPlatformInvoicePaid(invoice, "invoice").catch((err) => {
       // Ne bloque jamais l'octroi des crédits déjà accordé ci-dessus si la
       // comptabilisation échoue — même choix que BillingService.
-      this.logger.error(`Comptabilisation de la facture ${invoiceId} (crédits IA) échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture ${invoiceId} (crédits IA) échouée`, err);
     });
 
     return { invoice, balanceGranted: topUp.quantity };

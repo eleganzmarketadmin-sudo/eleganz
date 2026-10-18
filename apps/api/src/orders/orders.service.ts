@@ -368,7 +368,7 @@ export class OrdersService {
     // [scope, shopId, sourceType, sourceId] côté AccountingService, donc un
     // retour en arrière puis une nouvelle confirmation ne duplique rien.
     await this.accounting.postShopOrderReceived(updated, shopOrder.order.currency).catch((err) => {
-      this.logger.error(`Comptabilisation de la commande ${shopOrderId} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la commande ${shopOrderId} échouée`, err);
     });
 
     return updated;

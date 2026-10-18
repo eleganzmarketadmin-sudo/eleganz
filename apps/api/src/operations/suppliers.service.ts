@@ -47,7 +47,7 @@ export class SuppliersService {
 
     const supplier = await this.prisma.supplier.findUniqueOrThrow({ where: { id: supplierId } });
     await this.accounting.postPurchase(purchase, supplier.shopId).catch((err) => {
-      this.logger.error(`Comptabilisation de l'achat ${purchase.id} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de l'achat ${purchase.id} échouée`, err);
     });
 
     return purchase;
@@ -94,7 +94,7 @@ export class SuppliersService {
     await this.accounting
       .postSupplierPayment({ sourceId: dto.purchaseId ?? crypto.randomUUID(), shopId: supplier.shopId, amount: dto.amount })
       .catch((err) => {
-        this.logger.error(`Comptabilisation du règlement fournisseur ${supplierId} échouée`, err);
+        this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation du règlement fournisseur ${supplierId} échouée`, err);
       });
 
     return resultat;

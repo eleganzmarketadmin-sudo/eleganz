@@ -137,7 +137,7 @@ export class ComptableBillingService {
     ]);
 
     await this.accounting.postPlatformInvoicePaid(resultats[0], "comptableInvoice").catch((err) => {
-      this.logger.error(`Comptabilisation de la facture Secourable ${invoiceId} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture Secourable ${invoiceId} échouée`, err);
     });
 
     return resultats;

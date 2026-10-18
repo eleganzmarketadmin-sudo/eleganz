@@ -26,7 +26,7 @@ export class ExpensesService {
     // Comptabilisation après coup (docs/ARCHITECTURE_FINANCE.md §8bis) — une
     // dépense déjà enregistrée n'est jamais annulée par un échec d'écriture.
     await this.accounting.postExpense(expense).catch((err) => {
-      this.logger.error(`Comptabilisation de la dépense ${expense.id} échouée`, err);
+      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la dépense ${expense.id} échouée`, err);
     });
 
     return expense;
