@@ -15,6 +15,8 @@ import { renderRapportAnnuelPptx } from "./rapport-annuel-pptx-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
+import { LoansService } from "./loans.service";
+import { CreateLoanDto } from "./dto/loan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -42,6 +44,7 @@ export class FinanceController {
     private readonly dossierValidation: DossierValidationService,
     private readonly businessPlan: BusinessPlanService,
     private readonly rapportAnnuel: RapportAnnuelService,
+    private readonly loansService: LoansService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -279,6 +282,41 @@ export class FinanceController {
   @RequiresGestionFeature("financeAvancee")
   scenarioSupprimer(@Param("shopId") shopId: string, @Param("scenarioId") scenarioId: string) {
     return this.businessPlan.supprimerScenario(FiscalRuleScope.SHOP, shopId, scenarioId);
+  }
+
+  // Prêts réellement obtenus (19 oct. 2026) — distinct des scénarios
+  // ci-dessus (purement simulatifs) : un prêt ici est effectivement
+  // décaissé et comptabilisé dès sa création (voir LoansService). Même
+  // restriction OWNER/MANAGER/ACCOUNTANT que le business plan.
+  @Get("loans")
+  @RequiresGestionFeature("financeAvancee")
+  loansLister(@Param("shopId") shopId: string) {
+    return this.loansService.listForShop(shopId);
+  }
+
+  @Post("loans")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  loansObtenir(@Param("shopId") shopId: string, @Body() dto: CreateLoanDto) {
+    return this.loansService.create(shopId, dto);
+  }
+
+  // `periode` au format AAAA-MM, mois courant par défaut.
+  @Post("loans/:loanId/echeances")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  @RequiresGestionFeature("financeAvancee")
+  loansComptabiliserEcheance(
+    @Param("shopId") shopId: string,
+    @Param("loanId") loanId: string,
+    @Query("periode") periode?: string,
+  ) {
+    return this.loansService.comptabiliserEcheance(shopId, loanId, periode);
+  }
+
+  @Get("loans/:loanId/echeances")
+  @RequiresGestionFeature("financeAvancee")
+  loansListerEcheances(@Param("shopId") shopId: string, @Param("loanId") loanId: string) {
+    return this.loansService.listerEcheances(shopId, loanId);
   }
 
   // Rapport annuel (16 oct. 2026, point 3) — aux normes professionnelles

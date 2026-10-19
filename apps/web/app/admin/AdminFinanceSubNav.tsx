@@ -33,6 +33,8 @@ const ONGLETS = [
   // Ajout du 18 oct. 2026 (audit du 18 oct. 2026, point 7) — idem pour les
   // charges plateforme.
   { href: "/admin/finance/charges", cle: "admfinnav_charges" },
+  // Ajout du 19 oct. 2026 — prêts réellement obtenus par ELEGANZ.
+  { href: "/admin/finance/prets", cle: "admfinnav_prets" },
 ];
 
 export function AdminFinanceSubNav() {

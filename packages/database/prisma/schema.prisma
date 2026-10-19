@@ -1996,6 +1996,11 @@ enum JournalEntrySource {
   // durablement le bilan. sourceId = ReglementFournisseur.id (ou un id
   // généré quand aucun achat précis n'est lettré), jamais Purchase.id.
   SUPPLIER_PAYMENT
+  // Ajoutés le 19 oct. 2026 — suivi des prêts réellement obtenus (Loan).
+  // LOAN_DISBURSEMENT : réception du capital emprunté (sourceId=Loan.id).
+  // LOAN_INSTALLMENT : une échéance comptabilisée (sourceId=LoanInstallment.id).
+  LOAN_DISBURSEMENT
+  LOAN_INSTALLMENT
 }
 
 model Journal {

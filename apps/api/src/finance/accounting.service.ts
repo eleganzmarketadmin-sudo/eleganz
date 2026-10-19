@@ -127,6 +127,82 @@ export class AccountingService {
     });
   }
 
+  /**
+   * Décaissement d'un prêt réellement obtenu (19 oct. 2026 — voir
+   * LoansService) : débite le compte de trésorerie qui le reçoit, crédite
+   * 162 (Emprunts). Les deux plans comptables (boutique et ELEGANZ) ont ce
+   * code depuis le départ (chantier SYSCOHADA), donc aucun compte nouveau
+   * à seeder pour ce point.
+   */
+  async postLoanDisbursement(loan: {
+    id: string;
+    scope: FiscalRuleScope;
+    shopId: string | null;
+    montant: unknown;
+    compteAccountCode: string;
+    label: string;
+  }) {
+    if (loan.scope === FiscalRuleScope.SHOP && loan.shopId) {
+      await this.seed.ensureShopChartOfAccounts(loan.shopId);
+    } else {
+      await this.seed.ensurePlatformChartOfAccounts();
+    }
+    const montant = Number(loan.montant);
+    await this.enregistrer({
+      scope: loan.scope,
+      shopId: loan.shopId,
+      journalCode: "TR",
+      entryDate: new Date(),
+      label: `Décaissement prêt — ${loan.label}`,
+      sourceType: JournalEntrySource.LOAN_DISBURSEMENT,
+      sourceId: loan.id,
+      lignes: [
+        { accountCode: loan.compteAccountCode, debit: montant },
+        { accountCode: "162", credit: montant },
+      ],
+    });
+  }
+
+  /**
+   * Échéance d'un prêt réellement obtenu : débite 162 (part capital) et
+   * 671 (part intérêts), crédite le compte de trésorerie qui paie —
+   * répartition déjà calculée par LoansService (amortissement sur solde
+   * dégressif, même logique que l'échéancier affiché côté dossier crédit).
+   * `sourceId` = LoanInstallment.id (jamais Loan.id, pour que la contrainte
+   * d'unicité sur JournalEntry laisse passer une échéance par mois).
+   */
+  async postLoanInstallment(params: {
+    installmentId: string;
+    scope: FiscalRuleScope;
+    shopId: string | null;
+    compteAccountCode: string;
+    capital: number;
+    interet: number;
+    label: string;
+    periodDate: Date;
+  }) {
+    if (params.scope === FiscalRuleScope.SHOP && params.shopId) {
+      await this.seed.ensureShopChartOfAccounts(params.shopId);
+    } else {
+      await this.seed.ensurePlatformChartOfAccounts();
+    }
+    const mensualite = params.capital + params.interet;
+    await this.enregistrer({
+      scope: params.scope,
+      shopId: params.shopId,
+      journalCode: "TR",
+      entryDate: params.periodDate,
+      label: params.label,
+      sourceType: JournalEntrySource.LOAN_INSTALLMENT,
+      sourceId: params.installmentId,
+      lignes: [
+        { accountCode: "162", debit: params.capital },
+        { accountCode: "671", debit: params.interet },
+        { accountCode: params.compteAccountCode, credit: mensualite },
+      ],
+    });
+  }
+
   async postPurchase(purchase: { id: string; amount: unknown; onCredit: boolean }, shopId: string) {
     await this.seed.ensureShopChartOfAccounts(shopId);
     const montant = Number(purchase.amount);

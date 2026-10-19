@@ -31,6 +31,8 @@ import {
 } from "./dto/tresorerie.dto";
 import { ExpensesService } from "../operations/expenses.service";
 import { CreateExpenseDto } from "../operations/dto/expense.dto";
+import { LoansService } from "./loans.service";
+import { CreateLoanDto } from "./dto/loan.dto";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
@@ -70,6 +72,7 @@ export class AdminFinanceController {
     private readonly assetsService: AssetsService,
     private readonly tresorerieComptesService: TresorerieComptesService,
     private readonly expensesService: ExpensesService,
+    private readonly loansService: LoansService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -322,6 +325,41 @@ export class AdminFinanceController {
   createCharge(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateExpenseDto) {
     requireAdmin(user);
     return this.expensesService.createForPlatform(dto);
+  }
+
+  // --- Prêts réellement obtenus par ELEGANZ (19 oct. 2026 — demande du 19
+  // oct. 2026 : "si on obtient un financement pour ELEGANZ, comment est-ce
+  // que cela sera géré ?"). Distinct de business-plan/scenarios
+  // ci-dessus (purement simulatifs) : un prêt ici est effectivement
+  // décaissé et comptabilisé dès sa création (voir LoansService). ---------
+
+  @Get("loans")
+  listLoans(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.loansService.listForPlatform();
+  }
+
+  @Post("loans")
+  obtenirLoan(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateLoanDto) {
+    requireAdmin(user);
+    return this.loansService.createForPlatform(dto);
+  }
+
+  // `periode` au format AAAA-MM, mois courant par défaut.
+  @Post("loans/:loanId/echeances")
+  comptabiliserEcheanceLoan(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("loanId") loanId: string,
+    @Query("periode") periode?: string,
+  ) {
+    requireAdmin(user);
+    return this.loansService.comptabiliserEcheanceForPlatform(loanId, periode);
+  }
+
+  @Get("loans/:loanId/echeances")
+  listerEcheancesLoan(@CurrentUser() user: AuthenticatedUser, @Param("loanId") loanId: string) {
+    requireAdmin(user);
+    return this.loansService.listerEcheancesForPlatform(loanId);
   }
 
   @Get("dashboard")

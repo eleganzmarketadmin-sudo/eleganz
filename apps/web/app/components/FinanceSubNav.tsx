@@ -27,6 +27,9 @@ const GESTION_COURANTE = [
   // Dossier de crédit (demande du 16 oct. 2026, point 1) — états financiers,
   // demande de crédit et simulation réunis au même endroit.
   { href: "/finance/dossier-credit", label: "Dossier de crédit" },
+  // Prêts réellement obtenus (19 oct. 2026) — distinct du simulateur
+  // ci-dessus, purement théorique.
+  { href: "/finance/prets", label: "Prêts obtenus" },
   // Rapport annuel (demande du 16 oct. 2026, point 3) — export PDF/Word/PowerPoint.
   { href: "/finance/rapport-annuel", label: "Rapport annuel" },
 ];

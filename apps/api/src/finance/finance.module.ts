@@ -21,6 +21,7 @@ import { BusinessPlanService } from "./business-plan.service";
 import { RapportAnnuelService } from "./rapport-annuel.service";
 import { ExpensesService } from "../operations/expenses.service";
 import { ExpensesController } from "../operations/expenses.controller";
+import { LoansService } from "./loans.service";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -54,6 +55,7 @@ import { ExpensesController } from "../operations/expenses.controller";
     BusinessPlanService,
     RapportAnnuelService,
     ExpensesService,
+    LoansService,
   ],
   controllers: [
     FinanceController,
