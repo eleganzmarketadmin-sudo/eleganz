@@ -453,6 +453,9 @@ model Shop {
 
   // Business plan / dossier crédit (16 oct. 2026, point 1)
   businessPlans BusinessPlan[]
+
+  // Prêts réellement obtenus (19 oct. 2026)
+  loans Loan[]
 }
 
 model ShopStaff {
@@ -1908,6 +1911,62 @@ model LoanScenario {
   createdAt        DateTime     @default(now())
 
   @@index([businessPlanId])
+}
+
+// Prêt réellement obtenu (19 oct. 2026 — suite à l'audit du 18 oct. 2026,
+// point 7 : "comment sera géré un financement obtenu pour ELEGANZ") —
+// jusqu'ici LoanScenario ne modélisait qu'une hypothèse de prêt pour le
+// dossier crédit (jamais comptabilisée) ; Loan représente un prêt
+// effectivement décaissé, avec son solde restant et ses échéances
+// comptabilisées. Même pattern scope/shopId que tous les modèles Finance
+// (isolation imposée dans LoansService, jamais seulement par
+// l'affichage). `scenarioId` est une référence libre (pas de @relation) au
+// LoanScenario d'origine — purement informatif, un scénario peut être
+// modifié/supprimé sans jamais contraindre un prêt déjà obtenu.
+// `compteAccountCode` est le compte de trésorerie qui a reçu le
+// décaissement et qui paie les échéances (ex. "5711", ou "521-01" pour un
+// compte bancaire dédié — voir TresorerieCompte) ; validé à l'écriture par
+// AccountingService.enregistrer(), jamais par ce modèle.
+model Loan {
+  id                String       @id @default(uuid())
+  scope             FiscalRuleScope
+  shopId            String?
+  shop              Shop?        @relation(fields: [shopId], references: [id])
+  label             String
+  scenarioId        String?
+  montant           Decimal      @db.Decimal(14, 2)
+  tauxAnnuel        Decimal      @db.Decimal(5, 2)
+  dureeMois         Int
+  devise            String       @default("USD")
+  compteAccountCode String
+  dateObtention     DateTime     @default(now())
+  soldeRestant      Decimal      @db.Decimal(14, 2)
+  statut            LoanStatut   @default(ACTIF)
+  createdAt         DateTime     @default(now())
+
+  echeances LoanInstallment[]
+
+  @@index([scope, shopId])
+}
+
+enum LoanStatut {
+  ACTIF
+  TERMINE
+}
+
+// Une échéance réellement comptabilisée pour un prêt donné — contrainte
+// d'unicité [loanId, periodDate] pour que comptabiliser deux fois le même
+// mois soit idempotent, même garde-fou que AssetDepreciation.
+model LoanInstallment {
+  id         String   @id @default(uuid())
+  loanId     String
+  loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  periodDate DateTime
+  capital    Decimal  @db.Decimal(14, 2)
+  interet    Decimal  @db.Decimal(14, 2)
+  createdAt  DateTime @default(now())
+
+  @@unique([loanId, periodDate])
 }
 
 enum JournalEntrySource {
