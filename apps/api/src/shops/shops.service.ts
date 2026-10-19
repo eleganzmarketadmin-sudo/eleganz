@@ -303,6 +303,21 @@ export class ShopsService {
   /**
    * Publication volontaire d'une sélection de produits sur la Marketplace
    * (complément stratégique §12). Ne touche jamais aux données de gestion privées.
+   *
+   * Correctif du 19 oct. 2026 (signalement : "le bouton publier sur la
+   * marketplace n'a pas permis de voir le produit même après dix minutes")
+   * — `isPubliclyListed` n'était mis à `true` que si `shop.mode ===
+   * "PRIVATE"` au moment du clic. Une boutique déjà en HYBRID ou
+   * MARKETPLACE (choisi à la création, ou passée là par un autre chemin)
+   * ne voyait donc jamais ce champ basculer : `Product.isPublished`
+   * passait bien à `true`, mais MarketplaceCatalogService.search() exige
+   * AUSSI `shop.isPubliclyListed === true` — le produit restait invisible
+   * indéfiniment, sans aucune erreur ni délai à attendre (pas de file
+   * d'attente ni de cache ici, juste cette condition jamais remplie).
+   * Désormais mis à `true` dans tous les cas dès qu'une publication a
+   * lieu ; seul le passage du mode à HYBRID reste réservé aux boutiques
+   * PRIVATE (une boutique déjà HYBRID/MARKETPLACE n'a pas besoin que son
+   * mode change).
    */
   async publishSelection(shopId: string, productIds: string[]) {
     await this.prisma.product.updateMany({
@@ -311,12 +326,13 @@ export class ShopsService {
     });
 
     const shop = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
-    if (shop.mode === "PRIVATE") {
-      await this.prisma.shop.update({
-        where: { id: shopId },
-        data: { mode: "HYBRID", isPubliclyListed: true },
-      });
-    }
+    await this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        isPubliclyListed: true,
+        mode: shop.mode === "PRIVATE" ? "HYBRID" : shop.mode,
+      },
+    });
 
     return this.prisma.product.findMany({ where: { id: { in: productIds } } });
   }
