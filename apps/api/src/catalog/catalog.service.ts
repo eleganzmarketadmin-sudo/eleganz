@@ -212,8 +212,16 @@ export class CatalogService implements OnModuleInit {
     const nouveauSellPrice = dto.sellPrice ?? Number(variante.sellPrice);
     let compareAtPrice: number | null | undefined = undefined;
     if (dto.compareAtPrice !== undefined) {
-      compareAtPrice =
-        dto.compareAtPrice != null && dto.compareAtPrice > nouveauSellPrice ? dto.compareAtPrice : null;
+      // Incident du 20 oct. 2026 : une valeur invalide (prix barré ≤ prix de
+      // vente) était auparavant ignorée en silence, sans aucun retour à la
+      // personne — elle croyait avoir réglé une promo qui n'existait jamais.
+      // Erreur explicite désormais, jamais un échec muet.
+      if (dto.compareAtPrice != null && dto.compareAtPrice <= nouveauSellPrice) {
+        throw new BadRequestException(
+          `Le prix barré (${dto.compareAtPrice}) doit être strictement supérieur au prix de vente (${nouveauSellPrice}).`,
+        );
+      }
+      compareAtPrice = dto.compareAtPrice;
     }
     return this.prisma.variant.update({
       where: { id: variantId },

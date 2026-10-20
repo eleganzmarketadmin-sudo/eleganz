@@ -673,22 +673,54 @@ function CatalogueContent() {
     }
   }
 
-  // Mécanisme de promotion (19 oct. 2026) : prix barré de référence saisi
-  // via une invite simple, sur le modèle de window.confirm déjà utilisé
-  // ailleurs dans gestion (ex. changement de bouquet) — volontairement léger
-  // plutôt qu'un formulaire dédié pour ce premier jet.
+  /**
+   * Mécanisme de promotion — corrigé le 20 oct. 2026 (signalement : "J'ai
+   * défini une promotion mais qui ne marche", saisie "30" sur un article à
+   * $38). Cause réelle : la première version demandait le PRIX BARRÉ
+   * (l'ancien prix, plus élevé) plutôt que le nouveau prix promo, et une
+   * valeur invalide était ignorée sans aucun message. Corrigé sur les deux
+   * points : on demande maintenant le prix promo réel (ce que l'acheteur
+   * paiera), le prix actuel devient automatiquement le prix barré, et toute
+   * erreur de l'API s'affiche désormais au lieu d'échouer en silence.
+   */
   async function modifierPrixBarre(produitId: string, variante: Variant) {
     if (!currentShop) return;
+    const prixActuel = Number(variante.sellPrice);
+    const enPromoActuellement = variante.compareAtPrice != null;
     const saisie = window.prompt(
-      t("cat_promoInvite"),
-      variante.compareAtPrice != null ? String(variante.compareAtPrice) : "",
+      enPromoActuellement
+        ? `${t("cat_promoInvite")} (${t("cat_promoActuelle")} ${formatMoney(prixActuel, variante.currency)} ${t("cat_promoAncienPrix")} ${formatMoney(Number(variante.compareAtPrice), variante.currency)})`
+        : `${t("cat_promoInvite")} (${t("cat_promoPrixActuel")} ${formatMoney(prixActuel, variante.currency)})`,
+      "",
     );
     if (saisie === null) return; // annulé
     const valeur = saisie.trim();
     setErreur(null);
     try {
+      if (valeur === "") {
+        // Retire la promotion : remet le prix d'origine (le prix barré
+        // mémorisé) comme prix de vente, et efface le prix barré.
+        if (enPromoActuellement) {
+          await api.patch(`/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}`, {
+            sellPrice: Number(variante.compareAtPrice),
+            compareAtPrice: null,
+          });
+          recharger();
+        }
+        return;
+      }
+      const nouveauPrix = Number(valeur);
+      if (!Number.isFinite(nouveauPrix) || nouveauPrix <= 0) {
+        setErreur(t("cat_promoPrixInvalide"));
+        return;
+      }
+      if (nouveauPrix >= prixActuel) {
+        setErreur(t("cat_promoDoitEtreInferieur"));
+        return;
+      }
       await api.patch(`/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}`, {
-        compareAtPrice: valeur === "" ? null : Number(valeur),
+        sellPrice: nouveauPrix,
+        compareAtPrice: prixActuel,
       });
       recharger();
     } catch (err) {
