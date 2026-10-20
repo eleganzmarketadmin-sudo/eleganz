@@ -808,6 +808,39 @@ function CatalogueContent() {
     patchVariante(produitId, variante.id, { sellPrice: nombre }, "cat_prixVenteImpossible");
   }
 
+  /**
+   * Ajustement manuel du stock (20 oct. 2026 — suite de la question "le
+   * champ stock n'est toujours pas éditable"). Volontairement une action à
+   * part (pas un simple champ ✎ comme les autres) : elle passe par
+   * /stock-adjustment, qui enregistre toujours un mouvement de stock
+   * traçable avec un motif, plutôt qu'un PATCH direct sur stockQty qui
+   * romprait l'historique et la valorisation CUMP (voir le commentaire de
+   * CatalogService.adjustStock).
+   */
+  async function ajusterStock(produitId: string, variante: Variant) {
+    if (!currentShop) return;
+    const saisie = window.prompt(t("cat_inviteNouvelleQuantite"), String(variante.stockQty));
+    if (saisie === null) return;
+    const nouvelleQuantite = Number(saisie.trim());
+    if (!Number.isInteger(nouvelleQuantite) || nouvelleQuantite < 0) {
+      setErreur(t("cat_quantiteInvalide"));
+      return;
+    }
+    if (nouvelleQuantite === variante.stockQty) return;
+    const motif = window.prompt(t("cat_inviteMotifAjustement"), "");
+    if (motif === null) return; // annulé au deuxième prompt
+    setErreur(null);
+    try {
+      await api.post(`/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}/stock-adjustment`, {
+        newQty: nouvelleQuantite,
+        reason: motif.trim() || undefined,
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_ajustementImpossible"));
+    }
+  }
+
   async function modifierNomProduit(produit: Product) {
     if (!currentShop) return;
     const saisie = window.prompt(t("cat_inviteNomArticle"), produit.name);
@@ -1050,7 +1083,17 @@ function CatalogueContent() {
                             {remise != null ? `-${remise}% ✎` : t("cat_definirPromo")}
                           </button>
                         </td>
-                        <td className={styles.colChiffre}>{v.stockQty}</td>
+                        <td className={styles.colChiffre}>
+                          {v.stockQty}{" "}
+                          <button
+                            type="button"
+                            className={styles.boutonCrayon}
+                            title={t("cat_ajusterStock")}
+                            onClick={() => ajusterStock(produit.id, v)}
+                          >
+                            ✎
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}

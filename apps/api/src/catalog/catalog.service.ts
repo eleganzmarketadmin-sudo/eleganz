@@ -4,6 +4,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
+import { AdjustStockDto } from "./dto/adjust-stock.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { StockMovementType, VariantOptionKind } from "@eleganz/database";
@@ -378,6 +379,46 @@ export class CatalogService implements OnModuleInit {
         variantesCreees.push(variant);
       }
       return variantesCreees;
+    });
+  }
+
+  /**
+   * Ajustement manuel du stock (20 oct. 2026 — suite de la demande "le
+   * champ stock n'est toujours pas éditable"). `stockQty` n'est volontairement
+   * pas un champ libre comme sku/prix : chaque vente, retour ou réception
+   * l'actualise déjà en même temps qu'un StockMovement traçable, et la
+   * valorisation CUMP (coutMoyenPondere) dépend de cette cohérence. Un
+   * PATCH brut sur `stockQty` romprait cette traçabilité et pourrait
+   * écraser une vente concurrente. Cette méthode reste donc le seul point
+   * d'entrée pour une correction manuelle (inventaire physique, casse,
+   * erreur de saisie) : elle calcule l'écart elle-même et l'enregistre
+   * comme un mouvement ADJUSTMENT avec un motif, exactement comme le stock
+   * initial à la création d'une variante.
+   */
+  async adjustStock(shopId: string, productId: string, variantId: string, dto: AdjustStockDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const variante = await tx.variant.findFirstOrThrow({
+        where: { id: variantId, productId, product: { shopId } },
+      });
+      const ecart = dto.newQty - variante.stockQty;
+      if (ecart === 0) return variante;
+
+      const misAJour = await tx.variant.update({
+        where: { id: variantId },
+        data: { stockQty: dto.newQty },
+      });
+
+      await tx.stockMovement.create({
+        data: {
+          shopId,
+          variantId,
+          type: StockMovementType.ADJUSTMENT,
+          quantity: ecart,
+          reference: dto.reason?.trim() || "ajustement_manuel",
+        },
+      });
+
+      return misAJour;
     });
   }
 }

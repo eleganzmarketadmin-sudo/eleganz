@@ -4,6 +4,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
+import { AdjustStockDto } from "./dto/adjust-stock.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
@@ -83,6 +84,24 @@ export class CatalogController {
     @Body() dto: UpdateVariantDto,
   ) {
     return this.catalogService.updateVariant(shopId, productId, variantId, dto);
+  }
+
+  /**
+   * Correction manuelle d'un écart de stock constaté (inventaire physique,
+   * casse, erreur de saisie) — 20 oct. 2026. Jamais un PATCH direct sur
+   * `stockQty` : voir le commentaire de `CatalogService.adjustStock`, cette
+   * route reste le seul point d'entrée pour une correction manuelle, qui
+   * enregistre toujours un StockMovement ADJUSTMENT traçable.
+   */
+  @Post(":productId/variants/:variantId/stock-adjustment")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  adjustStock(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+    @Body() dto: AdjustStockDto,
+  ) {
+    return this.catalogService.adjustStock(shopId, productId, variantId, dto);
   }
 
   @Post(":productId/variants/bulk")
