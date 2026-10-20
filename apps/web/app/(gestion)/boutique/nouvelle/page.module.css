@@ -4,6 +4,74 @@
   padding: var(--espace-5);
 }
 
+.cadre:has(.bouquets) {
+  max-width: 920px;
+}
+
+.banniereGratuite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  background: var(--color-vert-paiement, #16a34a);
+  color: #fff;
+  padding: var(--espace-3) var(--espace-4);
+  margin-bottom: var(--espace-5);
+  border-radius: 6px;
+}
+
+.bouquets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-5);
+}
+
+.carteBouquet {
+  text-align: left;
+  padding: var(--espace-4);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.carteBouquetActive {
+  background: var(--color-cobalt);
+  color: #fff;
+  border-color: var(--color-cobalt);
+}
+
+.tagline {
+  font-style: italic;
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.prixBouquet {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: var(--espace-1) 0;
+}
+
+.note {
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+.listeFonctionnalites {
+  margin: var(--espace-2) 0 0;
+  padding-left: 1.1em;
+  font-size: 0.8125rem;
+}
+
+.badgeChoisi {
+  margin-top: var(--espace-2);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
 .titre {
   margin-bottom: var(--espace-2);
 }

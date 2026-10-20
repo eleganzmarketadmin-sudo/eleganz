@@ -93,16 +93,28 @@ export class ShopsService {
     const baseSlug = slugify(dto.name);
     const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`;
 
-    // Bouquet Gestion par défaut à la création (14 oct. 2026, plan
-    // commercial) : la boutique démarre sur le bouquet le moins cher
-    // (Starter) — elle peut en changer plus tard depuis /admin/boutiques.
-    // `undefined` plutôt qu'une erreur si aucun bouquet n'existe encore
-    // (ex. tout premier démarrage avant que le seed n'ait tourné).
-    const bouquetDeDepart = await this.prisma.subscriptionPlan.findFirst({
-      where: { category: PlanCategory.GESTION, active: true },
-      orderBy: { monthlyPrice: "asc" },
-      select: { id: true },
-    });
+    // Bouquet Gestion choisi par le propriétaire sur la page de présentation
+    // des bouquets (19 oct. 2026) — validé ici (actif, catégorie GESTION)
+    // plutôt que de faire confiance à l'ID transmis. Si absent ou invalide,
+    // on retombe sur l'ancien comportement : le bouquet actif le moins cher
+    // (14 oct. 2026, plan commercial) — elle peut en changer plus tard
+    // depuis /parametres. `undefined` plutôt qu'une erreur si aucun bouquet
+    // n'existe encore (ex. tout premier démarrage avant que le seed n'ait
+    // tourné).
+    let bouquetDeDepart: { id: string } | null = null;
+    if (dto.gestionBouquetId) {
+      bouquetDeDepart = await this.prisma.subscriptionPlan.findFirst({
+        where: { id: dto.gestionBouquetId, category: PlanCategory.GESTION, active: true },
+        select: { id: true },
+      });
+    }
+    if (!bouquetDeDepart) {
+      bouquetDeDepart = await this.prisma.subscriptionPlan.findFirst({
+        where: { category: PlanCategory.GESTION, active: true },
+        orderBy: { monthlyPrice: "asc" },
+        select: { id: true },
+      });
+    }
 
     // Décision #3 : période gratuite par défaut 3 mois, démarrée à la création
     // (« l'entrée en relation »), mais modifiable ensuite depuis l'admin.

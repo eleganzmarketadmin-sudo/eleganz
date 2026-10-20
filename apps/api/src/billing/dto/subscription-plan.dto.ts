@@ -36,6 +36,12 @@ export class CreateSubscriptionPlanDto {
   // de base de données (prompt §40 : administration sans programmation).
   @IsOptional()
   features?: Record<string, unknown>;
+
+  // Résumé motivant court affiché sur la page de présentation des bouquets
+  // à la création d'une boutique (19 oct. 2026).
+  @IsOptional()
+  @IsString()
+  tagline?: string;
 }
 
 export class UpdateSubscriptionPlanDto {
@@ -65,4 +71,8 @@ export class UpdateSubscriptionPlanDto {
 
   @IsOptional()
   features?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  tagline?: string;
 }

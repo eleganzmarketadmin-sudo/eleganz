@@ -16,6 +16,7 @@ interface Plan {
   commissionRate: string | null;
   active: boolean;
   featuresJson: Record<string, unknown>;
+  tagline?: string | null;
 }
 
 function featuresToTexte(features: Record<string, unknown>): string {
@@ -63,6 +64,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
   const [prix, setPrix] = useState(plan.monthlyPrice);
   const [maxProduits, setMaxProduits] = useState(plan.maxActiveProducts?.toString() ?? "");
   const [commission, setCommission] = useState(plan.commissionRate ?? "");
+  const [tagline, setTagline] = useState(plan.tagline ?? "");
   const [features, setFeatures] = useState(featuresToTexte(plan.featuresJson));
   const [coches, setCoches] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(CLES_FONCTIONNALITES_GESTION.map(({ cle }) => [cle, plan.featuresJson[cle] === true])),
@@ -90,6 +92,7 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
         maxActiveProducts: maxProduits ? Number(maxProduits) : null,
         commissionRate: estGestion ? undefined : commission ? Number(commission) : null,
         features: featuresAEnvoyer,
+        tagline: tagline || null,
       });
       onChange();
     } catch (err) {
@@ -158,6 +161,15 @@ function LignePlan({ plan, onChange }: { plan: Plan; onChange: () => void }) {
             <input value={features} onChange={(e) => setFeatures(e.target.value)} />
           </label>
         )}
+        <label className={styles.champLarge}>
+          <span>{t("admtarifs_tagline")}</span>
+          <input
+            placeholder={t("admtarifs_taglinePlaceholder")}
+            value={tagline}
+            onChange={(e) => setTagline(e.target.value)}
+            maxLength={120}
+          />
+        </label>
       </div>
       {estGestion && (
         <div className={styles.planChamps} style={{ flexDirection: "column", gap: 8 }}>
