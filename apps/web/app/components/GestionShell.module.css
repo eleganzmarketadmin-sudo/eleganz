@@ -60,6 +60,12 @@
   background: var(--color-surface);
   border-bottom: 2px solid var(--color-cobalt);
   overflow-x: auto;
+  /* 20 oct. 2026 (menu qui déborde sur petit écran) : avec 12 onglets, la
+     barre dépasse toujours la largeur d'un téléphone — on ne peut pas tous
+     les faire rentrer, donc on rend le défilement horizontal évident
+     (scrollbar fine mais visible, inertie tactile) plutôt que silencieux. */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .navLien {
@@ -71,6 +77,7 @@
   min-height: var(--touche-min);
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .navLien:hover {
@@ -106,5 +113,20 @@
   }
   .contenu {
     padding: var(--espace-4) var(--espace-3);
+  }
+  /* 20 oct. 2026 (menu qui déborde sur petit écran) : .entete passe déjà à
+     la ligne (flex-wrap ci-dessus), mais .droite restait une rangée flex
+     rigide de 6 éléments (lien accueil, bouton sync, sélecteur boutique,
+     cloche, langue, thème, déconnexion) qui continuait de déborder
+     horizontalement sans wrap ni défilement propre. */
+  .droite {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--espace-2);
+    width: 100%;
+  }
+  .navLien {
+    padding: var(--espace-2) var(--espace-3);
+    font-size: 0.9rem;
   }
 }

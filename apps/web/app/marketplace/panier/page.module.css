@@ -18,6 +18,13 @@
 
 .nom {
   flex: 1;
+  /* 20 oct. 2026 (bouton "retirer" presque caché sur petit écran) : un
+     enfant flex a par défaut min-width:auto, donc ce bloc ne pouvait pas
+     rétrécir sous la largeur de son texte (nom + taille/couleur +
+     boutique) — sur un écran étroit, ça poussait .qte/.montant/.retirer
+     hors du cadre visible. min-width:0 laisse le nom se tronquer au lieu
+     de repousser le reste de la ligne. */
+  min-width: 0;
 }
 
 .boutique {
@@ -76,4 +83,27 @@
   padding: var(--espace-6);
   text-align: center;
   color: var(--color-texte-muted);
+}
+
+@media (max-width: 420px) {
+  /* 20 oct. 2026 : même avec .nom qui peut maintenant rétrécir (min-width:0
+     ci-dessus), un nom de produit long + taille/couleur + boutique laisse
+     très peu de place à la quantité/au montant/au bouton "retirer" sur un
+     téléphone étroit (< 420px). On fait passer ces trois éléments à la
+     ligne suivante plutôt que de les comprimer au point de les rendre
+     difficiles à toucher. */
+  .ligne {
+    flex-wrap: wrap;
+  }
+  .nom {
+    flex: 1 1 100%;
+  }
+  .qte,
+  .montant,
+  .retirer {
+    flex: 0 0 auto;
+  }
+  .retirer {
+    margin-left: auto;
+  }
 }
