@@ -57,16 +57,21 @@ export class OrdersService {
         if (!variant.product.isPublished) {
           throw new BadRequestException(`Le produit ${variant.product.name} n'est pas publié.`);
         }
-        if (variant.stockQty < item.quantity) {
-          throw new BadRequestException(
-            `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s).`,
-          );
-        }
 
-        await tx.variant.update({
-          where: { id: item.variantId },
+        // Mise à jour conditionnelle atomique (20 oct. 2026, audit de
+        // lancement) — même correctif que PosService.createSale : vérifier
+        // puis décrémenter en deux requêtes séparées laissait une fenêtre où
+        // une vente caisse concurrente sur le même article pouvait aussi
+        // passer la vérification, provoquant une survente.
+        const resultat = await tx.variant.updateMany({
+          where: { id: item.variantId, stockQty: { gte: item.quantity } },
           data: { stockQty: { decrement: item.quantity } },
         });
+        if (resultat.count === 0) {
+          throw new BadRequestException(
+            `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s) (ou vendu entre-temps).`,
+          );
+        }
         await tx.stockMovement.create({
           data: {
             shopId: variant.product.shopId,

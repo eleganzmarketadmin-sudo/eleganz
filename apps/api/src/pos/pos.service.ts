@@ -43,19 +43,38 @@ export class PosService {
 
         if (line.variantId) {
           const variant = await tx.variant.findUniqueOrThrow({ where: { id: line.variantId } });
-          if (variant.stockQty < line.quantity) {
-            if (!options.allowNegativeStock) {
+
+          // Mise à jour conditionnelle atomique (20 oct. 2026, audit de
+          // lancement) : vérifier `stockQty` puis le décrémenter en deux
+          // requêtes séparées laissait une fenêtre où deux ventes
+          // concurrentes sur le dernier exemplaire (caisse + caisse, ou
+          // caisse + Marketplace) pouvaient toutes deux passer la
+          // vérification avant que l'une ne décrémente — une vraie
+          // survente. `updateMany` avec `stockQty: { gte }` dans le WHERE
+          // rend la vérification et la décrémentation indissociables au
+          // niveau de la base de données elle-même.
+          if (!options.allowNegativeStock) {
+            const resultat = await tx.variant.updateMany({
+              where: { id: line.variantId, stockQty: { gte: line.quantity } },
+              data: { stockQty: { decrement: line.quantity } },
+            });
+            if (resultat.count === 0) {
               throw new BadRequestException(
                 `Stock insuffisant pour ${variant.sku} : ${variant.stockQty} disponible(s), ${line.quantity} demandé(s).`,
               );
             }
-            discrepancyByLineIndex.add(index);
+          } else {
+            // Synchronisation hors-ligne : la vente a déjà réellement eu
+            // lieu pendant la coupure, jamais annulée — on accepte un stock
+            // négatif et on signale l'écart au lieu de rejeter.
+            if (variant.stockQty < line.quantity) {
+              discrepancyByLineIndex.add(index);
+            }
+            await tx.variant.update({
+              where: { id: line.variantId },
+              data: { stockQty: { decrement: line.quantity } },
+            });
           }
-
-          await tx.variant.update({
-            where: { id: line.variantId },
-            data: { stockQty: { decrement: line.quantity } },
-          });
 
           // Valorisation CUMP de la sortie (chantier SYSCOHADA phase 4b, 14
           // oct. 2026) — `coutUnitaire`/`valeur` restent `null` tant que la
@@ -228,12 +247,27 @@ export class PosService {
     });
   }
 
-  async cancelSale(saleId: string) {
+  /**
+   * Annulation d'une vente caisse. Corrigé le 20 oct. 2026 (audit de
+   * lancement) : la version précédente ne recevait pas `shopId` et ne
+   * vérifiait jamais que la vente appartenait bien à la boutique de
+   * l'appelant — n'importe quel membre authentifié d'une boutique pouvait
+   * annuler la vente d'une AUTRE boutique en devinant son identifiant.
+   * Scopée désormais comme toutes les autres opérations (`findFirstOrThrow`
+   * sur `shopId`), et protégée côté contrôleur par `@ShopRoles`. Ajout aussi
+   * d'une garde d'idempotence : annuler deux fois la même vente aurait
+   * sinon restitué le stock deux fois.
+   */
+  async cancelSale(shopId: string, saleId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const sale = await tx.posSale.findUniqueOrThrow({
-        where: { id: saleId },
+      const sale = await tx.posSale.findFirstOrThrow({
+        where: { id: saleId, shopId },
         include: { lines: true },
       });
+
+      if (sale.status === "CANCELLED") {
+        return sale;
+      }
 
       for (const line of sale.lines) {
         if (line.variantId) {

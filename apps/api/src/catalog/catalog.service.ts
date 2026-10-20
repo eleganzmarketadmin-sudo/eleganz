@@ -403,10 +403,24 @@ export class CatalogService implements OnModuleInit {
       const ecart = dto.newQty - variante.stockQty;
       if (ecart === 0) return variante;
 
-      const misAJour = await tx.variant.update({
-        where: { id: variantId },
+      // Mise à jour conditionnelle (20 oct. 2026, audit de lancement) : la
+      // version précédente écrasait `stockQty` par une valeur absolue sans
+      // vérifier qu'elle n'avait pas changé entre la lecture ci-dessus et
+      // cette écriture — une vente concurrente (caisse ou Marketplace) aurait
+      // pu voir sa décrémentation écrasée silencieusement par cet
+      // ajustement ("lost update"). La clause `stockQty: variante.stockQty`
+      // dans le WHERE garantit qu'on n'écrit que si rien n'a bougé entre
+      // temps ; sinon on rejette plutôt que d'enregistrer un écart faux.
+      const resultat = await tx.variant.updateMany({
+        where: { id: variantId, stockQty: variante.stockQty },
         data: { stockQty: dto.newQty },
       });
+      if (resultat.count === 0) {
+        throw new ConflictException(
+          "Le stock de cette variante a changé entre-temps (vente concurrente) — réessayez l'ajustement.",
+        );
+      }
+      const misAJour = { ...variante, stockQty: dto.newQty };
 
       await tx.stockMovement.create({
         data: {

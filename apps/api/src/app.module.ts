@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AuthModule } from "./auth/auth.module";
 import { ShopsModule } from "./shops/shops.module";
@@ -40,6 +42,12 @@ import { CronModule } from "./cron/cron.module";
     // (18 oct. 2026, automatisation du cycle de facturation) — un seul
     // ScheduleModule.forRoot() pour toute l'application.
     ScheduleModule.forRoot(),
+    // Limite de débit globale (20 oct. 2026, audit de lancement) — avant ce
+    // correctif, rien ne protégeait /auth/login ou /auth/register contre un
+    // bruteforce automatisé. Un plafond généreux par défaut (300 requêtes/min
+    // par IP) sert de filet de sécurité général ; AuthController applique en
+    // plus une limite bien plus stricte sur login/register via @Throttle.
+    ThrottlerModule.forRoot([{ name: "default", ttl: 60000, limit: 300 }]),
     PrismaModule,
     AuthModule,
     ShopsModule,
@@ -72,5 +80,6 @@ import { CronModule } from "./cron/cron.module";
     ExpertsModule,
     CronModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

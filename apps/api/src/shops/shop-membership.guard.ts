@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { SHOP_ROLES_KEY } from "./roles.decorator";
 import { GESTION_FEATURE_KEY } from "./gestion-feature.decorator";
-import { StaffRole, ShopExpertScope } from "@eleganz/database";
+import { StaffRole, ShopExpertScope, ShopStatus } from "@eleganz/database";
 
 // Préfixes de routes Finance & Comptabilité — seuls accessibles, et
 // seulement en lecture (GET), à un StaffRole.EXTERNAL_ACCOUNTANT (voir
@@ -60,6 +60,30 @@ export class ShopMembershipGuard implements CanActivate {
     // Les rôles admin globaux passent — leur accès est filtré ailleurs
     // (Centre de pilotage), pas au niveau de l'appartenance à une boutique.
     if (request.user.role.startsWith("ADMIN_")) return true;
+
+    // Corrigé le 20 oct. 2026 (audit de lancement) : le statut `SUSPENDED`/
+    // `CLOSED` d'une boutique ne bloquait jusqu'ici rien côté API — seule la
+    // valeur changeait en base (billing.service.ts::suspendOverdueShops),
+    // mais la boutique gardait un accès complet à la caisse, au catalogue et
+    // aux commandes malgré l'impayé. `PAYMENT_DUE` reste volontairement
+    // autorisé : c'est la période de grâce documentée avant suspension
+    // effective, pas un blocage. Seule la consultation de Facturation reste
+    // ouverte en lecture pendant une suspension, pour que le propriétaire
+    // puisse voir et régler ce qu'il doit.
+    const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { status: true } });
+    if (shop?.status === ShopStatus.SUSPENDED || shop?.status === ShopStatus.CLOSED) {
+      const consultationFacturationAutorisee =
+        request.method === "GET" &&
+        (/^\/shops\/[^/]+\/invoices(\/|$)/.test(request.path) ||
+          /^\/shops\/[^/]+\/subscription(\/|$)/.test(request.path));
+      if (!consultationFacturationAutorisee) {
+        throw new ForbiddenException(
+          shop.status === ShopStatus.CLOSED
+            ? "Cette boutique est fermée."
+            : "Cette boutique est suspendue pour facture(s) impayée(s). Réglez vos factures en attente depuis Facturation pour réactiver l'accès.",
+        );
+      }
+    }
 
     const membership = await this.prisma.shopStaff.findUnique({
       where: { shopId_userId: { shopId, userId: request.user.id } },

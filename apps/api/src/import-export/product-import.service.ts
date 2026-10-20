@@ -15,14 +15,15 @@ export const ENTETES_IMPORT_PRODUITS = [
   "Couleur",
   "Prix d'achat",
   "Prix de vente",
+  "Prix barré (promo, optionnel)",
   "Devise (USD ou CDF)",
   "Stock initial",
 ];
 
 const EXEMPLE_LIGNES: (string | number)[][] = [
-  ["Robe wax bleue", "Robes", "ROB-BLU-M", "M", "Bleu", 8, 15, "USD", 10],
-  ["Robe wax bleue", "Robes", "ROB-BLU-L", "L", "Bleu", 8, 15, "USD", 6],
-  ["Foulard soie imprimé", "Accessoires", "FOU-001", "", "Multicolore", 5, 12, "USD", 20],
+  ["Robe wax bleue", "Robes", "ROB-BLU-M", "M", "Bleu", 8, 15, "", "USD", 10],
+  ["Robe wax bleue", "Robes", "ROB-BLU-L", "L", "Bleu", 8, 15, "", "USD", 6],
+  ["Foulard soie imprimé", "Accessoires", "FOU-001", "", "Multicolore", 5, 12, 18, "USD", 20],
 ];
 
 interface LigneImportResultat {
@@ -62,6 +63,7 @@ export class ProductImportService {
           variante.color ?? "",
           variante.costPrice != null ? Number(variante.costPrice) : "",
           Number(variante.sellPrice),
+          variante.compareAtPrice != null ? Number(variante.compareAtPrice) : "",
           variante.currency,
           variante.stockQty,
         ]);
@@ -100,10 +102,27 @@ export class ProductImportService {
     // article sans relire la base à chaque ligne.
     const articlesParClef = new Map<string, string>();
 
+    // Limite de catalogue du bouquet Gestion (20 oct. 2026, audit de
+    // lancement) — l'API bloque déjà la création d'un produit au-delà de
+    // `maxActiveProducts` via CatalogService.createProduct, mais l'import
+    // Excel créait ses produits directement par `tx.product.create` sans
+    // jamais passer par cette vérification : une boutique au bouquet
+    // Starter pouvait dépasser sa limite d'un coup avec un gros fichier.
+    // On lit la limite une fois, puis on suit le compte courant (produits
+    // déjà en base + ceux créés pendant CET import) à chaque nouvelle ligne
+    // qui créerait un article inédit.
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { gestionBouquet: { select: { name: true, maxActiveProducts: true } } },
+    });
+    const maxProduits = shop?.gestionBouquet?.maxActiveProducts ?? null;
+    let nombreProduitsActuel =
+      typeof maxProduits === "number" ? await this.prisma.product.count({ where: { shopId } }) : 0;
+
     for (let i = 1; i < lignes.length; i++) {
       const numeroLigne = i + 1; // numéro visible dans Excel (1 = en-tête)
       const ligne = lignes[i];
-      const [nom, categorie, sku, taille, couleur, prixAchatTxt, prixVenteTxt, deviseTxt, stockTxt] = [
+      const [nom, categorie, sku, taille, couleur, prixAchatTxt, prixVenteTxt, prixBarreTxt, deviseTxt, stockTxt] = [
         ligne[0] ?? "",
         ligne[1] ?? "",
         ligne[2] ?? "",
@@ -113,6 +132,7 @@ export class ProductImportService {
         ligne[6] ?? "",
         ligne[7] ?? "",
         ligne[8] ?? "",
+        ligne[9] ?? "",
       ];
 
       if (!nom && !sku) continue; // ligne vide égarée
@@ -138,6 +158,24 @@ export class ProductImportService {
       const prixAchat = prixAchatTxt ? Number(String(prixAchatTxt).replace(",", ".")) : null;
       if (prixAchatTxt && Number.isNaN(prixAchat)) {
         resultats.push({ ligne: numeroLigne, statut: "erreur", sku, message: "Le prix d'achat doit être un nombre." });
+        continue;
+      }
+      // Prix barré (promo) — même règle que l'API (updateVariant/addVariant,
+      // incident du 20 oct. 2026) : jamais inférieur ou égal au prix de
+      // vente, et jamais enregistré en silence si invalide. Une cellule
+      // vide = pas de promo (null), jamais "0" implicite.
+      const prixBarre = prixBarreTxt ? Number(String(prixBarreTxt).replace(",", ".")) : null;
+      if (prixBarreTxt && Number.isNaN(prixBarre)) {
+        resultats.push({ ligne: numeroLigne, statut: "erreur", sku, message: "Le prix barré (promo) doit être un nombre." });
+        continue;
+      }
+      if (prixBarre != null && prixBarre <= prixVente) {
+        resultats.push({
+          ligne: numeroLigne,
+          statut: "erreur",
+          sku,
+          message: `Le prix barré (${prixBarre}) doit être strictement supérieur au prix de vente (${prixVente}).`,
+        });
         continue;
       }
       const devise = (deviseTxt || "USD").toUpperCase();
@@ -174,6 +212,7 @@ export class ProductImportService {
                 color: couleur || null,
                 costPrice: prixAchat,
                 sellPrice: prixVente,
+                compareAtPrice: prixBarre,
                 currency: devise,
                 stockQty: stock,
               },
@@ -206,10 +245,16 @@ export class ProductImportService {
             if (produitExistant) {
               produitId = produitExistant.id;
             } else {
+              if (typeof maxProduits === "number" && nombreProduitsActuel >= maxProduits) {
+                throw new Error(
+                  `Le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique est limité à ${maxProduits} produit(s) — limite atteinte, cette ligne crée un nouvel article. Passez à un bouquet supérieur depuis le Centre de pilotage pour en ajouter.`,
+                );
+              }
               const nouveau = await tx.product.create({
                 data: { shopId, name: nom, category: categorie || null },
               });
               produitId = nouveau.id;
+              nombreProduitsActuel += 1;
             }
             articlesParClef.set(clef, produitId);
           }
@@ -222,6 +267,7 @@ export class ProductImportService {
               color: couleur || null,
               costPrice: prixAchat,
               sellPrice: prixVente,
+              compareAtPrice: prixBarre,
               currency: devise,
               stockQty: stock,
             },

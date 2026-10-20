@@ -39,8 +39,11 @@ export class PosController {
   }
 
   @Post("sales/:saleId/cancel")
-  cancelSale(@Param("saleId") saleId: string) {
-    return this.posService.cancelSale(saleId);
+  // Corrigé le 20 oct. 2026 (audit de lancement) : réservée à OWNER/MANAGER,
+  // plus ouverte à tout caissier — voir le commentaire de PosService.cancelSale.
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  cancelSale(@Param("shopId") shopId: string, @Param("saleId") saleId: string) {
+    return this.posService.cancelSale(shopId, saleId);
   }
 
   @Get("stock-discrepancies")
