@@ -94,11 +94,20 @@
   gap: var(--espace-1);
 }
 
-.champ input {
+.champ input,
+.champ textarea {
   padding: var(--espace-2) var(--espace-3);
   border: 1px solid var(--color-border);
   min-height: 44px;
   min-width: 160px;
+}
+
+/* 20 oct. 2026 (champ description) : une textarea à 44px de haut n'a la
+   place que pour une ligne, inutile pour un texte de plusieurs phrases. */
+.champ textarea {
+  min-height: 80px;
+  font-family: inherit;
+  resize: vertical;
 }
 
 .bouton {

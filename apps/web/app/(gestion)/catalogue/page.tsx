@@ -154,6 +154,7 @@ interface Variant {
 interface Product {
   id: string;
   name: string;
+  description?: string | null;
   category?: string | null;
   isPublished: boolean;
   images: string[];
@@ -635,6 +636,11 @@ function CatalogueContent() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [nomNouveau, setNomNouveau] = useState("");
   const [categorieNouveau, setCategorieNouveau] = useState("");
+  // 20 oct. 2026 (demande : "ajouter à chaque produit un champ description
+  // qui sera également visible sur la marketplace") — le champ existait déjà
+  // en base et côté API (Product.description, create/update-product.dto.ts),
+  // seule l'interface de saisie manquait.
+  const [descriptionNouveau, setDescriptionNouveau] = useState("");
   const [creationEnCours, setCreationEnCours] = useState(false);
   const [creationConfirmee, setCreationConfirmee] = useState(false);
   const [recherche, setRecherche] = useState("");
@@ -879,6 +885,25 @@ function CatalogueContent() {
     }
   }
 
+  // 20 oct. 2026 — contrairement au nom/catégorie, une description vide est
+  // valide (elle masque simplement le paragraphe sur la fiche marketplace) :
+  // pas de contrôle "non vide" ici, `null` plutôt que "" pour bien l'effacer
+  // côté base (cohérent avec `compareAtPrice: null` ailleurs dans ce fichier).
+  async function modifierDescriptionProduit(produit: Product) {
+    if (!currentShop) return;
+    const saisie = window.prompt(t("cat_inviteDescriptionArticle"), produit.description ?? "");
+    if (saisie === null) return;
+    const valeur = saisie.trim();
+    if (valeur === (produit.description ?? "")) return;
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { description: valeur || null });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
+    }
+  }
+
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
@@ -888,9 +913,11 @@ function CatalogueContent() {
       await api.post(`/shops/${currentShop.id}/products`, {
         name: nomNouveau,
         category: categorieNouveau || undefined,
+        description: descriptionNouveau || undefined,
       });
       setNomNouveau("");
       setCategorieNouveau("");
+      setDescriptionNouveau("");
       recharger();
       // Confirmation explicite (16 oct. 2026) : auparavant, rien ne
       // distinguait "enregistré" de "pas encore cliqué" une fois le
@@ -945,6 +972,16 @@ function CatalogueContent() {
         <div className={styles.champ}>
           <label htmlFor="categorie">{t("cat_categorie")}</label>
           <SelecteurCategorie valeur={categorieNouveau} onChange={setCategorieNouveau} />
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="description">{t("cat_descriptionArticle")}</label>
+          <textarea
+            id="description"
+            placeholder={t("cat_placeholderDescriptionArticle")}
+            value={descriptionNouveau}
+            onChange={(e) => setDescriptionNouveau(e.target.value)}
+            rows={3}
+          />
         </div>
         <button className={styles.bouton} onClick={creerProduit} disabled={creationEnCours || !nomNouveau}>
           {creationEnCours ? t("cat_creationEnCours") : t("cat_creerArticle")}
@@ -1011,6 +1048,26 @@ function CatalogueContent() {
                 )}
               </span>
             </div>
+            <p
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "6px",
+                fontSize: "0.875rem",
+                color: "var(--color-texte-muted)",
+                margin: "4px 0 var(--espace-2)",
+              }}
+            >
+              <span>{produit.description || t("cat_sansDescription")}</span>
+              <button
+                type="button"
+                className={styles.boutonCrayon}
+                title={t("cat_modifier")}
+                onClick={() => modifierDescriptionProduit(produit)}
+              >
+                ✎
+              </button>
+            </p>
             <ImagesProduit produit={produit} onChange={recharger} />
             {produit.variants.length > 0 && (
               <table className={styles.tableauVariantes}>
