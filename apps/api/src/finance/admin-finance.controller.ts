@@ -225,7 +225,14 @@ export class AdminFinanceController {
   @Delete("clotures/:periode")
   reouvrirPeriode(@CurrentUser() user: AuthenticatedUser, @Param("periode") periode: string) {
     requireAdmin(user);
-    return this.closureService.reopen(FiscalRuleScope.PLATFORM, null, periode);
+    return this.closureService.reopen(FiscalRuleScope.PLATFORM, null, periode, user.id);
+  }
+
+  // Historique des réouvertures (audit de lancement, fix #8).
+  @Get("clotures/historique-reouvertures")
+  historiqueReouverturesClotures(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.closureService.historiqueReouvertures(FiscalRuleScope.PLATFORM, null);
   }
 
   // --- Immobilisations plateforme (18 oct. 2026, audit du 18 oct. 2026,

@@ -18,7 +18,10 @@ function debutDuMois(periode: string): Date {
  * registre légalement immuable, seulement une aide interne — fermer cette
  * possibilité aurait transformé une simple erreur de manipulation en
  * blocage définitif, ce qui n'est pas souhaitable pour un outil encore à ce
- * stade de maturité.
+ * stade de maturité. Depuis le 20 oct. 2026 (audit de lancement, fix #8),
+ * la réouverture n'efface plus la trace : le résumé figé est d'abord copié
+ * dans AccountingClosureReopenLog (avec qui a rouvert et quand) avant la
+ * suppression de la ligne AccountingClosure elle-même.
  */
 @Injectable()
 export class ClosureService {
@@ -64,12 +67,39 @@ export class ClosureService {
     });
   }
 
-  async reopen(scope: FiscalRuleScope, shopId: string | null, periode: string) {
+  async reopen(scope: FiscalRuleScope, shopId: string | null, periode: string, reopenedBy: string | null) {
     const debut = debutDuMois(periode);
     const existante = await this.prisma.accountingClosure.findFirst({ where: { scope, shopId, periodDate: debut } });
     if (!existante) {
       throw new NotFoundException(`La période ${periode} n'est pas clôturée.`);
     }
-    await this.prisma.accountingClosure.delete({ where: { id: existante.id } });
+    await this.prisma.$transaction([
+      this.prisma.accountingClosureReopenLog.create({
+        data: {
+          scope: existante.scope,
+          shopId: existante.shopId,
+          periodDate: existante.periodDate,
+          closedAt: existante.closedAt,
+          closedBy: existante.closedBy,
+          totalDebit: existante.totalDebit,
+          totalCredit: existante.totalCredit,
+          resultatNet: existante.resultatNet,
+          reopenedBy,
+        },
+      }),
+      this.prisma.accountingClosure.delete({ where: { id: existante.id } }),
+    ]);
+  }
+
+  /**
+   * Historique des réouvertures (audit de lancement, fix #8) — consultable
+   * pour retrouver le résumé d'une clôture supprimée, qui a rouvert le mois
+   * et quand.
+   */
+  historiqueReouvertures(scope: FiscalRuleScope, shopId: string | null) {
+    return this.prisma.accountingClosureReopenLog.findMany({
+      where: { scope, shopId },
+      orderBy: { reopenedAt: "desc" },
+    });
   }
 }

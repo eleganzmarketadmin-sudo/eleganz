@@ -168,8 +168,20 @@ export class FinanceController {
   @Delete("clotures/:periode")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
   @RequiresGestionFeature("cloture")
-  reouvrirPeriode(@Param("shopId") shopId: string, @Param("periode") periode: string) {
-    return this.closureService.reopen(FiscalRuleScope.SHOP, shopId, periode);
+  reouvrirPeriode(
+    @Param("shopId") shopId: string,
+    @Param("periode") periode: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.closureService.reopen(FiscalRuleScope.SHOP, shopId, periode, user.id);
+  }
+
+  // Historique des réouvertures (audit de lancement, fix #8) — pour
+  // retrouver le résumé d'une clôture supprimée, qui a rouvert et quand.
+  @Get("clotures/historique-reouvertures")
+  @RequiresGestionFeature("cloture")
+  historiqueReouverturesClotures(@Param("shopId") shopId: string) {
+    return this.closureService.historiqueReouvertures(FiscalRuleScope.SHOP, shopId);
   }
 
   // Simulation fiscale (docs/ARCHITECTURE_FINANCE.md §8septies) — jamais
