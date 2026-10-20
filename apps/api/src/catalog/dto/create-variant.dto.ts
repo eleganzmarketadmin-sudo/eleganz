@@ -22,6 +22,14 @@ export class CreateVariantDto {
   @Min(0)
   sellPrice!: number;
 
+  // Prix barré de référence pour une promotion (19 oct. 2026) — optionnel,
+  // validé côté service : ignoré silencieusement s'il n'est pas strictement
+  // supérieur à sellPrice, jamais un badge "promo" trompeur.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPrice?: number;
+
   @IsOptional()
   @IsIn(["USD", "CDF"])
   currency?: "USD" | "CDF";
@@ -30,4 +38,17 @@ export class CreateVariantDto {
   @IsInt()
   @Min(0)
   initialStockQty?: number;
+}
+
+export class UpdateVariantDto {
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  sellPrice?: number;
+
+  // Envoyer `null` explicitement retire la promotion en cours.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPrice?: number | null;
 }

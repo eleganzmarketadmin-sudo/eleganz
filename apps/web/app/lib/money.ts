@@ -26,6 +26,19 @@ export function formatMoney(amount: number, currency: string = "USD"): string {
   return `${signe}$${corps}.${partieDecimale}`;
 }
 
+/**
+ * Mécanisme de promotion (19 oct. 2026) : une promotion est active
+ * uniquement si compareAtPrice est renseigné ET strictement supérieur au
+ * prix de vente réel — même règle que côté API (catalog.service.ts),
+ * jamais un badge "promo" affiché sur la seule base d'un champ présent.
+ */
+export function pourcentageRemise(sellPrice: number, compareAtPrice?: number | string | null): number | null {
+  if (compareAtPrice == null) return null;
+  const reference = Number(compareAtPrice);
+  if (!Number.isFinite(reference) || reference <= sellPrice) return null;
+  return Math.round(((reference - sellPrice) / reference) * 100);
+}
+
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return new Intl.DateTimeFormat("fr-FR", {

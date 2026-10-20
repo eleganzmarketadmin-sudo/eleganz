@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
-import { CreateVariantDto } from "./dto/create-variant.dto";
+import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
@@ -74,6 +74,17 @@ export class CatalogController {
    * casserait la vente pour le bouquet Starter plutôt que de restreindre une
    * fonctionnalité premium.
    */
+  @Patch(":productId/variants/:variantId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  updateVariant(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+    @Body() dto: UpdateVariantDto,
+  ) {
+    return this.catalogService.updateVariant(shopId, productId, variantId, dto);
+  }
+
   @Post(":productId/variants/bulk")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   @RequiresGestionFeature("variantesProduits")

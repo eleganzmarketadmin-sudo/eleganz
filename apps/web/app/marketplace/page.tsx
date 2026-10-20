@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
-import { formatMoney } from "../lib/money";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
+import { PrixPromo } from "../components/PrixPromo";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { nomPays } from "../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -13,6 +13,7 @@ import styles from "./page.module.css";
 interface Variant {
   id: string;
   sellPrice: string;
+  compareAtPrice?: string | null;
   currency: string;
   stockQty: number;
 }
@@ -268,7 +269,12 @@ export default function MarketplacePage() {
                 <div className={styles.boutique}>{produit.shop.name}</div>
                 {moinsCher && (
                   <div className={styles.prix}>
-                    {formatMoney(Number(moinsCher.sellPrice), moinsCher.currency)}
+                    <PrixPromo
+                      sellPrice={Number(moinsCher.sellPrice)}
+                      compareAtPrice={moinsCher.compareAtPrice}
+                      currency={moinsCher.currency}
+                      taille="petite"
+                    />
                   </div>
                 )}
               </Link>

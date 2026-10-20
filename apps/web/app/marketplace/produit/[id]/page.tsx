@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "../../../lib/api";
-import { formatMoney } from "../../../lib/money";
 import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
 import { RetourLien } from "../../../components/RetourLien";
+import { PrixPromo } from "../../../components/PrixPromo";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -16,6 +16,7 @@ interface Variant {
   size?: string | null;
   color?: string | null;
   sellPrice: string;
+  compareAtPrice?: string | null;
   currency: string;
   stockQty: number;
 }
@@ -102,7 +103,15 @@ export default function ProduitPage() {
         )}
         {produit.description && <p style={{ marginBottom: "24px" }}>{produit.description}</p>}
 
-        {variante && <div className={styles.prix}>{formatMoney(Number(variante.sellPrice), variante.currency)}</div>}
+        {variante && (
+          <div className={styles.prix}>
+            <PrixPromo
+              sellPrice={Number(variante.sellPrice)}
+              compareAtPrice={variante.compareAtPrice}
+              currency={variante.currency}
+            />
+          </div>
+        )}
 
         {produit.variants.length > 1 && (
           <div className={styles.variantes}>

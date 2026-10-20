@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "../../../lib/api";
-import { formatMoney } from "../../../lib/money";
 import { useAuth } from "../../../lib/auth";
 import { RetourLien } from "../../../components/RetourLien";
+import { PrixPromo } from "../../../components/PrixPromo";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -31,6 +31,7 @@ interface Boutique {
 interface Variant {
   id: string;
   sellPrice: string;
+  compareAtPrice?: string | null;
   currency: string;
   stockQty: number;
 }
@@ -248,7 +249,12 @@ export default function BoutiquePage() {
                   <div className={styles.nomProduit}>{produit.name}</div>
                   {moinsCher && (
                     <div className={styles.prix}>
-                      {formatMoney(Number(moinsCher.sellPrice), moinsCher.currency)}
+                      <PrixPromo
+                        sellPrice={Number(moinsCher.sellPrice)}
+                        compareAtPrice={moinsCher.compareAtPrice}
+                        currency={moinsCher.currency}
+                        taille="petite"
+                      />
                     </div>
                   )}
                 </Link>

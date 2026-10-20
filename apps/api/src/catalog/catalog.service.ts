@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
-import { CreateVariantDto } from "./dto/create-variant.dto";
+import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
 import { CreateVariantsBulkDto } from "./dto/create-variants-bulk.dto";
 import { CreateVariantOptionDto } from "./dto/variant-option.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
@@ -174,6 +174,8 @@ export class CatalogService implements OnModuleInit {
           color: dto.color,
           costPrice: dto.costPrice,
           sellPrice: dto.sellPrice,
+          compareAtPrice:
+            dto.compareAtPrice != null && dto.compareAtPrice > dto.sellPrice ? dto.compareAtPrice : null,
           currency: dto.currency ?? "USD",
           stockQty: dto.initialStockQty ?? 0,
         },
@@ -192,6 +194,33 @@ export class CatalogService implements OnModuleInit {
       }
 
       return variant;
+    });
+  }
+
+  /**
+   * Modification d'une variante existante (19 oct. 2026) — pour l'instant
+   * limitée au prix de vente et au prix barré de promotion, les deux seuls
+   * champs qu'un gestionnaire a besoin de changer après coup sans repasser
+   * par un réapprovisionnement. `productId` scope la variante à la bonne
+   * boutique via la relation (jamais par variantId seul, pour empêcher
+   * qu'une boutique modifie la variante d'une autre).
+   */
+  async updateVariant(shopId: string, productId: string, variantId: string, dto: UpdateVariantDto) {
+    const variante = await this.prisma.variant.findFirstOrThrow({
+      where: { id: variantId, productId, product: { shopId } },
+    });
+    const nouveauSellPrice = dto.sellPrice ?? Number(variante.sellPrice);
+    let compareAtPrice: number | null | undefined = undefined;
+    if (dto.compareAtPrice !== undefined) {
+      compareAtPrice =
+        dto.compareAtPrice != null && dto.compareAtPrice > nouveauSellPrice ? dto.compareAtPrice : null;
+    }
+    return this.prisma.variant.update({
+      where: { id: variantId },
+      data: {
+        ...(dto.sellPrice !== undefined ? { sellPrice: dto.sellPrice } : {}),
+        ...(compareAtPrice !== undefined ? { compareAtPrice } : {}),
+      },
     });
   }
 

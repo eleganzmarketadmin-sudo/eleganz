@@ -6,7 +6,7 @@ import { StatusTag } from "../../components/StatusTag";
 import { BoutonBientotDisponible } from "../../components/BoutonBientotDisponible";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
-import { formatMoney } from "../../lib/money";
+import { formatMoney, pourcentageRemise } from "../../lib/money";
 import { telechargerFichier, envoyerFichier } from "../../lib/telecharger-fichier";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
@@ -146,6 +146,7 @@ interface Variant {
   color?: string | null;
   costPrice?: string | null;
   sellPrice: string;
+  compareAtPrice?: string | null;
   currency: string;
   stockQty: number;
 }
@@ -672,6 +673,29 @@ function CatalogueContent() {
     }
   }
 
+  // Mécanisme de promotion (19 oct. 2026) : prix barré de référence saisi
+  // via une invite simple, sur le modèle de window.confirm déjà utilisé
+  // ailleurs dans gestion (ex. changement de bouquet) — volontairement léger
+  // plutôt qu'un formulaire dédié pour ce premier jet.
+  async function modifierPrixBarre(produitId: string, variante: Variant) {
+    if (!currentShop) return;
+    const saisie = window.prompt(
+      t("cat_promoInvite"),
+      variante.compareAtPrice != null ? String(variante.compareAtPrice) : "",
+    );
+    if (saisie === null) return; // annulé
+    const valeur = saisie.trim();
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}`, {
+        compareAtPrice: valeur === "" ? null : Number(valeur),
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_promoImpossible"));
+    }
+  }
+
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
@@ -791,21 +815,35 @@ function CatalogueContent() {
                     <th>{t("cat_colTailleCouleur")}</th>
                     <th className={styles.colChiffre}>{t("cat_colPrixAchat")}</th>
                     <th className={styles.colChiffre}>{t("cat_colPrixVente")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colPromo")}</th>
                     <th className={styles.colChiffre}>{t("cat_colStock")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {produit.variants.map((v) => (
-                    <tr key={v.id}>
-                      <td>{v.sku}</td>
-                      <td>{[v.size, v.color].filter(Boolean).join(" · ") || "—"}</td>
-                      <td className={styles.colChiffre}>
-                        {v.costPrice != null ? formatMoney(Number(v.costPrice), v.currency) : "—"}
-                      </td>
-                      <td className={styles.colChiffre}>{formatMoney(Number(v.sellPrice), v.currency)}</td>
-                      <td className={styles.colChiffre}>{v.stockQty}</td>
-                    </tr>
-                  ))}
+                  {produit.variants.map((v) => {
+                    const remise = pourcentageRemise(Number(v.sellPrice), v.compareAtPrice);
+                    return (
+                      <tr key={v.id}>
+                        <td>{v.sku}</td>
+                        <td>{[v.size, v.color].filter(Boolean).join(" · ") || "—"}</td>
+                        <td className={styles.colChiffre}>
+                          {v.costPrice != null ? formatMoney(Number(v.costPrice), v.currency) : "—"}
+                        </td>
+                        <td className={styles.colChiffre}>{formatMoney(Number(v.sellPrice), v.currency)}</td>
+                        <td className={styles.colChiffre}>
+                          <button
+                            type="button"
+                            className={styles.bouton}
+                            style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                            onClick={() => modifierPrixBarre(produit.id, v)}
+                          >
+                            {remise != null ? `-${remise}% ✎` : t("cat_definirPromo")}
+                          </button>
+                        </td>
+                        <td className={styles.colChiffre}>{v.stockQty}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
