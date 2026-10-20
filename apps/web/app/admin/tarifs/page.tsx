@@ -46,8 +46,19 @@ function texteToFeatures(texte: string): Record<string, unknown> {
  * décorative : cocher/décocher ici change réellement ce qu'une boutique de
  * ce bouquet peut faire, sans redéploiement.
  */
+// 20 oct. 2026 (demande : "la liste des fonctionnalités n'est pas
+// exhaustive, exemple dossier crédit") — dossierCredit/businessPlan/prets/
+// rapportAnnuel partageaient tous la clé "financeAvancee" côté API, ce qui
+// empêchait de les répartir sur des bouquets différents. Ce sont maintenant
+// 4 clés indépendantes (voir finance.controller.ts et
+// subscription-plans.service.ts, qui préserve l'accès des boutiques déjà
+// sur "financeAvancee" lors de la migration).
 const CLES_FONCTIONNALITES_GESTION: { cle: string; cleTrad: string }[] = [
   { cle: "financeAvancee", cleTrad: "admtarifs_gestion_financeAvancee" },
+  { cle: "dossierCredit", cleTrad: "admtarifs_gestion_dossierCredit" },
+  { cle: "businessPlan", cleTrad: "admtarifs_gestion_businessPlan" },
+  { cle: "prets", cleTrad: "admtarifs_gestion_prets" },
+  { cle: "rapportAnnuel", cleTrad: "admtarifs_gestion_rapportAnnuel" },
   { cle: "immobilisations", cleTrad: "admtarifs_gestion_immobilisations" },
   { cle: "cloture", cleTrad: "admtarifs_gestion_cloture" },
   { cle: "tresorerie", cleTrad: "admtarifs_gestion_tresorerie" },

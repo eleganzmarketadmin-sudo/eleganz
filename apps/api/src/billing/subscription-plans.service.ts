@@ -45,6 +45,18 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
     // (plan comptable complet, états normalisés). Voir Doc "Finance &
     // Comptabilité SYSCOHADA — Audit & plan d'intégration", tab E.
     comptabiliteSyscohada: boolean;
+    // Ajoutées le 20 oct. 2026 (audit de lancement, demande : "la liste des
+    // fonctionnalités n'est pas exhaustive, exemple dossier crédit") — ces
+    // 4 écrans partageaient tous la clé générique `financeAvancee`, ce qui
+    // empêchait de les répartir sur des bouquets différents depuis le
+    // Centre de pilotage. Valeurs de départ alignées sur `financeAvancee`
+    // (même périmètre qu'avant la séparation) ; voir
+    // ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants()
+    // ci-dessous pour les bouquets déjà créés en production.
+    dossierCredit: boolean;
+    businessPlan: boolean;
+    prets: boolean;
+    rapportAnnuel: boolean;
     maxEquipe: number | null;
   };
 }> = [
@@ -62,6 +74,10 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       variantesProduits: false,
       exportExcelPdf: false,
       comptabiliteSyscohada: false,
+      dossierCredit: false,
+      businessPlan: false,
+      prets: false,
+      rapportAnnuel: false,
       maxEquipe: 2,
     },
   },
@@ -79,6 +95,10 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       variantesProduits: true,
       exportExcelPdf: true,
       comptabiliteSyscohada: false,
+      dossierCredit: true,
+      businessPlan: true,
+      prets: true,
+      rapportAnnuel: true,
       maxEquipe: 10,
     },
   },
@@ -99,6 +119,10 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       // ensureComptabiliteSyscohadaSurPremiumExistant() ci-dessous pour le
       // bouquet Premium déjà créé en production avant ce chantier.
       comptabiliteSyscohada: true,
+      dossierCredit: true,
+      businessPlan: true,
+      prets: true,
+      rapportAnnuel: true,
       maxEquipe: null,
     },
   },
@@ -122,10 +146,20 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       variantesProduits: true,
       exportExcelPdf: true,
       comptabiliteSyscohada: true,
+      dossierCredit: true,
+      businessPlan: true,
+      prets: true,
+      rapportAnnuel: true,
       maxEquipe: null,
     },
   },
 ];
+
+// Clés détaillées introduites le 20 oct. 2026, séparées de `financeAvancee`
+// (voir commentaire sur `featuresJson` ci-dessus) — utilisées par la
+// migration de démarrage ci-dessous pour ne backfiller que celles-ci,
+// jamais une autre clé.
+const CLES_FINANCE_DETAILLEES = ["dossierCredit", "businessPlan", "prets", "rapportAnnuel"] as const;
 
 @Injectable()
 export class SubscriptionPlansService implements OnModuleInit {
@@ -146,6 +180,7 @@ export class SubscriptionPlansService implements OnModuleInit {
       await this.seedBouquetsGestionDeDepart();
       await this.rattacherBoutiquesSansBouquet();
       await this.ensureComptabiliteSyscohadaSurPremiumExistant();
+      await this.ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants();
     } catch (err) {
       this.logger.error("Échec du seed des bouquets Gestion au démarrage", err);
     }
@@ -214,6 +249,49 @@ export class SubscriptionPlansService implements OnModuleInit {
       },
     });
     this.logger.log("Fonctionnalité comptabiliteSyscohada ajoutée au bouquet Premium existant.");
+  }
+
+  /**
+   * Migration ciblée du 20 oct. 2026 (audit de lancement, séparation de
+   * `financeAvancee` en 4 clés détaillées — voir le commentaire sur
+   * `featuresJson` plus haut) : pour TOUT bouquet Gestion déjà en
+   * production (même modifié depuis /admin/tarifs, même créé avant ce
+   * chantier), si l'une des 4 nouvelles clés est ABSENTE de son
+   * `featuresJson`, on l'ajoute avec la valeur actuelle de
+   * `financeAvancee` — jamais autre chose — pour qu'aucune boutique déjà
+   * abonnée ne perde un accès qu'elle utilisait déjà la veille de ce
+   * déploiement. Une clé déjà présente (donc déjà choisie explicitement
+   * par l'administrateur depuis /admin/tarifs, même avant la séparation si
+   * ce code a déjà tourné une fois) n'est jamais réécrite — même principe
+   * de fusion ciblée que ensureComptabiliteSyscohadaSurPremiumExistant.
+   */
+  private async ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants() {
+    const bouquets = await this.prisma.subscriptionPlan.findMany({
+      where: { category: PlanCategory.GESTION },
+    });
+    let nombreMisAJour = 0;
+    for (const bouquet of bouquets) {
+      const features = (bouquet.featuresJson ?? {}) as Record<string, unknown>;
+      const valeurDeDepart = features.financeAvancee === true;
+      const ajouts: Record<string, boolean> = {};
+      for (const cle of CLES_FINANCE_DETAILLEES) {
+        if (features[cle] === undefined) {
+          ajouts[cle] = valeurDeDepart;
+        }
+      }
+      if (Object.keys(ajouts).length === 0) continue;
+
+      await this.prisma.subscriptionPlan.update({
+        where: { id: bouquet.id },
+        data: { featuresJson: { ...features, ...ajouts } as Prisma.InputJsonValue },
+      });
+      nombreMisAJour++;
+    }
+    if (nombreMisAJour > 0) {
+      this.logger.log(
+        `${nombreMisAJour} bouquet(s) Gestion mis à jour avec les clés détaillées dossierCredit/businessPlan/prets/rapportAnnuel.`,
+      );
+    }
   }
 
   private async rattacherBoutiquesSansBouquet() {

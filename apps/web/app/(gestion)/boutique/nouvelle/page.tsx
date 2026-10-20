@@ -29,20 +29,17 @@ const MODES = [
 //
 // 20 oct. 2026 (demande : "la liste des menus/fonctionnalités ne sont pas
 // exhaustifs, exemple dossier crédit") — dossier de crédit, business plan,
-// prêts et rapport annuel sont bien conditionnés par bouquet côté API (tous
-// derrière le même booléen `financeAvancee`, voir finance.controller.ts),
-// mais n'apparaissaient nulle part explicitement sur cette page : le
-// libellé générique "Finance avancée" les cachait. Réutilisés ici en 4
-// lignes distinctes (même `cle`, donc toujours cohérentes avec le vrai
-// bouquet — jamais affichées si `financeAvancee` est faux) plutôt que de
-// tout entasser dans une seule puce, pour que chaque fonctionnalité à
-// valeur ajoutée soit listée individuellement.
+// prêts et rapport annuel sont désormais 4 clés de bouquet indépendantes
+// côté API (séparées de "financeAvancee", voir finance.controller.ts et
+// subscription-plans.service.ts) : chaque bouquet peut les inclure ou non
+// séparément depuis le Centre de pilotage, donc chacune a sa propre ligne
+// ici plutôt que d'être entassée dans la puce générique "Finance avancée".
 const CLES_FONCTIONNALITES_GESTION: { cle: string; cleTrad: string }[] = [
   { cle: "financeAvancee", cleTrad: "admtarifs_gestion_financeAvancee" },
-  { cle: "financeAvancee", cleTrad: "admtarifs_gestion_dossierCredit" },
-  { cle: "financeAvancee", cleTrad: "admtarifs_gestion_businessPlan" },
-  { cle: "financeAvancee", cleTrad: "admtarifs_gestion_prets" },
-  { cle: "financeAvancee", cleTrad: "admtarifs_gestion_rapportAnnuel" },
+  { cle: "dossierCredit", cleTrad: "admtarifs_gestion_dossierCredit" },
+  { cle: "businessPlan", cleTrad: "admtarifs_gestion_businessPlan" },
+  { cle: "prets", cleTrad: "admtarifs_gestion_prets" },
+  { cle: "rapportAnnuel", cleTrad: "admtarifs_gestion_rapportAnnuel" },
   { cle: "immobilisations", cleTrad: "admtarifs_gestion_immobilisations" },
   { cle: "cloture", cleTrad: "admtarifs_gestion_cloture" },
   { cle: "tresorerie", cleTrad: "admtarifs_gestion_tresorerie" },

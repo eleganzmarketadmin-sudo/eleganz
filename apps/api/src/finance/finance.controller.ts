@@ -234,14 +234,21 @@ export class FinanceController {
   // financiers, historique et dettes/créances pour appuyer une demande de
   // crédit auprès d'une institution financière. Jamais persisté, toujours
   // recalculé depuis les écritures réelles de la boutique.
+  // 20 oct. 2026 (demande : "la liste des fonctionnalités ne sont pas
+  // exhaustifs, exemple dossier crédit") — dossier crédit, business plan,
+  // prêts et rapport annuel partageaient tous la clé générique
+  // "financeAvancee", ce qui empêchait de les répartir entre bouquets
+  // différents depuis le Centre de pilotage. Chacun a maintenant sa propre
+  // clé de bouquet (voir subscription-plans.service.ts pour la migration
+  // qui préserve l'accès existant des boutiques déjà sur "financeAvancee").
   @Get("dossier-credit")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("dossierCredit")
   dossierCredit(@Param("shopId") shopId: string, @Query("mois") mois?: string) {
     return this.financeService.dossierCredit(shopId, mois ? Number(mois) : undefined);
   }
 
   @Get("export/dossier-credit")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("dossierCredit")
   async exportDossierCredit(
     @Param("shopId") shopId: string,
     @Res() res: Response,
@@ -259,28 +266,28 @@ export class FinanceController {
   // annuel. OWNER/MANAGER/ACCOUNTANT uniquement : contenu stratégique de la
   // boutique, pas une simple lecture de chiffres déjà publics en interne.
   @Get("business-plan")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("businessPlan")
   businessPlanObtenir(@Param("shopId") shopId: string) {
     return this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId);
   }
 
   @Patch("business-plan")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("businessPlan")
   businessPlanEnregistrer(@Param("shopId") shopId: string, @Body() dto: UpdateBusinessPlanDto) {
     return this.businessPlan.enregistrer(FiscalRuleScope.SHOP, shopId, dto);
   }
 
   @Post("business-plan/scenarios")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("businessPlan")
   scenarioAjouter(@Param("shopId") shopId: string, @Body() dto: CreateLoanScenarioDto) {
     return this.businessPlan.ajouterScenario(FiscalRuleScope.SHOP, shopId, dto);
   }
 
   @Patch("business-plan/scenarios/:scenarioId")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("businessPlan")
   scenarioModifier(
     @Param("shopId") shopId: string,
     @Param("scenarioId") scenarioId: string,
@@ -291,7 +298,7 @@ export class FinanceController {
 
   @Delete("business-plan/scenarios/:scenarioId")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("businessPlan")
   scenarioSupprimer(@Param("shopId") shopId: string, @Param("scenarioId") scenarioId: string) {
     return this.businessPlan.supprimerScenario(FiscalRuleScope.SHOP, shopId, scenarioId);
   }
@@ -301,14 +308,14 @@ export class FinanceController {
   // décaissé et comptabilisé dès sa création (voir LoansService). Même
   // restriction OWNER/MANAGER/ACCOUNTANT que le business plan.
   @Get("loans")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("prets")
   loansLister(@Param("shopId") shopId: string) {
     return this.loansService.listForShop(shopId);
   }
 
   @Post("loans")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("prets")
   loansObtenir(@Param("shopId") shopId: string, @Body() dto: CreateLoanDto) {
     return this.loansService.create(shopId, dto);
   }
@@ -316,7 +323,7 @@ export class FinanceController {
   // `periode` au format AAAA-MM, mois courant par défaut.
   @Post("loans/:loanId/echeances")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("prets")
   loansComptabiliserEcheance(
     @Param("shopId") shopId: string,
     @Param("loanId") loanId: string,
@@ -326,7 +333,7 @@ export class FinanceController {
   }
 
   @Get("loans/:loanId/echeances")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("prets")
   loansListerEcheances(@Param("shopId") shopId: string, @Param("loanId") loanId: string) {
     return this.loansService.listerEcheances(shopId, loanId);
   }
@@ -335,13 +342,13 @@ export class FinanceController {
   // SYSCOHADA/OHADA, exportable en PDF/Word/PowerPoint. Jamais persisté,
   // toujours recalculé depuis les écritures réelles de l'année demandée.
   @Get("rapport-annuel")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("rapportAnnuel")
   rapportAnnuelDonnees(@Param("shopId") shopId: string, @Query("annee") annee?: string) {
     return this.rapportAnnuel.assembler(FiscalRuleScope.SHOP, shopId, annee ? Number(annee) : new Date().getFullYear());
   }
 
   @Get("export/rapport-annuel")
-  @RequiresGestionFeature("financeAvancee")
+  @RequiresGestionFeature("rapportAnnuel")
   async exportRapportAnnuel(
     @Param("shopId") shopId: string,
     @Res() res: Response,
