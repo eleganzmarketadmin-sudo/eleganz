@@ -2180,6 +2180,33 @@ model AccountingClosure {
   @@unique([scope, shopId, periodDate])
 }
 
+// Journal de réouverture d'une clôture (20 oct. 2026, audit de lancement,
+// point "réouverture d'une clôture supprime le résumé sans laisser de
+// trace") — ClosureService.reopen() supprimait jusqu'ici la ligne
+// AccountingClosure sans conserver nulle part le résumé qui avait été figé
+// ni qui a rouvert le mois et quand. Ce journal capture un instantané
+// complet de la clôture juste avant sa suppression — purement additif,
+// jamais lu par AccountingService.enregistrer (qui continue de ne regarder
+// que AccountingClosure pour verrouiller un mois). `shopId` est un simple
+// scalaire (pas de `@relation`) : ce journal n'a besoin d'aucune jointure,
+// seulement de conserver la trace même si la boutique est supprimée plus
+// tard.
+model AccountingClosureReopenLog {
+  id          String   @id @default(uuid())
+  scope       FiscalRuleScope
+  shopId      String?
+  periodDate  DateTime
+  closedAt    DateTime
+  closedBy    String?
+  totalDebit  Decimal  @db.Decimal(12, 2)
+  totalCredit Decimal  @db.Decimal(12, 2)
+  resultatNet Decimal  @db.Decimal(12, 2)
+  reopenedAt  DateTime @default(now())
+  reopenedBy  String?
+
+  @@index([scope, shopId, periodDate])
+}
+
 // ---------------------------------------------------------------------------
 // NOTIFICATIONS & MESSAGERIE — fondations transverses (15 oct. 2026, demande
 // UX points 4 et 7). Portée volontairement minimale pour cette phase :
