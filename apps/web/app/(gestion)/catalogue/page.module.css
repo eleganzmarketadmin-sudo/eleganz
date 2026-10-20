@@ -157,6 +157,25 @@
   text-align: right;
 }
 
+/* Bouton crayon pour modifier un champ déjà saisi (20 oct. 2026) — discret à
+   côté de la valeur affichée, mais une cible de clic assez grande pour
+   rester utilisable au doigt. */
+.boutonCrayon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--espace-1);
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  min-width: 28px;
+  min-height: 28px;
+  vertical-align: middle;
+}
+
+.boutonCrayon:hover {
+  color: var(--color-cobalt);
+}
+
 .ajoutVariante {
   padding: var(--espace-3) var(--espace-4);
   display: flex;

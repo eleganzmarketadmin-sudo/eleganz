@@ -165,6 +165,14 @@ export class CatalogService implements OnModuleInit {
    * avec le principe d'unicité du stock décrit dans ARCHITECTURE.md.
    */
   async addVariant(shopId: string, productId: string, dto: CreateVariantDto) {
+    // Même principe que updateVariant (incident du 20 oct. 2026) : un prix
+    // barré invalide à la création doit être signalé, jamais ignoré en
+    // silence.
+    if (dto.compareAtPrice != null && dto.compareAtPrice <= dto.sellPrice) {
+      throw new BadRequestException(
+        `Le prix barré (${dto.compareAtPrice}) doit être strictement supérieur au prix de vente (${dto.sellPrice}).`,
+      );
+    }
     return this.prisma.$transaction(async (tx) => {
       const variant = await tx.variant.create({
         data: {
@@ -174,8 +182,7 @@ export class CatalogService implements OnModuleInit {
           color: dto.color,
           costPrice: dto.costPrice,
           sellPrice: dto.sellPrice,
-          compareAtPrice:
-            dto.compareAtPrice != null && dto.compareAtPrice > dto.sellPrice ? dto.compareAtPrice : null,
+          compareAtPrice: dto.compareAtPrice ?? null,
           currency: dto.currency ?? "USD",
           stockQty: dto.initialStockQty ?? 0,
         },
@@ -198,36 +205,61 @@ export class CatalogService implements OnModuleInit {
   }
 
   /**
-   * Modification d'une variante existante (19 oct. 2026) — pour l'instant
-   * limitée au prix de vente et au prix barré de promotion, les deux seuls
-   * champs qu'un gestionnaire a besoin de changer après coup sans repasser
-   * par un réapprovisionnement. `productId` scope la variante à la bonne
-   * boutique via la relation (jamais par variantId seul, pour empêcher
-   * qu'une boutique modifie la variante d'une autre).
+   * Modification d'une variante existante. Étendue le 20 oct. 2026 (demande :
+   * "les différents champs dans catalogue dès que saisie on ne peut pas les
+   * modifier") — référence, taille, couleur et prix d'achat sont désormais
+   * modifiables après coup, comme le prix de vente et la promotion (19 oct.
+   * 2026) : plus besoin de supprimer puis recréer une variante mal saisie.
+   * `productId` scope la variante à la bonne boutique via la relation
+   * (jamais par variantId seul, pour empêcher qu'une boutique modifie la
+   * variante d'une autre).
    */
   async updateVariant(shopId: string, productId: string, variantId: string, dto: UpdateVariantDto) {
     const variante = await this.prisma.variant.findFirstOrThrow({
       where: { id: variantId, productId, product: { shopId } },
     });
     const nouveauSellPrice = dto.sellPrice ?? Number(variante.sellPrice);
-    let compareAtPrice: number | null | undefined = undefined;
-    if (dto.compareAtPrice !== undefined) {
-      // Incident du 20 oct. 2026 : une valeur invalide (prix barré ≤ prix de
-      // vente) était auparavant ignorée en silence, sans aucun retour à la
-      // personne — elle croyait avoir réglé une promo qui n'existait jamais.
-      // Erreur explicite désormais, jamais un échec muet.
-      if (dto.compareAtPrice != null && dto.compareAtPrice <= nouveauSellPrice) {
+
+    // Le prix barré effectif après cette requête : la valeur explicitement
+    // envoyée, sinon celle déjà en base. Un simple changement de prix de
+    // vente (sans toucher à la promo) ne doit jamais rendre un prix barré
+    // existant incohérent en silence — même principe que l'incident du 20
+    // oct. 2026 sur la promotion elle-même : toujours une erreur explicite,
+    // jamais un état invalide enregistré sans avertissement.
+    const compareAtPriceExplicite = dto.compareAtPrice !== undefined;
+    const compareAtPriceEffectif = compareAtPriceExplicite
+      ? dto.compareAtPrice
+      : variante.compareAtPrice != null
+        ? Number(variante.compareAtPrice)
+        : null;
+
+    if (compareAtPriceEffectif != null && compareAtPriceEffectif <= nouveauSellPrice) {
+      if (compareAtPriceExplicite) {
         throw new BadRequestException(
           `Le prix barré (${dto.compareAtPrice}) doit être strictement supérieur au prix de vente (${nouveauSellPrice}).`,
         );
       }
-      compareAtPrice = dto.compareAtPrice;
+      throw new BadRequestException(
+        `Ce prix de vente (${nouveauSellPrice}) est supérieur ou égal au prix barré de la promotion en cours (${compareAtPriceEffectif}). Retirez d'abord la promotion avant de changer le prix de vente.`,
+      );
     }
+
+    if (dto.sku !== undefined && dto.sku !== variante.sku) {
+      const existante = await this.prisma.variant.findUnique({ where: { sku: dto.sku } });
+      if (existante) {
+        throw new ConflictException(`La référence "${dto.sku}" est déjà utilisée par une autre variante.`);
+      }
+    }
+
     return this.prisma.variant.update({
       where: { id: variantId },
       data: {
+        ...(dto.sku !== undefined ? { sku: dto.sku } : {}),
+        ...(dto.size !== undefined ? { size: dto.size } : {}),
+        ...(dto.color !== undefined ? { color: dto.color } : {}),
+        ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),
         ...(dto.sellPrice !== undefined ? { sellPrice: dto.sellPrice } : {}),
-        ...(compareAtPrice !== undefined ? { compareAtPrice } : {}),
+        ...(compareAtPriceExplicite ? { compareAtPrice: dto.compareAtPrice } : {}),
       },
     });
   }

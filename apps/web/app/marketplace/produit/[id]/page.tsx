@@ -6,7 +6,7 @@ import { api } from "../../../lib/api";
 import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
 import { RetourLien } from "../../../components/RetourLien";
-import { PrixPromo } from "../../../components/PrixPromo";
+import { PrixPromo, RubanPromo } from "../../../components/PrixPromo";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -84,12 +84,15 @@ export default function ProduitPage() {
       <div style={{ gridColumn: "1 / -1" }}>
         <RetourLien href="/marketplace" label={t("produit_retourMarketplace")} />
       </div>
-      {produit.images[0] ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={produit.images[0]} alt={produit.name} className={styles.image} style={{ objectFit: "cover", width: "100%" }} />
-      ) : (
-        <div className={styles.image}>{produit.name}</div>
-      )}
+      <div style={{ position: "relative" }}>
+        {produit.images[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={produit.images[0]} alt={produit.name} className={styles.image} style={{ objectFit: "cover", width: "100%" }} />
+        ) : (
+          <div className={styles.image}>{produit.name}</div>
+        )}
+        {variante && <RubanPromo sellPrice={Number(variante.sellPrice)} compareAtPrice={variante.compareAtPrice} />}
+      </div>
       <div>
         <h1 className={styles.titre}>{produit.name}</h1>
         <p className={styles.boutique}>{t("produit_venduPar")} {produit.shop.name}</p>

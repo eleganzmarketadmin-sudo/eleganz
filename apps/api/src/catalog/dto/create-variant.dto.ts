@@ -41,6 +41,27 @@ export class CreateVariantDto {
 }
 
 export class UpdateVariantDto {
+  // Référence, taille, couleur, prix d'achat (20 oct. 2026) — un article mal
+  // saisi à la création devait auparavant être supprimé et recréé ; tous les
+  // champs d'une variante sont désormais modifiables après coup, pas
+  // seulement le prix de vente et la promotion.
+  @IsOptional()
+  @IsString()
+  sku?: string;
+
+  @IsOptional()
+  @IsString()
+  size?: string | null;
+
+  @IsOptional()
+  @IsString()
+  color?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  costPrice?: number | null;
+
   @IsOptional()
   @IsNumber()
   @Min(0)

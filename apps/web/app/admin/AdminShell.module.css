@@ -89,6 +89,8 @@
   flex: 1;
   width: 100%;
   padding: var(--espace-5);
-  max-width: 960px;
+  /* Large écrans (20 oct. 2026) : voir GestionShell.module.css — même
+     correctif pour éviter les marges excessives sur un grand moniteur. */
+  max-width: clamp(960px, 94vw, 1600px);
   margin: 0 auto;
 }

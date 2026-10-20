@@ -728,6 +728,124 @@ function CatalogueContent() {
     }
   }
 
+  /**
+   * Édition des champs d'une variante et d'un article après leur création
+   * (20 oct. 2026 — signalement : "les différents champs dans catalogue dès
+   * que saisie on ne peut pas les modifier"). Avant ce correctif, seuls le
+   * prix de vente (via la promo) pouvaient changer après coup ; une
+   * référence, taille, couleur ou prix d'achat mal saisis obligeaient à
+   * supprimer puis recréer la variante. `patchVariante` factorise l'appel
+   * API commun à tous les champs ci-dessous.
+   */
+  async function patchVariante(
+    produitId: string,
+    varianteId: string,
+    patch: Record<string, unknown>,
+    cleErreur: string,
+  ) {
+    if (!currentShop) return;
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produitId}/variants/${varianteId}`, patch);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t(cleErreur));
+    }
+  }
+
+  function modifierReference(produitId: string, variante: Variant) {
+    const saisie = window.prompt(t("cat_inviteReference"), variante.sku);
+    if (saisie === null) return;
+    const valeur = saisie.trim();
+    if (!valeur) {
+      setErreur(t("cat_referenceVide"));
+      return;
+    }
+    if (valeur === variante.sku) return;
+    patchVariante(produitId, variante.id, { sku: valeur }, "cat_referenceImpossible");
+  }
+
+  function modifierTailleCouleur(produitId: string, variante: Variant) {
+    const taille = window.prompt(t("cat_inviteTaille"), variante.size ?? "");
+    if (taille === null) return;
+    const couleur = window.prompt(t("cat_inviteCouleur"), variante.color ?? "");
+    if (couleur === null) return;
+    patchVariante(
+      produitId,
+      variante.id,
+      { size: taille.trim() || null, color: couleur.trim() || null },
+      "cat_tailleCouleurImpossible",
+    );
+  }
+
+  function modifierPrixAchat(produitId: string, variante: Variant) {
+    const saisie = window.prompt(
+      t("cat_invitePrixAchat"),
+      variante.costPrice != null ? String(variante.costPrice) : "",
+    );
+    if (saisie === null) return;
+    const valeur = saisie.trim();
+    if (valeur === "") {
+      patchVariante(produitId, variante.id, { costPrice: null }, "cat_prixAchatImpossible");
+      return;
+    }
+    const nombre = Number(valeur);
+    if (!Number.isFinite(nombre) || nombre < 0) {
+      setErreur(t("cat_promoPrixInvalide"));
+      return;
+    }
+    patchVariante(produitId, variante.id, { costPrice: nombre }, "cat_prixAchatImpossible");
+  }
+
+  function modifierPrixVente(produitId: string, variante: Variant) {
+    const saisie = window.prompt(t("cat_invitePrixVente"), variante.sellPrice);
+    if (saisie === null) return;
+    const nombre = Number(saisie.trim());
+    if (!Number.isFinite(nombre) || nombre <= 0) {
+      setErreur(t("cat_promoPrixInvalide"));
+      return;
+    }
+    patchVariante(produitId, variante.id, { sellPrice: nombre }, "cat_prixVenteImpossible");
+  }
+
+  async function modifierNomProduit(produit: Product) {
+    if (!currentShop) return;
+    const saisie = window.prompt(t("cat_inviteNomArticle"), produit.name);
+    if (saisie === null) return;
+    const valeur = saisie.trim();
+    if (!valeur) {
+      setErreur(t("cat_nomVide"));
+      return;
+    }
+    if (valeur === produit.name) return;
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { name: valeur });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
+    }
+  }
+
+  async function modifierCategorieProduit(produit: Product) {
+    if (!currentShop) return;
+    const saisie = window.prompt(t("cat_inviteCategorieArticle"), produit.category ?? "");
+    if (saisie === null) return;
+    const valeur = saisie.trim();
+    if (!valeur) {
+      setErreur(t("cat_categorieVide"));
+      return;
+    }
+    if (valeur === produit.category) return;
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { category: valeur });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
+    }
+  }
+
   async function creerProduit() {
     if (!currentShop || !nomNouveau) return;
     setCreationEnCours(true);
@@ -813,9 +931,31 @@ function CatalogueContent() {
         produitsVisibles.map((produit) => (
           <div className={styles.produit} key={produit.id}>
             <div className={styles.produitEntete}>
-              <strong>{produit.name}</strong>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <strong>{produit.name}</strong>
+                <button
+                  type="button"
+                  className={styles.boutonCrayon}
+                  style={{ color: "rgba(255,255,255,0.75)" }}
+                  title={t("cat_modifier")}
+                  onClick={() => modifierNomProduit(produit)}
+                >
+                  ✎
+                </button>
+              </span>
               <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                {produit.category ?? t("cat_sansCategorie")}
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  {produit.category ?? t("cat_sansCategorie")}
+                  <button
+                    type="button"
+                    className={styles.boutonCrayon}
+                    style={{ color: "rgba(255,255,255,0.75)" }}
+                    title={t("cat_modifier")}
+                    onClick={() => modifierCategorieProduit(produit)}
+                  >
+                    ✎
+                  </button>
+                </span>
                 {produit.isPublished ? (
                   <>
                     <StatusTag label={t("cat_publieSurMarketplace")} humeur="paye" />
@@ -856,12 +996,50 @@ function CatalogueContent() {
                     const remise = pourcentageRemise(Number(v.sellPrice), v.compareAtPrice);
                     return (
                       <tr key={v.id}>
-                        <td>{v.sku}</td>
-                        <td>{[v.size, v.color].filter(Boolean).join(" · ") || "—"}</td>
-                        <td className={styles.colChiffre}>
-                          {v.costPrice != null ? formatMoney(Number(v.costPrice), v.currency) : "—"}
+                        <td>
+                          {v.sku}{" "}
+                          <button
+                            type="button"
+                            className={styles.boutonCrayon}
+                            title={t("cat_modifier")}
+                            onClick={() => modifierReference(produit.id, v)}
+                          >
+                            ✎
+                          </button>
                         </td>
-                        <td className={styles.colChiffre}>{formatMoney(Number(v.sellPrice), v.currency)}</td>
+                        <td>
+                          {[v.size, v.color].filter(Boolean).join(" · ") || "—"}{" "}
+                          <button
+                            type="button"
+                            className={styles.boutonCrayon}
+                            title={t("cat_modifier")}
+                            onClick={() => modifierTailleCouleur(produit.id, v)}
+                          >
+                            ✎
+                          </button>
+                        </td>
+                        <td className={styles.colChiffre}>
+                          {v.costPrice != null ? formatMoney(Number(v.costPrice), v.currency) : "—"}{" "}
+                          <button
+                            type="button"
+                            className={styles.boutonCrayon}
+                            title={t("cat_modifier")}
+                            onClick={() => modifierPrixAchat(produit.id, v)}
+                          >
+                            ✎
+                          </button>
+                        </td>
+                        <td className={styles.colChiffre}>
+                          {formatMoney(Number(v.sellPrice), v.currency)}{" "}
+                          <button
+                            type="button"
+                            className={styles.boutonCrayon}
+                            title={t("cat_modifier")}
+                            onClick={() => modifierPrixVente(produit.id, v)}
+                          >
+                            ✎
+                          </button>
+                        </td>
                         <td className={styles.colChiffre}>
                           <button
                             type="button"

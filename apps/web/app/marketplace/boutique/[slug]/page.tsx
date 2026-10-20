@@ -6,7 +6,7 @@ import Link from "next/link";
 import { api, ApiError } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
 import { RetourLien } from "../../../components/RetourLien";
-import { PrixPromo } from "../../../components/PrixPromo";
+import { PrixPromo, RubanPromo } from "../../../components/PrixPromo";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -235,17 +235,22 @@ export default function BoutiquePage() {
               );
               return (
                 <Link className={styles.carte} href={`/marketplace/produit/${produit.id}`} key={produit.id}>
-                  {produit.images[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={produit.images[0]}
-                      alt={produit.name}
-                      className={styles.imageProduit}
-                      style={{ objectFit: "cover", width: "100%" }}
-                    />
-                  ) : (
-                    <div className={styles.imageProduit}>{produit.name}</div>
-                  )}
+                  <div style={{ position: "relative" }}>
+                    {produit.images[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={produit.images[0]}
+                        alt={produit.name}
+                        className={styles.imageProduit}
+                        style={{ objectFit: "cover", width: "100%" }}
+                      />
+                    ) : (
+                      <div className={styles.imageProduit}>{produit.name}</div>
+                    )}
+                    {moinsCher && (
+                      <RubanPromo sellPrice={Number(moinsCher.sellPrice)} compareAtPrice={moinsCher.compareAtPrice} />
+                    )}
+                  </div>
                   <div className={styles.nomProduit}>{produit.name}</div>
                   {moinsCher && (
                     <div className={styles.prix}>

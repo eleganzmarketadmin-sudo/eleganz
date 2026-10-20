@@ -90,7 +90,11 @@
 .contenu {
   flex: 1;
   padding: var(--espace-5);
-  max-width: 960px;
+  /* Large écrans (20 oct. 2026) : 960px fixe laissait des marges énormes sur
+     un moniteur large (ex. ~480px de chaque côté à 1920px) — gênant pour les
+     tableaux denses (catalogue, etc.). clamp() garde la largeur de lecture
+     confortable sur petit/moyen écran et s'étend davantage sur un grand. */
+  max-width: clamp(960px, 94vw, 1600px);
   width: 100%;
   margin: 0 auto;
 }
