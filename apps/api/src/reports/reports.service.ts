@@ -257,7 +257,7 @@ export class ReportsService {
    * du regroupement, une colonne par période, plus une ligne/colonne total —
    * exploitable tel quel ou re-pivotable par le vendeur dans Excel.
    */
-  exporterExcel(releve: ReleveActivite): Buffer {
+  exporterExcel(releve: ReleveActivite): Promise<Buffer> {
     const formaterCellule = (montantUSD: number, montantCDF: number, quantite: number) => {
       const parts: string[] = [];
       if (montantUSD) parts.push(`$${montantUSD.toFixed(2)}`);

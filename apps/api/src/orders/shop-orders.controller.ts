@@ -32,7 +32,7 @@ export class ShopOrdersController {
       [c.order.deliveryAvenue, c.order.deliveryQuartier, c.order.deliveryCommune].filter(Boolean).join(", "),
       new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(c.createdAt),
     ]);
-    const buffer = construireClasseurExcel(
+    const buffer = await construireClasseurExcel(
       "Commandes Marketplace",
       ["N°", "Statut", "Sous-total", "Acheteur", "Contact", "Adresse de livraison", "Date"],
       lignes,

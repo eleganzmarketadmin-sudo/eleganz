@@ -1,4 +1,28 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+
+// 21 oct. 2026 (audit sécurité) : remplace `xlsx` (SheetJS) par `exceljs` —
+// `xlsx@0.18.5` porte deux failles hautes (pollution de prototype, ReDoS)
+// sans correctif disponible sur le canal npm gratuit (le mainteneur ne
+// publie ses patches que sur son propre CDN/offre payante). `exceljs` est
+// activement maintenu et n'a, à ce jour, aucune vulnérabilité connue.
+// Changement d'API notable : exceljs lit/écrit de façon asynchrone (il n'y a
+// pas d'équivalent synchrone), donc les trois fonctions ci-dessous sont
+// désormais `async` — chaque appelant a été mis à jour pour les `await`.
+
+function appliquerLargeursColonnes(
+  feuille: ExcelJS.Worksheet,
+  entetes: string[],
+  lignes: (string | number | null | undefined)[][],
+  largeurMax: number,
+) {
+  feuille.columns = entetes.map((entete, i) => {
+    const maxContenu = lignes.reduce((max, ligne) => {
+      const texte = String(ligne[i] ?? "");
+      return Math.max(max, texte.length);
+    }, entete.length);
+    return { width: Math.min(largeurMax, Math.max(10, maxContenu + 2)) };
+  });
+}
 
 /**
  * Construit un classeur Excel (.xlsx) à une feuille à partir d'en-têtes et de
@@ -6,26 +30,29 @@ import * as XLSX from "xlsx";
  * (boutiques, produits, commandes, factures côté admin et côté boutique) afin
  * de garder un seul endroit qui connaît la mise en forme du fichier.
  */
-export function construireClasseurExcel(
+export async function construireClasseurExcel(
   nomFeuille: string,
   entetes: string[],
   lignes: (string | number | null | undefined)[][],
-): Buffer {
-  const feuille = XLSX.utils.aoa_to_sheet([entetes, ...lignes.map((l) => l.map((v) => v ?? ""))]);
+): Promise<Buffer> {
+  const classeur = new ExcelJS.Workbook();
+  const feuille = classeur.addWorksheet(nomFeuille);
+  feuille.addRow(entetes);
+  for (const ligne of lignes) {
+    feuille.addRow(ligne.map((v) => v ?? ""));
+  }
   // Largeur de colonne approximative, calculée sur le contenu le plus long —
   // sans ça, Excel ouvre le fichier avec des colonnes toutes collées.
-  const largeurs = entetes.map((entete, i) => {
-    const maxContenu = lignes.reduce((max, ligne) => {
-      const texte = String(ligne[i] ?? "");
-      return Math.max(max, texte.length);
-    }, entete.length);
-    return { wch: Math.min(40, Math.max(10, maxContenu + 2)) };
-  });
-  feuille["!cols"] = largeurs;
+  appliquerLargeursColonnes(feuille, entetes, lignes, 40);
 
-  const classeur = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(classeur, feuille, nomFeuille);
-  return XLSX.write(classeur, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  const buffer = await classeur.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+export interface Feuille {
+  nom: string;
+  entetes: string[];
+  lignes: (string | number | null | undefined)[][];
 }
 
 /**
@@ -36,10 +63,8 @@ export function construireClasseurExcel(
  * format .xlsx) et dédupliqués si besoin, pour éviter une erreur silencieuse
  * de la librairie en cas de collision.
  */
-export function construireClasseurExcelMultiFeuilles(
-  feuilles: { nom: string; entetes: string[]; lignes: (string | number | null | undefined)[][] }[],
-): Buffer {
-  const classeur = XLSX.utils.book_new();
+export async function construireClasseurExcelMultiFeuilles(feuilles: Feuille[]): Promise<Buffer> {
+  const classeur = new ExcelJS.Workbook();
   const nomsUtilises = new Set<string>();
 
   for (const { nom, entetes, lignes } of feuilles) {
@@ -51,19 +76,16 @@ export function construireClasseurExcelMultiFeuilles(
     }
     nomsUtilises.add(nomFinal);
 
-    const feuille = XLSX.utils.aoa_to_sheet([entetes, ...lignes.map((l) => l.map((v) => v ?? ""))]);
-    const largeurs = entetes.map((entete, i) => {
-      const maxContenu = lignes.reduce((max, ligne) => {
-        const texte = String(ligne[i] ?? "");
-        return Math.max(max, texte.length);
-      }, entete.length);
-      return { wch: Math.min(60, Math.max(10, maxContenu + 2)) };
-    });
-    feuille["!cols"] = largeurs;
-    XLSX.utils.book_append_sheet(classeur, feuille, nomFinal);
+    const feuille = classeur.addWorksheet(nomFinal);
+    feuille.addRow(entetes);
+    for (const ligne of lignes) {
+      feuille.addRow(ligne.map((v) => v ?? ""));
+    }
+    appliquerLargeursColonnes(feuille, entetes, lignes, 60);
   }
 
-  return XLSX.write(classeur, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  const buffer = await classeur.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }
 
 /**
@@ -71,14 +93,26 @@ export function construireClasseurExcelMultiFeuilles(
  * première feuille sous forme de tableaux de chaînes, la ligne d'en-tête
  * (index 0) incluse. Les lignes entièrement vides sont filtrées.
  */
-export function lireClasseurExcel(buffer: Buffer): string[][] {
-  const classeur = XLSX.read(buffer, { type: "buffer" });
-  const premiereFeuille = classeur.Sheets[classeur.SheetNames[0]];
+export async function lireClasseurExcel(buffer: Buffer): Promise<string[][]> {
+  const classeur = new ExcelJS.Workbook();
+  await classeur.xlsx.load(buffer);
+  const premiereFeuille = classeur.worksheets[0];
   if (!premiereFeuille) return [];
-  const lignes = XLSX.utils.sheet_to_json<unknown[]>(premiereFeuille, {
-    header: 1,
-    defval: "",
-    blankrows: false,
+
+  const lignes: string[][] = [];
+  premiereFeuille.eachRow({ includeEmpty: false }, (row) => {
+    // `row.values` est 1-indexé par exceljs (index 0 toujours vide) — on
+    // reconstruit un tableau 0-indexé sur la largeur réelle de la ligne,
+    // en couvrant les cellules sautées (valeur vide) comme SheetJS le
+    // faisait avec `defval: ""`.
+    const valeurs: string[] = [];
+    for (let i = 1; i <= row.cellCount; i++) {
+      const cellule = row.getCell(i);
+      valeurs.push(String(cellule.value ?? "").trim());
+    }
+    if (valeurs.some((v) => v !== "")) {
+      lignes.push(valeurs);
+    }
   });
-  return lignes.map((ligne) => ligne.map((cellule) => String(cellule ?? "").trim()));
+  return lignes;
 }

@@ -115,7 +115,7 @@ export class ComptableExportService {
     };
   }
 
-  exporterSyntheseExcel(synthese: SynthesePeriode): Buffer {
+  exporterSyntheseExcel(synthese: SynthesePeriode): Promise<Buffer> {
     const entetes = ["Activité", "Ventes CDF", "Ventes USD", "Dépenses CDF", "Dépenses USD", "Résultat CDF", "Résultat USD"];
     const lignes = synthese.activites.map((a) => [
       a.activityName,

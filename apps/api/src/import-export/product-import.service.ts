@@ -64,7 +64,7 @@ export class ProductImportService {
     return "Erreur inattendue sur cette ligne.";
   }
 
-  genererGabarit(): Buffer {
+  genererGabarit(): Promise<Buffer> {
     return construireClasseurExcel("Articles", ENTETES_IMPORT_PRODUITS, EXEMPLE_LIGNES);
   }
 
@@ -116,7 +116,7 @@ export class ProductImportService {
     misesAJour: number;
     erreurs: number;
   }> {
-    const lignes = lireClasseurExcel(buffer);
+    const lignes = await lireClasseurExcel(buffer);
     if (lignes.length < 2) {
       throw new BadRequestException(
         "Le fichier est vide ou ne contient que l'en-tête. Téléchargez le gabarit et remplissez-le à partir de la ligne 2.",

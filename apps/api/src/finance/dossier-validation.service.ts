@@ -92,7 +92,7 @@ export class DossierValidationService {
       this.feuilleCompteResultat(compteResultat),
     ];
 
-    const buffer = construireClasseurExcelMultiFeuilles(feuilles);
+    const buffer = await construireClasseurExcelMultiFeuilles(feuilles);
     const suffixe = scope === FiscalRuleScope.SHOP ? "boutique" : "eleganz";
     const nomFichier = `dossier-validation-syscohada-${suffixe}-${to.toISOString().slice(0, 10)}.xlsx`;
     return { buffer, nomFichier };

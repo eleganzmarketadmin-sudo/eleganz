@@ -53,7 +53,7 @@ export class ReportsController {
     const releve = await this.reportsService.genererReleve({ ...params, shopId });
 
     if (params.format === "xlsx") {
-      const buffer = this.reportsService.exporterExcel(releve);
+      const buffer = await this.reportsService.exporterExcel(releve);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", 'attachment; filename="releve-activite-eleganz.xlsx"');
       return res.send(buffer);

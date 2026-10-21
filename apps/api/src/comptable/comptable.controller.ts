@@ -231,7 +231,7 @@ export class ComptableController {
     const synthese = await this.comptableExportService.synthesePeriode(user.id, from, to);
 
     if (format === "xlsx") {
-      const buffer = this.comptableExportService.exporterSyntheseExcel(synthese);
+      const buffer = await this.comptableExportService.exporterSyntheseExcel(synthese);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", 'attachment; filename="synthese-mon-comptable.xlsx"');
       return res.send(buffer);

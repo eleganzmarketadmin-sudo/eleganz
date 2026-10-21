@@ -26,8 +26,8 @@ export class ProductImportController {
   constructor(private readonly importService: ProductImportService) {}
 
   @Get("import-template")
-  gabarit(@Res() res: Response) {
-    const buffer = this.importService.genererGabarit();
+  async gabarit(@Res() res: Response) {
+    const buffer = await this.importService.genererGabarit();
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
