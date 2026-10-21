@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { StockMovementType } from "@eleganz/database";
+import { Prisma, StockMovementType } from "@eleganz/database";
 import { lireClasseurExcel, construireClasseurExcel } from "../common/xlsx.util";
 
 // Ordre de colonnes imposé par la plateforme (prompt du 12 oct. 2026) — le
@@ -35,7 +35,34 @@ interface LigneImportResultat {
 
 @Injectable()
 export class ProductImportService {
+  private readonly logger = new Logger(ProductImportService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * 21 oct. 2026 (audit sécurité, fuite d'information) : avant ce correctif,
+   * `err.message` était renvoyé tel quel au client pour CHAQUE ligne en
+   * échec. Une erreur `BadRequestException` levée par notre propre code de
+   * validation (ex. "SKU manquant à la ligne X") est un message métier sûr
+   * à afficher ; une erreur Prisma (contrainte unique, type de colonne...)
+   * contient le nom réel de colonnes/tables et ne doit jamais partir vers le
+   * navigateur — elle est désormais loguée côté serveur et remplacée par un
+   * message générique.
+   */
+  private messagePublicErreurImport(err: unknown): string {
+    if (err instanceof BadRequestException) {
+      const reponse = err.getResponse();
+      return typeof reponse === "string" ? reponse : ((reponse as { message?: string }).message ?? err.message);
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      this.logger.error(`Erreur Prisma pendant l'import Excel (code ${err.code}) : ${err.message}`);
+      return err.code === "P2002"
+        ? "Cette référence (SKU) existe déjà pour cet article."
+        : "Erreur technique lors de l'enregistrement de cette ligne.";
+    }
+    this.logger.error("Erreur inattendue pendant l'import Excel", err instanceof Error ? err.stack : err);
+    return "Erreur inattendue sur cette ligne.";
+  }
 
   genererGabarit(): Buffer {
     return construireClasseurExcel("Articles", ENTETES_IMPORT_PRODUITS, EXEMPLE_LIGNES);
@@ -292,7 +319,7 @@ export class ProductImportService {
           ligne: numeroLigne,
           statut: "erreur",
           sku,
-          message: err instanceof Error ? err.message : "Erreur inattendue sur cette ligne.",
+          message: this.messagePublicErreurImport(err),
         });
       }
     }

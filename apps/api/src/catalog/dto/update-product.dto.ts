@@ -1,16 +1,19 @@
-import { IsArray, IsOptional, IsString, IsUrl } from "class-validator";
+import { IsArray, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
 
 export class UpdateProductDto {
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   name?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   description?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   category?: string;
 
   // URLs d'images hébergées ailleurs (le compte de stockage objet ELEGANZ

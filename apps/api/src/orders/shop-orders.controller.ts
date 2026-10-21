@@ -48,10 +48,11 @@ export class ShopOrdersController {
   @Patch(":shopOrderId/status")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
   updateStatus(
+    @Param("shopId") shopId: string,
     @Param("shopOrderId") shopOrderId: string,
     @Body("status") status: OrderStatus,
     @Body("deliveryCode") deliveryCode?: string,
   ) {
-    return this.ordersService.transitionStatus(shopOrderId, status, deliveryCode);
+    return this.ordersService.transitionStatus(shopId, shopOrderId, status, deliveryCode);
   }
 }

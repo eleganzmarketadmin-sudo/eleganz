@@ -33,8 +33,12 @@ export class CustomersService {
    * enregistre un `ReglementClient` en plus de la décrémentation du solde
    * cumulé, qui reste la seule source de vérité pour le solde affiché.
    */
-  async recordPayment(customerId: string, dto: RecordCreditPaymentDto) {
-    const customer = await this.prisma.shopCustomer.findUniqueOrThrow({ where: { id: customerId } });
+  async recordPayment(shopId: string, customerId: string, dto: RecordCreditPaymentDto) {
+    // 21 oct. 2026 (audit sécurité) : IDOR corrigé — `findUniqueOrThrow`
+    // sans filtre `shopId` permettait à un employé de la boutique A
+    // d'enregistrer un règlement sur un client d'une AUTRE boutique en
+    // devinant son UUID, effaçant frauduleusement une créance due à B.
+    const customer = await this.prisma.shopCustomer.findFirstOrThrow({ where: { id: customerId, shopId } });
     if (dto.amount > Number(customer.creditBalance)) {
       throw new BadRequestException("Le paiement dépasse le solde dû par ce client.");
     }

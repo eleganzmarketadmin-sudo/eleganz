@@ -20,7 +20,11 @@ export class CustomersController {
   }
 
   @Post(":customerId/payments")
-  recordPayment(@Param("customerId") customerId: string, @Body() dto: RecordCreditPaymentDto) {
-    return this.customersService.recordPayment(customerId, dto);
+  recordPayment(
+    @Param("shopId") shopId: string,
+    @Param("customerId") customerId: string,
+    @Body() dto: RecordCreditPaymentDto,
+  ) {
+    return this.customersService.recordPayment(shopId, customerId, dto);
   }
 }

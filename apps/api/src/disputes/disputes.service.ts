@@ -92,7 +92,10 @@ export class DisputesService {
    * ALLOWED_TRANSITIONS[DISPUTED].
    */
   async resolve(disputeId: string, outcome: IssueLitige, resolution: string) {
-    const litige = await this.prisma.dispute.findUnique({ where: { id: disputeId } });
+    const litige = await this.prisma.dispute.findUnique({
+      where: { id: disputeId },
+      include: { shopOrder: { select: { shopId: true } } },
+    });
     if (!litige) {
       throw new NotFoundException("Litige introuvable.");
     }
@@ -100,7 +103,12 @@ export class DisputesService {
       throw new BadRequestException("Ce litige a déjà été tranché.");
     }
 
+    // `shopId` vient de la sous-commande déjà chargée (jamais de l'appelant)
+    // — cette décision est administrative (admin uniquement, voir le
+    // contrôleur), donc pas d'IDOR possible ici, seulement la forme exigée
+    // par OrdersService.transitionStatus depuis le correctif du 21 oct. 2026.
     await this.orders.transitionStatus(
+      litige.shopOrder.shopId,
       litige.shopOrderId,
       outcome === "REFUND" ? OrderStatus.REFUNDED : OrderStatus.RECEIVED_CONFIRMED,
     );

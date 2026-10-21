@@ -244,9 +244,15 @@ export class OrdersService {
    * déclaration de livraison sans l'accord de l'acheteur, pas un secret
    * cryptographique — l'acheteur le communique de vive voix au livreur.
    */
-  async transitionStatus(shopOrderId: string, newStatus: OrderStatus, deliveryCode?: string) {
-    const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
-      where: { id: shopOrderId },
+  async transitionStatus(shopId: string, shopOrderId: string, newStatus: OrderStatus, deliveryCode?: string) {
+    // 21 oct. 2026 (audit sécurité) : IDOR corrigé — avant ce correctif,
+    // `findUniqueOrThrow` ne filtrait que sur `shopOrderId`, donc un employé
+    // de la boutique A (passant le `ShopMembershipGuard` sur SA propre
+    // boutique) pouvait transitionner la sous-commande d'une boutique B en
+    // devinant/énumérant son UUID. `findFirstOrThrow` avec `shopId` force
+    // l'appartenance réelle à la boutique de l'URL.
+    const shopOrder = await this.prisma.shopOrder.findFirstOrThrow({
+      where: { id: shopOrderId, shopId },
       include: { lines: true, order: true, shop: { select: { name: true } } },
     });
     const allowed = ALLOWED_TRANSITIONS[shopOrder.status] ?? [];
@@ -382,7 +388,10 @@ export class OrdersService {
     if (shopOrder.order.buyerId !== buyerId) {
       throw new ForbiddenException("Cette commande ne vous appartient pas.");
     }
-    return this.transitionStatus(shopOrderId, OrderStatus.CANCELLED);
+    // `shopOrder.shopId` vient de l'enregistrement déjà chargé ci-dessus et
+    // dont la propriété par `buyerId` vient d'être vérifiée — pas d'IDOR
+    // possible ici, juste la forme exigée par transitionStatus.
+    return this.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.CANCELLED);
   }
 
   /**

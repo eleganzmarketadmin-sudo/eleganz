@@ -1,11 +1,13 @@
-import { IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsDateString, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 export class CreateCustomerDto {
   @IsString()
+  @MaxLength(200)
   fullName!: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   phone?: string;
 }
 
@@ -19,9 +21,13 @@ export class RecordCreditPaymentDto {
   // valeur du solde cumulé.
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   method?: string;
 
+  // `@IsDateString` ajouté le 21 oct. 2026 (audit sécurité) — sans
+  // décorateur de type, une chaîne non-date passait silencieusement jusqu'à
+  // `new Date(...)`, produisant un `Invalid Date` stocké sans erreur.
   @IsOptional()
-  @IsString()
+  @IsDateString()
   paidAt?: string;
 }

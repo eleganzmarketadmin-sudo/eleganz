@@ -21,7 +21,13 @@ export class SuppliersService {
     return this.prisma.supplier.findMany({ where: { shopId }, include: { purchases: true } });
   }
 
-  async recordPurchase(supplierId: string, dto: RecordPurchaseDto) {
+  async recordPurchase(shopId: string, supplierId: string, dto: RecordPurchaseDto) {
+    // 21 oct. 2026 (audit sécurité) : IDOR corrigé — avant ce correctif, rien
+    // ne vérifiait que `supplierId` appartienne à la boutique de l'URL ; un
+    // employé de la boutique A pouvait créer un achat fictif ou gonfler la
+    // dette (`balanceOwed`) d'un fournisseur d'une AUTRE boutique.
+    await this.prisma.supplier.findFirstOrThrow({ where: { id: supplierId, shopId } });
+
     const purchase = await this.prisma.$transaction(async (tx) => {
       const purchase = await tx.purchase.create({
         data: {
@@ -68,8 +74,12 @@ export class SuppliersService {
    *     le solde baissait sans que la dette ni la sortie de caisse soient
    *     jamais constatées en comptabilité.
    */
-  async settleDebt(supplierId: string, dto: SettleDebtDto) {
-    const supplier = await this.prisma.supplier.findUniqueOrThrow({ where: { id: supplierId } });
+  async settleDebt(shopId: string, supplierId: string, dto: SettleDebtDto) {
+    // 21 oct. 2026 (audit sécurité) : IDOR corrigé — même défaut que
+    // `recordPurchase` ci-dessus, mais plus grave : sans ce filtre, un
+    // employé de la boutique A pouvait solder frauduleusement la dette
+    // réelle d'un fournisseur d'une AUTRE boutique.
+    const supplier = await this.prisma.supplier.findFirstOrThrow({ where: { id: supplierId, shopId } });
     if (dto.amount > Number(supplier.balanceOwed)) {
       throw new BadRequestException(
         `Le règlement (${dto.amount}) dépasse le solde dû (${supplier.balanceOwed}) pour ce fournisseur.`,

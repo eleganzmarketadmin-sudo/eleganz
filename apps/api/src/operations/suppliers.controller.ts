@@ -28,13 +28,21 @@ export class SuppliersController {
   }
 
   @Post(":supplierId/purchases")
-  recordPurchase(@Param("supplierId") supplierId: string, @Body() dto: RecordPurchaseDto) {
-    return this.suppliersService.recordPurchase(supplierId, dto);
+  recordPurchase(
+    @Param("shopId") shopId: string,
+    @Param("supplierId") supplierId: string,
+    @Body() dto: RecordPurchaseDto,
+  ) {
+    return this.suppliersService.recordPurchase(shopId, supplierId, dto);
   }
 
   @Post(":supplierId/settle")
-  settle(@Param("supplierId") supplierId: string, @Body() dto: SettleDebtDto) {
-    return this.suppliersService.settleDebt(supplierId, dto);
+  settle(
+    @Param("shopId") shopId: string,
+    @Param("supplierId") supplierId: string,
+    @Body() dto: SettleDebtDto,
+  ) {
+    return this.suppliersService.settleDebt(shopId, supplierId, dto);
   }
 
   @Get("echeancier")

@@ -179,9 +179,13 @@ export class DeliveryService {
   }
 
   async confirmPickup(shopOrderId: string, userId: string) {
-    await this.assertAssignedDriver(shopOrderId, userId);
-    await this.ordersService.transitionStatus(shopOrderId, OrderStatus.PICKED_UP);
-    return this.ordersService.transitionStatus(shopOrderId, OrderStatus.IN_TRANSIT);
+    const shopOrder = await this.assertAssignedDriver(shopOrderId, userId);
+    // `shopOrder.shopId` vient de l'enregistrement déjà chargé par
+    // `assertAssignedDriver`, qui vient de vérifier que ce livreur y est
+    // bien affecté — pas d'IDOR possible ici, juste la forme exigée par
+    // transitionStatus.
+    await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.PICKED_UP);
+    return this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.IN_TRANSIT);
   }
 
   /**
@@ -195,7 +199,7 @@ export class DeliveryService {
    * exactement la même règle).
    */
   async confirmDelivery(shopOrderId: string, userId: string, proofCode?: string) {
-    await this.assertAssignedDriver(shopOrderId, userId);
-    return this.ordersService.transitionStatus(shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
+    const shopOrder = await this.assertAssignedDriver(shopOrderId, userId);
+    return this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
   }
 }
