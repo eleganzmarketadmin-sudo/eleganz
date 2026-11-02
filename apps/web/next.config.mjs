@@ -22,6 +22,19 @@ const nextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          // 2 nov. 2026 (audit sécurité) : manquait ici — déjà envoyé par
+          // l'API via helmet() (main.ts), mais jamais par ces pages HTML
+          // elles-mêmes (domaine www.eleganzmarket.com, service distinct).
+          // Sans ce header, un visiteur dont le navigateur tente une
+          // première requête en http:// (lien tapé sans "https://", vieux
+          // favori) est exposé à une redirection interceptable avant
+          // d'atteindre la bascule HTTPS côté hébergeur. Pas de `preload`
+          // (engagement plus difficile à défaire) tant que ce n'est pas une
+          // décision délibérée.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=15552000; includeSubDomains",
+          },
         ],
       },
     ];
