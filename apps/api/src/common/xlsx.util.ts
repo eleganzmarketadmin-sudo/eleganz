@@ -95,7 +95,15 @@ export async function construireClasseurExcelMultiFeuilles(feuilles: Feuille[]):
  */
 export async function lireClasseurExcel(buffer: Buffer): Promise<string[][]> {
   const classeur = new ExcelJS.Workbook();
-  await classeur.xlsx.load(buffer);
+  // 2 nov. 2026 (échec de build Railway) : `classeur.xlsx.load(buffer)`
+  // refusait de compiler — deux copies de `@types/node` dans l'arbre de
+  // dépendances font que le `Buffer` qu'exceljs attend dans sa propre
+  // déclaration de types n'est pas structurellement le même que le
+  // `Buffer` de ce fichier, même si c'est la même donnée au runtime.
+  // Convertir en `ArrayBuffer` pur (un type sans dépendance à
+  // `@types/node`) contourne le problème sans rien changer au contenu lu.
+  const donnees = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  await classeur.xlsx.load(donnees as ArrayBuffer);
   const premiereFeuille = classeur.worksheets[0];
   if (!premiereFeuille) return [];
 
