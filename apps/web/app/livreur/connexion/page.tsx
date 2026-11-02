@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import { ChampMotDePasse } from "../../components/ChampMotDePasse";
+import { BoutonAccueilPlateforme } from "../../components/BoutonAccueilPlateforme";
 import styles from "./page.module.css";
 
 export default function ConnexionLivreurPage() {
@@ -35,6 +36,7 @@ export default function ConnexionLivreurPage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.panneauMarque}>
+        <BoutonAccueilPlateforme />
         <h1>{t("lconnexion_titreMarque")}</h1>
         <p>{t("lconnexion_texteMarque")}</p>
       </div>

@@ -1,0 +1,20 @@
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touche-min);
+  padding: var(--espace-2) var(--espace-4);
+  margin-bottom: var(--espace-5);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.08);
+  width: fit-content;
+}
+
+.bouton:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: #fff;
+}

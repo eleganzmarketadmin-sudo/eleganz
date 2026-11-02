@@ -13,7 +13,18 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
+// 2 nov. 2026 (signalement : "le format mobile et application continuent à
+// déborder l'écran au moment de balayage ou défilement") — cause probable :
+// dès qu'on exporte un objet `viewport` personnalisé dans Next.js (ici pour
+// `themeColor`), Next n'ajoute PLUS automatiquement `width=device-width,
+// initial-scale=1` à la balise <meta name="viewport"> — il faut les
+// redéclarer explicitement, sinon le navigateur mobile rend la page à une
+// largeur de bureau par défaut (~980px) puis la réduit à l'échelle pour
+// tenir dans l'écran, ce qui autorise justement ce débordement/zoom arrière
+// au balayage. `themeColor` seul ne suffisait donc pas.
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
   themeColor: "#17408a",
 };
 

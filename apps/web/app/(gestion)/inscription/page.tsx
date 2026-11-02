@@ -7,6 +7,7 @@ import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import { ChampMotDePasse } from "../../components/ChampMotDePasse";
+import { BoutonAccueilPlateforme } from "../../components/BoutonAccueilPlateforme";
 import styles from "./page.module.css";
 
 export default function InscriptionPage() {
@@ -40,6 +41,7 @@ export default function InscriptionPage() {
   return (
     <div className={styles.cadre}>
       <div className={styles.panneauMarque}>
+        <BoutonAccueilPlateforme />
         <h1>{t("ginscription_titreMarque")}</h1>
         <p>{t("ginscription_texteMarque")}</p>
       </div>

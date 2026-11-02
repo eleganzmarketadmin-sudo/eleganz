@@ -95,6 +95,18 @@ html,
 body {
   padding: 0;
   margin: 0;
+  /* 2 nov. 2026 (signalement : débordement horizontal persistant en format
+     mobile/app au balayage) — filet de sécurité en plus du correctif de
+     balise viewport (voir layout.tsx) : si un élément quelconque dépasse
+     malgré tout la largeur de l'écran (tableau dense, mot trop long non
+     coupé, etc.), la page ne doit plus jamais pouvoir glisser
+     horizontalement dans son ensemble. Les barres de défilement horizontal
+     volontaires (menus d'onglets, tableaux) restent intactes : elles posent
+     leur propre `overflow-x: auto` sur un conteneur interne, ce qui reste
+     indépendant de cette règle sur html/body.
+   */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -105,6 +117,18 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   transition: background-color var(--duree-transition) ease, color var(--duree-transition) ease;
+}
+
+/* Filet de sécurité complémentaire (2 nov. 2026) : une image sans largeur
+   CSS explicite peut s'afficher à sa taille naturelle et faire déborder son
+   conteneur sur petit écran — la plupart des usages du dépôt fixent déjà une
+   largeur en ligne, mais cette règle couvre les oublis sans rien changer
+   pour les images déjà contraintes (`max-width` ne réduit jamais une image
+   déjà plus étroite que son conteneur).
+*/
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 h1,
