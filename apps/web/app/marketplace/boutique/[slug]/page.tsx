@@ -6,7 +6,7 @@ import Link from "next/link";
 import { api, ApiError } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth";
 import { RetourLien } from "../../../components/RetourLien";
-import { PrixPromo, RubanPromo } from "../../../components/PrixPromo";
+import { PrixPromo, RubanPromo, RubanNouveau } from "../../../components/PrixPromo";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -41,6 +41,7 @@ interface Produit {
   name: string;
   category?: string | null;
   images: string[];
+  isNewArrival: boolean;
   shop: { id: string; name: string; slug: string };
   variants: Variant[];
 }
@@ -250,6 +251,7 @@ export default function BoutiquePage() {
                     {moinsCher && (
                       <RubanPromo sellPrice={Number(moinsCher.sellPrice)} compareAtPrice={moinsCher.compareAtPrice} />
                     )}
+                    <RubanNouveau isNewArrival={produit.isNewArrival} />
                   </div>
                   <div className={styles.nomProduit}>{produit.name}</div>
                   {moinsCher && (

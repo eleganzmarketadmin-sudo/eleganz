@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
+import { IsArray, IsBoolean, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
 
 export class UpdateProductDto {
   @IsOptional()
@@ -15,6 +15,12 @@ export class UpdateProductDto {
   @IsString()
   @MaxLength(200)
   category?: string;
+
+  // Étiquette "Nouveau" / "Nouvel arrivage" (2 nov. 2026) — voir
+  // Product.isNewArrival dans schema.prisma.
+  @IsOptional()
+  @IsBoolean()
+  isNewArrival?: boolean;
 
   // URLs d'images hébergées ailleurs (le compte de stockage objet ELEGANZ
   // n'existe pas encore — voir PROJECT_STATUS.md). Une fois ce compte créé,

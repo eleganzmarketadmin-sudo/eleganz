@@ -21,6 +21,11 @@ const VARIANT_PUBLIC_SELECT = {
   compareAtPrice: true,
   currency: true,
   stockQty: true,
+  // Prix de gros par palier (2 nov. 2026) — information de tarification
+  // publique au même titre que sellPrice/compareAtPrice, nécessaire côté
+  // vitrine pour afficher "à partir de 10 pièces : X $" et calculer le total
+  // du panier au bon prix avant la commande.
+  priceTiers: { select: { minQuantity: true, unitPrice: true }, orderBy: { minQuantity: "asc" } },
 } as const;
 
 @Injectable()

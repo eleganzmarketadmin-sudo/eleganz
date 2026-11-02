@@ -97,3 +97,35 @@ export function RubanPromo({
     </span>
   );
 }
+
+/**
+ * Bandeau "NOUVEAU" posé sur l'image d'un produit (2 nov. 2026, demande
+ * boutique : "ajouter les options de marquer ou étiqueter nouvel arrivage ou
+ * new pour les nouveaux produits") — en haut à droite, pour ne jamais se
+ * superposer au bandeau PROMO (RubanPromo ci-dessus), posé en haut à gauche.
+ * À poser dans un conteneur en `position: relative`, comme RubanPromo.
+ */
+export function RubanNouveau({ isNewArrival }: { isNewArrival?: boolean }) {
+  const { t } = useLocale();
+  if (!isNewArrival) return null;
+
+  return (
+    <span
+      style={{
+        position: "absolute",
+        top: "8px",
+        right: "8px",
+        background: "var(--color-cobalt, #2563eb)",
+        color: "#fff",
+        borderRadius: "4px",
+        padding: "3px 8px",
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        letterSpacing: "0.02em",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+      }}
+    >
+      {t("market_nouveauLabel")}
+    </span>
+  );
+}

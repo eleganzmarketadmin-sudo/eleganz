@@ -7,6 +7,7 @@ import { CreateVariantOptionDto } from "./dto/variant-option.dto";
 import { AdjustStockDto } from "./dto/adjust-stock.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { CreatePriceTierDto } from "./dto/price-tier.dto";
 import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
@@ -113,6 +114,37 @@ export class CatalogController {
     @Body() dto: CreateVariantsBulkDto,
   ) {
     return this.catalogService.addVariantsBulk(shopId, productId, dto);
+  }
+
+  /**
+   * Prix de gros par palier de quantité (2 nov. 2026, demande boutique :
+   * "les options des prix en gros et les conditions, exemple à partir de 10
+   * pièces"), géré ici comme une sous-ressource de la variante — même
+   * principe que /variant-options pour taille/couleur : ajout/suppression
+   * plutôt qu'un PATCH de tableau complet, pour éviter qu'un écran resté
+   * ouvert longtemps n'écrase les paliers ajoutés entre-temps depuis un
+   * autre onglet.
+   */
+  @Post(":productId/variants/:variantId/price-tiers")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  addPriceTier(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+    @Body() dto: CreatePriceTierDto,
+  ) {
+    return this.catalogService.addPriceTier(shopId, productId, variantId, dto);
+  }
+
+  @Delete(":productId/variants/:variantId/price-tiers/:tierId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  removePriceTier(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+    @Param("tierId") tierId: string,
+  ) {
+    return this.catalogService.removePriceTier(shopId, productId, variantId, tierId);
   }
 }
 

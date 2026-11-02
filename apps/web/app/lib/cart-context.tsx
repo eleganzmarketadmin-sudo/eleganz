@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { prixUnitaireEffectif, type PaliersPrix } from "./price-tiers";
 
 export interface LigneDuPanier {
   variantId: string;
@@ -8,6 +9,11 @@ export interface LigneDuPanier {
   shopName: string;
   size?: string | null;
   color?: string | null;
+  // Prix normal (sans remise de gros) — gardé séparément de `unitPrice` pour
+  // pouvoir recalculer ce dernier à chaque changement de quantité (2 nov.
+  // 2026, prix de gros par palier).
+  basePrice: number;
+  priceTiers?: PaliersPrix[];
   unitPrice: number;
   currency: string;
   quantity: number;
@@ -51,23 +57,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLignes((prev) => {
       const existante = prev.find((l) => l.variantId === ligne.variantId);
       if (existante) {
-        return prev.map((l) =>
-          l.variantId === ligne.variantId
-            ? { ...l, quantity: Math.min(l.quantity + quantite, l.stockDisponible) }
-            : l,
-        );
+        return prev.map((l) => {
+          if (l.variantId !== ligne.variantId) return l;
+          const nouvelleQuantite = Math.min(l.quantity + quantite, l.stockDisponible);
+          return {
+            ...l,
+            quantity: nouvelleQuantite,
+            unitPrice: prixUnitaireEffectif(nouvelleQuantite, l.basePrice, l.priceTiers),
+          };
+        });
       }
-      return [...prev, { ...ligne, quantity: Math.min(quantite, ligne.stockDisponible) }];
+      const nouvelleQuantite = Math.min(quantite, ligne.stockDisponible);
+      return [
+        ...prev,
+        {
+          ...ligne,
+          quantity: nouvelleQuantite,
+          unitPrice: prixUnitaireEffectif(nouvelleQuantite, ligne.basePrice, ligne.priceTiers),
+        },
+      ];
     });
   }, []);
 
+  // Recalcule le prix unitaire effectif à chaque changement de quantité
+  // (2 nov. 2026, prix de gros par palier) — l'affichage du panier reste
+  // ainsi toujours cohérent avec ce que la commande facturera réellement.
   const modifierQuantite = useCallback((variantId: string, quantite: number) => {
     setLignes((prev) =>
-      prev.map((l) =>
-        l.variantId === variantId
-          ? { ...l, quantity: Math.max(1, Math.min(quantite, l.stockDisponible)) }
-          : l,
-      ),
+      prev.map((l) => {
+        if (l.variantId !== variantId) return l;
+        const nouvelleQuantite = Math.max(1, Math.min(quantite, l.stockDisponible));
+        return {
+          ...l,
+          quantity: nouvelleQuantite,
+          unitPrice: prixUnitaireEffectif(nouvelleQuantite, l.basePrice, l.priceTiers),
+        };
+      }),
     );
   }, []);
 

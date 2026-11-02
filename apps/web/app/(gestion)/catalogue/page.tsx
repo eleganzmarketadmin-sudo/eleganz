@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { StatusTag } from "../../components/StatusTag";
 import { BoutonBientotDisponible } from "../../components/BoutonBientotDisponible";
@@ -139,6 +139,12 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
   );
 }
 
+interface PriceTier {
+  id: string;
+  minQuantity: number;
+  unitPrice: string;
+}
+
 interface Variant {
   id: string;
   sku: string;
@@ -149,6 +155,7 @@ interface Variant {
   compareAtPrice?: string | null;
   currency: string;
   stockQty: number;
+  priceTiers: PriceTier[];
 }
 
 interface Product {
@@ -157,6 +164,7 @@ interface Product {
   description?: string | null;
   category?: string | null;
   isPublished: boolean;
+  isNewArrival: boolean;
   images: string[];
   variants: Variant[];
 }
@@ -628,6 +636,123 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
   );
 }
 
+/**
+ * Prix de gros par palier de quantité (2 nov. 2026, demande boutique : "les
+ * options des prix en gros et les conditions, exemple à partir de 10
+ * pièces"). Géré par variante (c'est elle qui porte le prix normal), avec un
+ * petit formulaire d'ajout et la liste des paliers déjà créés, chacun
+ * supprimable individuellement — même principe d'ajout/suppression que les
+ * listes déroulantes taille/couleur (SelecteurMultiple) plutôt qu'un
+ * tableau entier réenregistré à chaque changement.
+ */
+function PrixDeGros({
+  produitId,
+  variante,
+  onChange,
+}: {
+  produitId: string;
+  variante: Variant;
+  onChange: () => void;
+}) {
+  const { currentShop } = useShop();
+  const { t } = useLocale();
+  const [quantite, setQuantite] = useState("");
+  const [prix, setPrix] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function ajouterPalier() {
+    if (!currentShop || !quantite || !prix) return;
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await api.post(
+        `/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}/price-tiers`,
+        { minQuantity: Number(quantite), unitPrice: Number(prix) },
+      );
+      setQuantite("");
+      setPrix("");
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_palierAjoutImpossible"));
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  async function supprimerPalier(tierId: string) {
+    if (!currentShop) return;
+    setErreur(null);
+    try {
+      await api.delete(
+        `/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}/price-tiers/${tierId}`,
+      );
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_palierSuppressionImpossible"));
+    }
+  }
+
+  return (
+    <div style={{ padding: "10px 12px", background: "var(--color-surface-alt, rgba(255,255,255,0.03))" }}>
+      <strong style={{ fontSize: "0.8125rem" }}>
+        {t("cat_prixDeGrosTitre")} — {variante.sku}
+      </strong>
+      <p style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)", margin: "2px 0 8px" }}>
+        {t("cat_prixDeGrosAide")}
+      </p>
+      {variante.priceTiers.length > 0 && (
+        <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px", display: "flex", flexDirection: "column", gap: "4px" }}>
+          {variante.priceTiers.map((palier) => (
+            <li key={palier.id} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8125rem" }}>
+              <span>
+                {t("cat_aPartirDe")} <strong>{palier.minQuantity}</strong> {t("cat_pieces")} :{" "}
+                {formatMoney(Number(palier.unitPrice), variante.currency)} {t("cat_parUnite")}
+              </span>
+              <button
+                type="button"
+                className={styles.boutonCrayon}
+                title={t("cat_supprimer")}
+                onClick={() => supprimerPalier(palier.id)}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+        <input
+          type="number"
+          min={2}
+          placeholder={t("cat_placeholderQuantiteMin")}
+          value={quantite}
+          onChange={(e) => setQuantite(e.target.value)}
+          style={{ width: "90px", padding: "6px", fontSize: "0.8125rem" }}
+        />
+        <input
+          type="number"
+          min={0}
+          placeholder={t("cat_placeholderPrixUnitaireGros")}
+          value={prix}
+          onChange={(e) => setPrix(e.target.value)}
+          style={{ width: "120px", padding: "6px", fontSize: "0.8125rem" }}
+        />
+        <button
+          type="button"
+          className={styles.boutonSecondaire}
+          style={{ padding: "4px 10px", minHeight: "32px" }}
+          onClick={ajouterPalier}
+          disabled={enCours || !quantite || !prix}
+        >
+          {t("cat_ajouterPalier")}
+        </button>
+      </div>
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+    </div>
+  );
+}
+
 function CatalogueContent() {
   const { currentShop } = useShop();
   const { t } = useLocale();
@@ -644,6 +769,9 @@ function CatalogueContent() {
   const [creationEnCours, setCreationEnCours] = useState(false);
   const [creationConfirmee, setCreationConfirmee] = useState(false);
   const [recherche, setRecherche] = useState("");
+  // Panneau "Prix en gros" déplié pour une variante (2 nov. 2026) — une seule
+  // variante à la fois par simplicité, comme les `<details>` ailleurs.
+  const [varianteGrosOuverte, setVarianteGrosOuverte] = useState<string | null>(null);
 
   function recharger() {
     if (!currentShop) return;
@@ -676,6 +804,21 @@ function CatalogueContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cat_retraitImpossible"));
+    }
+  }
+
+  /**
+   * Étiquette "Nouveau" / "Nouvel arrivage" (2 nov. 2026, demande boutique) —
+   * simple bascule, comme publier/dépublier juste au-dessus.
+   */
+  async function basculerNouveauteProduit(produit: Product) {
+    if (!currentShop) return;
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { isNewArrival: !produit.isNewArrival });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
     }
   }
 
@@ -1026,6 +1169,21 @@ function CatalogueContent() {
                     ✎
                   </button>
                 </span>
+                <button
+                  type="button"
+                  className={styles.boutonSecondaire}
+                  title={t("cat_bascculerNouveauteAide")}
+                  style={{
+                    padding: "4px 10px",
+                    minHeight: "28px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    opacity: produit.isNewArrival ? 1 : 0.5,
+                  }}
+                  onClick={() => basculerNouveauteProduit(produit)}
+                >
+                  🆕 {t("cat_etiquetteNouveau")}
+                </button>
                 {produit.isPublished ? (
                   <>
                     <StatusTag label={t("cat_publieSurMarketplace")} humeur="paye" />
@@ -1078,14 +1236,17 @@ function CatalogueContent() {
                     <th className={styles.colChiffre}>{t("cat_colPrixAchat")}</th>
                     <th className={styles.colChiffre}>{t("cat_colPrixVente")}</th>
                     <th className={styles.colChiffre}>{t("cat_colPromo")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colPrixDeGros")}</th>
                     <th className={styles.colChiffre}>{t("cat_colStock")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {produit.variants.map((v) => {
                     const remise = pourcentageRemise(Number(v.sellPrice), v.compareAtPrice);
+                    const grosOuvert = varianteGrosOuverte === v.id;
                     return (
-                      <tr key={v.id}>
+                      <Fragment key={v.id}>
+                      <tr>
                         <td>
                           {v.sku}{" "}
                           <button
@@ -1141,6 +1302,18 @@ function CatalogueContent() {
                           </button>
                         </td>
                         <td className={styles.colChiffre}>
+                          <button
+                            type="button"
+                            className={styles.bouton}
+                            style={{ fontSize: "0.75rem", padding: "4px 8px" }}
+                            onClick={() => setVarianteGrosOuverte(grosOuvert ? null : v.id)}
+                          >
+                            {v.priceTiers.length > 0
+                              ? `${v.priceTiers.length} ${t("cat_paliers")} ✎`
+                              : t("cat_definirPrixDeGros")}
+                          </button>
+                        </td>
+                        <td className={styles.colChiffre}>
                           {v.stockQty}{" "}
                           <button
                             type="button"
@@ -1152,6 +1325,14 @@ function CatalogueContent() {
                           </button>
                         </td>
                       </tr>
+                      {grosOuvert && (
+                        <tr>
+                          <td colSpan={7} style={{ padding: 0 }}>
+                            <PrixDeGros produitId={produit.id} variante={v} onChange={recharger} />
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>

@@ -4,6 +4,7 @@ import { CreateOrderDto } from "./dto/create-order.dto";
 import { NotificationType, OrderStatus, Prisma, StockMovementType } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { prixUnitaireEffectif } from "../common/pricing.util";
 
 // Transitions légales du statut d'une sous-commande (prompt §42). Toute
 // transition hors de cette carte est refusée — évite qu'un statut saute une
@@ -51,7 +52,7 @@ export class OrdersService {
       for (const item of dto.items) {
         const variant = await tx.variant.findUniqueOrThrow({
           where: { id: item.variantId },
-          include: { product: true },
+          include: { product: true, priceTiers: true },
         });
 
         if (!variant.product.isPublished) {
@@ -81,8 +82,19 @@ export class OrdersService {
           },
         });
 
+        // Prix de gros par palier (2 nov. 2026) — le prix facturé n'est
+        // jamais celui envoyé par le client (cohérent avec le reste de ce
+        // module : `unitPrice` est toujours recalculé côté serveur depuis la
+        // base), seulement dérivé de `sellPrice` + des paliers actifs de la
+        // variante selon la quantité réellement commandée.
+        const prixUnitaire = prixUnitaireEffectif(
+          item.quantity,
+          Number(variant.sellPrice),
+          variant.priceTiers.map((p) => ({ minQuantity: p.minQuantity, unitPrice: Number(p.unitPrice) })),
+        );
+
         const shopItems = byShop.get(variant.product.shopId) ?? [];
-        shopItems.push({ variantId: item.variantId, quantity: item.quantity, unitPrice: Number(variant.sellPrice) });
+        shopItems.push({ variantId: item.variantId, quantity: item.quantity, unitPrice: prixUnitaire });
         byShop.set(variant.product.shopId, shopItems);
       }
 

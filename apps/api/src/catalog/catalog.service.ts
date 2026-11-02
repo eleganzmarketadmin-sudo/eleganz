@@ -7,6 +7,7 @@ import { CreateVariantOptionDto } from "./dto/variant-option.dto";
 import { AdjustStockDto } from "./dto/adjust-stock.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { CreatePriceTierDto } from "./dto/price-tier.dto";
 import { StockMovementType, VariantOptionKind } from "@eleganz/database";
 import { StorageService } from "../storage/storage.service";
 
@@ -147,17 +148,57 @@ export class CatalogService implements OnModuleInit {
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.category !== undefined ? { category: dto.category } : {}),
         ...(dto.images !== undefined ? { images: dto.images } : {}),
+        ...(dto.isNewArrival !== undefined ? { isNewArrival: dto.isNewArrival } : {}),
       },
-      include: { variants: true },
+      include: { variants: { include: { priceTiers: true } } },
     });
   }
 
   listProducts(shopId: string) {
     return this.prisma.product.findMany({
       where: { shopId },
-      include: { variants: true },
+      include: { variants: { include: { priceTiers: { orderBy: { minQuantity: "asc" } } } } },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /**
+   * Prix de gros par palier de quantité (2 nov. 2026, demande boutique) —
+   * voir PriceTier dans schema.prisma. Optionnel et géré par variante : une
+   * boutique qui ne s'en sert pas n'en voit jamais la trace. `minQuantity`
+   * doit rester strictement supérieur au précédent palier le plus proche
+   * sans équivalent déjà pris — l'unicité (`minQuantity`, `variantId`) est
+   * garantie en base, mais on vérifie aussi `unitPrice` < prix normal, sinon
+   * un palier "prix de gros" plus cher que le prix public n'aurait aucun
+   * sens et induirait l'acheteur en erreur.
+   */
+  async addPriceTier(shopId: string, productId: string, variantId: string, dto: CreatePriceTierDto) {
+    const variante = await this.prisma.variant.findFirstOrThrow({
+      where: { id: variantId, productId, product: { shopId } },
+    });
+    if (dto.unitPrice >= Number(variante.sellPrice)) {
+      throw new BadRequestException(
+        `Le prix de gros (${dto.unitPrice}) doit être strictement inférieur au prix de vente normal (${Number(variante.sellPrice)}).`,
+      );
+    }
+    const existant = await this.prisma.priceTier.findFirst({
+      where: { variantId, minQuantity: dto.minQuantity },
+    });
+    if (existant) {
+      throw new ConflictException(
+        `Un palier existe déjà à partir de ${dto.minQuantity} pièce(s) pour cette variante — supprimez-le avant d'en ajouter un nouveau à la même quantité.`,
+      );
+    }
+    await this.prisma.priceTier.create({
+      data: { variantId, minQuantity: dto.minQuantity, unitPrice: dto.unitPrice },
+    });
+    return this.prisma.priceTier.findMany({ where: { variantId }, orderBy: { minQuantity: "asc" } });
+  }
+
+  async removePriceTier(shopId: string, productId: string, variantId: string, tierId: string) {
+    await this.prisma.variant.findFirstOrThrow({ where: { id: variantId, productId, product: { shopId } } });
+    await this.prisma.priceTier.deleteMany({ where: { id: tierId, variantId } });
+    return this.prisma.priceTier.findMany({ where: { variantId }, orderBy: { minQuantity: "asc" } });
   }
 
   /**

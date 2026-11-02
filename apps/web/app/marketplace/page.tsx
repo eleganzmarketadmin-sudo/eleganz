@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "../lib/api";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
-import { PrixPromo, RubanPromo } from "../components/PrixPromo";
+import { PrixPromo, RubanPromo, RubanNouveau } from "../components/PrixPromo";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { nomPays } from "../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -23,6 +23,7 @@ interface Produit {
   name: string;
   category?: string | null;
   images: string[];
+  isNewArrival: boolean;
   shop: { id: string; name: string; slug: string };
   variants: Variant[];
 }
@@ -269,6 +270,7 @@ export default function MarketplacePage() {
                   {moinsCher && (
                     <RubanPromo sellPrice={Number(moinsCher.sellPrice)} compareAtPrice={moinsCher.compareAtPrice} />
                   )}
+                  <RubanNouveau isNewArrival={produit.isNewArrival} />
                 </div>
                 <div className={styles.nomProduit}>{produit.name}</div>
                 <div className={styles.boutique}>{produit.shop.name}</div>
