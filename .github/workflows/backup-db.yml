@@ -1,0 +1,95 @@
+name: Sauvegarde quotidienne de la base de données
+
+# Pourquoi ce fichier existe (audit sécurité du 3 nov. 2026, docs/MAINTENANCE.md) :
+# aucune sauvegarde externe n'était documentée ni automatisée. Railway peut
+# proposer des sauvegardes automatiques, mais seulement sur un plan payant
+# supérieur (en attente d'activation côté propriétaire). En attendant — et
+# même après, en complément — ce workflow fait un `pg_dump` complet de la
+# base de production chaque nuit et l'envoie vers Cloudflare R2 (même
+# fournisseur de stockage que les images produits, déjà en place), dans un
+# bucket/préfixe séparé des fichiers applicatifs.
+#
+# Aucun identifiant n'est écrit dans ce fichier : tout vient des secrets du
+# dépôt GitHub (Settings → Secrets and variables → Actions), à ajouter
+# manuellement — jamais via Claude, qui n'entre jamais d'identifiants dans
+# un tableau de bord externe.
+
+on:
+  schedule:
+    # 03h00 UTC chaque jour (heure creuse). Modifiable si besoin.
+    - cron: "0 3 * * *"
+  workflow_dispatch: {} # permet de lancer une sauvegarde manuelle depuis l'onglet Actions
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Installer les outils PostgreSQL et AWS CLI
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client awscli
+
+      - name: Exporter la base (pg_dump, format compressé)
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          HORODATAGE=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          echo "FICHIER=eleganz-db-${HORODATAGE}.dump" >> "$GITHUB_ENV"
+          # Format custom (-Fc) : compressé, et restaurable sélectivement
+          # (table par table) avec pg_restore si besoin, contrairement à un
+          # simple .sql.gz.
+          pg_dump "$DATABASE_URL" -Fc -f "eleganz-db-${HORODATAGE}.dump"
+
+      - name: Vérifier que le fichier n'est pas vide
+        run: |
+          set -euo pipefail
+          TAILLE=$(stat -c%s "$FICHIER")
+          echo "Taille du dump : ${TAILLE} octets"
+          if [ "$TAILLE" -lt 1000 ]; then
+            echo "::error::Le dump fait moins de 1 Ko — probablement vide ou échoué. Sauvegarde refusée."
+            exit 1
+          fi
+
+      - name: Envoyer vers Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 cp "$FICHIER" "s3://${R2_BUCKET}/backups/postgres/${FICHIER}" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          echo "Sauvegarde envoyée : backups/postgres/${FICHIER}"
+
+      - name: Purger les sauvegardes de plus de 30 jours
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          LIMITE=$(date -u -d "30 days ago" +%s)
+          aws s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix "backups/postgres/" --endpoint-url "$ENDPOINT" \
+            --query "Contents[].{Key:Key,Modified:LastModified}" --output json \
+          | python3 -c "
+          import json, sys, datetime
+          limite = datetime.datetime.fromtimestamp($LIMITE, tz=datetime.timezone.utc)
+          items = json.load(sys.stdin) or []
+          for it in items:
+              modifie = datetime.datetime.fromisoformat(it['Modified'].replace('Z', '+00:00'))
+              if modifie < limite:
+                  print(it['Key'])
+          " > /tmp/a_supprimer.txt
+          if [ -s /tmp/a_supprimer.txt ]; then
+            while IFS= read -r cle; do
+              echo "Suppression (plus de 30 jours) : $cle"
+              aws s3 rm "s3://${R2_BUCKET}/${cle}" --endpoint-url "$ENDPOINT"
+            done < /tmp/a_supprimer.txt
+          else
+            echo "Rien à purger."
+          fi
