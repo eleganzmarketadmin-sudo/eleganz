@@ -13,11 +13,24 @@
  * Ce service worker ne touche jamais aux appels vers l'API (autre origine)
  * — la file hors-ligne de la caisse (offline-queue.ts/offline-sync.tsx)
  * gère déjà elle-même les échecs réseau vers l'API.
+ *
+ * Mise en cache des images produits (3 nov. 2026, demande du propriétaire :
+ * accélérer les visites répétées et réduire la consommation de données sur
+ * une connexion faible, sans rien changer au stockage central). Ces images
+ * viennent de Cloudflare R2, une origine différente du site — exclue par
+ * défaut ci-dessus — donc traitée séparément plus bas, avant le filtre
+ * "même origine". Chaque image reçoit un nom de fichier unique (UUID) à
+ * l'envoi et n'est jamais réécrite au même nom (voir storage.service.ts) :
+ * une fois vue, elle ne change plus jamais, donc "cache d'abord, sans
+ * jamais revalider au réseau" est sûr indéfiniment. Cache séparé de celui
+ * de l'app shell (préfixe différent) pour ne pas être vidé quand VERSION
+ * change ci-dessous.
  */
 
 const VERSION = "eleganz-shell-v1";
 const CACHE_PAGES = `${VERSION}-pages`;
 const CACHE_ASSETS = `${VERSION}-assets`;
+const CACHE_IMAGES = "eleganz-images-v1";
 const OFFLINE_URL = "/hors-ligne.html";
 
 self.addEventListener("install", (event) => {
@@ -45,10 +58,22 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Seulement les requêtes GET de même origine — jamais l'API (autre
-  // origine), jamais les mutations (POST/PATCH/DELETE), qui doivent
+  if (request.method !== "GET") {
+    return;
+  }
+
+  // Images (produits, profils experts, etc.) : voir le commentaire d'en-tête.
+  // Vérifié avant le filtre "même origine" ci-dessous puisque ces images
+  // viennent presque toujours d'une autre origine (Cloudflare R2).
+  if (request.destination === "image") {
+    event.respondWith(cachePuisReseau(request, CACHE_IMAGES));
+    return;
+  }
+
+  // Le reste : seulement les requêtes de même origine — jamais l'API
+  // (autre origine), jamais les mutations (POST/PATCH/DELETE), qui doivent
   // toujours passer par la file hors-ligne applicative, pas par le cache HTTP.
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) {
+  if (new URL(request.url).origin !== self.location.origin) {
     return;
   }
 
