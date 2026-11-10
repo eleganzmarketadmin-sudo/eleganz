@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 import { UpsertGuideDto } from "./dto/upsert-guide.dto";
+import { SEED_ARTICLES } from "./seed-articles";
 
 // Même slugification que shops.service.ts — garde la convention du
 // dépôt plutôt que d'en réinventer une.
@@ -16,11 +17,37 @@ function slugify(texte: string): string {
 }
 
 @Injectable()
-export class GuidesService {
+export class GuidesService implements OnModuleInit {
+  private readonly logger = new Logger(GuidesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
+
+  /**
+   * Amorçage du Centre d'aide (10 nov. 2026) : insère le contenu de
+   * départ (seed-articles.ts) au démarrage de l'API, sans avoir besoin
+   * d'un compte admin ni d'un accès direct à la base de production.
+   * `skipDuplicates` s'appuie sur l'unicité de `slug` — une fiche déjà
+   * présente (créée ici à un déploiement précédent, ou depuis modifiée
+   * par un agent) n'est jamais recréée ni écrasée. Ne bloque jamais le
+   * démarrage de l'API si ça échoue (ex. table pas encore migrée au tout
+   * premier déploiement) : seule une erreur est journalisée.
+   */
+  async onModuleInit() {
+    try {
+      const resultat = await this.prisma.guideArticle.createMany({
+        data: SEED_ARTICLES,
+        skipDuplicates: true,
+      });
+      if (resultat.count > 0) {
+        this.logger.log(`Centre d'aide : ${resultat.count} fiche(s) de départ ajoutée(s).`);
+      }
+    } catch (err) {
+      this.logger.error("Centre d'aide : échec de l'amorçage du contenu de départ.", err as Error);
+    }
+  }
 
   /**
    * Recherche texte simple (titre, catégorie, mots-clés, contenu agent)
