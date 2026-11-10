@@ -1,4 +1,18 @@
-import ExcelJS from "exceljs";
+// 10 nov. 2026 (incident "Internal server error" au téléchargement du
+// gabarit Excel) : `exceljs` est un module CommonJS classique
+// (`module.exports = …`), sans son propre export `.default`. Un import par
+// défaut (`import ExcelJS from "exceljs"`) ne fonctionne correctement que
+// grâce à l'option `esModuleInterop`, qui n'est PAS activée dans le
+// tsconfig de cette API — seule `allowSyntheticDefaultImports` l'est, et
+// cette option ne change que la vérification de type, jamais le code
+// généré. Résultat en production : le JS compilé devenait
+// `new exceljs_1.default.Workbook()`, et `.default` valait `undefined` →
+// `TypeError: Cannot read properties of undefined (reading 'Workbook')` à
+// chaque appel (gabarit, export ET import). L'import par espace de noms
+// ci-dessous (`import * as ExcelJS`) correspond exactement à ce que ce
+// module exporte réellement et fonctionne quel que soit le réglage
+// `esModuleInterop`.
+import * as ExcelJS from "exceljs";
 
 // 21 oct. 2026 (audit sécurité) : remplace `xlsx` (SheetJS) par `exceljs` —
 // `xlsx@0.18.5` porte deux failles hautes (pollution de prototype, ReDoS)
