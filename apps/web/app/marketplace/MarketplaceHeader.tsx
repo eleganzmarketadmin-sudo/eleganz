@@ -84,7 +84,12 @@ export function MarketplaceHeader() {
   const { lignes } = useCart();
   const { user } = useAuth();
   const { t } = useLocale();
-  const nombreArticles = lignes.reduce((s, l) => s + l.quantity, 0);
+  // 10 nov. 2026 : affichait la SOMME des quantités (1 article × 1 + 1
+  // article × 4 = "5"), ce qui ne correspond à rien de concret pour le
+  // client — il voit "5" alors qu'il n'a que 2 articles différents dans son
+  // panier. Le badge compte désormais le nombre de lignes (d'articles
+  // distincts), pas les quantités commandées de chacun.
+  const nombreArticles = lignes.length;
 
   return (
     <>

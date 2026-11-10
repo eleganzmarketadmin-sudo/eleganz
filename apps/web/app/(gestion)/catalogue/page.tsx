@@ -518,11 +518,49 @@ function SelecteurCategorie({ valeur, onChange }: { valeur: string; onChange: (v
   );
 }
 
-function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjoutee: () => void }) {
+// 10 nov. 2026 : la référence (SKU) d'une variante ne doit plus jamais être
+// saisie à la main — une fois combinée à la taille/couleur côté API
+// (CatalogService.addVariantsBulk), une référence tapée librement est
+// source d'incohérences (doublons proches, codes sans rapport avec
+// l'article) alors que tout ce qu'il faut pour la construire (nom,
+// catégorie) est déjà connu. Dérivée du nom + de la catégorie de
+// l'article, complétée d'un court suffixe aléatoire pour ne jamais entrer
+// en collision avec une référence existante.
+function genererBaseReference(nom: string, categorie?: string | null): string {
+  const base = `${categorie ?? ""} ${nom}`
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // accents retirés (é → e, etc.)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 24);
+  return base || "ARTICLE";
+}
+
+function NouvelleVariante({
+  produitId,
+  produitNom,
+  produitCategorie,
+  onAjoutee,
+}: {
+  produitId: string;
+  produitNom: string;
+  produitCategorie?: string | null;
+  onAjoutee: () => void;
+}) {
   const { currentShop } = useShop();
   const { t } = useLocale();
   const [options, setOptions] = useState<VariantOptionsListe>({ sizes: [], colors: [] });
-  const [sku, setSku] = useState("");
+  // `nonce` change après chaque création réussie pour que le prochain lot de
+  // variantes reçoive un nouveau suffixe aléatoire (sans ça, ajouter un
+  // deuxième lot pour le même article réutiliserait la même base et
+  // provoquerait un conflit de référence).
+  const [nonce, setNonce] = useState(0);
+  const skuBaseAuto = useMemo(() => {
+    const suffixeAleatoire = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return `${genererBaseReference(produitNom, produitCategorie)}-${suffixeAleatoire}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [produitNom, produitCategorie, nonce]);
   const [taillesChoisies, setTaillesChoisies] = useState<string[]>([]);
   const [couleursChoisies, setCouleursChoisies] = useState<string[]>([]);
   const [prixAchat, setPrixAchat] = useState("");
@@ -557,7 +595,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
   const nombreVariantes = Math.max(taillesChoisies.length, 1) * Math.max(couleursChoisies.length, 1);
 
   async function ajouter() {
-    if (!currentShop || !sku || !prixVente) return;
+    if (!currentShop || !prixVente) return;
     setEnCours(true);
     setErreur(null);
     setConfirmation(null);
@@ -565,7 +603,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
       const variantes = await api.post<unknown[]>(
         `/shops/${currentShop.id}/products/${produitId}/variants/bulk`,
         {
-          skuBase: sku,
+          skuBase: skuBaseAuto,
           sizes: taillesChoisies.length ? taillesChoisies : undefined,
           colors: couleursChoisies.length ? couleursChoisies : undefined,
           costPrice: prixAchat ? Number(prixAchat) : undefined,
@@ -578,7 +616,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
           ? `${variantes.length} ${t("cat_variantesCreees")}`
           : t("cat_varianteCreee"),
       );
-      setSku("");
+      setNonce((n) => n + 1);
       setTaillesChoisies([]);
       setCouleursChoisies([]);
       setPrixAchat("");
@@ -594,11 +632,13 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
 
   return (
     <div className={styles.ajoutVariante}>
-      <input
-        placeholder={t("cat_placeholderReference")}
-        value={sku}
-        onChange={(e) => setSku(e.target.value)}
-      />
+      <span
+        className={styles.champRefAuto}
+        title={t("cat_placeholderReference")}
+      >
+        <code>{skuBaseAuto}</code>
+        <small>{t("cat_referenceAutoGeneree")}</small>
+      </span>
       <SelecteurMultiple
         label={t("cat_tailles")}
         valeurs={options.sizes}
@@ -631,7 +671,7 @@ function NouvelleVariante({ produitId, onAjoutee }: { produitId: string; onAjout
         value={stock}
         onChange={(e) => setStock(e.target.value)}
       />
-      <button className={styles.bouton} onClick={ajouter} disabled={enCours || !sku || !prixVente}>
+      <button className={styles.bouton} onClick={ajouter} disabled={enCours || !prixVente}>
         {nombreVariantes > 1 ? `${t("cat_creer")} ${nombreVariantes} ${t("cat_variantesMinuscule")}` : t("cat_ajouterVariante")}
       </button>
       {erreur && <div className={styles.erreur}>{erreur}</div>}
@@ -1347,7 +1387,12 @@ function CatalogueContent() {
               </table>
               </div>
             )}
-            <NouvelleVariante produitId={produit.id} onAjoutee={recharger} />
+            <NouvelleVariante
+              produitId={produit.id}
+              produitNom={produit.name}
+              produitCategorie={produit.category}
+              onAjoutee={recharger}
+            />
           </div>
         ))
       )}

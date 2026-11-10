@@ -239,6 +239,34 @@
   min-width: 110px;
 }
 
+/* 10 nov. 2026 : la référence n'est plus un champ de saisie libre mais une
+   valeur calculée affichée en lecture seule (voir genererBaseReference) —
+   un style visuellement distinct d'un champ de formulaire pour que ce soit
+   clair au premier regard, avec une légende discrète qui l'indique. */
+.champRefAuto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-muted);
+  min-height: 40px;
+  flex: 1 1 160px;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.champRefAuto code {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.champRefAuto small {
+  font-size: 0.6875rem;
+  color: var(--color-texte-muted);
+}
+
 .erreur {
   background: var(--color-flamme);
   color: #fff;
