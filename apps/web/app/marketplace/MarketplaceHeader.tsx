@@ -11,6 +11,7 @@ import { NotificationBell } from "../components/NotificationBell";
 import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
+import { useClampDropdownADroite } from "../lib/useClampDropdown";
 import styles from "./MarketplaceHeader.module.css";
 
 /**
@@ -25,6 +26,8 @@ function MenuCompte() {
   const { t } = useLocale();
   const [ouvert, setOuvert] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  useClampDropdownADroite(dropdownRef, ouvert);
 
   useEffect(() => {
     function surClicExterieur(e: MouseEvent) {
@@ -43,11 +46,17 @@ function MenuCompte() {
         className={styles.menuCompteBouton}
         onClick={() => setOuvert((v) => !v)}
         aria-expanded={ouvert}
+        aria-label={t("market_monCompte")}
       >
-        {t("market_monCompte")} {ouvert ? "▲" : "▼"}
+        <span aria-hidden="true">👤</span>
+        {/* 10 nov. 2026 : texte masqué en très petit écran (voir CSS) pour
+            que le bouton tienne sur la même ligne que le reste au lieu de
+            pousser l'en-tête à occuper l'essentiel de l'écran mobile. */}
+        <span className={styles.texteBouton}>{t("market_monCompte")}</span>
+        <span aria-hidden="true">{ouvert ? "▲" : "▼"}</span>
       </button>
       {ouvert && (
-        <div className={styles.menuCompteDropdown} role="menu">
+        <div className={styles.menuCompteDropdown} role="menu" ref={dropdownRef}>
           <Link href="/marketplace/profil" onClick={() => setOuvert(false)}>
             {t("market_monProfil")}
           </Link>
@@ -104,8 +113,9 @@ export function MarketplaceHeader() {
           <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
           <LanguageSwitcher />
           <ThemeToggle clair />
-          <Link href="/marketplace/panier" className={styles.panier}>
-            {t("nav_panier")}
+          <Link href="/marketplace/panier" className={styles.panier} aria-label={t("nav_panier")}>
+            <span aria-hidden="true">🛒</span>
+            <span className={styles.texteBouton}>{t("nav_panier")}</span>
             {nombreArticles > 0 && <span className={styles.compteur}>{nombreArticles}</span>}
           </Link>
           {user ? (

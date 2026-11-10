@@ -11,8 +11,17 @@ import styles from "./AccueilLien.module.css";
  */
 export function AccueilLien() {
   return (
-    <Link href="/" className={styles.lien} title="Retour à la page d'accueil ELEGANZ">
-      <span aria-hidden="true">←</span> Accueil
+    <Link
+      href="/"
+      className={styles.lien}
+      title="Retour à la page d'accueil ELEGANZ"
+      aria-label="Retour à la page d'accueil ELEGANZ"
+    >
+      <span aria-hidden="true">←</span>
+      {/* 10 nov. 2026 (signalement : en-tête mobile trop haute) — texte
+          masqué sous 420px (voir AccueilLien.module.css), ne laissant que
+          la flèche, commune aux en-têtes de tous les espaces. */}
+      <span className={styles.texte}>Accueil</span>
     </Link>
   );
 }

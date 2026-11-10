@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api, ApiError } from "../lib/api";
 import { useLocale } from "../lib/i18n/LocaleContext";
+import { useClampDropdownADroite } from "../lib/useClampDropdown";
 import styles from "./NotificationBell.module.css";
 
 interface Notification {
@@ -50,6 +51,8 @@ export function NotificationBell() {
   const [ouvert, setOuvert] = useState(false);
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const conteneurRef = useRef<HTMLDivElement>(null);
+  const panneauRef = useRef<HTMLDivElement>(null);
+  useClampDropdownADroite(panneauRef, ouvert);
 
   const rafraichirCompteur = useCallback(async () => {
     try {
@@ -127,7 +130,7 @@ export function NotificationBell() {
         {nonLues > 0 && <span className={styles.badge}>{nonLues > 9 ? "9+" : nonLues}</span>}
       </button>
       {ouvert && (
-        <div className={styles.panneau} role="menu">
+        <div className={styles.panneau} role="menu" ref={panneauRef}>
           <div className={styles.entetePanneau}>
             <span>{t("nav_notifications")}</span>
             {nonLues > 0 && (

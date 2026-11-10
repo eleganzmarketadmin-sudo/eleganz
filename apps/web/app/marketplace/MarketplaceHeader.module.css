@@ -51,15 +51,36 @@
   color: #fff;
 }
 
+/* Présent par défaut — masqué uniquement sous 420px (voir media query plus
+   bas). Doit rester déclaré AVANT cette media query : à spécificité égale,
+   c'est l'ordre dans la feuille qui tranche, pas le fait d'être dans un
+   @media actif. */
+.texteBouton {
+  display: inline;
+}
+
 @media (max-width: 420px) {
   .liens {
     gap: var(--espace-2) var(--espace-3);
     font-size: 0.875rem;
   }
+
+  /* 10 nov. 2026 (signalement : en-tête mobile prenant une grande partie de
+     l'écran, boutons qui débordent) — "Panier" et "Mon compte" passent en
+     icône seule sous ce seuil, comme suggéré : ça libère assez de largeur
+     pour que ces deux-là tiennent sur la même ligne que le reste au lieu de
+     forcer encore une ligne de plus dans l'en-tête. */
+  .texteBouton {
+    display: none;
+  }
 }
 
 .panier {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touche-min);
 }
 
 .compteur {
@@ -77,12 +98,16 @@
 }
 
 .menuCompteBouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: none;
   color: #fff;
   cursor: pointer;
   font: inherit;
   padding: 0;
+  min-height: var(--touche-min);
 }
 
 .menuCompteDropdown {
@@ -92,6 +117,10 @@
   display: flex;
   flex-direction: column;
   min-width: 200px;
+  /* 10 nov. 2026 : filet de sécurité si jamais la fenêtre est plus étroite
+     que 200px + la marge — voir useClampDropdownADroite pour le correctif
+     principal (débordement par le bord gauche sur mobile). */
+  max-width: calc(100vw - 24px);
   background: var(--color-surface);
   color: var(--color-ink);
   border: 1px solid var(--color-border);
