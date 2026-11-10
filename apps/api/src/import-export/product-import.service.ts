@@ -116,7 +116,31 @@ export class ProductImportService {
     misesAJour: number;
     erreurs: number;
   }> {
-    const lignes = await lireClasseurExcel(buffer);
+    // 10 nov. 2026 (erreur "Internal server error" remontée telle quelle au
+    // navigateur) : `lireClasseurExcel` lève une exception technique brute
+    // (exceljs) dès que le fichier n'est pas un classeur .xlsx valide —
+    // ancien format binaire .xls (que l'input du formulaire accepte encore
+    // par erreur), fichier renommé en .xlsx sans en être un, classeur
+    // corrompu ou protégé par mot de passe. Cette exception n'était
+    // interceptée nulle part : elle remontait telle quelle jusqu'au filtre
+    // d'exceptions global de Nest, qui renvoie un générique "Internal server
+    // error" sans aucune indication utile pour la boutique. On l'attrape ici
+    // pour renvoyer un message métier clair, et on logue le détail technique
+    // côté serveur pour le diagnostic.
+    let lignes: string[][];
+    try {
+      lignes = await lireClasseurExcel(buffer);
+    } catch (err) {
+      this.logger.error(
+        "Échec de lecture du classeur Excel à l'import catalogue",
+        err instanceof Error ? err.stack : err,
+      );
+      throw new BadRequestException(
+        "Ce fichier n'a pas pu être lu comme un classeur Excel (.xlsx). Vérifiez qu'il s'agit bien d'un fichier .xlsx " +
+          "non corrompu et non protégé par mot de passe (l'ancien format .xls n'est pas pris en charge) — le plus " +
+          "simple est de repartir du gabarit à télécharger ci-dessus, de le remplir, puis de le réimporter.",
+      );
+    }
     if (lignes.length < 2) {
       throw new BadRequestException(
         "Le fichier est vide ou ne contient que l'en-tête. Téléchargez le gabarit et remplissez-le à partir de la ligne 2.",

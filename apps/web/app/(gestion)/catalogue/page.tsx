@@ -103,7 +103,11 @@ function ImportExportExcel({ onImporte }: { onImporte: () => void }) {
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            // 10 nov. 2026 : ".xls" retiré — l'ancien format binaire Excel
+            // n'est pas lisible par exceljs côté serveur (seul le .xlsx
+            // moderne l'est) ; le proposer ici ne faisait que mener à un
+            // fichier qui échouait systématiquement à l'import.
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             style={{ display: "none" }}
             disabled={enCours !== null}
             onChange={(e) => {
