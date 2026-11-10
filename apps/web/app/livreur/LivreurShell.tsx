@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -12,6 +12,7 @@ import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
+import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
 import styles from "./LivreurShell.module.css";
 
 /**
@@ -25,6 +26,8 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, reviewRecommended } = useLocale();
+  const navRef = useRef<HTMLElement>(null);
+  useScrollNavActifEnVue(navRef, pathname ?? "");
 
   const LIENS = [
     { href: "/livreur/missions", label: t("livr_mesMissions") },
@@ -73,16 +76,20 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
         <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
       )}
       <BandeMarque />
-      <nav className={styles.nav}>
-        {LIENS.map((lien) => (
-          <Link
-            key={lien.href}
-            href={lien.href}
-            className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
-          >
-            {lien.label}
-          </Link>
-        ))}
+      <nav className={styles.nav} ref={navRef}>
+        {LIENS.map((lien) => {
+          const actif = pathname === lien.href;
+          return (
+            <Link
+              key={lien.href}
+              href={lien.href}
+              className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+              data-nav-actif={actif ? "true" : undefined}
+            >
+              {lien.label}
+            </Link>
+          );
+        })}
       </nav>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>

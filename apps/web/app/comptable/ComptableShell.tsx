@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -13,6 +13,7 @@ import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
+import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
 import styles from "./ComptableShell.module.css";
 
 /**
@@ -49,6 +50,8 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { t, reviewRecommended } = useLocale();
   const { nombreEnAttente, synchroniser } = useOfflineSync();
+  const navRef = useRef<HTMLElement>(null);
+  useScrollNavActifEnVue(navRef, pathname ?? "");
 
   useEffect(() => {
     if (!loading && !user) router.replace("/marketplace/compte?retour=/comptable");
@@ -119,18 +122,22 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
         <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
       )}
       <BandeMarque />
-      <nav className={styles.nav}>
+      <nav className={styles.nav} ref={navRef}>
         {GROUPES_NAV.map((groupe, indexGroupe) => (
           <div className={styles.navGroupe} key={indexGroupe}>
-            {groupe.liens.map((lien) => (
-              <Link
-                key={lien.href}
-                href={lien.href}
-                className={`${styles.navLien} ${pathname === lien.href ? styles.navLienActif : ""}`}
-              >
-                <span aria-hidden="true">{lien.icone}</span> {lien.label}
-              </Link>
-            ))}
+            {groupe.liens.map((lien) => {
+              const actif = pathname === lien.href;
+              return (
+                <Link
+                  key={lien.href}
+                  href={lien.href}
+                  className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                  data-nav-actif={actif ? "true" : undefined}
+                >
+                  <span aria-hidden="true">{lien.icone}</span> {lien.label}
+                </Link>
+              );
+            })}
           </div>
         ))}
       </nav>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -13,6 +13,7 @@ import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
+import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
 import styles from "./AdminShell.module.css";
 
 // Menus accordés par rôle admin, par défaut (16 oct. 2026 — "le menu équipe
@@ -42,6 +43,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLocale();
+  const navRef = useRef<HTMLElement>(null);
+  useScrollNavActifEnVue(navRef, pathname ?? "");
 
   // `menu` = la clé MenuAdmin (API) correspondant à chaque lien — sert au
   // filtrage ci-dessous.
@@ -117,18 +120,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <BandeMarque />
-      <nav className={styles.nav}>
-        {liens.map((lien) => (
-          <Link
-            key={lien.href}
-            href={lien.href}
-            className={`${styles.navLien} ${
-              pathname === lien.href || pathname?.startsWith(`${lien.href}/`) ? styles.navLienActif : ""
-            }`}
-          >
-            {lien.label}
-          </Link>
-        ))}
+      <nav className={styles.nav} ref={navRef}>
+        {liens.map((lien) => {
+          const actif = pathname === lien.href || pathname?.startsWith(`${lien.href}/`);
+          return (
+            <Link
+              key={lien.href}
+              href={lien.href}
+              className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+              data-nav-actif={actif ? "true" : undefined}
+            >
+              {lien.label}
+            </Link>
+          );
+        })}
       </nav>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>

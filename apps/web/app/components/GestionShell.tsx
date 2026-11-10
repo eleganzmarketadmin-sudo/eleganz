@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
@@ -13,6 +14,7 @@ import { ChatWidget } from "./ChatWidget";
 import { AccueilLien } from "./AccueilLien";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
+import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
 import styles from "./GestionShell.module.css";
 
 export function GestionShell({ children }: { children: React.ReactNode }) {
@@ -22,6 +24,8 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   const { shops, currentShop, setCurrentShopId } = useShop();
   const { nombreEnAttente, synchroniser } = useOfflineSync();
   const { t } = useLocale();
+  const navRef = useRef<HTMLElement>(null);
+  useScrollNavActifEnVue(navRef, pathname ?? "");
 
   // `menu` = la clé MenuGestion (API) correspondant à chaque lien — sert au
   // filtrage ci-dessous (16 oct. 2026, point 2 des propositions du 16 oct.
@@ -110,18 +114,20 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <BandeMarque />
-      <nav className={styles.nav}>
-        {liens.map((lien) => (
-          <Link
-            key={lien.href}
-            href={lien.href}
-            className={`${styles.navLien} ${
-              pathname === lien.href || pathname?.startsWith(`${lien.href}/`) ? styles.navLienActif : ""
-            }`}
-          >
-            {lien.label}
-          </Link>
-        ))}
+      <nav className={styles.nav} ref={navRef}>
+        {liens.map((lien) => {
+          const actif = pathname === lien.href || pathname?.startsWith(`${lien.href}/`);
+          return (
+            <Link
+              key={lien.href}
+              href={lien.href}
+              className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+              data-nav-actif={actif ? "true" : undefined}
+            >
+              {lien.label}
+            </Link>
+          );
+        })}
       </nav>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
