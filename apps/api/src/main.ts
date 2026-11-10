@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { Logger, ValidationPipe } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { ToutesExceptionsFiltre } from "./common/all-exceptions.filter";
 
 // 21 oct. 2026 (audit sécurité/IT) : `app.enableCors()` sans options
 // acceptait n'importe quelle origine (reflète Access-Control-Allow-Origin
@@ -31,6 +32,10 @@ async function bootstrap() {
   // Les permissions sont vérifiées côté service (exigence du prompt maître §11) ;
   // cette validation globale ne couvre que la forme des requêtes entrantes.
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Voir le commentaire du filtre : avant ça, toute erreur imprévue (pas
+  // seulement une erreur métier volontaire) ressortait comme un "Internal
+  // server error" muet, sans aucune trace serveur exploitable.
+  app.useGlobalFilters(new ToutesExceptionsFiltre());
 
   // En-têtes de sécurité HTTP standards (X-Content-Type-Options,
   // X-Frame-Options, etc.) — absents jusqu'ici, aucun équivalent ailleurs
