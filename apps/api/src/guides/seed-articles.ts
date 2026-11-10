@@ -17,6 +17,28 @@ import type { Prisma } from "@eleganz/database";
  * à l'administration ELEGANZ), jamais un client.
  */
 export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
+  // ───────────────────────── Documentation ─────────────────────────
+  {
+    slug: "seed-documentation-pdf",
+    titre: "Documentation PDF de la plateforme",
+    categorie: "Documentation",
+    motsCles: ["documentation", "pdf", "cahier des charges", "tarifs", "spécifications", "bouquets"],
+    contenuAgent:
+      "Deux documents de référence sont hébergés directement sur le site (fichiers statiques Next.js, aucune " +
+      "authentification requise pour les ouvrir — à transmettre tel quel) :\n\n" +
+      "• Cahier des charges complet de la plateforme : https://www.eleganzmarket.com/documentation/cahier-des-charges.pdf\n" +
+      "  Le document de spécifications d'origine (converti en PDF depuis le Word original) — fonctionnement " +
+      "d'ensemble, rôles, modules, décisions prises à chaque étape du projet.\n\n" +
+      "• Tarifs et conditions (capture des écrans Centre de pilotage → Tarifs) : https://www.eleganzmarket.com/documentation/tarifs-ecrans.pdf\n" +
+      "  Référence visuelle des bouquets ELEGANZ Gestion/Marketplace, des tarifs livreurs, de l'abonnement Mon " +
+      "Comptable et du taux de change système (CDF/USD) — pratique pour répondre vite à une question de " +
+      "tarification sans rouvrir l'écran Tarifs soi-même.\n\n" +
+      "D'autres documents internes existent dans le dépôt de code (architecture technique, conformité facture " +
+      "normalisée, plan commercial...) mais restent volontairement hors du Centre d'aide : destinés aux " +
+      "développeurs, pas aux agents en contact avec la clientèle. Si un document PDF supplémentaire doit être " +
+      "ajouté ici, il suffit de le transmettre pour qu'il soit déposé au même endroit et lié depuis cette fiche.",
+  },
+
   // ───────────────────────── Catalogue ─────────────────────────
   {
     slug: "seed-catalogue-ajouter-produit",
