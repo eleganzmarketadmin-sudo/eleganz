@@ -4,6 +4,7 @@ import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { CurrentUser } from "./current-user.decorator";
 import type { AuthenticatedUser } from "./jwt-auth.guard";
@@ -38,5 +39,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateMeDto) {
     return this.authService.updateMe(user.id, dto);
+  }
+
+  // Même limite que login/register (10/min) : cette route revérifie un mot
+  // de passe, donc un bruteforce y a exactement le même intérêt pour un
+  // attaquant qui aurait mis la main sur un token encore valide.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Patch("me/password")
+  @UseGuards(JwtAuthGuard)
+  changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user.id, dto);
   }
 }

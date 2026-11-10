@@ -126,6 +126,61 @@ function ParametresContent() {
   const [enregistrementCompte, setEnregistrementCompte] = useState(false);
   const [erreurCompte, setErreurCompte] = useState<string | null>(null);
 
+  // Changement de mot de passe (demande du 10 nov. 2026, point 3) — même
+  // route/vérification que côté Gestion (AuthService.changePassword, commun
+  // à tout compte ELEGANZ, y compris admin).
+  const [editionMotDePasse, setEditionMotDePasse] = useState(false);
+  const [motDePasseActuel, setMotDePasseActuel] = useState("");
+  const [motDePasseNouveau, setMotDePasseNouveau] = useState("");
+  const [motDePasseConfirmation, setMotDePasseConfirmation] = useState("");
+  const [enregistrementMotDePasse, setEnregistrementMotDePasse] = useState(false);
+  const [erreurMotDePasse, setErreurMotDePasse] = useState<string | null>(null);
+  const [confirmationMotDePasse, setConfirmationMotDePasse] = useState<string | null>(null);
+
+  function ouvrirEditionMotDePasse() {
+    setMotDePasseActuel("");
+    setMotDePasseNouveau("");
+    setMotDePasseConfirmation("");
+    setErreurMotDePasse(null);
+    setConfirmationMotDePasse(null);
+    setEditionMotDePasse(true);
+  }
+
+  async function enregistrerMotDePasse(e: React.FormEvent) {
+    e.preventDefault();
+    setErreurMotDePasse(null);
+    if (motDePasseNouveau.length < 8) {
+      setErreurMotDePasse(t("profil_motDePasseTropCourt"));
+      return;
+    }
+    if (motDePasseNouveau !== motDePasseConfirmation) {
+      setErreurMotDePasse(t("profil_motDePasseConfirmationIncorrecte"));
+      return;
+    }
+    setEnregistrementMotDePasse(true);
+    try {
+      await api.patch("/auth/me/password", {
+        currentPassword: motDePasseActuel,
+        newPassword: motDePasseNouveau,
+      });
+      setConfirmationMotDePasse(t("profil_motDePasseConfirmationChangement"));
+      setEditionMotDePasse(false);
+      setMotDePasseActuel("");
+      setMotDePasseNouveau("");
+      setMotDePasseConfirmation("");
+    } catch (err) {
+      setErreurMotDePasse(
+        err instanceof ApiError && err.statusCode === 401
+          ? t("profil_motDePasseErreurActuel")
+          : err instanceof ApiError
+            ? err.message
+            : t("profil_motDePasseErreurGenerique"),
+      );
+    } finally {
+      setEnregistrementMotDePasse(false);
+    }
+  }
+
   useEffect(() => {
     api.get<Compte>("/auth/me").then(setCompte).catch(() => {
       // Non bloquant : sans ces infos, les autres sections restent utilisables.
@@ -255,6 +310,61 @@ function ParametresContent() {
           <p>{t("profil_telephone")} : {compte?.phone ?? t("profil_nonRenseigne")}</p>
           <button className={styles.boutonEnregistrer} onClick={ouvrirEditionCompte}>
             {t("profil_modifier")}
+          </button>
+        </div>
+      )}
+
+      <h2 className={styles.titreSection}>{t("profil_motDePasseTitre")}</h2>
+      {confirmationMotDePasse && !editionMotDePasse && (
+        <p className={styles.confirmation}>{confirmationMotDePasse}</p>
+      )}
+      {editionMotDePasse ? (
+        <form
+          className={styles.formulaire}
+          onSubmit={enregistrerMotDePasse}
+          style={{ marginBottom: "var(--espace-5)" }}
+        >
+          <div className={styles.champ}>
+            <label>{t("profil_motDePasseActuel")}</label>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={motDePasseActuel}
+              onChange={(e) => setMotDePasseActuel(e.target.value)}
+            />
+          </div>
+          <div className={styles.champ}>
+            <label>{t("profil_motDePasseNouveau")}</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={motDePasseNouveau}
+              onChange={(e) => setMotDePasseNouveau(e.target.value)}
+            />
+          </div>
+          <div className={styles.champ}>
+            <label>{t("profil_motDePasseConfirmation")}</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={motDePasseConfirmation}
+              onChange={(e) => setMotDePasseConfirmation(e.target.value)}
+            />
+          </div>
+          {erreurMotDePasse && <p className={styles.erreur}>{erreurMotDePasse}</p>}
+          <div style={{ display: "flex", gap: "var(--espace-3)" }}>
+            <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrementMotDePasse}>
+              {enregistrementMotDePasse ? t("profil_motDePasseEnCours") : t("action_enregistrer")}
+            </button>
+            <button className={styles.boutonEnregistrer} type="button" onClick={() => setEditionMotDePasse(false)}>
+              {t("action_annuler")}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div style={{ marginBottom: "var(--espace-5)" }}>
+          <button className={styles.boutonEnregistrer} onClick={ouvrirEditionMotDePasse}>
+            {t("profil_motDePasseModifier")}
           </button>
         </div>
       )}

@@ -19,7 +19,7 @@ export interface InscriptionInfos {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (identifiant: string, motDePasse: string) => Promise<void>;
+  login: (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion") => Promise<void>;
   register: (infos: InscriptionInfos) => Promise<void>;
   logout: () => void;
 }
@@ -74,18 +74,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const login = useCallback(async (identifiant: string, motDePasse: string) => {
-    const estEmail = identifiant.includes("@");
-    const { accessToken } = await api.post<{ accessToken: string }>(
-      "/auth/login",
-      estEmail
-        ? { email: identifiant, password: motDePasse }
-        : { phone: identifiant, password: motDePasse },
-      false,
-    );
-    setToken(accessToken);
-    setUser(decodeJwtPayload(accessToken));
-  }, []);
+  // `espace` (demande du 10 nov. 2026, point 5) : transmis par la page de
+  // connexion dédiée (admin/livreur/gestion) pour que le serveur refuse la
+  // connexion — sans émettre de jeton — si le rôle du compte ne correspond
+  // pas à cet espace. Omis par /marketplace/compte (Marketplace + "Mon
+  // assistant"/Secourable), qui reste ouvert à tout compte ELEGANZ.
+  const login = useCallback(
+    async (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion") => {
+      const estEmail = identifiant.includes("@");
+      const { accessToken } = await api.post<{ accessToken: string }>(
+        "/auth/login",
+        {
+          ...(estEmail ? { email: identifiant } : { phone: identifiant }),
+          password: motDePasse,
+          ...(espace ? { espace } : {}),
+        },
+        false,
+      );
+      setToken(accessToken);
+      setUser(decodeJwtPayload(accessToken));
+    },
+    [],
+  );
 
   const register = useCallback(
     async ({ fullName, identifiant, motDePasse, role = "SHOP_OWNER" }: InscriptionInfos) => {

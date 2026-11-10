@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { ChangePasswordDto } from "./dto/change-password.dto";
 import { ecransAdminEffectifs } from "../admin-team/menu-admin.util";
 
 @Injectable()
@@ -70,6 +71,28 @@ export class AuthService {
       );
     }
 
+    // Cloisonnement par espace (demande du 10 nov. 2026, point 5) — vérifié
+    // ICI, avant `issueToken`, pour qu'un compte créé dans un autre module
+    // ne reparte jamais avec une session valable pour celui-ci, même
+    // stockée sous une mauvaise clé côté front. `dto.espace` absent (cas de
+    // /marketplace/compte, qui dessert aussi "Mon assistant"/Secourable)
+    // reste volontairement sans restriction.
+    if (dto.espace === "admin" && !user.role.startsWith("ADMIN_")) {
+      throw new UnauthorizedException(
+        "Ce compte n'a pas accès au Centre de pilotage ELEGANZ.",
+      );
+    }
+    if (dto.espace === "livreur" && user.role !== "DRIVER") {
+      throw new UnauthorizedException(
+        "Ce compte n'est pas un compte livreur ELEGANZ.",
+      );
+    }
+    if (dto.espace === "gestion" && user.role !== "SHOP_OWNER" && user.role !== "SHOP_STAFF") {
+      throw new UnauthorizedException(
+        "Ce compte n'a pas accès à ELEGANZ Gestion.",
+      );
+    }
+
     return this.issueToken(user.id, user.role);
   }
 
@@ -130,5 +153,26 @@ export class AuthService {
       select: { id: true, fullName: true, email: true, phone: true, role: true },
     });
     return user;
+  }
+
+  // Changement de mot de passe (demande du 10 nov. 2026, point 3) —
+  // revérifie l'ancien mot de passe avant d'accepter le nouveau, pour
+  // qu'une session volée (token encore valide, machine laissée ouverte) ne
+  // suffise pas à elle seule à prendre le contrôle du compte.
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user?.passwordHash || !(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException("Le mot de passe actuel est incorrect.");
+    }
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException("Le nouveau mot de passe doit être différent de l'actuel.");
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    return { ok: true };
   }
 }

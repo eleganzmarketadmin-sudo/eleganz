@@ -24,7 +24,7 @@ export default function ConnexionPage() {
     setErreur(null);
     setEnCours(true);
     try {
-      await login(identifiant, motDePasse);
+      await login(identifiant, motDePasse, "gestion");
       router.push("/caisse");
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("gconnexion_erreur"));

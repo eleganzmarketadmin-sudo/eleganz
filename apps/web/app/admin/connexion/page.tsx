@@ -24,7 +24,7 @@ export default function AdminConnexionPage() {
     setErreur(null);
     setEnCours(true);
     try {
-      await login(identifiant, motDePasse);
+      await login(identifiant, motDePasse, "admin");
       router.push("/admin/pilotage");
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("lconnexion_erreur"));
