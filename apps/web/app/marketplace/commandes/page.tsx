@@ -37,12 +37,16 @@ interface Order {
   currency: string;
   createdAt: string;
   shopOrders: ShopOrder[];
+  // Mode de paiement annoncé à la commande (10 nov. 2026, point 2) — décide
+  // quel circuit de suivi s'applique (paiement au moment de la commande vs
+  // paiement à la livraison), voir annulationPossible() plus bas.
+  payments?: { method: string }[];
 }
 
 const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"> = {
   CREATED: "attente",
   PAYMENT_PENDING: "attente",
-  PAYMENT_CONFIRMED: "neutre",
+  PAYMENT_CONFIRMED: "paye",
   ACCEPTED: "neutre",
   PREPARING: "neutre",
   READY_FOR_PICKUP: "neutre",
@@ -143,7 +147,21 @@ export default function CommandesPage() {
     }
   }
 
-  const STATUTS_ANNULABLES = ["CREATED", "PAYMENT_PENDING", "PAYMENT_CONFIRMED", "ACCEPTED"];
+  // Reflet des deux circuits de suivi côté API (orders.service.ts,
+  // circuitSuivi()) : pour le paiement à la livraison, PAYMENT_CONFIRMED
+  // n'arrive qu'après IN_TRANSIT (trop tard pour annuler), donc la liste
+  // "annulable" ne doit pas y inclure ce statut dans ce cas — sinon le
+  // bouton "annuler" apparaîtrait à tort juste avant la livraison.
+  const STATUTS_ANNULABLES_PAIEMENT_COMMANDE = ["CREATED", "PAYMENT_PENDING", "PAYMENT_CONFIRMED", "ACCEPTED"];
+  const STATUTS_ANNULABLES_PAIEMENT_LIVRAISON = ["CREATED", "ACCEPTED"];
+
+  function annulationPossible(commande: Order, so: ShopOrder): boolean {
+    const circuit =
+      commande.payments?.[0]?.method === "CASH_ON_DELIVERY"
+        ? STATUTS_ANNULABLES_PAIEMENT_LIVRAISON
+        : STATUTS_ANNULABLES_PAIEMENT_COMMANDE;
+    return circuit.includes(so.status);
+  }
 
   // Statuts où signaler un problème n'a pas de sens : déjà annulée, déjà en
   // litige, déjà remboursée ou déjà en retour (un autre circuit prend le
@@ -271,7 +289,7 @@ export default function CommandesPage() {
                       {t("cmd_confirmerReception")}
                     </button>
                   )}
-                  {STATUTS_ANNULABLES.includes(so.status) && (
+                  {annulationPossible(commande, so) && (
                     <button
                       disabled={enCours === so.id}
                       onClick={() => annulerCommande(so.id)}

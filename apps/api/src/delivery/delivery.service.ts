@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/com
 import { PrismaService } from "../prisma/prisma.service";
 import { OrdersService } from "../orders/orders.service";
 import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
-import { OrderStatus, DriverBillingStatus } from "@eleganz/database";
+import { OrderStatus, DriverBillingStatus, PaymentMethod } from "@eleganz/database";
 import { DriverBillingService } from "./driver-billing.service";
 
 @Injectable()
@@ -170,7 +170,7 @@ export class DeliveryService {
   private async assertAssignedDriver(shopOrderId: string, userId: string) {
     const shopOrder = await this.prisma.shopOrder.findUniqueOrThrow({
       where: { id: shopOrderId },
-      include: { driver: true },
+      include: { driver: true, order: { include: { payments: { select: { method: true } } } } },
     });
     if (!shopOrder.driver || shopOrder.driver.userId !== userId) {
       throw new ForbiddenException("Cette livraison ne vous est pas assignée.");
@@ -200,6 +200,15 @@ export class DeliveryService {
    */
   async confirmDelivery(shopOrderId: string, userId: string, proofCode?: string) {
     const shopOrder = await this.assertAssignedDriver(shopOrderId, userId);
+    // Circuit paiement à la livraison (10 nov. 2026, point 2) : ce livreur
+    // perçoit lui-même l'argent au moment de la remise, donc sa déclaration
+    // de livraison vaut aussi confirmation du paiement — on traverse
+    // PAYMENT_CONFIRMED (ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON) dans le même
+    // geste plutôt que d'exiger une étape séparée que ce flux livreur n'a
+    // jamais eu d'écran pour déclencher.
+    if (shopOrder.order.payments[0]?.method === PaymentMethod.CASH_ON_DELIVERY && shopOrder.status === OrderStatus.IN_TRANSIT) {
+      await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.PAYMENT_CONFIRMED);
+    }
     return this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
   }
 }

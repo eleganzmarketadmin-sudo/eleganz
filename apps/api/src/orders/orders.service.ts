@@ -8,7 +8,9 @@ import { prixUnitaireEffectif } from "../common/pricing.util";
 
 // Transitions légales du statut d'une sous-commande (prompt §42). Toute
 // transition hors de cette carte est refusée — évite qu'un statut saute une
-// étape (ex. CREATED -> DELIVERED_DECLARED directement).
+// étape (ex. CREATED -> DELIVERED_DECLARED directement). Ce circuit suppose
+// que le paiement est réglé (mobile money) avant que la boutique n'accepte
+// la commande — adapté au paiement au moment de la commande.
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   CREATED: [OrderStatus.PAYMENT_PENDING, OrderStatus.CANCELLED],
   PAYMENT_PENDING: [OrderStatus.PAYMENT_CONFIRMED, OrderStatus.CANCELLED],
@@ -28,6 +30,41 @@ const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
   REFUNDED: [],
 };
+
+// Second circuit de suivi, pour les commandes payées en espèces à la
+// livraison (demande du 10 nov. 2026, point 2) — le circuit ci-dessus
+// oblige à "confirmer le paiement" avant même d'accepter la commande, ce qui
+// n'a aucun sens tant que le livreur n'a pas effectivement perçu l'argent.
+// Ici PAYMENT_PENDING/PAYMENT_CONFIRMED sont déplacés juste avant
+// DELIVERED_DECLARED : la boutique accepte et prépare la commande sans rien
+// à confirmer au départ, et confirme la réception de l'argent au moment de
+// la livraison (une fois IN_TRANSIT), pas avant.
+const ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON: Record<OrderStatus, OrderStatus[]> = {
+  CREATED: [OrderStatus.ACCEPTED, OrderStatus.CANCELLED],
+  PAYMENT_PENDING: [], // étape inutilisée dans ce circuit
+  PAYMENT_CONFIRMED: [OrderStatus.DELIVERED_DECLARED],
+  ACCEPTED: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
+  PREPARING: [OrderStatus.READY_FOR_PICKUP],
+  READY_FOR_PICKUP: [OrderStatus.PICKED_UP],
+  PICKED_UP: [OrderStatus.IN_TRANSIT],
+  IN_TRANSIT: [OrderStatus.PAYMENT_CONFIRMED],
+  DELIVERED_DECLARED: [OrderStatus.DISPUTED],
+  RECEIVED_CONFIRMED: [OrderStatus.CLOSED, OrderStatus.RETURN_REQUESTED],
+  RETURN_REQUESTED: [OrderStatus.REFUNDED, OrderStatus.DISPUTED],
+  DISPUTED: [OrderStatus.REFUNDED, OrderStatus.RECEIVED_CONFIRMED],
+  CLOSED: [],
+  CANCELLED: [],
+  REFUNDED: [],
+};
+
+/** Choisit le circuit de suivi selon le mode de paiement annoncé par
+ * l'acheteur à la commande (voir createOrder ci-dessous) — CASH_ON_DELIVERY
+ * suit le second circuit, tout le reste (mobile money) garde le premier. */
+function circuitSuivi(methodePaiement: PaymentMethod | undefined): Record<OrderStatus, OrderStatus[]> {
+  return methodePaiement === PaymentMethod.CASH_ON_DELIVERY
+    ? ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON
+    : ALLOWED_TRANSITIONS;
+}
 
 @Injectable()
 export class OrdersService {
@@ -211,6 +248,11 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { buyerId },
       include: {
+        // Mode de paiement annoncé à la commande (10 nov. 2026, point 2) —
+        // l'écran en a besoin pour savoir quel circuit de suivi afficher
+        // (paiement au moment de la commande vs paiement à la livraison),
+        // seulement `method` : jamais le détail interne de l'OrderPayment.
+        payments: { select: { method: true } },
         shopOrders: {
           include: {
             lines: { include: { variant: { include: { product: { select: { id: true, name: true } } } } } },
@@ -280,9 +322,13 @@ export class OrdersService {
     // l'appartenance réelle à la boutique de l'URL.
     const shopOrder = await this.prisma.shopOrder.findFirstOrThrow({
       where: { id: shopOrderId, shopId },
-      include: { lines: true, order: true, shop: { select: { name: true } } },
+      include: {
+        lines: true,
+        order: { include: { payments: { select: { method: true } } } },
+        shop: { select: { name: true } },
+      },
     });
-    const allowed = ALLOWED_TRANSITIONS[shopOrder.status] ?? [];
+    const allowed = circuitSuivi(shopOrder.order.payments[0]?.method)[shopOrder.status] ?? [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
@@ -322,6 +368,20 @@ export class OrdersService {
       }),
       this.prisma.orderStatusEvent.create({ data: { shopOrderId, status: newStatus } }),
     ];
+
+    // Jusqu'ici PAYMENT_CONFIRMED n'était qu'une étiquette de suivi — le
+    // champ OrderPayment.confirmed restait à `false` pour toujours, même une
+    // fois ce statut atteint. Corrigé en même temps que l'ajout du second
+    // circuit (10 nov. 2026, point 2), où cette étape porte justement la
+    // confirmation réelle de l'argent perçu à la livraison.
+    if (newStatus === OrderStatus.PAYMENT_CONFIRMED) {
+      operations.push(
+        this.prisma.orderPayment.updateMany({
+          where: { orderId: shopOrder.orderId },
+          data: { confirmed: true },
+        }),
+      );
+    }
 
     // Annulation (demande du 16 oct. 2026, point 4) — le stock avait été
     // décompté dès la création de la commande (ONLINE_SALE_RESERVED), qu'elle

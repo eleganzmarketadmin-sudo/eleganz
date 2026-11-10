@@ -64,7 +64,8 @@ function versLienWhatsapp(numero: string): string {
 
 // Reflet côté écran de ALLOWED_TRANSITIONS (orders.service.ts) — seulement
 // les transitions qu'un membre de l'équipe déclenche lui-même ; la
-// confirmation de réception reste un geste de l'acheteur.
+// confirmation de réception reste un geste de l'acheteur. Circuit adapté au
+// paiement au moment de la commande (mobile money).
 const TRANSITIONS_STAFF: Record<string, { cible: string; cle: string; annulation?: boolean }[]> = {
   CREATED: [
     { cible: "PAYMENT_PENDING", cle: "gcmd_marquerPaiementAttente" },
@@ -87,6 +88,39 @@ const TRANSITIONS_STAFF: Record<string, { cible: string; cle: string; annulation
   PICKED_UP: [{ cible: "IN_TRANSIT", cle: "statut_enLivraison" }],
   IN_TRANSIT: [{ cible: "DELIVERED_DECLARED", cle: "gcmd_declarerLivraison" }],
 };
+
+// Second circuit (reflet de ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON,
+// orders.service.ts, 10 nov. 2026 point 2) — pour les commandes payées en
+// espèces à la livraison : rien à confirmer avant que le livreur ait
+// effectivement remis l'argent, donc la boutique accepte et prépare
+// directement, et la confirmation de paiement est demandée une fois la
+// commande en route, juste avant de déclarer la livraison.
+const TRANSITIONS_STAFF_PAIEMENT_LIVRAISON: Record<string, { cible: string; cle: string; annulation?: boolean }[]> = {
+  CREATED: [
+    { cible: "ACCEPTED", cle: "gcmd_accepterCommande" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
+  ],
+  ACCEPTED: [
+    { cible: "PREPARING", cle: "gcmd_commencerPreparation" },
+    { cible: "CANCELLED", cle: "action_annuler", annulation: true },
+  ],
+  PREPARING: [{ cible: "READY_FOR_PICKUP", cle: "statut_preteEnlevement" }],
+  READY_FOR_PICKUP: [{ cible: "PICKED_UP", cle: "statut_recupereeLivreur" }],
+  PICKED_UP: [{ cible: "IN_TRANSIT", cle: "statut_enLivraison" }],
+  IN_TRANSIT: [{ cible: "PAYMENT_CONFIRMED", cle: "gcmd_confirmerPaiementLivraison" }],
+  PAYMENT_CONFIRMED: [{ cible: "DELIVERED_DECLARED", cle: "gcmd_declarerLivraison" }],
+};
+
+/** Choisit le circuit de transitions à afficher selon le mode de paiement
+ * annoncé par l'acheteur à la commande — même logique que circuitSuivi()
+ * côté API (orders.service.ts), jamais recalculée indépendamment. */
+function transitionsPour(so: ShopOrder): { cible: string; cle: string; annulation?: boolean }[] {
+  const circuit =
+    so.order.payments?.[0]?.method === "CASH_ON_DELIVERY"
+      ? TRANSITIONS_STAFF_PAIEMENT_LIVRAISON
+      : TRANSITIONS_STAFF;
+  return circuit[so.status] ?? [];
+}
 
 const CLES_STATUT: Record<string, string> = {
   CREATED: "statut_creee",
@@ -113,6 +147,7 @@ const HUMEUR_PAR_STATUT: Record<string, "paye" | "attente" | "alerte" | "neutre"
   DISPUTED: "alerte",
   RETURN_REQUESTED: "alerte",
   REFUNDED: "alerte",
+  PAYMENT_CONFIRMED: "paye",
   RECEIVED_CONFIRMED: "paye",
   CLOSED: "paye",
 };
@@ -388,7 +423,7 @@ function CommandesContent() {
               </div>
             </div>
             <div className={styles.actions}>
-              {(TRANSITIONS_STAFF[so.status] ?? []).map((transition) => (
+              {transitionsPour(so).map((transition) => (
                 <button
                   key={transition.cible}
                   className={`${styles.boutonAction} ${transition.annulation ? styles.boutonAnnuler : ""}`}
