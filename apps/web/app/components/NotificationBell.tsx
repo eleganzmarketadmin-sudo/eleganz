@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, ApiError } from "../lib/api";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { useClampDropdownADroite } from "../lib/useClampDropdown";
+import { usePushNotifications } from "../lib/usePushNotifications";
 import styles from "./NotificationBell.module.css";
 
 interface Notification {
@@ -53,6 +54,13 @@ export function NotificationBell() {
   const conteneurRef = useRef<HTMLDivElement>(null);
   const panneauRef = useRef<HTMLDivElement>(null);
   useClampDropdownADroite(panneauRef, ouvert);
+  const { etat: etatPush, activer: activerPush, rejeterInvite, inviteDejaRejetee } = usePushNotifications();
+  const [inviteRejeteeIci, setInviteRejeteeIci] = useState(false);
+  // 10 nov. 2026 (demande : alerte sur le téléphone à l'arrivée d'un
+  // message/d'une commande, avec redirection au clic) — invite affichée
+  // dans ce panneau déjà familier plutôt qu'une bannière à part, tant que
+  // la personne n'a ni activé ni explicitement refusé.
+  const proposerPush = etatPush === "inactif" && !inviteDejaRejetee() && !inviteRejeteeIci;
 
   const rafraichirCompteur = useCallback(async () => {
     try {
@@ -139,6 +147,26 @@ export function NotificationBell() {
               </button>
             )}
           </div>
+          {proposerPush && (
+            <div className={styles.invitePush}>
+              <span>{t("notif_pushTitre")}</span>
+              <div className={styles.invitePushActions}>
+                <button type="button" className={styles.lienAction} onClick={() => activerPush()}>
+                  {t("notif_pushActiver")}
+                </button>
+                <button
+                  type="button"
+                  className={styles.invitePushIgnorer}
+                  onClick={() => {
+                    rejeterInvite();
+                    setInviteRejeteeIci(true);
+                  }}
+                >
+                  {t("notif_pushPlusTard")}
+                </button>
+              </div>
+            </div>
+          )}
           <div className={styles.liste}>
             {notifications === null && <p className={styles.vide}>…</p>}
             {notifications?.length === 0 && <p className={styles.vide}>{t("notif_aucune")}</p>}

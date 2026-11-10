@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationType } from "@eleganz/database";
+import { PushSenderService } from "../push/push-sender.service";
+import { PushSubscriptionsService } from "../push/push-subscriptions.service";
 
 /**
  * Notifications in-app (15 oct. 2026, demande UX point 7) — fondation
@@ -17,7 +19,11 @@ import { NotificationType } from "@eleganz/database";
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushSender: PushSenderService,
+    private readonly pushSubscriptions: PushSubscriptionsService,
+  ) {}
 
   async notifierUtilisateurs(
     userIds: string[],
@@ -40,7 +46,7 @@ export class NotificationsService {
 
     const settings = await this.prisma.platformSettings.findUnique({
       where: { id: "platform" },
-      select: { notificationsInAppEnabled: true },
+      select: { notificationsInAppEnabled: true, notificationsPushEnabled: true },
     });
     // Pas de ligne par défaut tant qu'un admin n'a jamais configuré
     // PlatformSettings — on considère l'in-app actif par défaut (valeur de
@@ -57,6 +63,42 @@ export class NotificationsService {
         link: params.link,
       })),
     });
+
+    // Notifications push (10 nov. 2026) : même logique de repli que
+    // notificationsInAppEnabled ci-dessus (actif par défaut tant qu'aucun
+    // admin n'a explicitement coupé), ET le canal doit être réellement
+    // câblé (clés VAPID présentes) — voir PushSenderService.estConfigure().
+    // Ne bloque jamais la création de la notification in-app ci-dessus :
+    // lancé après, sans attendre la fin de l'envoi (l'appelant a déjà ce
+    // qu'il attend de cette méthode une fois la ligne en base écrite).
+    if ((!settings || settings.notificationsPushEnabled) && this.pushSender.estConfigure()) {
+      this.envoyerPushEnArrierePlan(uniques, params).catch((err) => {
+        this.logger.error(`Échec du relais push: ${err instanceof Error ? err.message : err}`);
+      });
+    }
+  }
+
+  private async envoyerPushEnArrierePlan(
+    userIds: string[],
+    params: { title: string; body: string; link?: string },
+  ) {
+    const abonnements = await this.pushSubscriptions.pourUtilisateurs(userIds);
+    const resultats = await Promise.allSettled(
+      abonnements.map(async (abonnement) => {
+        const resultat = await this.pushSender.envoyer(abonnement, {
+          title: params.title,
+          body: params.body,
+          link: params.link,
+        });
+        if (resultat === "expiree") {
+          await this.pushSubscriptions.supprimerExpiree(abonnement.endpoint);
+        }
+      }),
+    );
+    const echecs = resultats.filter((r) => r.status === "rejected").length;
+    if (echecs > 0) {
+      this.logger.warn(`${echecs}/${abonnements.length} envoi(s) push en échec pour "${params.title}"`);
+    }
   }
 
   list(userId: string, options: { nonLuesSeulement?: boolean } = {}) {

@@ -28,6 +28,7 @@ import { ComptableModule } from "./comptable/comptable.module";
 import { FinanceModule } from "./finance/finance.module";
 import { AiCreditsModule } from "./ai-credits/ai-credits.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { PushModule } from "./push/push.module";
 import { MessagingModule } from "./messaging/messaging.module";
 import { EcheancierModule } from "./echeancier/echeancier.module";
 import { GeoModule } from "./geo/geo.module";
@@ -74,6 +75,7 @@ import { GuidesModule } from "./guides/guides.module";
     FinanceModule,
     AiCreditsModule,
     NotificationsModule,
+    PushModule,
     MessagingModule,
     EcheancierModule,
     GeoModule,

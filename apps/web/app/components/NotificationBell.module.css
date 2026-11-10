@@ -75,6 +75,38 @@
   overflow-y: auto;
 }
 
+/* Invite "activer les notifications push" (10 nov. 2026) — même esprit
+   visuel que .itemNonLu (léger lavis cobalt) pour signaler qu'il y a une
+   action à faire, sans ressembler à une notification réelle. */
+.invitePush {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  background: color-mix(in srgb, var(--color-cobalt) 6%, var(--color-surface));
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+}
+
+.invitePushActions {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.invitePushIgnorer {
+  background: none;
+  border: none;
+  color: var(--color-texte-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.invitePushIgnorer:hover {
+  text-decoration: underline;
+}
+
 .vide {
   padding: var(--espace-4);
   color: var(--color-texte-muted);

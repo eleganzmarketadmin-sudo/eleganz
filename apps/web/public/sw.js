@@ -107,3 +107,56 @@ async function cachePuisReseau(request, nomCache) {
   cache.put(request, reponse.clone());
   return reponse;
 }
+
+/**
+ * Notifications push (10 nov. 2026, demande : alerter la personne sur son
+ * téléphone/ordinateur à l'arrivée d'un message ou d'une commande, avec
+ * redirection au clic) — reçues ici même si l'app n'est pas ouverte, c'est
+ * tout l'intérêt par rapport au sondage déjà fait par NotificationBell
+ * (qui ne tourne que si un onglet est ouvert). La charge envoyée par
+ * NotificationsService (voir apps/api/src/notifications) est un simple
+ * JSON { title, body, link }.
+ */
+self.addEventListener("push", (event) => {
+  let charge = {};
+  try {
+    charge = event.data ? event.data.json() : {};
+  } catch {
+    // Charge non-JSON (ne devrait pas arriver, NotificationsService envoie
+    // toujours du JSON) — on affiche quand même une notification générique
+    // plutôt que de ne rien afficher du tout.
+  }
+  const titre = charge.title || "ELEGANZ";
+  event.waitUntil(
+    self.registration.showNotification(titre, {
+      body: charge.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { link: charge.link || "/" },
+    }),
+  );
+});
+
+/**
+ * Clic sur la notification : si un onglet ELEGANZ est déjà ouvert, on le
+ * ramène au premier plan et on le fait naviguer vers le lien plutôt que
+ * d'ouvrir un doublon — sinon on ouvre un nouvel onglet directement sur ce
+ * lien (demande explicite : "possibilité d'être redirigé sur la
+ * plateforme").
+ */
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const lien = (event.notification.data && event.notification.data.link) || "/";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((liste) => {
+      for (const fenetre of liste) {
+        const url = new URL(fenetre.url);
+        if (url.origin === self.location.origin) {
+          if ("navigate" in fenetre) fenetre.navigate(lien);
+          return fenetre.focus();
+        }
+      }
+      return clients.openWindow(lien);
+    }),
+  );
+});

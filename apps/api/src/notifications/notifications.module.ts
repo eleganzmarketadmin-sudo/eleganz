@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { NotificationsService } from "./notifications.service";
 import { NotificationsController } from "./notifications.controller";
 import { AuthModule } from "../auth/auth.module";
+import { PushModule } from "../push/push.module";
 
 // Importe AuthModule : NotificationsController utilise @UseGuards(JwtAuthGuard),
 // qui dépend de JwtService (fourni par AuthModule). Sans cet import, Nest ne
@@ -9,7 +10,7 @@ import { AuthModule } from "../auth/auth.module";
 // ("Piège fréquent : tout nouveau module avec @UseGuards(JwtAuthGuard) doit
 // importer AuthModule").
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PushModule],
   providers: [NotificationsService],
   controllers: [NotificationsController],
   exports: [NotificationsService],
