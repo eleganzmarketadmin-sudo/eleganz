@@ -110,6 +110,13 @@ model PlatformSettings {
   notificationsInAppEnabled Boolean @default(true)
   notificationsEmailEnabled Boolean @default(false)
   notificationsSmsEnabled   Boolean @default(false)
+  // 10 nov. 2026 (demande : être alerté sur le téléphone à l'arrivée d'un
+  // message/d'une commande, avec redirection au clic) — notifications push
+  // du navigateur (Web Push), réellement câblées dès que VAPID_PUBLIC_KEY/
+  // VAPID_PRIVATE_KEY sont configurées (voir PushSenderService) ; par
+  // défaut actif comme l'in-app, contrairement à email/SMS ci-dessus qui
+  // restent des interrupteurs en attente d'un fournisseur.
+  notificationsPushEnabled Boolean @default(true)
 
   // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, point 2) —
   // même esprit que Shop.fiscalLegalName/fiscalIdNumber/fiscalAddress/
@@ -265,6 +272,7 @@ model User {
 
   // Notifications & messagerie (15 oct. 2026, fondations UX points 4 et 7)
   notifications               Notification[]
+  pushSubscriptions           PushSubscription[]
   conversationParticipations  ConversationParticipant[]
   sentMessages                Message[]
 
@@ -2288,6 +2296,28 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
+}
+
+// Abonnement Web Push d'UN navigateur/appareil précis (10 nov. 2026, demande
+// d'alerte sur le téléphone à l'arrivée d'un message/d'une commande) — un
+// même compte peut avoir plusieurs lignes (téléphone + ordinateur, etc.),
+// chacune reçoit l'envoi séparément. `endpoint` identifie l'abonnement côté
+// navigateur et sert de clé pour mettre à jour ou retirer la bonne ligne
+// (resouscrire après expiration envoie un nouvel endpoint, pas le même).
+// Supprimée automatiquement par PushSenderService quand le navigateur
+// confirme que l'abonnement n'est plus valide (404/410 à l'envoi), pour ne
+// pas accumuler des lignes mortes.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // Messagerie interne (point 4) — volontairement générique : une conversation
