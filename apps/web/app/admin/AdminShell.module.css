@@ -69,20 +69,40 @@
   background: var(--color-or);
 }
 
-@media (max-width: 560px) {
-  .entete {
-    flex-wrap: wrap;
-    gap: var(--espace-2);
-  }
-  .contenu {
-    padding: var(--espace-4) var(--espace-3);
-  }
-}
-
 .enteteActions {
   display: flex;
   align-items: center;
   gap: var(--espace-3);
+}
+
+/* 10 nov. 2026 : sur mobile, `justify-content: space-between` + un simple
+   `flex-wrap` éparpillait l'entête — bouton Accueil, cloche, sélecteur de
+   langue et bascule de thème retombaient en vrac sur une deuxième ligne, et
+   « Se déconnecter » se retrouvait seul sur sa propre ligne poussé tout à
+   droite par le `space-between` hérité, avec un grand vide à gauche. On
+   empile proprement en colonne à la place : la marque centrée, puis les
+   actions centrées et uniformément espacées, puis la déconnexion en pleine
+   largeur — plus de ligne avec un seul élément mal aligné. */
+@media (max-width: 560px) {
+  .entete {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--espace-3);
+  }
+  .marque {
+    justify-content: center;
+  }
+  .enteteActions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .deconnexion {
+    width: 100%;
+    text-align: center;
+  }
+  .contenu {
+    padding: var(--espace-4) var(--espace-3);
+  }
 }
 
 .contenu {
