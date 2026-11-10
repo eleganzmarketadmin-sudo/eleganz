@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { PasswordResetService } from "./password-reset.service";
 import { EmailSenderService } from "./email-sender.service";
 import { WhatsAppSenderService } from "./whatsapp-sender.service";
+import { SmsSenderService } from "./sms-sender.service";
 import { PasswordResetController, AdminPasswordResetController } from "./password-reset.controller";
 import { AuthModule } from "../auth/auth.module";
 import { NotificationsModule } from "../notifications/notifications.module";
@@ -12,7 +13,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
 // même module pour rester avec son service.
 @Module({
   imports: [AuthModule, NotificationsModule],
-  providers: [PasswordResetService, EmailSenderService, WhatsAppSenderService],
+  providers: [PasswordResetService, EmailSenderService, WhatsAppSenderService, SmsSenderService],
   controllers: [PasswordResetController, AdminPasswordResetController],
 })
 export class PasswordResetModule {}

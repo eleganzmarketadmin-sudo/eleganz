@@ -49,6 +49,10 @@ interface ShopOrder {
     deliveryAvenue?: string | null;
     deliveryRepere?: string | null;
     deliveryNote?: string | null;
+    // Intention de paiement annoncée par l'acheteur (10 nov. 2026, point 4) —
+    // juste informatif (voir OrdersService.createOrder), pour que la
+    // boutique sache à quoi s'attendre à la remise de la commande.
+    payments?: { method: string; confirmed: boolean }[];
   };
 }
 
@@ -283,7 +287,8 @@ function CommandesContent() {
               so.order.deliveryQuartier ||
               so.order.deliveryAvenue ||
               so.order.deliveryRepere ||
-              so.order.deliveryNote) && (
+              so.order.deliveryNote ||
+              so.order.payments?.[0]) && (
               <div className={styles.contact}>
                 <div className={styles.contactLigne}>
                   <strong>{so.order.buyer?.fullName ?? t("gcmd_acheteurFallback")}</strong>
@@ -311,6 +316,14 @@ function CommandesContent() {
                 {so.order.deliveryNote && (
                   <div className={styles.contactAdresse}>
                     {t("gcmd_notePrefix")} {so.order.deliveryNote}
+                  </div>
+                )}
+                {so.order.payments?.[0] && (
+                  <div className={styles.contactAdresse}>
+                    {t("gcmd_paiementPrefix")}{" "}
+                    {so.order.payments[0].method === "MOBILE_MONEY"
+                      ? t("cmd_modePaiementMobileMoney")
+                      : t("cmd_modePaiementCash")}
                   </div>
                 )}
               </div>

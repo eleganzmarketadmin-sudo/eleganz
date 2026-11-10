@@ -5,6 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { EmailSenderService } from "./email-sender.service";
 import { WhatsAppSenderService } from "./whatsapp-sender.service";
+import { SmsSenderService } from "./sms-sender.service";
 import { NotificationType, PasswordResetRequestStatus } from "@eleganz/database";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 
@@ -49,6 +50,7 @@ export class PasswordResetService {
     private readonly notifications: NotificationsService,
     private readonly email: EmailSenderService,
     private readonly whatsapp: WhatsAppSenderService,
+    private readonly sms: SmsSenderService,
   ) {}
 
   // Toujours la même réponse générique quant à l'existence du compte, qu'un
@@ -90,16 +92,21 @@ export class PasswordResetService {
       };
     }
 
-    // Canal préféré : email si disponible, sinon WhatsApp — évalués dans
-    // cet ordre car l'email ne demande aucune action préalable au
-    // destinataire, contrairement au bac à sable WhatsApp (voir
-    // WhatsAppSenderService).
-    const canal: "EMAIL" | "WHATSAPP" | null =
+    // Canal préféré : email, puis SMS, puis WhatsApp (demande du 10 nov.
+    // 2026, point 4 — ajout du SMS) — évalués dans cet ordre car ni l'email
+    // ni le SMS ne demandent une action préalable au destinataire,
+    // contrairement au bac à sable WhatsApp (voir WhatsAppSenderService) ;
+    // le SMS passe avant WhatsApp ici parce qu'il fonctionne pour
+    // n'importe quel numéro dès que TWILIO_SMS_FROM est configuré, sans
+    // dépendre d'un numéro WhatsApp Business approuvé par Meta.
+    const canal: "EMAIL" | "SMS" | "WHATSAPP" | null =
       utilisateur.email && this.email.estConfigure()
         ? "EMAIL"
-        : utilisateur.phone && this.whatsapp.estConfigure()
-          ? "WHATSAPP"
-          : null;
+        : utilisateur.phone && this.sms.estConfigure()
+          ? "SMS"
+          : utilisateur.phone && this.whatsapp.estConfigure()
+            ? "WHATSAPP"
+            : null;
 
     if (!canal) {
       await this.prisma.passwordResetRequest.create({ data: { identifiant: identifiantNettoye, userId: utilisateur.id, message } });
@@ -131,10 +138,15 @@ export class PasswordResetService {
             "Votre code de réinitialisation ELEGANZ",
             `Votre code de réinitialisation est : ${code}\n\nCe code expire dans ${DUREE_CODE_MINUTES} minutes. Si vous n'avez pas demandé cette réinitialisation, ignorez ce message.`,
           )
-        : await this.whatsapp.envoyer(
-            utilisateur.phone!,
-            `ELEGANZ — Votre code de réinitialisation est : ${code}\nCe code expire dans ${DUREE_CODE_MINUTES} minutes.`,
-          );
+        : canal === "SMS"
+          ? await this.sms.envoyer(
+              utilisateur.phone!,
+              `ELEGANZ — Votre code de réinitialisation est : ${code}\nCe code expire dans ${DUREE_CODE_MINUTES} minutes.`,
+            )
+          : await this.whatsapp.envoyer(
+              utilisateur.phone!,
+              `ELEGANZ — Votre code de réinitialisation est : ${code}\nCe code expire dans ${DUREE_CODE_MINUTES} minutes.`,
+            );
 
     if (!envoye) {
       // L'envoi a échoué malgré un fournisseur configuré (clé invalide,
@@ -170,10 +182,11 @@ export class PasswordResetService {
       },
     });
 
+    const canalLabel = canal === "EMAIL" ? "email" : canal === "SMS" ? "SMS" : "WhatsApp";
     return {
       canal,
       destinataireMasque: masquerIdentifiant(canal === "EMAIL" ? utilisateur.email! : utilisateur.phone!),
-      message: `Un code vous a été envoyé par ${canal === "EMAIL" ? "email" : "WhatsApp"}. Saisissez-le ci-dessous avec votre nouveau mot de passe.`,
+      message: `Un code vous a été envoyé par ${canalLabel}. Saisissez-le ci-dessous avec votre nouveau mot de passe.`,
     };
   }
 

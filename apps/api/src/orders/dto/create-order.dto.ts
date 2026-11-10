@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsInt,
   IsOptional,
   IsPositive,
@@ -67,4 +68,16 @@ export class CreateOrderDto {
   @IsString()
   @MaxLength(300)
   deliveryNote?: string;
+
+  // Intention de paiement à la livraison (demande du 10 nov. 2026, point 4)
+  // — le paiement en ligne n'existe pas encore (voir cmd_notePaiement côté
+  // front) : ce champ capture seulement ce que l'acheteur prévoit de faire
+  // à la remise de la commande (espèces, ou virement mobile money une fois
+  // sur place), pour que la boutique/le livreur sache à quoi s'attendre.
+  // Jamais de montant prélevé ici — voir OrdersService.createOrder, qui crée
+  // un OrderPayment `confirmed: false`, uniquement informatif tant qu'aucune
+  // passerelle de paiement n'est branchée.
+  @IsOptional()
+  @IsIn(["CASH", "MOBILE_MONEY"])
+  paymentMethod?: "CASH" | "MOBILE_MONEY";
 }

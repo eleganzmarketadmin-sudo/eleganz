@@ -8,19 +8,20 @@ import { ChampMotDePasse } from "../components/ChampMotDePasse";
 import styles from "./page.module.css";
 
 interface ReponseDemande {
-  canal: "EMAIL" | "WHATSAPP" | "ADMIN";
+  canal: "EMAIL" | "SMS" | "WHATSAPP" | "ADMIN";
   destinataireMasque?: string;
   message: string;
 }
 
 // Mot de passe oublié (16 oct. 2026, point 1, puis "je veux que la
-// réception d'un code par email/WhatsApp soit branché") : page commune à
-// tous les espaces (Marketplace, Gestion, Livreur, Centre de pilotage).
-// Une seule étape suffit à décider le canal (le serveur choisit — email
-// d'abord, puis WhatsApp, voir PasswordResetService) : si un code a pu
-// être envoyé, l'étape 2 permet de le saisir avec le nouveau mot de passe
-// sans aucune intervention admin ; sinon, la demande est honnêtement
-// transmise à l'administration (même écran de confirmation qu'avant).
+// réception d'un code par email/WhatsApp soit branché", puis 10 nov. 2026
+// point 4 — ajout du SMS) : page commune à tous les espaces (Marketplace,
+// Gestion, Livreur, Centre de pilotage). Une seule étape suffit à décider
+// le canal (le serveur choisit — email d'abord, puis SMS, puis WhatsApp,
+// voir PasswordResetService) : si un code a pu être envoyé, l'étape 2
+// permet de le saisir avec le nouveau mot de passe sans aucune
+// intervention admin ; sinon, la demande est honnêtement transmise à
+// l'administration (même écran de confirmation qu'avant).
 export default function MotDePasseOubliePage() {
   const { t } = useLocale();
   const [identifiant, setIdentifiant] = useState("");
@@ -98,10 +99,13 @@ export default function MotDePasseOubliePage() {
       ) : (
         <form onSubmit={verifierCode}>
           <p className={styles.optionsIndisponibles}>
-            {t(reponse.canal === "EMAIL" ? "mdpoublie_codeEnvoyeEmail" : "mdpoublie_codeEnvoyeWhatsapp").replace(
-              "{destinataire}",
-              reponse.destinataireMasque ?? "",
-            )}
+            {t(
+              reponse.canal === "EMAIL"
+                ? "mdpoublie_codeEnvoyeEmail"
+                : reponse.canal === "SMS"
+                  ? "mdpoublie_codeEnvoyeSms"
+                  : "mdpoublie_codeEnvoyeWhatsapp",
+            ).replace("{destinataire}", reponse.destinataireMasque ?? "")}
           </p>
           {erreur && <div className={styles.erreur}>{erreur}</div>}
           <div className={styles.champ}>

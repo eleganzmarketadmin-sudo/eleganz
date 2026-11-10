@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
-import { NotificationType, OrderStatus, Prisma, StockMovementType } from "@eleganz/database";
+import { NotificationType, OrderStatus, PaymentMethod, Prisma, StockMovementType } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { prixUnitaireEffectif } from "../common/pricing.util";
@@ -137,6 +137,17 @@ export class OrdersService {
           deliveryAvenue: dto.deliveryAvenue,
           deliveryRepere: dto.deliveryRepere,
           deliveryNote: dto.deliveryNote,
+          // Intention de paiement (demande du 10 nov. 2026, point 4) — simple
+          // enregistrement informatif (`confirmed: false`, aucune passerelle
+          // branchée) : voir le commentaire sur CreateOrderDto.paymentMethod.
+          payments: {
+            create: {
+              method: dto.paymentMethod === "MOBILE_MONEY" ? PaymentMethod.MOBILE_MONEY : PaymentMethod.CASH_ON_DELIVERY,
+              provider: dto.paymentMethod === "MOBILE_MONEY" ? "mobile_money_a_la_livraison" : "cash_on_delivery",
+              amount: totalAmount,
+              confirmed: false,
+            },
+          },
           shopOrders: {
             create: [...byShop.entries()].map(([shopId, items]) => {
               const subtotal = items.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
@@ -238,6 +249,10 @@ export class OrdersService {
             deliveryAvenue: true,
             deliveryRepere: true,
             deliveryNote: true,
+            // Intention de paiement annoncée par l'acheteur (10 nov. 2026,
+            // point 4) — juste `method`/`confirmed`, jamais le détail de
+            // l'OrderPayment complet (provider/providerRef internes).
+            payments: { select: { method: true, confirmed: true } },
           },
         },
       },

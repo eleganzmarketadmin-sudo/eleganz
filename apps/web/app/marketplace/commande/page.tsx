@@ -40,6 +40,12 @@ export default function CommandePage() {
   const [repere, setRepere] = useState("");
   const [note, setNote] = useState("");
 
+  // Mode de paiement prévu (demande du 10 nov. 2026, point 4) — purement
+  // informatif tant qu'aucune passerelle n'est branchée (voir
+  // OrdersService.createOrder) : CASH reste le choix par défaut puisque
+  // c'est déjà le fonctionnement implicite de la plateforme.
+  const [modePaiement, setModePaiement] = useState<"CASH" | "MOBILE_MONEY">("CASH");
+
   // Carnet d'adresses (prompt du 15 oct. 2026, point 2) — pré-remplit les
   // champs ci-dessus au lieu de les resaisir à chaque commande ; la saisie
   // libre reste toujours possible et prioritaire si l'acheteur la modifie.
@@ -115,6 +121,7 @@ export default function CommandePage() {
         deliveryAvenue: avenue.trim() || undefined,
         deliveryRepere: repere.trim() || undefined,
         deliveryNote: note.trim() || undefined,
+        paymentMethod: modePaiement,
       });
       vider();
       setCommandeConfirmee(true);
@@ -171,6 +178,33 @@ export default function CommandePage() {
       </div>
 
       <p className={styles.note}>{t("cmd_notePaiement")}</p>
+
+      <div className={styles.livraison}>
+        <h2 className={styles.sousTitre}>{t("cmd_sousTitrePaiement")}</h2>
+        <p className={styles.note} style={{ marginBottom: "var(--espace-3)" }}>
+          {t("cmd_notePaiementChoix")}
+        </p>
+        <div className={styles.champs}>
+          <label className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "var(--espace-2)" }}>
+            <input
+              type="radio"
+              name="modePaiement"
+              checked={modePaiement === "CASH"}
+              onChange={() => setModePaiement("CASH")}
+            />
+            <span>{t("cmd_modePaiementCash")}</span>
+          </label>
+          <label className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "var(--espace-2)" }}>
+            <input
+              type="radio"
+              name="modePaiement"
+              checked={modePaiement === "MOBILE_MONEY"}
+              onChange={() => setModePaiement("MOBILE_MONEY")}
+            />
+            <span>{t("cmd_modePaiementMobileMoney")}</span>
+          </label>
+        </div>
+      </div>
 
       <div className={styles.livraison}>
         <h2 className={styles.sousTitre}>{t("cmd_sousTitreLivraison")}</h2>
