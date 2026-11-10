@@ -66,7 +66,7 @@
 }
 
 .lien {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
   font-weight: 600;
   text-decoration: underline;
 }
@@ -149,7 +149,7 @@
 }
 
 .carte:hover .imageProduit {
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
   border-width: 2px;
 }
 
@@ -160,7 +160,7 @@
 }
 
 .carte:hover .nomProduit {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
 }
 
 .prix {

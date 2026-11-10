@@ -74,7 +74,7 @@
 }
 
 .carte:hover .logo {
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
   border-width: 2px;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .carte:hover .nomBoutique {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
 }
 
 .note {

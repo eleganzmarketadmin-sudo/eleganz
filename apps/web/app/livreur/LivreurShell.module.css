@@ -23,7 +23,11 @@
 }
 
 .marque span {
-  color: var(--color-flamme);
+  /* --color-encre-fixe (fond de .entete) ne se retourne jamais : il faut
+     donc la variante fixe --color-flamme-sur-fonce, pas --color-flamme-texte
+     qui ne s'éclaircit qu'en mode sombre et restait flou en mode clair
+     (~3.6:1 dans les deux thèmes avec la teinte brute). */
+  color: var(--color-flamme-sur-fonce);
 }
 
 .enteteActions {
@@ -58,7 +62,7 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-flamme);
+  border-bottom: 2px solid var(--color-flamme-texte);
   overflow-x: auto;
 }
 

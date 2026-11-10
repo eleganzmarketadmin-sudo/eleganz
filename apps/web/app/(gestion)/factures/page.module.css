@@ -46,8 +46,10 @@
 
 .boutonSecondaire {
   background: var(--color-surface);
-  color: var(--color-cobalt);
-  border: 2px solid var(--color-cobalt);
+  /* 10 nov. 2026 : --color-cobalt-texte reste lisible en mode sombre,
+     contrairement au cobalt brut (voir globals.css). */
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
   padding: var(--espace-2) var(--espace-4);
   min-height: 40px;
   cursor: pointer;
@@ -111,9 +113,9 @@
 
 .boutonReimprimer {
   padding: var(--espace-1) var(--espace-3);
-  border: 2px solid var(--color-cobalt);
+  border: 2px solid var(--color-cobalt-texte);
   background: var(--color-surface);
-  color: var(--color-cobalt);
+  color: var(--color-cobalt-texte);
   cursor: pointer;
   font-weight: 500;
   min-height: 32px;

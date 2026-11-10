@@ -26,12 +26,14 @@
 }
 
 .statutVerifie {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
   font-weight: 600;
 }
 
 .statutNonVerifie {
-  color: var(--color-or);
+  /* 10 nov. 2026 : l'or brut en texte est trop clair/flou sur une surface
+     claire — voir --color-or-texte dans globals.css. */
+  color: var(--color-or-texte);
   font-weight: 600;
 }
 

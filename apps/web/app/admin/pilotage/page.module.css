@@ -46,23 +46,25 @@
 }
 
 .carteCobalt {
-  border-left-color: var(--color-cobalt);
+  /* 10 nov. 2026 : --color-cobalt-texte reste lisible en mode sombre,
+     contrairement au cobalt brut (voir globals.css). */
+  border-left-color: var(--color-cobalt-texte);
 }
 
 .carteMagenta {
-  border-left-color: var(--color-magenta);
+  border-left-color: var(--color-magenta-texte);
 }
 
 .carteOr {
-  border-left-color: var(--color-or);
+  border-left-color: var(--color-or-texte);
 }
 
 .carteFlamme {
-  border-left-color: var(--color-flamme);
+  border-left-color: var(--color-flamme-texte);
 }
 
 .carteFlamme .carteValeur {
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
 }
 
 .grilleGraphiques {
@@ -92,8 +94,8 @@
 
 .boutonExport {
   background: var(--color-surface);
-  color: var(--color-cobalt);
-  border: 2px solid var(--color-cobalt);
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
   padding: var(--espace-2) var(--espace-4);
   min-height: 40px;
   cursor: pointer;

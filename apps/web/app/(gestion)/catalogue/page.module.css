@@ -12,7 +12,9 @@
 }
 
 .blocImport {
-  border: 2px solid var(--color-cobalt);
+  /* 10 nov. 2026 : --color-cobalt-texte reste lisible en mode sombre,
+     contrairement au cobalt brut (voir globals.css). */
+  border: 2px solid var(--color-cobalt-texte);
   padding: var(--espace-4);
   margin-bottom: var(--espace-4);
   background: var(--color-surface);
@@ -38,8 +40,8 @@
 
 .boutonSecondaire {
   background: var(--color-surface);
-  color: var(--color-cobalt);
-  border: 2px solid var(--color-cobalt);
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
   padding: var(--espace-2) var(--espace-4);
   min-height: 40px;
   cursor: pointer;
@@ -66,7 +68,7 @@
 .listeErreursImport {
   margin: var(--espace-2) 0 0;
   padding-left: var(--espace-4);
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
 }
 
 .recherche {
@@ -220,7 +222,7 @@
 }
 
 .boutonCrayon:hover {
-  color: var(--color-cobalt);
+  color: var(--color-cobalt-texte);
 }
 
 .ajoutVariante {

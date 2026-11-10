@@ -83,19 +83,20 @@
 }
 
 .comptable {
-  border-color: var(--color-vert-paiement);
+  border-color: var(--color-vert-paiement-texte);
 }
 
 .gestion {
-  border-color: var(--color-cobalt);
+  /* 10 nov. 2026 : visible dans les deux modes, voir globals.css */
+  border-color: var(--color-cobalt-texte);
 }
 
 .marketplace {
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
 }
 
 .livreur {
-  border-color: var(--color-flamme);
+  border-color: var(--color-flamme-texte);
 }
 
 .engagement {

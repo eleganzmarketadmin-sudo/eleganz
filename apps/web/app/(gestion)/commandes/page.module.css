@@ -36,7 +36,7 @@
 }
 
 .lienWhatsapp {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
   font-weight: 600;
   text-decoration: underline;
 }
@@ -62,9 +62,9 @@
 
 .boutonAction {
   padding: var(--espace-2) var(--espace-3);
-  border: 2px solid var(--color-cobalt);
+  border: 2px solid var(--color-cobalt-texte);
   background: var(--color-surface);
-  color: var(--color-cobalt);
+  color: var(--color-cobalt-texte);
   cursor: pointer;
   font-weight: 500;
   min-height: 40px;
@@ -76,8 +76,8 @@
 }
 
 .boutonAnnuler {
-  border-color: var(--color-flamme);
-  color: var(--color-flamme);
+  border-color: var(--color-flamme-texte);
+  color: var(--color-flamme-texte);
 }
 
 .boutonAnnuler:hover {

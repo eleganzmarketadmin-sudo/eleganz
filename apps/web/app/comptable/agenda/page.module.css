@@ -56,11 +56,12 @@
 }
 
 .type_dette {
-  border-left: 4px solid var(--color-magenta);
+  border-left: 4px solid var(--color-magenta-texte);
 }
 
 .type_creance {
-  border-left: 4px solid var(--color-cobalt);
+  /* 10 nov. 2026 : visible dans les deux modes, voir globals.css */
+  border-left: 4px solid var(--color-cobalt-texte);
 }
 
 .type_emprunt {
@@ -68,11 +69,11 @@
 }
 
 .type_loyer {
-  border-left: 4px solid var(--color-vert-paiement);
+  border-left: 4px solid var(--color-vert-paiement-texte);
 }
 
 .type_versement {
-  border-left: 4px solid var(--color-flamme);
+  border-left: 4px solid var(--color-flamme-texte);
 }
 
 .navigationMois {

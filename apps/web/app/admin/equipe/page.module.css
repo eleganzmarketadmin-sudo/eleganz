@@ -86,8 +86,8 @@
 
 .boutonRetirer {
   background: none;
-  border: 1px solid var(--color-flamme);
-  color: var(--color-flamme);
+  border: 1px solid var(--color-flamme-texte);
+  color: var(--color-flamme-texte);
   padding: var(--espace-1) var(--espace-3);
   min-height: 36px;
   cursor: pointer;

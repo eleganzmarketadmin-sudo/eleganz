@@ -174,7 +174,7 @@
   width: 100%;
   order: 10;
   font-size: 0.75rem;
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
 }
 
 .ligneTicketMontant {
@@ -188,7 +188,7 @@
 .ligneTicketSupprimer {
   background: none;
   border: none;
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   cursor: pointer;
   font-weight: 600;
   min-height: var(--touche-min);

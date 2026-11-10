@@ -179,7 +179,7 @@
 }
 
 .cadre[data-template="MODERNE"] .lien {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
 }
 
 /* --- CRÉATIF : bloc diagonal coloré, chips rotatives, grand nom --- */
@@ -204,7 +204,12 @@
 }
 
 .cadre[data-template="CREATIF"] .domaine {
-  background: var(--color-ink);
+  /* 10 nov. 2026 : --color-ink se retourne avec le thème (clair en mode
+     sombre) — cette étiquette doit toujours rester un fond sombre avec du
+     texte or, donc --color-encre-fixe (jamais retourné) plutôt que
+     --color-ink, sans quoi le texte or devenait illisible en mode sombre
+     (fond devenu clair, ~1.9:1). */
+  background: var(--color-encre-fixe);
   color: var(--color-or);
   border-radius: 4px;
   transform: rotate(-2deg);
@@ -221,6 +226,6 @@
 }
 
 .cadre[data-template="CREATIF"] .lien {
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   font-weight: 700;
 }

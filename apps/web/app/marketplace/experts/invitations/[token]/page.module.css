@@ -47,6 +47,6 @@
 }
 
 .lien {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
   text-decoration: underline;
 }

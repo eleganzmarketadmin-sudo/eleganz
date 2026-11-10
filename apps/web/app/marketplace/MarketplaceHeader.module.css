@@ -7,7 +7,12 @@
   padding: var(--espace-3) var(--espace-5);
   background: var(--color-encre-fixe);
   color: #fff;
-  border-bottom: 2px solid var(--color-magenta);
+  /* 10 nov. 2026 : --color-encre-fixe ne se retourne JAMAIS avec le thème,
+     donc --color-magenta-texte (qui ne change qu'en mode sombre) laissait
+     ce filet flou en mode clair aussi (magenta brut sur encre-fixe :
+     2.61:1 dans les deux thèmes). --color-magenta-sur-fonce est le jeton
+     déjà prévu pour ce cas précis (texte/filet sur fond fixe-sombre). */
+  border-bottom: 2px solid var(--color-magenta-sur-fonce);
 }
 
 .marque {

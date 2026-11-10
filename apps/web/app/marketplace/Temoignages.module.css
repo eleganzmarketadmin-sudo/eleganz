@@ -26,7 +26,7 @@
 }
 
 .etoiles {
-  color: var(--color-or);
+  color: var(--color-or-texte);
   font-size: 1.0625rem;
   letter-spacing: 1px;
 }

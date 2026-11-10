@@ -23,7 +23,11 @@
 }
 
 .marque span {
-  color: var(--color-vert-paiement);
+  /* --color-encre-fixe (fond de .entete) ne se retourne jamais : il faut
+     donc la variante fixe --color-vert-paiement-sur-fonce, pas
+     --color-vert-paiement-texte qui ne s'éclaircit qu'en mode sombre et
+     restait flou en mode clair aussi (~2.8:1 dans les deux thèmes). */
+  color: var(--color-vert-paiement-sur-fonce);
 }
 
 .enteteActions {
@@ -69,7 +73,7 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-vert-paiement);
+  border-bottom: 2px solid var(--color-vert-paiement-texte);
   overflow-x: auto;
 }
 

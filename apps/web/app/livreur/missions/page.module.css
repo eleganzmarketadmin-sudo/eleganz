@@ -44,7 +44,7 @@
 }
 
 .lienWhatsapp {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
   font-weight: 600;
   text-decoration: underline;
 }
@@ -80,9 +80,9 @@
 
 .boutonAction {
   padding: var(--espace-2) var(--espace-3);
-  border: 2px solid var(--color-flamme);
+  border: 2px solid var(--color-flamme-texte);
   background: var(--color-surface);
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   cursor: pointer;
   font-weight: 500;
   min-height: 40px;

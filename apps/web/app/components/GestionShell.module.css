@@ -58,7 +58,11 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-cobalt);
+  /* 10 nov. 2026 : --color-cobalt ne se retourne jamais avec le thème — ce
+     filet devenait presque invisible en mode sombre (surface très proche
+     du cobalt brut en luminosité) ; --color-cobalt-texte reste lisible
+     dans les deux modes. */
+  border-bottom: 2px solid var(--color-cobalt-texte);
   overflow-x: auto;
   /* 20 oct. 2026 (menu qui déborde sur petit écran) : avec 12 onglets, la
      barre dépasse toujours la largeur d'un téléphone — on ne peut pas tous

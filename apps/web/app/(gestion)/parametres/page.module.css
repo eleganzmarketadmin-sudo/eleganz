@@ -68,7 +68,7 @@
 }
 
 .zoneDanger {
-  border-color: var(--color-flamme);
+  border-color: var(--color-flamme-texte);
 }
 
 .boutonDanger {

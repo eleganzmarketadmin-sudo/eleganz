@@ -62,7 +62,7 @@
 
 .carte:hover {
   transform: translateY(-4px);
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
 }
 
 .enteteCarte {

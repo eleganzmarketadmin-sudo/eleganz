@@ -85,7 +85,7 @@
 .boutonFiltreTexte {
   border: none;
   background: none;
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
   font: inherit;
   text-decoration: underline;
   cursor: pointer;
@@ -122,7 +122,7 @@
 }
 
 .carte:hover .imageProduit {
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
   border-width: 2px;
 }
 
@@ -133,7 +133,7 @@
 }
 
 .carte:hover .nomProduit {
-  color: var(--color-magenta);
+  color: var(--color-magenta-texte);
 }
 
 .boutique {

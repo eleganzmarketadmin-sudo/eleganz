@@ -39,7 +39,7 @@
 }
 
 .planChoisi {
-  border-color: var(--color-vert-paiement);
+  border-color: var(--color-vert-paiement-texte);
   background: var(--color-surface);
 }
 

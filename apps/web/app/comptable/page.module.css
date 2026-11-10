@@ -8,7 +8,7 @@
 }
 
 .bandeAbonnement {
-  border: 2px solid var(--color-vert-paiement);
+  border: 2px solid var(--color-vert-paiement-texte);
   padding: var(--espace-3) var(--espace-4);
   margin-bottom: var(--espace-5);
   display: flex;
@@ -32,7 +32,7 @@
 }
 
 .blocUrgent {
-  border: 2px solid var(--color-flamme);
+  border: 2px solid var(--color-flamme-texte);
   background: color-mix(in srgb, var(--color-flamme) 8%, transparent);
   padding: var(--espace-3) var(--espace-4) var(--espace-2);
   margin-bottom: var(--espace-4);
@@ -42,15 +42,15 @@
   font-size: 1rem;
   margin: 0 0 var(--espace-3);
   padding-bottom: var(--espace-2);
-  border-bottom: 2px solid var(--color-flamme);
-  color: var(--color-flamme);
+  border-bottom: 2px solid var(--color-flamme-texte);
+  color: var(--color-flamme-texte);
 }
 
 .carteDossier {
   display: inline-flex;
   align-items: center;
   gap: var(--espace-2);
-  border: 2px solid var(--color-vert-paiement);
+  border: 2px solid var(--color-vert-paiement-texte);
   color: var(--color-ink);
   padding: var(--espace-3) var(--espace-4);
   margin-bottom: var(--espace-4);
@@ -74,7 +74,7 @@
 }
 
 .rappelUrgent {
-  border-left: 4px solid var(--color-flamme);
+  border-left: 4px solid var(--color-flamme-texte);
 }
 
 .rappelAVenir {

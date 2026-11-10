@@ -45,12 +45,12 @@
 }
 
 .soldePositif {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
   font-weight: 700;
 }
 
 .soldeNegatif {
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   font-weight: 700;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .note a {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
 }
 
 .exportZone {

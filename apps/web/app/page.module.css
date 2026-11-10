@@ -177,19 +177,20 @@
 }
 
 .comptable {
-  border-top-color: var(--color-vert-paiement);
+  border-top-color: var(--color-vert-paiement-texte);
 }
 
 .gestion {
-  border-top-color: var(--color-cobalt);
+  /* 10 nov. 2026 : visible dans les deux modes, voir globals.css */
+  border-top-color: var(--color-cobalt-texte);
 }
 
 .marketplace {
-  border-top-color: var(--color-magenta);
+  border-top-color: var(--color-magenta-texte);
 }
 
 .experts {
-  border-top-color: var(--color-or);
+  border-top-color: var(--color-or-texte);
 }
 
 .lienCarte {

@@ -16,9 +16,12 @@
   --color-texte-muted: #55554f;
   --color-cobalt-dark: #0f2c61;
   --color-flamme: #c83e1f;
+  --color-flamme-texte: var(--color-flamme);
   --color-magenta: #a62368;
+  --color-magenta-texte: var(--color-magenta);
   --color-or: #d9a61a;
   --color-vert-paiement: #2f6b3f;
+  --color-vert-paiement-texte: var(--color-vert-paiement);
 
   /* Variante claire du cobalt, jamais retournée par le thème (comme
      --color-encre-fixe ci-dessus) : le cobalt brut (#17408a) est trop sombre
@@ -30,10 +33,30 @@
      sous 3:1 en texte sur un fond fixe-sombre ; cette variante (~4.9:1)
      sert uniquement à ce cas (ex. "ELEGANZ Market" dans l'en-tête). */
   --color-magenta-sur-fonce: #d6579e;
+  /* 10 nov. 2026 (même audit) : même cas que le cobalt et le magenta
+     ci-dessus, pour la flamme et le vert-paiement bruts en texte/filet sur
+     un en-tête à fond fixe-sombre (ex. le logotype "ELEGANZ" dans les
+     en-têtes Livreur/Comptable) — brut : ~2.6-3.6:1 ; ces variantes
+     (~5.6-6.1:1) ne servent qu'à ce cas précis, jamais ailleurs. */
+  --color-flamme-sur-fonce: #d7745d;
+  --color-vert-paiement-sur-fonce: #79a084;
+  /* 10 nov. 2026 (même audit de contraste) : l'or brut (#d9a61a) en TEXTE
+     sur une surface claire ne tient qu'à 2.23:1 — flou/illisible, bien
+     sous le seuil AA (4.5:1). Variante texte plus sombre (~5:1 sur blanc) ;
+     sur fond sombre ou sur --color-encre-fixe, l'or brut reste déjà très
+     lisible (~7.5:1), donc cette variante n'y change rien. */
+  --color-or-texte: #8f6a0a;
 
   --color-surface: #ffffff;
   --color-surface-muted: var(--color-toile);
-  --color-border: #d8d8d0;
+  /* 10 nov. 2026 (signalement : filets de champs/cartes trop flous, en
+     mode clair comme en mode sombre) — #d8d8d0 sur fond blanc ne tenait
+     qu'à 1.43:1 de contraste, largement sous le seuil WCAG 1.4.11 (3:1)
+     recommandé pour la délimitation d'un composant d'interface : l'œil ne
+     distinguait quasiment plus le bord d'un champ de son fond. Remonté à
+     ~2.3:1 (voir aussi la variante mode sombre ci-dessous) — net sans
+     devenir un trait dur. */
+  --color-border: #aeada0;
   --color-border-forte: var(--color-ink);
 
   --rayon: 0px; /* pas d'angles arrondis dans le système ELEGANZ */
@@ -67,7 +90,22 @@
 
   --color-surface: #1c1e24;
   --color-surface-muted: #181a1f;
-  --color-border: #34363d;
+  /* 10 nov. 2026 — même correctif que la variante claire ci-dessus :
+     #34363d sur --color-surface (#1c1e24) ne tenait qu'à 1.38:1, remonté
+     à ~2.4:1. */
+  --color-border: #565a65;
+  /* L'or brut est déjà très lisible sur une surface sombre (~7.5:1) —
+     contrairement à la variante claire, pas besoin de l'assombrir ici. */
+  --color-or-texte: var(--color-or);
+  /* 10 nov. 2026 (même audit) : contrairement à l'or, la flamme, le
+     magenta et le vert-paiement bruts sont LISIBLES en mode clair mais
+     tombent sous le seuil AA en TEXTE sur la surface sombre (flamme
+     3.30:1, magenta 2.43:1, vert-paiement 2.61:1 — le même problème que
+     le cobalt brut). Variantes éclaircies (~5:1 sur la surface sombre),
+     utilisées uniquement en mode sombre. */
+  --color-flamme-texte: #d7745d;
+  --color-magenta-texte: #cb7fa7;
+  --color-vert-paiement-texte: #79a084;
 
   color-scheme: dark;
 }
@@ -81,7 +119,11 @@
 
     --color-surface: #1c1e24;
     --color-surface-muted: #181a1f;
-    --color-border: #34363d;
+    --color-border: #565a65;
+    --color-or-texte: var(--color-or);
+    --color-flamme-texte: #d7745d;
+    --color-magenta-texte: #cb7fa7;
+    --color-vert-paiement-texte: #79a084;
 
     color-scheme: dark;
   }

@@ -75,8 +75,8 @@
 .boutonOuvrir {
   margin-top: var(--espace-3);
   background: var(--color-surface);
-  color: var(--color-magenta);
-  border: 2px solid var(--color-magenta);
+  color: var(--color-magenta-texte);
+  border: 2px solid var(--color-magenta-texte);
   padding: var(--espace-2) var(--espace-4);
   min-height: 40px;
   cursor: pointer;

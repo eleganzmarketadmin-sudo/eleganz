@@ -66,22 +66,22 @@
 }
 
 .ligneVentes {
-  stroke: var(--color-vert-paiement);
+  stroke: var(--color-vert-paiement-texte);
   stroke-width: 2;
 }
 
 .ligneDepenses {
-  stroke: var(--color-flamme);
+  stroke: var(--color-flamme-texte);
   stroke-width: 2;
 }
 
 .pointVentes {
-  fill: var(--color-vert-paiement);
+  fill: var(--color-vert-paiement-texte);
   cursor: pointer;
 }
 
 .pointDepenses {
-  fill: var(--color-flamme);
+  fill: var(--color-flamme-texte);
   cursor: pointer;
 }
 
@@ -120,12 +120,12 @@
 }
 
 .positif {
-  color: var(--color-vert-paiement);
+  color: var(--color-vert-paiement-texte);
   font-weight: 600;
 }
 
 .negatif {
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   font-weight: 600;
 }
 

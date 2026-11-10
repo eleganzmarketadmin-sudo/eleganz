@@ -66,9 +66,9 @@
 }
 
 .retirer {
-  border: 1px solid var(--color-flamme);
+  border: 1px solid var(--color-flamme-texte);
   background: var(--color-surface);
-  color: var(--color-flamme);
+  color: var(--color-flamme-texte);
   padding: 4px 10px;
   min-height: 32px;
   cursor: pointer;

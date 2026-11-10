@@ -118,7 +118,7 @@
 }
 
 .templateCarteActive {
-  border-color: var(--color-magenta);
+  border-color: var(--color-magenta-texte);
 }
 
 .templateApercu {
