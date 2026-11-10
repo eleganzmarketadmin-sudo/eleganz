@@ -18,6 +18,43 @@ export class MessagingService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  // Recherche de contacts pour "Nouvelle conversation" (demande du 10 nov.
+  // 2026, réponse au point sur l'identifiant brut non affiché nulle part) —
+  // remplace la saisie d'un UUID interne par une recherche par email,
+  // téléphone ou nom (personne ou boutique), même esprit que
+  // ShopsService.inviteStaff (email/téléphone) et AdminUsersService.search
+  // (nom/email/téléphone), étendu ici aux boutiques publiques puisque
+  // "contacter la boutique" est un cas d'usage courant de la Messagerie.
+  // Seuls id + nom sont renvoyés pour les comptes trouvés — jamais l'email/
+  // téléphone en clair d'un tiers, juste assez pour choisir le bon
+  // destinataire dans la liste.
+  async rechercherContacts(userId: string, q: string) {
+    const requete = q.trim();
+    if (requete.length < 2) return { utilisateurs: [], boutiques: [] };
+
+    const [utilisateurs, boutiques] = await Promise.all([
+      this.prisma.user.findMany({
+        where: {
+          id: { not: userId },
+          OR: [
+            { fullName: { contains: requete, mode: "insensitive" } },
+            { email: { contains: requete, mode: "insensitive" } },
+            { phone: { contains: requete } },
+          ],
+        },
+        select: { id: true, fullName: true },
+        take: 8,
+      }),
+      this.prisma.shop.findMany({
+        where: { isPubliclyListed: true, name: { contains: requete, mode: "insensitive" } },
+        select: { id: true, name: true },
+        take: 8,
+      }),
+    ]);
+
+    return { utilisateurs, boutiques };
+  }
+
   listerConversations(userId: string) {
     return this.prisma.conversation.findMany({
       where: { participants: { some: { userId } } },

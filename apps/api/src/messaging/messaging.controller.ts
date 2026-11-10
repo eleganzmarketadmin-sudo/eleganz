@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { MessagingService } from "./messaging.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -13,6 +13,13 @@ export class MessagingController {
   @Get("conversations")
   listerConversations(@CurrentUser() user: AuthenticatedUser) {
     return this.messaging.listerConversations(user.id);
+  }
+
+  // Recherche de contacts pour "Nouvelle conversation" (demande du 10 nov.
+  // 2026) — voir MessagingService.rechercherContacts.
+  @Get("contacts/recherche")
+  rechercherContacts(@CurrentUser() user: AuthenticatedUser, @Query("q") q: string = "") {
+    return this.messaging.rechercherContacts(user.id, q);
   }
 
   @Get("conversations/:id/messages")
