@@ -77,8 +77,10 @@
 
 .navigationMois {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--espace-1) var(--espace-3);
   margin-bottom: var(--espace-3);
 }
 

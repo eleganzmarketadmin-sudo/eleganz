@@ -141,3 +141,13 @@
   padding: var(--espace-3);
   margin-bottom: var(--espace-4);
 }
+
+/* 10 nov. 2026 (tableaux sur mobile) : un tableau large ne tient jamais
+   sur la largeur d'un téléphone en portrait — sans ce conteneur, les
+   colonnes de droite étaient soit coupées soit écrasées, visibles
+   seulement en tournant l'écran en paysage. Ce conteneur laisse le
+   tableau défiler horizontalement à l'intérieur de son propre cadre. */
+.tableauScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

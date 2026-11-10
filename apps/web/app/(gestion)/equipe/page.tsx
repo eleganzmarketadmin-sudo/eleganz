@@ -328,6 +328,7 @@ function EquipeContent() {
       {chargement ? (
         <p>{t("eq_chargementEquipe")}</p>
       ) : (
+        <div className={styles.tableauScroll}>
         <table className={styles.tableau}>
           <thead>
             <tr>
@@ -418,6 +419,7 @@ function EquipeContent() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       {/* Module Experts (16 oct. 2026, point 2) — lien d'invitation avec */}
@@ -459,6 +461,7 @@ function EquipeContent() {
             )}
 
             {invitesExpert.filter((i) => i.status === "PENDING").length > 0 && (
+              <div className={styles.tableauScroll}>
               <table className={styles.tableau} style={{ marginTop: "16px" }}>
                 <thead>
                   <tr>
@@ -483,6 +486,7 @@ function EquipeContent() {
                     ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}
@@ -491,6 +495,7 @@ function EquipeContent() {
         {engagementsExpert.filter((e) => e.status === "ACTIVE").length === 0 ? (
           <p style={{ color: "var(--color-texte-muted)" }}>{t("experts_aucunAcces")}</p>
         ) : (
+          <div className={styles.tableauScroll}>
           <table className={styles.tableau}>
             <thead>
               <tr>
@@ -519,6 +524,7 @@ function EquipeContent() {
                 ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

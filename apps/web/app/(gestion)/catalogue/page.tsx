@@ -1156,7 +1156,10 @@ function CatalogueContent() {
                   ✎
                 </button>
               </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span
+                className={styles.produitActions}
+                style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}
+              >
                 <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   {produit.category ?? t("cat_sansCategorie")}
                   <button
@@ -1228,6 +1231,7 @@ function CatalogueContent() {
             </p>
             <ImagesProduit produit={produit} onChange={recharger} />
             {produit.variants.length > 0 && (
+              <div className={styles.tableauVariantesScroll}>
               <table className={styles.tableauVariantes}>
                 <thead>
                   <tr>
@@ -1337,6 +1341,7 @@ function CatalogueContent() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
             <NouvelleVariante produitId={produit.id} onAjoutee={recharger} />
           </div>

@@ -151,6 +151,7 @@ function ReglesFiscalesAdminContenu() {
           {regles.length === 0 ? (
             <p>{t("rfi_aucuneRegle")}</p>
           ) : (
+            <div className={styles.tableauScroll}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
@@ -181,6 +182,7 @@ function ReglesFiscalesAdminContenu() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}

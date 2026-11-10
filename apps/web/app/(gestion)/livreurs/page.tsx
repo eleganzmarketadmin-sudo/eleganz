@@ -149,6 +149,7 @@ function LivreursContent() {
       ) : livreurs.length === 0 ? (
         <p>{t("gliv_aucunLivreur")}</p>
       ) : (
+        <div className={styles.tableauScroll}>
         <table className={styles.tableau}>
           <thead>
             <tr>
@@ -175,6 +176,7 @@ function LivreursContent() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

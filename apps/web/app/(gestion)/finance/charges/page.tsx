@@ -176,6 +176,7 @@ function ChargesContent() {
       ) : depenses.length === 0 ? (
         <p>{t("cha_aucuneCharge")}</p>
       ) : (
+        <div className={styles.tableauScroll}>
         <table className={styles.tableau}>
           <thead>
             <tr>
@@ -198,6 +199,7 @@ function ChargesContent() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

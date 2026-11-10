@@ -86,6 +86,7 @@ function FinanceAdminContenu() {
           </div>
 
           <h2 className={styles.sectionTitre}>{t("admfinance_revenusParSource")}</h2>
+          <div className={styles.tableauScroll}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
@@ -112,6 +113,7 @@ function FinanceAdminContenu() {
               </tr>
             </tbody>
           </table>
+          </div>
         </>
       )}
     </div>

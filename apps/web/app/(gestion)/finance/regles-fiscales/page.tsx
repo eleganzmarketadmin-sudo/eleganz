@@ -256,6 +256,7 @@ function ReglesFiscalesContent() {
           {regles.length === 0 ? (
             <p>{t("rfi_aucuneRegle")}</p>
           ) : (
+            <div className={styles.tableauScroll}>
             <table className={styles.tableau}>
               <thead>
                 <tr>
@@ -286,6 +287,7 @@ function ReglesFiscalesContent() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           <p style={{ color: "#888", fontSize: "0.8rem", marginTop: "16px" }}>

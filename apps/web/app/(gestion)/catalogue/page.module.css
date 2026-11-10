@@ -132,12 +132,50 @@
 
 .produitEntete {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: var(--espace-2) var(--espace-4);
+  gap: var(--espace-2) var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
   background: var(--color-encre-fixe);
   color: #fff;
   min-height: 40px;
+}
+
+/* 10 nov. 2026 (en-tête d'article sur mobile) : les deux blocs (nom à
+   gauche, catégorie + étiquettes + actions à droite) tenaient sur une
+   seule ligne grâce à `justify-content: space-between`, sans jamais
+   pouvoir passer à la ligne — sur un écran étroit, les boutons
+   « Nouveau »/« Publier »/« Retirer » débordaient hors champ et
+   n'étaient visibles qu'en tournant le téléphone en mode paysage.
+   `flex-wrap: wrap` ci-dessus permet au bloc d'actions de redescendre
+   sous le nom ; cette règle fait en sorte qu'il occupe alors toute la
+   largeur et que ses propres boutons s'enchaînent proprement. */
+@media (max-width: 640px) {
+  .produitEntete {
+    align-items: flex-start;
+  }
+
+  .produitActions {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+/* Le tableau des variantes a toujours plus de colonnes que ce qu'un
+   écran de téléphone peut afficher d'un coup (référence, taille/couleur,
+   prix d'achat, prix de vente, promo, prix de gros, stock…) : plutôt que
+   de laisser le tableau se faire écraser ou déborder du cadre sans
+   recours, on l'enferme dans un conteneur qui défile horizontalement —
+   les colonnes restent lisibles, atteignables du doigt, sans devoir
+   mettre le téléphone en mode paysage. */
+.tableauVariantesScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableauVariantes {
+  min-width: 640px;
 }
 
 .tableauVariantes {

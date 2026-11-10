@@ -15,14 +15,18 @@
 
 .ligne {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
   padding: var(--espace-2) var(--espace-4);
   border-bottom: 1px solid var(--color-border);
 }
 
 .total {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
   padding: var(--espace-4);
   background: var(--color-encre-fixe);
   color: #fff;

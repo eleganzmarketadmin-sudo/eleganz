@@ -160,6 +160,7 @@ function FacturesContent() {
           {documents.length === 0 ? t("fact_aucuneVente") : t("fact_aucunResultatRecherche")}
         </p>
       ) : (
+        <div className={styles.tableauScroll}>
         <table className={styles.tableau}>
           <thead>
             <tr>
@@ -196,6 +197,7 @@ function FacturesContent() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

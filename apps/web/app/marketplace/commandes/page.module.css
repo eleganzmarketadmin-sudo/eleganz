@@ -15,7 +15,9 @@
 
 .entete {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
   padding: var(--espace-3) var(--espace-4);
   background: var(--color-encre-fixe);
   color: #fff;
@@ -24,7 +26,9 @@
 
 .sousCommande {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
   padding: var(--espace-3) var(--espace-4);
   border-bottom: 1px solid var(--color-border);
 }
