@@ -1,0 +1,46 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-toile);
+  color: var(--color-ink);
+}
+
+.entete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-4) var(--espace-5);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.contenu {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--espace-4) var(--espace-5) var(--espace-6);
+}
+
+.titre {
+  margin-bottom: var(--espace-4);
+}
+
+.corps {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin-bottom: var(--espace-4);
+}
+
+.erreur {
+  color: #842029;
+}
+
+.galerie {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.galerie img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+}

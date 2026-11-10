@@ -11,20 +11,47 @@ import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 // GET /auth/me) sans créer de dépendance circulaire entre modules.
 export const TOUS_LES_ECRANS_ADMIN: MenuAdmin[] = Object.values(MenuAdmin);
 
+// 10 nov. 2026 : le Centre d'aide interne est accordé par défaut à TOUS les
+// rôles ADMIN_* (documentation interne, pas une donnée sensible par
+// boutique/compte) — ajouté explicitement à chaque liste ci-dessous plutôt
+// que de modifier la garde d'accès, pour que `adminMenuItemsOverride`
+// (choix explicite d'un ADMIN_SUPER) continue de faire foi normalement s'il
+// est un jour utilisé pour retirer ce menu à un compte précis.
 export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
   switch (role) {
     case UserRole.ADMIN_SUPER:
       return TOUS_LES_ECRANS_ADMIN;
     case UserRole.ADMIN_SALES:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.BOUTIQUES, MenuAdmin.SUIVI_COMMANDES, MenuAdmin.TARIFS, MenuAdmin.LITIGES];
+      return [
+        MenuAdmin.PILOTAGE,
+        MenuAdmin.BOUTIQUES,
+        MenuAdmin.SUIVI_COMMANDES,
+        MenuAdmin.TARIFS,
+        MenuAdmin.LITIGES,
+        MenuAdmin.CENTRE_AIDE,
+      ];
     case UserRole.ADMIN_FINANCE:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.TARIFS, MenuAdmin.RELEVES];
+      return [
+        MenuAdmin.PILOTAGE,
+        MenuAdmin.FINANCE,
+        MenuAdmin.FACTURES,
+        MenuAdmin.TARIFS,
+        MenuAdmin.RELEVES,
+        MenuAdmin.CENTRE_AIDE,
+      ];
     case UserRole.ADMIN_OPS:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.SUIVI_COMMANDES, MenuAdmin.LITIGES, MenuAdmin.RELEVES, MenuAdmin.BOUTIQUES];
+      return [
+        MenuAdmin.PILOTAGE,
+        MenuAdmin.SUIVI_COMMANDES,
+        MenuAdmin.LITIGES,
+        MenuAdmin.RELEVES,
+        MenuAdmin.BOUTIQUES,
+        MenuAdmin.CENTRE_AIDE,
+      ];
     case UserRole.ADMIN_LOGISTICS:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.LIVREURS, MenuAdmin.SUIVI_COMMANDES];
+      return [MenuAdmin.PILOTAGE, MenuAdmin.LIVREURS, MenuAdmin.SUIVI_COMMANDES, MenuAdmin.CENTRE_AIDE];
     case UserRole.ADMIN_MARKETING:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.BOUTIQUES, MenuAdmin.MESSAGERIE];
+      return [MenuAdmin.PILOTAGE, MenuAdmin.BOUTIQUES, MenuAdmin.MESSAGERIE, MenuAdmin.CENTRE_AIDE];
     case UserRole.ADMIN_SUPPORT:
       return [
         MenuAdmin.PILOTAGE,
@@ -33,9 +60,10 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.MESSAGERIE,
         MenuAdmin.SUIVI_COMMANDES,
         MenuAdmin.EXPERTS,
+        MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_AUDITOR:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.RELEVES];
+      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.RELEVES, MenuAdmin.CENTRE_AIDE];
     default:
       return [];
   }

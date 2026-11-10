@@ -1,0 +1,228 @@
+.titre {
+  margin-bottom: var(--espace-1);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+}
+
+.erreur {
+  color: #842029;
+  margin-bottom: var(--espace-3);
+}
+
+.barreOutils {
+  display: flex;
+  gap: var(--espace-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--espace-4);
+}
+
+.champRecherche {
+  flex: 1;
+  min-width: 220px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.barreOutils select {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.boutonPrincipal {
+  background: var(--color-ink);
+  color: var(--color-surface);
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.boutonPrincipal:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonSecondaire {
+  border: 2px solid var(--color-ink);
+  background: transparent;
+  padding: var(--espace-1) var(--espace-3);
+  min-height: 36px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonDanger {
+  background: #842029;
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.liste {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--espace-3);
+}
+
+.carteFiche {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espace-1);
+  text-align: left;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  padding: var(--espace-3);
+  cursor: pointer;
+  position: relative;
+}
+
+.carteCategorie {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-texte-muted);
+}
+
+.carteTitre {
+  font-weight: 600;
+}
+
+.puceLienPublic {
+  position: absolute;
+  top: var(--espace-2);
+  right: var(--espace-2);
+}
+
+.panneau {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-width: 720px;
+}
+
+.lienRetour {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+  align-self: flex-start;
+  margin-bottom: var(--espace-2);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.champ input {
+  font-weight: 400;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.section {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--espace-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.sectionTitre {
+  font-size: 1rem;
+}
+
+.zoneTexte {
+  padding: var(--espace-3);
+  border: 2px solid var(--color-ink);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.galerie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.vignette {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+.vignette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+}
+
+.vignette button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #842029;
+  color: #fff;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.boutonAjoutImage {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.75rem;
+  border: 2px dashed var(--color-border);
+  cursor: pointer;
+  padding: var(--espace-1);
+}
+
+.caseACocher {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-weight: 600;
+}
+
+.blocLien {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: 0.875rem;
+}
+
+.actionsPanneau {
+  display: flex;
+  gap: var(--espace-2);
+  margin-top: var(--espace-3);
+}

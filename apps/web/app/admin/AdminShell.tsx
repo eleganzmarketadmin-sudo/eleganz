@@ -27,14 +27,14 @@ import styles from "./AdminShell.module.css";
 // admin) fait foi. Équipe admin et Paramètres plateforme restent réservés
 // à ADMIN_SUPER par défaut.
 const MENUS_PAR_ROLE_ADMIN: Record<string, string[]> = {
-  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME"],
-  ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES"],
-  ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES"],
-  ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES"],
-  ADMIN_LOGISTICS: ["PILOTAGE", "LIVREURS", "SUIVI_COMMANDES"],
-  ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE"],
-  ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS"],
-  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES"],
+  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "CENTRE_AIDE"],
+  ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES", "CENTRE_AIDE"],
+  ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES", "CENTRE_AIDE"],
+  ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES", "CENTRE_AIDE"],
+  ADMIN_LOGISTICS: ["PILOTAGE", "LIVREURS", "SUIVI_COMMANDES", "CENTRE_AIDE"],
+  ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE", "CENTRE_AIDE"],
+  ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS", "CENTRE_AIDE"],
+  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES", "CENTRE_AIDE"],
 };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -61,6 +61,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/messagerie", label: t("nav_messagerie"), menu: "MESSAGERIE" },
     { href: "/admin/equipe", label: t("nav_equipeAdmin"), menu: "EQUIPE_ADMIN" },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme"), menu: "PARAMETRES_PLATEFORME" },
+    { href: "/admin/centre-aide", label: t("nav_centreAide"), menu: "CENTRE_AIDE" },
   ];
 
   // `adminMenuItems` (GET /auth/me, calculé côté API — voir

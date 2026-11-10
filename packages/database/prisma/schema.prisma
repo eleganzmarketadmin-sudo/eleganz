@@ -218,6 +218,13 @@ enum MenuAdmin {
   MESSAGERIE
   EQUIPE_ADMIN
   PARAMETRES_PLATEFORME
+  // 10 nov. 2026 — Centre d'aide interne (demande du propriétaire : les
+  // agents ELEGANZ, quel que soit leur rôle admin, doivent pouvoir chercher
+  // "comment faire X" sur la plateforme et/ou trouver un guide pas-à-pas à
+  // suivre pour accompagner un client). Accordé par défaut à tous les
+  // rôles ADMIN_* dans menuAdminParDefaut (menu-admin.util.ts) — c'est de
+  // la documentation interne, pas une donnée sensible par boutique/compte.
+  CENTRE_AIDE
 }
 
 model User {
@@ -2322,4 +2329,38 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// Centre d'aide interne ELEGANZ (10 nov. 2026, demande du propriétaire) :
+// une fiche par fonctionnalité de la plateforme, cherchable par les agents
+// ELEGANZ (tous rôles ADMIN_*, voir MenuAdmin.CENTRE_AIDE ci-dessus). Deux
+// usages distincts, donc deux contenus séparés sur la même fiche :
+//   - contenuAgent  : explication technique interne ("comment ça marche"),
+//     jamais exposée publiquement.
+//   - contenuClient : étapes à suivre/transmettre pour accompagner un
+//     client — c'est la SEULE partie qu'un lien public peut révéler
+//     (partagePublicActif), jamais contenuAgent.
+// Pas d'images interleavées dans le texte (pas de rendu Markdown pour
+// rester simple en V1) : chaque section a son propre tableau d'URLs
+// d'images (uploadées sur R2 via StorageService.creerUrlUpload, même
+// mécanisme que les photos produits), affichées sous le texte.
+model GuideArticle {
+  id                 String   @id @default(uuid())
+  slug               String   @unique
+  titre              String
+  categorie          String
+  motsCles           String[] @default([])
+  contenuAgent       String
+  imagesAgent        String[] @default([])
+  contenuClient      String?
+  imagesClient       String[] @default([])
+  // Lien public séparé du slug interne : changer le slug interne (ex.
+  // renommage) ne casse jamais un lien déjà transmis à un client.
+  partagePublicActif Boolean  @default(false)
+  publicSlug         String?  @unique
+  creeParId          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([categorie])
 }
