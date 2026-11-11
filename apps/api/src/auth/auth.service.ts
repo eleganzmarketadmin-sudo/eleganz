@@ -75,8 +75,12 @@ export class AuthService {
     // ICI, avant `issueToken`, pour qu'un compte créé dans un autre module
     // ne reparte jamais avec une session valable pour celui-ci, même
     // stockée sous une mauvaise clé côté front. `dto.espace` absent (cas de
-    // /marketplace/compte, qui dessert aussi "Mon assistant"/Secourable)
-    // reste volontairement sans restriction.
+    // /marketplace/compte) reste volontairement sans restriction.
+    // `dto.espace === "comptable"` (Mon assistant/Secourable, 11 nov. 2026)
+    // n'ajoute aucune restriction non plus — Secourable reste ouvert à tout
+    // compte ELEGANZ par choix de conception — il ne fait que transiter ici
+    // pour que la connexion dédiée (/comptable/connexion) redevienne requise
+    // malgré l'absence de contrôle de rôle, voir espaceAuth() côté front.
     if (dto.espace === "admin" && !user.role.startsWith("ADMIN_")) {
       throw new UnauthorizedException(
         "Ce compte n'a pas accès au Centre de pilotage ELEGANZ.",

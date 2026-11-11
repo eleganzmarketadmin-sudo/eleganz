@@ -18,12 +18,12 @@ import styles from "./ComptableShell.module.css";
 
 /**
  * Coquille d'ELEGANZ Secourable (prompt du 13 oct. 2026, §3) — espace
- * fonctionnellement autonome (pas de boutique requise), mais partage le
- * compte ELEGANZ commun : contrairement à l'espace livreur ou admin, aucune
- * clé de jeton séparée, aucun rôle imposé — n'importe quel compte ELEGANZ
- * authentifié peut utiliser Secourable (voir espaceAuth() dans api.ts,
- * qui range tout ce qui n'est pas /admin ou /livreur dans le même espace
- * "défaut" que la Marketplace et Gestion).
+ * fonctionnellement autonome (pas de boutique requise). Aucun rôle imposé
+ * côté serveur : n'importe quel compte ELEGANZ peut utiliser Secourable
+ * (voir AuthService.login). Depuis le 11 nov. 2026, sa propre clé de jeton
+ * (espaceAuth() === "comptable", voir api.ts) exige malgré tout une vraie
+ * reconnexion dédiée (/comptable/connexion) — ne réutilise plus
+ * silencieusement une session déjà ouverte pour Gestion/Marketplace.
  *
  * `LocaleProvider` (prompt §21 + réponse du 13 oct. 2026) est monté une
  * seule fois à la racine (`app/layout.tsx`, généralisé le 15 oct. 2026) —
@@ -54,7 +54,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   useScrollNavActifEnVue(navRef, pathname ?? "");
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/marketplace/compte?retour=/comptable");
+    if (!loading && !user) router.replace("/comptable/connexion");
   }, [loading, user, router]);
 
   if (loading || !user) return null;

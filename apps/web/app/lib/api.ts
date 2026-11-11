@@ -13,6 +13,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const TOKEN_KEY_DEFAUT = "eleganz_token";
 const TOKEN_KEY_ADMIN = "eleganz_admin_token";
 const TOKEN_KEY_LIVREUR = "eleganz_livreur_token";
+const TOKEN_KEY_COMPTABLE = "eleganz_comptable_token";
 
 export class ApiError extends Error {
   statusCode: number;
@@ -33,7 +34,7 @@ export class ApiError extends Error {
  * clés séparées, choisies selon le préfixe d'URL, pour que les trois espaces
  * cohabitent sans se marcher dessus.
  */
-export function espaceAuth(): "admin" | "livreur" | "defaut" {
+export function espaceAuth(): "admin" | "livreur" | "comptable" | "defaut" {
   if (typeof window === "undefined") return "defaut";
   const chemin = window.location.pathname;
   // `startsWith` seul confondait l'espace livreur plateforme (/livreur/...)
@@ -43,12 +44,22 @@ export function espaceAuth(): "admin" | "livreur" | "defaut" {
   // On exige maintenant une frontière de segment après "/admin"/"/livreur".
   if (chemin === "/admin" || chemin.startsWith("/admin/")) return "admin";
   if (chemin === "/livreur" || chemin.startsWith("/livreur/")) return "livreur";
+  // "Mon assistant"/Secourable (signalement du 11 nov. 2026) : jusqu'ici
+  // confondu avec l'espace "defaut" (Marketplace + Gestion), donc déjà
+  // connecté sous un compte permettait d'entrer dans Secourable sans la
+  // moindre reconnexion, même avec un second compte distinct en tête. Sa
+  // propre clé de jeton impose désormais une vraie reconnexion, comme pour
+  // admin/livreur — sans changer qui a le droit d'y entrer : toujours aucun
+  // rôle imposé côté serveur (voir AuthService.login), seul le cloisonnement
+  // du jeton côté navigateur change.
+  if (chemin === "/comptable" || chemin.startsWith("/comptable/")) return "comptable";
   return "defaut";
 }
 
-function cleJeton(espace: "admin" | "livreur" | "defaut" = espaceAuth()): string {
+function cleJeton(espace: "admin" | "livreur" | "comptable" | "defaut" = espaceAuth()): string {
   if (espace === "admin") return TOKEN_KEY_ADMIN;
   if (espace === "livreur") return TOKEN_KEY_LIVREUR;
+  if (espace === "comptable") return TOKEN_KEY_COMPTABLE;
   return TOKEN_KEY_DEFAUT;
 }
 

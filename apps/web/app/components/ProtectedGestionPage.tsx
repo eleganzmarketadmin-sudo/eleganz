@@ -31,10 +31,11 @@ export function ProtectedGestionPage({ children }: { children: React.ReactNode }
   // principe déjà en place côté AdminShell/LivreurShell : le vrai jeton
   // Gestion est désormais refusé dès /auth/login pour un rôle incompatible
   // (voir AuthService.login), mais Gestion partage sa clé de jeton avec
-  // Marketplace/"Mon assistant" (espaceAuth() === "defaut", voir api.ts),
-  // donc un compte connecté via /marketplace/compte pourrait sinon naviguer
-  // directement vers /(gestion)/... avec un jeton valide d'un autre rôle.
-  // Ce contrôle couvre ce cas, en plus du refus à la connexion.
+  // Marketplace (espaceAuth() === "defaut", voir api.ts — "Mon assistant"/
+  // Secourable a sa propre clé depuis le 11 nov. 2026), donc un compte
+  // connecté via /marketplace/compte pourrait sinon naviguer directement
+  // vers /(gestion)/... avec un jeton valide d'un autre rôle. Ce contrôle
+  // couvre ce cas, en plus du refus à la connexion.
   if (user.role !== "SHOP_OWNER" && user.role !== "SHOP_STAFF") {
     return (
       <GestionShell>

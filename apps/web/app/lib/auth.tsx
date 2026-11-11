@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api, ApiError, espaceAuth, getToken, setToken } from "./api";
+import { useDeconnexionInactivite } from "./useDeconnexionInactivite";
 
 export interface AuthUser {
   id: string;
@@ -19,7 +20,7 @@ export interface InscriptionInfos {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion") => Promise<void>;
+  login: (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable") => Promise<void>;
   register: (infos: InscriptionInfos) => Promise<void>;
   logout: () => void;
 }
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // pas à cet espace. Omis par /marketplace/compte (Marketplace + "Mon
   // assistant"/Secourable), qui reste ouvert à tout compte ELEGANZ.
   const login = useCallback(
-    async (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion") => {
+    async (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable") => {
       const estEmail = identifiant.includes("@");
       const { accessToken } = await api.post<{ accessToken: string }>(
         "/auth/login",
@@ -120,6 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
   }, []);
+
+  // Déconnexion automatique après inactivité prolongée (signalement du
+  // 11 nov. 2026) — branchée ici une seule fois plutôt que dans chaque
+  // coquille d'espace (GestionShell, AdminShell...) : couvre les quatre
+  // espaces d'un coup, chacun avec son propre horodatage (clé par `espace`).
+  useDeconnexionInactivite(espace, !!user, logout);
 
   const value = useMemo(
     () => ({ user, loading, login, register, logout }),
