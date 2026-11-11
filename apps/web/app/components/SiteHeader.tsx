@@ -21,12 +21,15 @@ export function SiteHeader() {
   const pathname = usePathname();
   const { t } = useLocale();
 
+  // Ordre demandé le 11 nov. 2026 : Gestion, Market, Mon assistant, puis
+  // Trouver un expert en dernier — reflète l'ordre des cartes de la
+  // section d'orientation de l'accueil (#outils, page.tsx).
   const LIENS = [
     { href: "/", label: t("nav_accueil") },
     { href: "/connexion", label: t("nom_gestion") },
     { href: "/marketplace", label: t("nom_market") },
-    { href: "/marketplace/experts", label: t("accueil_trouverUnExpert") },
     { href: "/comptable", label: t("titre_accueil") },
+    { href: "/marketplace/experts", label: t("accueil_trouverUnExpert") },
     { href: "/a-propos", label: t("nav_aPropos") },
   ];
 

@@ -46,16 +46,9 @@ export default function HomePage() {
         <h2>{t("accueil_h2Outils")}</h2>
         <p className={styles.outilsIntro}>{t("accueil_outilsIntro")}</p>
         <div className={styles.grille}>
-          <div className={`${styles.carte} ${styles.comptable}`}>
-            <h3>{t("accueil_questionComptable")}</h3>
-            <p>
-              <strong>ELEGANZ {t("titre_accueil")}</strong> {t("accueil_descComptable")}
-            </p>
-            <Link className={styles.lienCarte} href="/comptable">
-              {t("accueil_ouvrirCarnet")}
-            </Link>
-          </div>
-
+          {/* Ordre demandé le 11 nov. 2026 : Gestion, Market, Mon assistant,
+              puis Trouver un expert en dernier — pas de présentation de
+              "Mon assistant" avant Gestion/Market. */}
           <div className={`${styles.carte} ${styles.gestion}`}>
             <h3>{t("accueil_questionGestion")}</h3>
             <p>
@@ -73,6 +66,16 @@ export default function HomePage() {
             </p>
             <Link className={styles.lienCarte} href="/marketplace">
               {t("accueil_parcourirVitrine")}
+            </Link>
+          </div>
+
+          <div className={`${styles.carte} ${styles.comptable}`}>
+            <h3>{t("accueil_questionComptable")}</h3>
+            <p>
+              <strong>ELEGANZ {t("titre_accueil")}</strong> {t("accueil_descComptable")}
+            </p>
+            <Link className={styles.lienCarte} href="/comptable">
+              {t("accueil_ouvrirCarnet")}
             </Link>
           </div>
 
