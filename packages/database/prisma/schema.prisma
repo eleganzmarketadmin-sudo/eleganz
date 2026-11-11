@@ -407,6 +407,20 @@ model Shop {
   // administrateur ELEGANZ, après vérification réelle de son homologation.
   fiscalHomologationConfirmed Boolean @default(false)
 
+  // Préférence de la boutique (demande du 11 nov. 2026, menu Paramètres) :
+  // quel type de document pré-sélectionner à la caisse par défaut — jamais
+  // un troisième état "toujours fiscal" sans condition, seulement un choix
+  // entre les deux formats déjà prévus par la décision #9. `null` = aucune
+  // préférence exprimée, la caisse garde son comportement historique
+  // (sélection initiale sur TICKET) ; ne change donc rien pour les
+  // boutiques existantes tant qu'elles ne passent pas par ce réglage.
+  // INVOICE_FISCAL reste bloqué à l'enregistrement si
+  // `fiscalHomologationConfirmed` n'est pas vrai (ShopsService.
+  // updateInvoiceSettings) — ce champ n'accorde jamais lui-même le droit
+  // d'émettre une facture fiscale, il ne fait que mémoriser un choix déjà
+  // autorisé par ailleurs.
+  defaultInvoiceType DocumentType?
+
   // Identité fiscale de l'entreprise (Finance & Comptabilité, 13 oct. 2026,
   // §5.1) — tous facultatifs et vides par défaut : rien n'est présumé pour
   // une boutique qui ne les a pas renseignés, et aucune valeur n'est

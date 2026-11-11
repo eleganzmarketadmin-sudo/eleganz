@@ -109,9 +109,26 @@ function CaisseContent() {
     if (!currentShop) return;
     let annule = false;
     api
-      .get<{ fiscalHomologationConfirmed: boolean }>(`/shops/${currentShop.id}`)
+      .get<{
+        fiscalHomologationConfirmed: boolean;
+        defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
+      }>(`/shops/${currentShop.id}`)
       .then((data) => {
-        if (!annule) setHomologationConfirmee(Boolean(data.fiscalHomologationConfirmed));
+        if (annule) return;
+        setHomologationConfirmee(Boolean(data.fiscalHomologationConfirmed));
+        // Préférence de la boutique (menu Paramètres, 11 nov. 2026) —
+        // pré-sélectionne le type choisi par la boutique à l'ouverture de la
+        // caisse, au lieu du TICKET historique. N'applique jamais
+        // INVOICE_FISCAL si l'homologation n'est pas confirmée (double
+        // vérification : déjà filtré côté service à l'enregistrement, voir
+        // ShopsService.updateInvoiceSettings, mais une caisse ne doit jamais
+        // dépendre d'une seule vérification pour un sujet fiscal).
+        if (
+          data.defaultInvoiceType === "INVOICE_INTERNAL" ||
+          (data.defaultInvoiceType === "INVOICE_FISCAL" && data.fiscalHomologationConfirmed)
+        ) {
+          setTypeDocument(data.defaultInvoiceType);
+        }
       })
       .catch(() => {
         // Non bloquant pour la caisse : par défaut la facture fiscale reste

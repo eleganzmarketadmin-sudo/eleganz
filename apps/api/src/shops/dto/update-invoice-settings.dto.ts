@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from "class-validator";
+import { IsIn, IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from "class-validator";
 
 /**
  * Identité d'une boutique sur ses documents imprimés (factures, bons de
@@ -31,4 +31,15 @@ export class UpdateInvoiceSettingsDto {
   @IsString()
   @MaxLength(300)
   invoiceFooterNote?: string;
+
+  // Préférence de pré-sélection à la caisse (demande du 11 nov. 2026) — voir
+  // le commentaire sur Shop.defaultInvoiceType : seulement ces deux valeurs,
+  // jamais TICKET/RECEIPT (des choix ponctuels de caisse, pas un défaut de
+  // facturation), et INVOICE_FISCAL reste revérifié côté service contre
+  // fiscalHomologationConfirmed avant d'être enregistré. `null` efface la
+  // préférence (retour au comportement historique de la caisse).
+  @IsOptional()
+  @ValidateIf((o) => o.defaultInvoiceType !== null)
+  @IsIn(["INVOICE_INTERNAL", "INVOICE_FISCAL"])
+  defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
 }

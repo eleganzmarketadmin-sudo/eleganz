@@ -187,7 +187,21 @@ export class ShopsService {
    * chaîne vide efface l'information plutôt que de la laisser inchangée.
    */
   async updateInvoiceSettings(shopId: string, dto: UpdateInvoiceSettingsDto) {
-    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    const boutique = await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+
+    // Choix du type de facture par défaut à la caisse (11 nov. 2026, menu
+    // Paramètres) — jamais INVOICE_FISCAL tant que l'homologation DGI de
+    // CETTE boutique n'est pas confirmée (même règle que
+    // DocumentsService.verifierTypeAutorise, revérifiée ici indépendamment :
+    // ce service ne doit jamais faire confiance à une seule vérification
+    // côté écran).
+    if (dto.defaultInvoiceType === "INVOICE_FISCAL" && !boutique.fiscalHomologationConfirmed) {
+      throw new BadRequestException(
+        "La facture fiscale homologuée ne peut pas être choisie par défaut : l'homologation DGI de cette " +
+          "boutique n'a pas encore été confirmée par l'administration ELEGANZ.",
+      );
+    }
+
     return this.prisma.shop.update({
       where: { id: shopId },
       data: {
@@ -197,6 +211,7 @@ export class ShopsService {
         ...(dto.invoiceFooterNote !== undefined && {
           invoiceFooterNote: dto.invoiceFooterNote || null,
         }),
+        ...(dto.defaultInvoiceType !== undefined && { defaultInvoiceType: dto.defaultInvoiceType }),
       },
     });
   }

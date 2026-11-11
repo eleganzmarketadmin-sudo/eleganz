@@ -19,6 +19,8 @@ interface ShopDetails {
   invoicePhone?: string | null;
   invoiceLogoUrl?: string | null;
   invoiceFooterNote?: string | null;
+  fiscalHomologationConfirmed: boolean;
+  defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
 }
 
 interface Compte {
@@ -207,6 +209,14 @@ function ParametresContent() {
   const [telephone, setTelephone] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [noteBasPage, setNoteBasPage] = useState("");
+  // Choix du type de facture par défaut à la caisse (demande du 11 nov. 2026)
+  // — "" = aucune préférence (comportement historique de la caisse,
+  // sélection sur Ticket). INVOICE_FISCAL n'est proposable que si
+  // l'homologation DGI de cette boutique a été confirmée par
+  // l'administration ELEGANZ (voir fiscalHomologationConfirmed) ; ce n'est
+  // jamais la boutique elle-même qui s'auto-déclare homologuée.
+  const [typeFactureDefaut, setTypeFactureDefaut] = useState("");
+  const [homologationConfirmee, setHomologationConfirmee] = useState(false);
   const [slug, setSlug] = useState("");
   const [publiee, setPubliee] = useState(false);
   const [lienCopie, setLienCopie] = useState(false);
@@ -245,6 +255,8 @@ function ParametresContent() {
         setTelephone(shop.invoicePhone ?? "");
         setLogoUrl(shop.invoiceLogoUrl ?? "");
         setNoteBasPage(shop.invoiceFooterNote ?? "");
+        setTypeFactureDefaut(shop.defaultInvoiceType ?? "");
+        setHomologationConfirmee(Boolean(shop.fiscalHomologationConfirmed));
         setSlug(shop.slug);
         setPubliee(shop.isPubliclyListed);
       })
@@ -268,6 +280,7 @@ function ParametresContent() {
         invoicePhone: telephone,
         invoiceLogoUrl: logoUrl,
         invoiceFooterNote: noteBasPage,
+        defaultInvoiceType: typeFactureDefaut || null,
       });
       setConfirmation(t("param_confirmationEnregistrement"));
     } catch (err) {
@@ -435,6 +448,26 @@ function ParametresContent() {
               placeholder={t("param_placeholderNoteBasPage")}
               maxLength={300}
             />
+          </div>
+          <div className={styles.champ}>
+            <label htmlFor="typeFactureDefaut">{t("param_labelTypeFactureDefaut")}</label>
+            <select
+              id="typeFactureDefaut"
+              value={typeFactureDefaut}
+              onChange={(e) => setTypeFactureDefaut(e.target.value)}
+            >
+              <option value="">{t("param_typeFactureDefautAucune")}</option>
+              <option value="INVOICE_INTERNAL">{t("fact_typeFactureInterne")}</option>
+              <option value="INVOICE_FISCAL" disabled={!homologationConfirmee}>
+                {t("caisse_typeFactureFiscaleHomologuee")}
+                {!homologationConfirmee ? ` — ${t("param_typeFactureDefautNonHomologuee")}` : ""}
+              </option>
+            </select>
+            <p className={styles.note}>
+              {homologationConfirmee
+                ? t("param_typeFactureDefautNote")
+                : t("param_typeFactureDefautNoteNonHomologuee")}
+            </p>
           </div>
           <button className={styles.bouton} type="submit" disabled={enregistrement}>
             {enregistrement ? t("param_enregistrementEnCours") : t("param_enregistrer")}
