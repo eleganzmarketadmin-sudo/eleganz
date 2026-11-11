@@ -66,6 +66,24 @@
   margin-left: auto;
 }
 
+/* Signalement du 11 nov. 2026 : sur mobile en portrait, logo + sélecteur de
+   langue + bascule de thème + bouton "Se connecter" ne tenaient jamais sur
+   une seule ligne (aucun flex-wrap) — la ligne débordait du viewport et
+   entraînait tout l'en-tête (et la barre de nav en dessous) à déborder
+   horizontalement, texte coupé à droite. Les actions basculent sur leur
+   propre ligne, alignées à droite, dès que la place manque. */
+@media (max-width: 560px) {
+  .contenu {
+    flex-wrap: wrap;
+    row-gap: var(--espace-2);
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 .connexion {
   background: var(--color-ink);
   color: var(--color-surface);

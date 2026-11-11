@@ -40,7 +40,16 @@ export function SiteHeader() {
         <div className={styles.actions}>
           <LanguageSwitcher />
           <ThemeToggle />
-          <Link href="/connexion" className={styles.connexion}>
+          {/* Signalement du 11 nov. 2026 : ce bouton menait tout droit à la
+              connexion Gestion (/connexion), le seul des quatre modules —
+              rien n'indiquait lequel on allait rejoindre. Renvoie maintenant
+              vers la section d'orientation de l'accueil (#outils), qui pose
+              la question dans les mots du visiteur pour chaque module avant
+              de le laisser choisir où se connecter — jamais un module choisi
+              à sa place. `/#outils` (chemin absolu) plutôt que `#outils` :
+              ce bouton est aussi monté sur /a-propos, qui n'a pas cette
+              section. */}
+          <Link href="/#outils" className={styles.connexion}>
             {t("action_seConnecter")}
           </Link>
         </div>
