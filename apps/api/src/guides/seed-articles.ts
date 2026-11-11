@@ -15,6 +15,16 @@ import type { Prisma } from "@eleganz/database";
  * — seule partie qu'un lien public peut un jour révéler). contenuClient est
  * omis quand le sujet ne concerne que l'agent lui-même (ex. écrans réservés
  * à l'administration ELEGANZ), jamais un client.
+ *
+ * `visibleFaq: true` (11 nov. 2026 — FAQ publique sur /aide) : posé ici sur
+ * toutes les fiches qui ont un contenuClient, pour que la FAQ publique ne
+ * démarre jamais vide — ce sont bien les « questions préconçues » demandées,
+ * pas de nouveau contenu. GuidesService.onModuleInit applique ce drapeau en
+ * rattrapage une seule fois sur les fiches déjà présentes en base (celles
+ * créées par un déploiement précédent de ce fichier, avant l'existence du
+ * champ) via un correctif ponctuel — voir le commentaire associé là-bas pour
+ * la garantie qu'un agent qui désactive ensuite une fiche depuis l'écran ne
+ * la voit jamais réactivée au redéploiement suivant.
  */
 export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
   // ───────────────────────── Documentation ─────────────────────────
@@ -61,6 +71,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "stock.\n" +
       "4. Ajoutez une ou plusieurs photos en cliquant sur la zone d'image — elles s'envoient automatiquement.\n" +
       "5. Activez « Publié » pour que le produit apparaisse immédiatement sur votre boutique en ligne.",
+    visibleFaq: true,
   },
   {
     slug: "seed-catalogue-prix-gros",
@@ -84,6 +95,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "être inférieur au prix de vente normal.\n" +
       "4. C'est automatique ensuite : dès qu'un acheteur commande au moins cette quantité, le prix réduit " +
       "s'applique tout seul, sans rien à faire de plus.",
+    visibleFaq: true,
   },
   {
     slug: "seed-catalogue-nouvel-arrivage",
@@ -100,6 +112,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Dans Catalogue, sur la ligne du produit, cliquez sur le bouton 🆕 pour activer ou désactiver le badge " +
       "« Nouveau ». Il apparaît immédiatement sur votre boutique en ligne et sur le marketplace. Vous pouvez le " +
       "laisser actif aussi longtemps que vous voulez, ou le désactiver dès que le produit n'est plus une nouveauté.",
+    visibleFaq: true,
   },
   {
     slug: "seed-catalogue-ajuster-stock",
@@ -115,6 +128,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Catalogue, ouvrez le produit, trouvez la variante concernée et modifiez directement la quantité en " +
       "stock. Le changement est immédiat et se reflète tout de suite sur votre boutique en ligne.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Caisse (POS) ─────────────────────────
@@ -134,6 +148,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "3. Cliquez sur « Encaisser la vente ».\n" +
       "4. Imprimez le ticket si le client en a besoin.\n" +
       "Le stock et votre chiffre d'affaires du jour se mettent à jour automatiquement.",
+    visibleFaq: true,
   },
   {
     slug: "seed-caisse-mode-hors-ligne",
@@ -151,6 +166,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Vous pouvez continuer à vendre même sans internet : la caisse enregistre la vente localement et l'envoie " +
       "automatiquement dès que la connexion revient. Ne fermez pas l'onglet et ne videz pas le cache du navigateur " +
       "tant que vous n'avez pas retrouvé une connexion — c'est ce qui permet l'envoi différé.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Commandes ─────────────────────────
@@ -171,6 +187,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Dans Gestion → Commandes, vous voyez toutes vos commandes et leur statut actuel. Faites avancer une " +
       "commande en changeant son statut au fur et à mesure (confirmée → en préparation → en livraison → livrée). " +
       "L'acheteur voit cette progression de son côté.",
+    visibleFaq: true,
   },
   {
     slug: "seed-commandes-affecter-livreur",
@@ -187,6 +204,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Dans Commandes, ouvrez la commande à livrer, cliquez sur « Changer le livreur » et choisissez dans la " +
       "liste de vos livreurs. Vous pouvez changer de livreur à tout moment tant que la commande n'est pas encore " +
       "livrée.",
+    visibleFaq: true,
   },
   {
     slug: "seed-commandes-litige",
@@ -204,6 +222,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "depuis la commande concernée. Une fois ouvert, la commande est transmise à l'équipe ELEGANZ pour " +
       "instruction — expliquez-lui que ça peut prendre un peu de temps et que la commande restera en attente " +
       "jusqu'à la décision finale.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Finance & Facturation ─────────────────────────
@@ -219,6 +238,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Factures, utilisez la recherche pour retrouver la facture par numéro, date ou montant, puis " +
       "cliquez sur « Réimprimer ». Pour un lot de factures (comptabilité, fin de mois), utilisez « Exporter Excel ».",
+    visibleFaq: true,
   },
   {
     slug: "seed-releves-generer",
@@ -233,6 +253,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Relevés, choisissez la période et le regroupement souhaités, puis cliquez sur « Exporter " +
       "PDF ». Le document généré porte un code de vérification que vous pouvez transmettre à votre comptable.",
+    visibleFaq: true,
   },
   {
     slug: "seed-finance-tableau",
@@ -248,6 +269,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Finance, vous avez une vue d'ensemble de la santé financière de votre boutique sur la " +
       "période choisie : ventes, achats, charges et la commission prélevée par ELEGANZ sur les ventes marketplace.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Équipe & Livreurs ─────────────────────────
@@ -265,6 +287,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Équipe, cliquez sur « Ajouter un collaborateur », indiquez son nom et son contact, et " +
       "choisissez son rôle. Vous pouvez affiner les écrans auxquels il a accès après l'avoir ajouté.",
+    visibleFaq: true,
   },
   {
     slug: "seed-livreurs-ajouter",
@@ -279,6 +302,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Livreurs, cliquez sur « Ajouter un livreur » et renseignez son nom, son téléphone et son " +
       "véhicule. Il devient immédiatement disponible pour être affecté à une commande.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Abonnement ─────────────────────────
@@ -295,6 +319,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Dans Gestion → Paramètres, section Abonnement, vous voyez votre bouquet actuel et son plafond de produits. " +
       "Cliquez sur « Choisir un bouquet » pour voir les options disponibles et changer si besoin.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Messagerie ─────────────────────────
@@ -310,6 +335,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "La messagerie se trouve dans le menu principal (icône de notifications/messages). Les nouveaux messages " +
       "apparaissent avec une pastille ; ouvrez la conversation pour les marquer comme lus.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Marketplace (acheteur) ─────────────────────────
@@ -327,6 +353,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Sur la page d'accueil du marketplace, cliquez sur « Se connecter » puis « Créer mon compte ». Indiquez " +
       "votre email ou votre téléphone, choisissez un mot de passe (8 caractères minimum), et c'est prêt — vous " +
       "pouvez commander tout de suite.",
+    visibleFaq: true,
   },
   {
     slug: "seed-marketplace-passer-commande",
@@ -344,6 +371,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "panier ». Si la boutique propose un tarif dégressif à partir d'une certaine quantité, le prix unitaire " +
       "baisse automatiquement dès que vous atteignez ce seuil. Une fois votre panier prêt, validez la commande " +
       "depuis l'icône panier.",
+    visibleFaq: true,
   },
   {
     slug: "seed-marketplace-avis",
@@ -356,6 +384,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     contenuClient:
       "Sur la page de la boutique, faites défiler jusqu'à la section « Avis », choisissez une note en étoiles et " +
       "ajoutez un commentaire si vous le souhaitez, puis validez.",
+    visibleFaq: true,
   },
 
   // ───────────────────────── Experts ─────────────────────────
@@ -373,6 +402,7 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "Depuis le marketplace, rendez-vous sur Experts → « Devenir expert », remplissez votre profil (présentation, " +
       "domaines, documents si vous en avez) et soumettez. Un administrateur ELEGANZ examine votre candidature ; " +
       "vous pourrez la corriger et la resoumettre si elle n'est pas validée du premier coup.",
+    visibleFaq: true,
   },
 
   // ─────────────── Pour les agents ELEGANZ (Centre de pilotage) ───────────────

@@ -108,7 +108,9 @@ export default function AideFaqPage() {
         {!erreur && questions === null && <p className={styles.messageVide}>{t("commun_chargement")}</p>}
 
         {!erreur && questions !== null && groupes.length === 0 && (
-          <p className={styles.messageVide}>{t("aide_faqAucuneQuestion")}</p>
+          <p className={styles.messageVide}>
+            {recherche.trim() || categorieFiltre ? t("aide_faqAucuneQuestion") : t("aide_faqVide")}
+          </p>
         )}
 
         {groupes.map(([categorie, items]) => (

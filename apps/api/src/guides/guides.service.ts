@@ -47,6 +47,49 @@ export class GuidesService implements OnModuleInit {
     } catch (err) {
       this.logger.error("Centre d'aide : échec de l'amorçage du contenu de départ.", err as Error);
     }
+
+    await this.rattraperVisibleFaqSeed();
+  }
+
+  /**
+   * Rattrapage ponctuel (11 nov. 2026, FAQ publique) : le champ `visibleFaq`
+   * n'existait pas au premier amorçage du Centre d'aide (10 nov. 2026), donc
+   * les fiches de seed déjà présentes en base avant ce déploiement ne l'ont
+   * jamais reçu via `createMany` (ignorées par `skipDuplicates`, leur slug
+   * existe déjà). Ce correctif pose `visibleFaq: true` sur ces fiches de
+   * seed précises, mais SEULEMENT tant que personne n'y a touché depuis
+   * l'écran Centre d'aide : `updatedAt === createdAt` signifie qu'aucune
+   * sauvegarde n'a jamais eu lieu dessus. Dès qu'un agent ouvre puis
+   * enregistre une de ces fiches (même pour une tout autre raison), cette
+   * égalité devient fausse pour toujours et ce correctif ne la retouche
+   * plus jamais — même s'il désactive ensuite `visibleFaq` lui-même. Ne
+   * s'applique jamais à une fiche créée depuis l'écran (toujours un
+   * `creeParId` renseigné, jamais dans SEED_ARTICLES).
+   */
+  private async rattraperVisibleFaqSeed() {
+    try {
+      const slugsSeedAvecContenuClient = SEED_ARTICLES.filter((a) => a.contenuClient).map((a) => a.slug);
+      if (slugsSeedAvecContenuClient.length === 0) return;
+
+      const candidates = await this.prisma.guideArticle.findMany({
+        where: { slug: { in: slugsSeedAvecContenuClient }, visibleFaq: false },
+        select: { id: true, createdAt: true, updatedAt: true },
+      });
+      const idsJamaisModifies = candidates
+        .filter((c) => c.createdAt.getTime() === c.updatedAt.getTime())
+        .map((c) => c.id);
+      if (idsJamaisModifies.length === 0) return;
+
+      const resultat = await this.prisma.guideArticle.updateMany({
+        where: { id: { in: idsJamaisModifies } },
+        data: { visibleFaq: true },
+      });
+      if (resultat.count > 0) {
+        this.logger.log(`Centre d'aide : ${resultat.count} fiche(s) de départ basculée(s) dans la FAQ publique.`);
+      }
+    } catch (err) {
+      this.logger.error("Centre d'aide : échec du rattrapage visibleFaq des fiches de départ.", err as Error);
+    }
   }
 
   /**
