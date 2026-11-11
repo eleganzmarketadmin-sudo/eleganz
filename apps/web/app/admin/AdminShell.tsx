@@ -65,6 +65,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/equipe", label: t("nav_equipeAdmin"), menu: "EQUIPE_ADMIN" },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme"), menu: "PARAMETRES_PLATEFORME" },
     { href: "/admin/centre-aide", label: t("nav_centreAide"), menu: "CENTRE_AIDE" },
+    // Guide développeur/architecture (demande du 11 nov. 2026) — pas de clé
+    // i18n (page volontairement non traduite, voir son commentaire d'en-tête)
+    // et pas de nouvelle valeur `MenuAdmin` en base : rattaché au même
+    // périmètre que « Centre d'aide », que tous les rôles admin possèdent
+    // déjà par défaut (voir MENUS_PAR_ROLE_ADMIN ci-dessus), pour que ce
+    // guide reste visible à toute l'équipe admin sans migration de schéma.
+    { href: "/admin/guide-developpeur", label: "Guide développeur", menu: "CENTRE_AIDE" },
   ];
 
   // `adminMenuItems` (GET /auth/me, calculé côté API — voir
