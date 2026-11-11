@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { GuidesService } from "./guides.service";
 import { GuidesController } from "./guides.controller";
-import { GuidesPublicController } from "./guides-public.controller";
+import { GuidesPublicController, GuidesPublicFaqController } from "./guides-public.controller";
 import { StorageModule } from "../storage/storage.module";
 import { AuthModule } from "../auth/auth.module";
 
@@ -14,7 +14,7 @@ import { AuthModule } from "../auth/auth.module";
 // ShopsModule — plus simple et plus direct de l'importer ici directement.
 @Module({
   imports: [StorageModule, AuthModule],
-  controllers: [GuidesController, GuidesPublicController],
+  controllers: [GuidesController, GuidesPublicController, GuidesPublicFaqController],
   providers: [GuidesService],
 })
 export class GuidesModule {}

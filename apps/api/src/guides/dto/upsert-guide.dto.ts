@@ -45,4 +45,8 @@ export class UpsertGuideDto {
   @IsOptional()
   @IsBoolean()
   partagePublicActif?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  visibleFaq?: boolean;
 }

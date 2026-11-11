@@ -2388,6 +2388,14 @@ model GuideArticle {
   // renommage) ne casse jamais un lien déjà transmis à un client.
   partagePublicActif Boolean  @default(false)
   publicSlug         String?  @unique
+  // FAQ publique de la plateforme (demande du 11 nov. 2026) — distinct de
+  // `partagePublicActif` : ce dernier crée un lien à usage unique transmis
+  // par un agent à UN client ; `visibleFaq` liste la fiche parmi les
+  // questions fréquentes consultables par N'IMPORTE QUEL visiteur sur
+  // `/aide` (voir guides.service.ts `listerFaq`). Les deux peuvent être
+  // activés indépendamment sur une même fiche. Toujours filtré en plus par
+  // `contenuClient` non vide côté lecture — jamais contenuAgent.
+  visibleFaq         Boolean  @default(false)
   creeParId          String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

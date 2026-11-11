@@ -1,0 +1,115 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.corps {
+  flex: 1;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: var(--espace-6) var(--espace-5);
+  width: 100%;
+}
+
+.entete {
+  margin-bottom: var(--espace-5);
+}
+
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  max-width: 560px;
+}
+
+.barreOutils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+}
+
+.champRecherche {
+  flex: 1;
+  min-width: 220px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.barreOutils select {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.messageVide {
+  padding: var(--espace-6) var(--espace-3);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.groupe {
+  margin-bottom: var(--espace-5);
+}
+
+.groupeTitre {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-2);
+}
+
+.question {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-2);
+}
+
+.questionBouton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  text-align: left;
+  background: var(--color-surface);
+  border: none;
+  padding: var(--espace-3);
+  min-height: var(--touche-min);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.questionChevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.questionChevronOuvert {
+  transform: rotate(180deg);
+}
+
+.reponse {
+  padding: 0 var(--espace-3) var(--espace-3);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--espace-2);
+  white-space: pre-line;
+}
+
+.galerie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-top: var(--espace-2);
+}
+
+.galerie img {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+}

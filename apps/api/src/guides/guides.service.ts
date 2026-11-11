@@ -106,6 +106,7 @@ export class GuidesService implements OnModuleInit {
         imagesClient: dto.imagesClient ?? [],
         partagePublicActif: dto.partagePublicActif ?? false,
         publicSlug: dto.partagePublicActif ? randomUUID() : null,
+        visibleFaq: dto.visibleFaq ?? false,
         creeParId,
       },
     });
@@ -132,6 +133,7 @@ export class GuidesService implements OnModuleInit {
         imagesClient: dto.imagesClient ?? [],
         partagePublicActif: dto.partagePublicActif ?? false,
         publicSlug,
+        visibleFaq: dto.visibleFaq ?? false,
       },
     });
   }
@@ -165,5 +167,24 @@ export class GuidesService implements OnModuleInit {
       contenuClient: fiche.contenuClient,
       imagesClient: fiche.imagesClient,
     };
+  }
+
+  /**
+   * FAQ publique de la plateforme (demande du 11 nov. 2026) — accessible à
+   * tout visiteur sans authentification, sur `/aide`. Ne renvoie que les
+   * fiches explicitement marquées `visibleFaq` par un agent ELEGANZ ET
+   * ayant un `contenuClient` renseigné (une fiche cochée par erreur sans
+   * texte client n'apparaît jamais vide côté public) ; jamais
+   * `contenuAgent`, `motsCles` ni `imagesAgent`, même indirectement.
+   */
+  async listerFaq() {
+    const fiches = await this.prisma.guideArticle.findMany({
+      where: { visibleFaq: true, contenuClient: { not: null } },
+      select: { titre: true, categorie: true, contenuClient: true, imagesClient: true },
+      orderBy: [{ categorie: "asc" }, { titre: "asc" }],
+    });
+    // Double sécurité : exclut aussi un contenuClient vide ("") qui
+    // passerait le filtre Prisma `not: null` mais n'aurait rien à montrer.
+    return fiches.filter((f) => f.contenuClient && f.contenuClient.trim().length > 0);
   }
 }

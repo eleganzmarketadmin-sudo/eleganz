@@ -30,6 +30,10 @@ export function SiteHeader() {
     { href: "/marketplace", label: t("nom_market") },
     { href: "/comptable", label: t("titre_accueil") },
     { href: "/marketplace/experts", label: t("accueil_trouverUnExpert") },
+    // FAQ publique (11 nov. 2026) — juste avant "À propos", à la suite des
+    // quatre modules plutôt qu'au milieu d'eux (voir page.tsx pour l'ordre
+    // demandé le 11 nov. 2026 pour les modules eux-mêmes, non concerné ici).
+    { href: "/aide", label: t("nav_faq") },
     { href: "/a-propos", label: t("nav_aPropos") },
   ];
 

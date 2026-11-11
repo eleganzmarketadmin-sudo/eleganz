@@ -18,6 +18,7 @@ interface GuideArticle {
   imagesClient: string[];
   partagePublicActif: boolean;
   publicSlug: string | null;
+  visibleFaq: boolean;
   updatedAt: string;
 }
 
@@ -30,6 +31,7 @@ const FICHE_VIDE = {
   contenuClient: "",
   imagesClient: [] as string[],
   partagePublicActif: false,
+  visibleFaq: false,
 };
 
 // Centre d'aide interne ELEGANZ (10 nov. 2026, demande du propriétaire) :
@@ -91,6 +93,7 @@ function CentreAideContent() {
       contenuClient: fiche.contenuClient ?? "",
       imagesClient: fiche.imagesClient,
       partagePublicActif: fiche.partagePublicActif,
+      visibleFaq: fiche.visibleFaq,
     });
   }
 
@@ -151,6 +154,7 @@ function CentreAideContent() {
       contenuClient: brouillon.contenuClient || undefined,
       imagesClient: brouillon.imagesClient,
       partagePublicActif: brouillon.partagePublicActif,
+      visibleFaq: brouillon.visibleFaq,
     };
     try {
       if (ficheOuverte) {
@@ -217,6 +221,14 @@ function CentreAideContent() {
             <button className={styles.boutonPrincipal} onClick={ouvrirCreation}>
               + {t("aide_nouvelleFiche")}
             </button>
+            <a
+              className={styles.boutonSecondaire}
+              href="/aide"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t("aide_voirFaqPublique")} ↗
+            </a>
           </div>
 
           {chargement ? (
@@ -230,6 +242,11 @@ function CentreAideContent() {
                   <span className={styles.carteCategorie}>{f.categorie}</span>
                   <span className={styles.carteTitre}>{f.titre}</span>
                   {f.partagePublicActif && <span className={styles.puceLienPublic}>🔗</span>}
+                  {f.visibleFaq && (
+                    <span className={styles.puceLienPublic} style={{ right: "var(--espace-6)" }} title={t("aide_visibleFaq")}>
+                      ❓
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -322,6 +339,20 @@ function CentreAideContent() {
                 )}
               </div>
             )}
+
+            {/* FAQ publique (11 nov. 2026) — distinct du partage individuel
+                ci-dessus : coche cette fiche pour qu'elle apparaisse pour
+                TOUT visiteur sur /aide, sans lien à transmettre au cas par
+                cas. Les deux cases sont indépendantes et peuvent être
+                cochées ensemble. */}
+            <label className={styles.caseACocher}>
+              <input
+                type="checkbox"
+                checked={brouillon.visibleFaq}
+                onChange={(e) => setBrouillon((p) => ({ ...p, visibleFaq: e.target.checked }))}
+              />
+              {t("aide_visibleFaq")}
+            </label>
           </div>
 
           <div className={styles.actionsPanneau}>

@@ -100,6 +100,11 @@ export function Footer({
           <Link href="/connexion">ELEGANZ {t("nom_gestion")}</Link>
           <Link href="/comptable">ELEGANZ {t("titre_accueil")}</Link>
           <Link href="/admin/connexion">{t("footer_centreDePilotage")}</Link>
+          {/* FAQ publique (11 nov. 2026) — Footer est commun aux six
+              variantes (accueil/gestion/admin/marketplace/livreur/
+              comptable), donc ce lien reste atteignable depuis n'importe
+              quel espace de l'application, pas seulement l'accueil public. */}
+          <Link href="/aide">{t("nav_faq")}</Link>
           <Link href="/a-propos">{t("nav_aPropos")}</Link>
         </nav>
 
