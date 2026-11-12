@@ -137,6 +137,14 @@ export class ExpertsService {
     if (!document.url.toLowerCase().endsWith(".pdf")) {
       throw new BadRequestException("Seuls les CV au format PDF peuvent être analysés automatiquement.");
     }
+    // Corrigé le 12 nov. 2026 (retour client) — `document.url` n'est validé
+    // par le DTO que comme une URL bien formée (@IsUrl), pas comme une URL
+    // de notre bucket de stockage : sans ce contrôle, un utilisateur pouvait
+    // déclarer n'importe quelle adresse (y compris une adresse interne) et
+    // faire effectuer la requête `fetch()` par le serveur à sa place (SSRF).
+    if (!this.storage.urlEstDansLeBucket(document.url)) {
+      throw new BadRequestException("Ce document n'a pas été téléversé via l'upload ELEGANZ attendu.");
+    }
 
     let buffer: ArrayBuffer;
     try {
@@ -293,6 +301,26 @@ export class ExpertsService {
       where: { id },
       data: { status, statusNote: note, reviewedById: adminId, reviewedAt: new Date() },
     });
+
+    // Corrigé le 12 nov. 2026 (retour client) — rejeter ou suspendre un
+    // expert ne touchait jusqu'ici que ExpertProfile.status (annuaire public,
+    // visibilité). ShopMembershipGuard n'interroge lui que le statut ACTIVE
+    // de ShopExpertEngagement/PlatformExpertEngagement, jamais le statut de
+    // l'ExpertProfile sous-jacent : un expert déjà engagé par une boutique
+    // (ou par la plateforme) gardait donc son accès en lecture même après
+    // rejet/suspension. On révoque ici tous ses engagements actifs.
+    if (status === ExpertStatus.REJECTED || status === ExpertStatus.SUSPENDED) {
+      const maintenant = new Date();
+      await this.prisma.shopExpertEngagement.updateMany({
+        where: { expertProfileId: id, status: ShopExpertEngagementStatus.ACTIVE },
+        data: { status: ShopExpertEngagementStatus.REVOKED, revokedAt: maintenant },
+      });
+      await this.prisma.platformExpertEngagement.updateMany({
+        where: { expertProfileId: id, status: ShopExpertEngagementStatus.ACTIVE },
+        data: { status: ShopExpertEngagementStatus.REVOKED, revokedAt: maintenant },
+      });
+    }
+
     await this.notifications.notifierUtilisateurs([profil.userId], {
       type: NotificationType.AUTRE,
       title: "Votre candidature expert",

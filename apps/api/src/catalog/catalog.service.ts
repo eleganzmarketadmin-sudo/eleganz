@@ -401,6 +401,18 @@ export class CatalogService implements OnModuleInit {
    * un suffixe par combinaison pour garantir l'unicité (contrainte
    * `Variant.sku @unique`) ; si une combinaison est déjà prise, l'ensemble de
    * l'opération échoue (transaction) plutôt que de créer un lot partiel.
+   *
+   * Corrigé le 12 nov. 2026 (retour client, parcours d'achat complet) —
+   * cette route était jusqu'ici restreinte en bloc au bouquet
+   * "variantesProduits" (@RequiresGestionFeature sur le contrôleur), y
+   * compris quand sizes/colors sont vides : c'est pourtant le SEUL écran du
+   * front (NouvelleVariante dans catalogue/page.tsx) qui permette de donner
+   * un prix et un stock à un produit — `addVariant` (route simple, ouverte à
+   * tous les bouquets) existe côté API mais n'est appelé nulle part. Un
+   * commerçant au bouquet Starter ne pouvait donc jamais publier le moindre
+   * article. Le contrôle de bouquet se fait maintenant ici, une fois le
+   * nombre réel de combinaisons connu : au-delà d'une seule variante, c'est
+   * un vrai lot, et ça reste à juste titre réservé au bouquet supérieur.
    */
   async addVariantsBulk(shopId: string, productId: string, dto: CreateVariantsBulkDto) {
     await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
@@ -420,6 +432,18 @@ export class CatalogService implements OnModuleInit {
       throw new BadRequestException(
         "Trop de combinaisons à la fois (200 maximum) — réduisez la sélection.",
       );
+    }
+    if (combinaisons.length > 1) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
+      });
+      const features = (shop?.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
+      if (features["variantesProduits"] !== true) {
+        throw new ForbiddenException(
+          `Cette fonctionnalité n'est pas incluse dans le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez à un bouquet supérieur depuis le Centre de pilotage pour y accéder.`,
+        );
+      }
     }
 
     const slug = (texte: string) =>

@@ -97,6 +97,20 @@ export class StorageService {
 
     return { uploadUrl, publicUrl };
   }
+
+  /**
+   * Vrai seulement si `url` pointe vers NOTRE bucket public (12 nov. 2026,
+   * retour client — SSRF trouvé dans ExpertsService.extraireSuggestionCv,
+   * qui faisait un `fetch()` serveur sur n'importe quelle URL déclarée par
+   * un utilisateur). À appeler avant tout `fetch()` fait par le serveur sur
+   * une URL fournie par un utilisateur (document, image…) — jamais
+   * uniquement un `@IsUrl()` sur le DTO, qui ne restreint pas le domaine ni
+   * n'empêche une adresse interne (ex. 169.254.169.254).
+   */
+  urlEstDansLeBucket(url: string): boolean {
+    if (!this.publicBaseUrl) return false;
+    return url.startsWith(this.publicBaseUrl.replace(/\/$/, "") + "/");
+  }
 }
 
 function extensionPourType(contentType: string): string {

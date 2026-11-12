@@ -131,18 +131,31 @@ function ChiffresContenu() {
   }
 
   useEffect(() => {
+    // La comparaison entre périodes est réservée aux bouquets supérieurs
+    // (403 pour le bouquet Essentiel, celui attribué par défaut) — corrigé le
+    // 12 nov. 2026, retour client : avant ce correctif, ce 403 faisait
+    // échouer tout le Promise.all et masquait même le tableau de bord de
+    // base (pourtant disponible à tous), qui n'a lui-même aucun lien avec
+    // cette fonctionnalité. On l'isole donc dans son propre appel, avec son
+    // propre repli silencieux — la section correspondante reste simplement
+    // masquée (`comparaison.length > 1` plus bas) pour qui n'y a pas accès.
     Promise.all([
       api.get<Dashboard>("/comptable/dashboard"),
       api.get<PointHistorique[]>("/comptable/dashboard/historique?jours=14"),
-      api.get<LigneComparaison[]>("/comptable/dashboard/comparaison"),
     ])
-      .then(([d, h, c]) => {
+      .then(([d, h]) => {
         setDashboard(d);
         setHistorique(h);
-        setComparaison(c);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
+
+    api
+      .get<LigneComparaison[]>("/comptable/dashboard/comparaison")
+      .then(setComparaison)
+      .catch(() => {
+        // Non bloquant : bouquet sans comparaisonPeriodes, section masquée.
+      });
   }, [t]);
 
   if (chargement) return <p>{t("commun_chargement")}</p>;

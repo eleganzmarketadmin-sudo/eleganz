@@ -12,7 +12,6 @@ import { RequestImageUploadDto } from "./dto/request-image-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
-import { RequiresGestionFeature } from "../shops/gestion-feature.decorator";
 import { StaffRole } from "@eleganz/database";
 
 // Ce contrôleur est la vue "gestion" du catalogue (staff de la boutique
@@ -105,9 +104,15 @@ export class CatalogController {
     return this.catalogService.adjustStock(shopId, productId, variantId, dto);
   }
 
+  // Pas de @RequiresGestionFeature ici (corrigé 12 nov. 2026, retour client :
+  // voir le commentaire de CatalogService.addVariantsBulk) — cette route sert
+  // aussi bien la création "simple" (0 taille/0 couleur, ouverte à tous les
+  // bouquets, seul moyen pour le front de donner un prix/stock à un produit)
+  // que le vrai lot multi-combinaisons (réservé au bouquet "variantesProduits").
+  // Le contrôle se fait donc dans le service, après avoir calculé le nombre
+  // réel de combinaisons demandées, pas ici au niveau de la route entière.
   @Post(":productId/variants/bulk")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
-  @RequiresGestionFeature("variantesProduits")
   addVariantsBulk(
     @Param("shopId") shopId: string,
     @Param("productId") productId: string,
