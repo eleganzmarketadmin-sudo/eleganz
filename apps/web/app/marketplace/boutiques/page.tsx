@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import { nomPays } from "../../lib/i18n/nomPays";
@@ -35,10 +36,26 @@ interface Boutique {
   nombreAvis: number;
 }
 
+/**
+ * Enveloppe `useSearchParams` dans un Suspense (convention recommandée du
+ * App Router, voir ../page.tsx) — nécessaire pour lire `?q=` au chargement
+ * (12 nov. 2026 : la recherche de boutiques existait déjà mais n'était
+ * accessible qu'en se rendant d'abord sur cette page ; un nouveau champ sur
+ * la Marketplace y renvoie désormais directement avec la requête).
+ */
 export default function BoutiquesPage() {
+  return (
+    <Suspense fallback={null}>
+      <BoutiquesContenu />
+    </Suspense>
+  );
+}
+
+function BoutiquesContenu() {
   const { t } = useLocale();
-  const [recherche, setRecherche] = useState("");
-  const [requeteActive, setRequeteActive] = useState("");
+  const searchParams = useSearchParams();
+  const [recherche, setRecherche] = useState(() => searchParams.get("q") ?? "");
+  const [requeteActive, setRequeteActive] = useState(() => searchParams.get("q") ?? "");
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);

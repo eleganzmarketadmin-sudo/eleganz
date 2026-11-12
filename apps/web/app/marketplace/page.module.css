@@ -57,6 +57,45 @@
   color: var(--color-ink);
 }
 
+/* 12 nov. 2026 (signalement : "la recherche des produits ne ramène pas les
+   résultats sur les téléphones et appli et aucun bouton pour lancer la
+   recherche mais sur les ordinateurs enter fait le job") — le formulaire
+   n'avait jamais eu de bouton de soumission visible, contrairement à la
+   barre de recherche de la page d'accueil (voir app/page.tsx). Sur
+   ordinateur, la touche Entrée suffisait à passer inaperçue ; sur mobile,
+   rien n'indiquait comment lancer la recherche. */
+.boutonRecherche {
+  padding: var(--espace-3) var(--espace-4);
+  border: 2px solid var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-weight: 600;
+  min-height: var(--touche-min);
+  cursor: pointer;
+}
+
+.barreRechercheBoutiques {
+  padding: var(--espace-3) var(--espace-5);
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.barreRechercheBoutiques label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.barreRechercheBoutiques input {
+  flex: 1;
+  min-width: 180px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: var(--touche-min);
+}
+
 .barreFiltres {
   padding: var(--espace-3) var(--espace-5);
   border-bottom: 2px solid var(--color-ink);

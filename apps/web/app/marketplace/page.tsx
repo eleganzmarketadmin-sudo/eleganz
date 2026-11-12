@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
@@ -63,9 +63,17 @@ export default function MarketplacePage() {
 
 function MarketplaceContenu() {
   const { t } = useLocale();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [recherche, setRecherche] = useState(() => searchParams.get("q") ?? "");
   const [requeteActive, setRequeteActive] = useState(() => searchParams.get("q") ?? "");
+  // Recherche de boutiques (demande du 12 nov. 2026 : "prévoir également un
+  // champ de recherche pour les boutiques") — la recherche par nom de
+  // boutique existe déjà et fonctionne sur /marketplace/boutiques, mais
+  // n'était accessible qu'en s'y rendant d'abord sans pouvoir chercher
+  // directement. Ce champ redirige vers cette page avec la requête déjà
+  // appliquée (voir ?q= géré là-bas, même mécanisme que pour les produits).
+  const [rechercheBoutique, setRechercheBoutique] = useState("");
   const [produits, setProduits] = useState<Produit[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -180,6 +188,9 @@ function MarketplaceContenu() {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
+        <button type="submit" className={styles.boutonRecherche}>
+          {t("accueil_rechercheProduitBouton")}
+        </button>
         <BoutonBientotDisponible icone="📷" label={t("market_rechercherParPhoto")} />
         <select
           aria-label={t("zonesLivraison_pays")}
@@ -206,6 +217,26 @@ function MarketplaceContenu() {
             </option>
           ))}
         </select>
+      </form>
+
+      <form
+        className={styles.barreRechercheBoutiques}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const q = rechercheBoutique.trim();
+          router.push(q ? `/marketplace/boutiques?q=${encodeURIComponent(q)}` : "/marketplace/boutiques");
+        }}
+      >
+        <label htmlFor="rechercheBoutique">{t("market_boutiques")}</label>
+        <input
+          id="rechercheBoutique"
+          placeholder={t("boutiques_rechercherPlaceholder")}
+          value={rechercheBoutique}
+          onChange={(e) => setRechercheBoutique(e.target.value)}
+        />
+        <button type="submit" className={styles.boutonRecherche}>
+          {t("accueil_rechercheProduitBouton")}
+        </button>
       </form>
 
       <div className={styles.barreFiltres}>
