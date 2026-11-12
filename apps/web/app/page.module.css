@@ -46,6 +46,39 @@
   flex-wrap: wrap;
 }
 
+/* Barre de recherche produit (11 nov. 2026, amélioration "expérience grand
+   public") — visible dès le haut de l'accueil, avant même les 4 cartes de
+   module : un visiteur qui sait déjà qu'il vient acheter n'a plus besoin de
+   lire "vous avez une boutique ?" avant de pouvoir taper ce qu'il cherche. */
+.rechercheProduit {
+  display: flex;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-5);
+  max-width: 480px;
+}
+
+.rechercheProduit input {
+  flex: 1;
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-3);
+  border: 2px solid var(--color-ink);
+}
+
+.rechercheProduit button {
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-5);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rechercheProduit button:hover {
+  opacity: 0.85;
+}
+
 .lienPrincipal {
   display: inline-flex;
   align-items: center;

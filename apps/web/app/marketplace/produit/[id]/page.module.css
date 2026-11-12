@@ -71,6 +71,7 @@
 
 .bouton {
   width: 100%;
+  flex: 1;
   min-height: var(--touche-min);
   background: var(--color-magenta);
   color: #fff;
@@ -82,6 +83,24 @@
 .bouton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Partage (11 nov. 2026, amélioration "expérience grand public") — bouton
+   secondaire (contour, pas de remplissage) pour ne jamais rivaliser
+   visuellement avec l'action principale "Ajouter au panier". */
+.boutonPartager {
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-4);
+  background: transparent;
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.boutonPartager:hover {
+  opacity: 0.8;
 }
 
 .confirmation {

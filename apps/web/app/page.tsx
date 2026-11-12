@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SiteHeader } from "./components/SiteHeader";
 import { Footer } from "./components/Footer";
 import { useLocale } from "./lib/i18n/LocaleContext";
@@ -16,6 +18,42 @@ import styles from "./page.module.css";
 // présente la suite avant de pousser vers une app précise.
 export default function HomePage() {
   const { t } = useLocale();
+  const router = useRouter();
+  // Barre de recherche produit sur l'accueil (11 nov. 2026, amélioration
+  // "expérience grand public") — envoie directement vers la Marketplace
+  // avec la requête déjà appliquée (voir `?q=` lu par MarketplaceContenu
+  // dans marketplace/page.tsx), sans jamais passer par les 4 cartes de
+  // module ci-dessous.
+  const [rechercheAccueil, setRechercheAccueil] = useState("");
+
+  // Raccourci pour un acheteur déjà venu (11 nov. 2026, amélioration
+  // "expérience grand public", point 4) — saute directement en Marketplace
+  // si ce navigateur a déjà visité la Marketplace une fois (voir
+  // MarqueurVisiteMarketplace), sans repasser par le portail de choix de
+  // module. Deux échappatoires volontaires pour ne jamais enfermer
+  // personne : `/?portail=1` et un lien direct vers `/#outils` (c'est
+  // justement ce que fait le bouton "Se connecter" du SiteHeader) laissent
+  // tous les deux voir le portail malgré tout.
+  useEffect(() => {
+    try {
+      const dejaVisiteMarketplace = localStorage.getItem("eleganz_marketplace_visite") === "1";
+      const parametres = new URLSearchParams(window.location.search);
+      const demandeExpliciteDuPortail = parametres.get("portail") === "1" || window.location.hash === "#outils";
+      if (dejaVisiteMarketplace && !demandeExpliciteDuPortail) {
+        router.replace("/marketplace");
+      }
+    } catch {
+      // Stockage indisponible (navigation privée, etc.) : on reste
+      // simplement sur le portail, comportement historique.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function rechercherDepuisAccueil(e: React.FormEvent) {
+    e.preventDefault();
+    const q = rechercheAccueil.trim();
+    router.push(q ? `/marketplace?q=${encodeURIComponent(q)}` : "/marketplace");
+  }
 
   return (
     <div className={styles.page}>
@@ -25,6 +63,15 @@ export default function HomePage() {
         <div className={styles.heroTexte}>
           <h1>{t("accueil_h1")}</h1>
           <p>{t("accueil_heroTexte")}</p>
+          <form className={styles.rechercheProduit} onSubmit={rechercherDepuisAccueil}>
+            <input
+              value={rechercheAccueil}
+              onChange={(e) => setRechercheAccueil(e.target.value)}
+              placeholder={t("accueil_rechercheProduitPlaceholder")}
+              aria-label={t("accueil_rechercheProduitPlaceholder")}
+            />
+            <button type="submit">{t("accueil_rechercheProduitBouton")}</button>
+          </form>
           <div className={styles.heroActions}>
             <a className={styles.lienPrincipal} href="#outils">
               {t("accueil_choisirOutil")}

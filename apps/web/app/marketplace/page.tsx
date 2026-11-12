@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
@@ -44,10 +45,27 @@ interface Categorie {
   name: string;
 }
 
+/**
+ * Enveloppe `useSearchParams` dans un Suspense (convention recommandée du
+ * App Router) — nécessaire pour lire `?q=` / `?category=` (11 nov. 2026,
+ * amélioration "expérience grand public" : la barre de recherche de
+ * l'accueil et le sitemap par catégorie renvoient maintenant vers une
+ * Marketplace qui respecte réellement ces paramètres au chargement, plutôt
+ * que vers une recherche vide qu'il fallait relancer à la main).
+ */
 export default function MarketplacePage() {
+  return (
+    <Suspense fallback={null}>
+      <MarketplaceContenu />
+    </Suspense>
+  );
+}
+
+function MarketplaceContenu() {
   const { t } = useLocale();
-  const [recherche, setRecherche] = useState("");
-  const [requeteActive, setRequeteActive] = useState("");
+  const searchParams = useSearchParams();
+  const [recherche, setRecherche] = useState(() => searchParams.get("q") ?? "");
+  const [requeteActive, setRequeteActive] = useState(() => searchParams.get("q") ?? "");
   const [produits, setProduits] = useState<Produit[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -64,7 +82,7 @@ export default function MarketplacePage() {
   // ProductCategory) ; le prix exige "Appliquer" pour éviter une requête à
   // chaque frappe sur les deux champs.
   const [categories, setCategories] = useState<Categorie[]>([]);
-  const [categorieChoisie, setCategorieChoisie] = useState("");
+  const [categorieChoisie, setCategorieChoisie] = useState(() => searchParams.get("category") ?? "");
   const [prixMinSaisi, setPrixMinSaisi] = useState("");
   const [prixMaxSaisi, setPrixMaxSaisi] = useState("");
   const [prixMinActif, setPrixMinActif] = useState("");
