@@ -203,6 +203,20 @@ export default function CommandePage() {
             />
             <span>{t("cmd_modePaiementMobileMoney")}</span>
           </label>
+          {/* Paiement en ligne par passerelle (demande du 12 nov. 2026) — visible
+              mais non sélectionnable tant qu'aucun fournisseur de paiement n'est
+              branché (voir OrdersService.createOrder) ; distinct du Mobile Money
+              ci-dessus, qui reste un arrangement manuel à la livraison. */}
+          <label className={styles.champPaiementDesactive} title={t("bientotDisponible_info")}>
+            <input type="radio" name="modePaiement" disabled />
+            <span>{t("cmd_modePaiementCarte")}</span>
+            <span className={styles.badgeBientot}>{t("bientotDisponible_badge")}</span>
+          </label>
+          <label className={styles.champPaiementDesactive} title={t("bientotDisponible_info")}>
+            <input type="radio" name="modePaiement" disabled />
+            <span>{t("cmd_modePaiementMobileMoneyEnLigne")}</span>
+            <span className={styles.badgeBientot}>{t("bientotDisponible_badge")}</span>
+          </label>
         </div>
       </div>
 

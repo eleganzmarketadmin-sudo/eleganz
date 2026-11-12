@@ -102,6 +102,29 @@
   resize: vertical;
 }
 
+/* Options de paiement en ligne (carte, Mobile Money par passerelle) encore
+   grisées (demande du 12 nov. 2026 : "les deux options de paiement en
+   ligne avec passerelle... grisées jusqu'à leur effectivité") — même
+   principe visuel que BoutonBientotDisponible (pastille discrète), décliné
+   ici pour s'intégrer à la liste de choix existante plutôt qu'en bouton
+   autonome. */
+.champPaiementDesactive {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--espace-2);
+  color: var(--color-texte-muted);
+  cursor: not-allowed;
+}
+
+.badgeBientot {
+  background: var(--color-border);
+  color: var(--color-texte-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
 .confirmation {
   text-align: center;
   padding: var(--espace-7) var(--espace-4);
