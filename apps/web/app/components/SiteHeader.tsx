@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoMark, BandeMarque } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { ModulesMenu } from "./ModulesMenu";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./SiteHeader.module.css";
@@ -40,6 +41,7 @@ export function SiteHeader() {
   return (
     <header className={styles.entete}>
       <div className={styles.contenu}>
+        <ModulesMenu />
         <Link href="/" className={styles.marque}>
           <LogoMark size={28} />
           ELEGANZ

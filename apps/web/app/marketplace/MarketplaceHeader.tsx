@@ -9,6 +9,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { NotificationBell } from "../components/NotificationBell";
 import { AccueilLien } from "../components/AccueilLien";
+import { ModulesMenu } from "../components/ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useClampDropdownADroite } from "../lib/useClampDropdown";
@@ -103,10 +104,13 @@ export function MarketplaceHeader() {
   return (
     <>
       <header className={styles.entete}>
-        <Link href="/marketplace" className={styles.marque}>
-          <LogoMark size={28} />
-          ELEGANZ <span className={styles.nomModule}>{t("nom_market")}</span>
-        </Link>
+        <div className={styles.groupeMarque}>
+          <ModulesMenu />
+          <Link href="/marketplace" className={styles.marque}>
+            <LogoMark size={28} />
+            ELEGANZ <span className={styles.nomModule}>{t("nom_market")}</span>
+          </Link>
+        </div>
         <nav className={styles.liens}>
           <AccueilLien />
           <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>

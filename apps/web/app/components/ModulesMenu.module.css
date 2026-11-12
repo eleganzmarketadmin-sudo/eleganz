@@ -1,0 +1,170 @@
+.bouton {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  height: var(--touche-min, 44px);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bouton span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.fond {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 400;
+}
+
+.fondVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.volet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(340px, 85vw);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  z-index: 401;
+  transform: translateX(-100%);
+  transition: transform 220ms ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  overflow-y: auto;
+}
+
+.voletOuvert {
+  transform: translateX(0);
+}
+
+.enteteVolet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espace-4) var(--espace-4);
+  border-bottom: 2px solid var(--color-ink);
+  flex-shrink: 0;
+}
+
+.marqueVolet {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.boutonFermer {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--color-ink);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.contenuVolet {
+  padding: var(--espace-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.lienAccueil {
+  font-weight: 600;
+  color: var(--color-ink);
+  padding: var(--espace-2) 0;
+}
+
+.titreSection {
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: var(--espace-2);
+}
+
+.carteModule {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid transparent;
+  padding: var(--espace-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.gestion {
+  border-left-color: var(--color-cobalt-texte);
+}
+
+.marketplace {
+  border-left-color: var(--color-magenta-texte);
+}
+
+.comptable {
+  border-left-color: var(--color-vert-paiement-texte);
+}
+
+.experts {
+  border-left-color: var(--color-or-texte);
+}
+
+.question {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.lienModule {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-encre-fixe);
+  color: #fff;
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-3);
+  font-weight: 600;
+  font-size: 0.875rem;
+  width: fit-content;
+}
+
+.lienModule:hover {
+  text-decoration: none;
+}
+
+.lienModuleSecondaire {
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  width: fit-content;
+  color: var(--color-ink);
+}
+
+.separateur {
+  border-top: 1px solid var(--color-border);
+  margin: var(--espace-2) 0;
+}
+
+.lienBas {
+  color: var(--color-ink);
+  padding: var(--espace-1) 0;
+}

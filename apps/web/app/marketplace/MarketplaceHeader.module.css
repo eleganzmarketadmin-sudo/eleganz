@@ -15,6 +15,12 @@
   border-bottom: 2px solid var(--color-magenta-sur-fonce);
 }
 
+.groupeMarque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
 .marque {
   display: flex;
   align-items: center;

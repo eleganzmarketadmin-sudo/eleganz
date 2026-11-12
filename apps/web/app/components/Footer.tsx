@@ -96,9 +96,14 @@ export function Footer({
 
         <nav className={styles.liens} aria-label={t("footer_autresEspaces")}>
           <Link href="/">{t("nav_accueil")}</Link>
-          <Link href="/marketplace">ELEGANZ {t("nom_market")}</Link>
           <Link href="/connexion">ELEGANZ {t("nom_gestion")}</Link>
+          <Link href="/marketplace">ELEGANZ {t("nom_market")}</Link>
           <Link href="/comptable">ELEGANZ {t("titre_accueil")}</Link>
+          {/* Lien manquant signalé le 12 nov. 2026 (retour client) — Experts
+              est un module à part entière (voir SiteHeader/page.tsx, même
+              ordre Gestion/Market/Comptable/Experts) mais n'avait jamais
+              rejoint le Footer, commun aux six variantes de l'application. */}
+          <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
           <Link href="/admin/connexion">{t("footer_centreDePilotage")}</Link>
           {/* FAQ publique (11 nov. 2026) — Footer est commun aux six
               variantes (accueil/gestion/admin/marketplace/livreur/

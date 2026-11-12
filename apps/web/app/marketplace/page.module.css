@@ -3,20 +3,33 @@
   background: var(--color-surface);
 }
 
+/* Réduit le 12 nov. 2026 (retour client) : pour un visiteur déjà venu une
+   fois, cette page EST l'accueil (voir MarqueurVisiteMarketplace — il saute
+   directement ici depuis "/" dès la deuxième visite), si bien que le grand
+   bandeau d'argumentaire de vente d'origine n'avait plus de rôle et
+   occupait un écran entier avant la moindre barre de recherche. Un bandeau
+   compact, titre + phrase courte sur la même respiration visuelle, reste
+   utile pour qui atterrit directement sur /marketplace (premier lien
+   partagé, moteur de recherche) sans justifier tout cet espace. */
 .entete {
   background: var(--color-magenta);
   color: #fff;
-  padding: var(--espace-7) var(--espace-5);
+  padding: var(--espace-4) var(--espace-5);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--espace-1) var(--espace-3);
 }
 
 .entete h1 {
   font-family: var(--font-display), serif;
-  font-size: clamp(2rem, 5vw, 3rem);
-  margin-bottom: var(--espace-3);
+  font-size: 1.375rem;
 }
 
 .entete p {
   max-width: 48ch;
+  font-size: 0.875rem;
+  opacity: 0.9;
 }
 
 .barreRecherche {
