@@ -146,8 +146,20 @@ body {
      volontaires (menus d'onglets, tableaux) restent intactes : elles posent
      leur propre `overflow-x: auto` sur un conteneur interne, ce qui reste
      indépendant de cette règle sur html/body.
+
+     12 nov. 2026 (signalement : "la fixation des en-têtes... n'est toujours
+     pas effective", persistant malgré les correctifs position: sticky sur
+     SiteHeader/MarketplaceHeader/GestionShell/AdminShell/LivreurShell/
+     ComptableShell) — cause trouvée : `overflow-x: hidden` sur html/body est
+     un piège CSS bien connu qui désactive `position: sticky` pour TOUS les
+     descendants de la page, quel que soit l'en-tête concerné. `overflow-x:
+     clip` protège contre le même débordement horizontal sans ce défaut de
+     bord, et se comporte comme `hidden` dans les navigateurs qui ne le
+     reconnaissent pas encore (déclaré après `hidden`, qu'il remplace quand
+     il est supporté : Chrome/Edge 90+, Firefox 102+, Safari 16+).
    */
   overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
