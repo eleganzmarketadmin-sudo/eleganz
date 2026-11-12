@@ -102,7 +102,13 @@ export function MarketplaceHeader() {
   const nombreArticles = lignes.length;
 
   return (
-    <>
+    // Enveloppe sticky (retour client du 12 nov. 2026 : "l'en-tête doit
+    // rester figée pendant la navigation et le défilement") — l'en-tête de
+    // la Marketplace était jusqu'ici le seul des deux en-têtes publics
+    // (contrairement à SiteHeader) à défiler avec le reste de la page.
+    // Englobe aussi le bandeau de couleur (BandeMarque) pour qu'il reste
+    // collé juste sous l'en-tête plutôt que de défiler séparément.
+    <div className={styles.enveloppeFixe}>
       <header className={styles.entete}>
         <div className={styles.groupeMarque}>
           <ModulesMenu />
@@ -133,6 +139,6 @@ export function MarketplaceHeader() {
         </nav>
       </header>
       <BandeMarque />
-    </>
+    </div>
   );
 }

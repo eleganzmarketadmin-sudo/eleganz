@@ -1,3 +1,9 @@
+.enveloppeFixe {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
 .entete {
   display: flex;
   flex-wrap: wrap;
