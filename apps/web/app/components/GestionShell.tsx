@@ -56,79 +56,86 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.cadre}>
-      <header className={styles.entete}>
-        <div className={styles.marqueBloc}>
-          <LogoMark size={30} />
-          <div>
-            <div className={styles.marque}>
-              ELEGANZ <span>{t("nom_gestion")}</span>
+      {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
+          en-têtes dans la plateforme lors du défilement ou navigation n'est
+          toujours pas effective") — comme pour MarketplaceHeader, l'en-tête
+          Gestion (bloc marque + barre d'onglets) défilait jusqu'ici avec le
+          reste de la page au lieu de rester visible. */}
+      <div className={styles.enveloppeFixe}>
+        <header className={styles.entete}>
+          <div className={styles.marqueBloc}>
+            <LogoMark size={30} />
+            <div>
+              <div className={styles.marque}>
+                ELEGANZ <span>{t("nom_gestion")}</span>
+              </div>
+              {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
             </div>
-            {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
           </div>
-        </div>
-        <div className={styles.droite}>
-          <AccueilLien />
-          {nombreEnAttente > 0 && (
+          <div className={styles.droite}>
+            <AccueilLien />
+            {nombreEnAttente > 0 && (
+              <button
+                onClick={synchroniser}
+                title={t("horsLigne_cliquerSynchroniser")}
+                style={{
+                  background: "var(--color-or)",
+                  color: "var(--color-encre-fixe)",
+                  border: "none",
+                  padding: "8px 12px",
+                  minHeight: "40px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                {nombreEnAttente} vente(s) en attente de synchronisation
+              </button>
+            )}
+            {shops.length > 1 && (
+              <select
+                aria-label="Choisir la boutique"
+                value={currentShop?.id ?? ""}
+                onChange={(e) => setCurrentShopId(e.target.value)}
+                style={{ padding: "8px", minHeight: "40px" }}
+              >
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <NotificationBell />
+            <LanguageSwitcher />
+            <ThemeToggle clair />
             <button
-              onClick={synchroniser}
-              title={t("horsLigne_cliquerSynchroniser")}
-              style={{
-                background: "var(--color-or)",
-                color: "var(--color-encre-fixe)",
-                border: "none",
-                padding: "8px 12px",
-                minHeight: "40px",
-                cursor: "pointer",
-                fontWeight: 600,
+              className={styles.deconnexion}
+              onClick={() => {
+                logout();
+                router.push("/");
               }}
             >
-              {nombreEnAttente} vente(s) en attente de synchronisation
+              {t("action_seDeconnecter")}
             </button>
-          )}
-          {shops.length > 1 && (
-            <select
-              aria-label="Choisir la boutique"
-              value={currentShop?.id ?? ""}
-              onChange={(e) => setCurrentShopId(e.target.value)}
-              style={{ padding: "8px", minHeight: "40px" }}
-            >
-              {shops.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <NotificationBell />
-          <LanguageSwitcher />
-          <ThemeToggle clair />
-          <button
-            className={styles.deconnexion}
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-          >
-            {t("action_seDeconnecter")}
-          </button>
-        </div>
-      </header>
-      <BandeMarque />
-      <nav className={styles.nav} ref={navRef}>
-        {liens.map((lien) => {
-          const actif = pathname === lien.href || pathname?.startsWith(`${lien.href}/`);
-          return (
-            <Link
-              key={lien.href}
-              href={lien.href}
-              className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
-              data-nav-actif={actif ? "true" : undefined}
-            >
-              {lien.label}
-            </Link>
-          );
-        })}
-      </nav>
+          </div>
+        </header>
+        <BandeMarque />
+        <nav className={styles.nav} ref={navRef}>
+          {liens.map((lien) => {
+            const actif = pathname === lien.href || pathname?.startsWith(`${lien.href}/`);
+            return (
+              <Link
+                key={lien.href}
+                href={lien.href}
+                className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                data-nav-actif={actif ? "true" : undefined}
+              >
+                {lien.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
       </main>

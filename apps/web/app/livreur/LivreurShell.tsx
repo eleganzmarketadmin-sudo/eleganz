@@ -51,46 +51,51 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.cadre}>
-      <header className={styles.entete}>
-        <span className={styles.marque}>
-          <LogoMark size={28} />
-          ELEGANZ <span>{t("livr_titre")}</span>
-        </span>
-        <div className={styles.enteteActions}>
-          <AccueilLien />
-          <NotificationBell />
-          <LanguageSwitcher />
-          <ThemeToggle clair />
-          <button
-            className={styles.deconnexion}
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-          >
-            {t("action_seDeconnecter")}
-          </button>
-        </div>
-      </header>
-      {reviewRecommended && (
-        <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
-      )}
-      <BandeMarque />
-      <nav className={styles.nav} ref={navRef}>
-        {LIENS.map((lien) => {
-          const actif = pathname === lien.href;
-          return (
-            <Link
-              key={lien.href}
-              href={lien.href}
-              className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
-              data-nav-actif={actif ? "true" : undefined}
+      {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
+          en-têtes dans la plateforme lors du défilement ou navigation n'est
+          toujours pas effective") — voir aussi GestionShell/AdminShell. */}
+      <div className={styles.enveloppeFixe}>
+        <header className={styles.entete}>
+          <span className={styles.marque}>
+            <LogoMark size={28} />
+            ELEGANZ <span>{t("livr_titre")}</span>
+          </span>
+          <div className={styles.enteteActions}>
+            <AccueilLien />
+            <NotificationBell />
+            <LanguageSwitcher />
+            <ThemeToggle clair />
+            <button
+              className={styles.deconnexion}
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
             >
-              {lien.label}
-            </Link>
-          );
-        })}
-      </nav>
+              {t("action_seDeconnecter")}
+            </button>
+          </div>
+        </header>
+        {reviewRecommended && (
+          <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
+        )}
+        <BandeMarque />
+        <nav className={styles.nav} ref={navRef}>
+          {LIENS.map((lien) => {
+            const actif = pathname === lien.href;
+            return (
+              <Link
+                key={lien.href}
+                href={lien.href}
+                className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                data-nav-actif={actif ? "true" : undefined}
+              >
+                {lien.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
       </main>

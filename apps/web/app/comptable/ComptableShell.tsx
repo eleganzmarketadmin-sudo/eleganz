@@ -108,65 +108,70 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.cadre}>
-      <header className={styles.entete}>
-        <span className={styles.marque}>
-          <LogoMark size={28} />
-          ELEGANZ <span>{t("titre_accueil")}</span>
-        </span>
-        <div className={styles.enteteActions}>
-          <AccueilLien />
-          {nombreEnAttente > 0 && (
+      {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
+          en-têtes dans la plateforme lors du défilement ou navigation n'est
+          toujours pas effective") — voir aussi GestionShell/AdminShell/LivreurShell. */}
+      <div className={styles.enveloppeFixe}>
+        <header className={styles.entete}>
+          <span className={styles.marque}>
+            <LogoMark size={28} />
+            ELEGANZ <span>{t("titre_accueil")}</span>
+          </span>
+          <div className={styles.enteteActions}>
+            <AccueilLien />
+            {nombreEnAttente > 0 && (
+              <button
+                className={styles.pendingSync}
+                onClick={synchroniser}
+                title={t("horsLigne_cliquerSynchroniser")}
+              >
+                {nombreEnAttente} {t("horsLigne_enAttente")}
+              </button>
+            )}
+            <NotificationBell />
+            <LanguageSwitcher />
+            <ThemeToggle clair />
             <button
-              className={styles.pendingSync}
-              onClick={synchroniser}
-              title={t("horsLigne_cliquerSynchroniser")}
+              className={styles.deconnexion}
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
             >
-              {nombreEnAttente} {t("horsLigne_enAttente")}
+              {t("action_seDeconnecter")}
             </button>
-          )}
-          <NotificationBell />
-          <LanguageSwitcher />
-          <ThemeToggle clair />
-          <button
-            className={styles.deconnexion}
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-          >
-            {t("action_seDeconnecter")}
-          </button>
-        </div>
-      </header>
-      {reviewRecommended && (
-        <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
-      )}
-      <BandeMarque />
-      <nav className={styles.nav} ref={navRef}>
-        {GROUPES_NAV.map((groupe, indexGroupe) => (
-          <div className={styles.navGroupe} key={indexGroupe}>
-            {groupe.liens.map((lien) => {
-              const actif = pathname === lien.href;
-              const nonInclus =
-                lien.cleFonctionnalite && fonctionnalitesBouquet
-                  ? fonctionnalitesBouquet[lien.cleFonctionnalite] !== true
-                  : false;
-              return (
-                <Link
-                  key={lien.href}
-                  href={lien.href}
-                  className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
-                  data-nav-actif={actif ? "true" : undefined}
-                  title={nonInclus ? t("abo_nonInclusBouquet") : undefined}
-                >
-                  <span aria-hidden="true">{lien.icone}</span> {lien.label}
-                  {nonInclus && <span aria-hidden="true"> 🔒</span>}
-                </Link>
-              );
-            })}
           </div>
-        ))}
-      </nav>
+        </header>
+        {reviewRecommended && (
+          <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
+        )}
+        <BandeMarque />
+        <nav className={styles.nav} ref={navRef}>
+          {GROUPES_NAV.map((groupe, indexGroupe) => (
+            <div className={styles.navGroupe} key={indexGroupe}>
+              {groupe.liens.map((lien) => {
+                const actif = pathname === lien.href;
+                const nonInclus =
+                  lien.cleFonctionnalite && fonctionnalitesBouquet
+                    ? fonctionnalitesBouquet[lien.cleFonctionnalite] !== true
+                    : false;
+                return (
+                  <Link
+                    key={lien.href}
+                    href={lien.href}
+                    className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                    data-nav-actif={actif ? "true" : undefined}
+                    title={nonInclus ? t("abo_nonInclusBouquet") : undefined}
+                  >
+                    <span aria-hidden="true">{lien.icone}</span> {lien.label}
+                    {nonInclus && <span aria-hidden="true"> 🔒</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+      </div>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>
       </main>
