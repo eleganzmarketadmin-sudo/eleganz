@@ -23,7 +23,8 @@ export class CreateVariantDto {
   sellPrice!: number;
 
   // Prix barré de référence pour une promotion (19 oct. 2026) — optionnel,
-  // validé côté service : ignoré silencieusement s'il n'est pas strictement
+  // validé côté service : rejeté avec une erreur explicite (pas ignoré
+  // silencieusement, corrigé le 12 nov. 2026) s'il n'est pas strictement
   // supérieur à sellPrice, jamais un badge "promo" trompeur.
   @IsOptional()
   @IsNumber()

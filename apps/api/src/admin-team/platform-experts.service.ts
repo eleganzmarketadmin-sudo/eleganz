@@ -55,6 +55,11 @@ export class PlatformExpertsService {
     if (!invite) {
       throw new NotFoundException("Lien d'invitation introuvable.");
     }
+    // Corrigé le 12 nov. 2026 (retour client), même correctif que
+    // ExpertsService.apercuInvite côté boutique.
+    if (invite.status === ShopExpertInviteStatus.PENDING && invite.expiresAt < new Date()) {
+      return { ...invite, status: ShopExpertInviteStatus.EXPIRED };
+    }
     return invite;
   }
 

@@ -6,10 +6,13 @@ import { AccountingService } from "../finance/accounting.service";
 
 /**
  * Facturation d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14) — même
- * découpage que DriverBillingService/BillingService : déclenchement manuel
- * des transitions de cycle tant qu'aucun planificateur n'est en place.
- * `freeTrialStartedAt` est posé dès la création de l'abonnement (= première
- * activation effective), jamais à la création du compte ELEGANZ.
+ * découpage que DriverBillingService/BillingService. Chaque méthode reste
+ * déclenchable manuellement depuis les écrans admin (POST /admin/.../run-...)
+ * ET tourne automatiquement chaque jour à 3h via CronJobsService (corrigé le
+ * 12 nov. 2026 — ce commentaire affirmait encore à tort qu'aucun
+ * planificateur n'était branché). `freeTrialStartedAt` est posé dès la
+ * création de l'abonnement (= première activation effective), jamais à la
+ * création du compte ELEGANZ.
  */
 @Injectable()
 export class ComptableBillingService {

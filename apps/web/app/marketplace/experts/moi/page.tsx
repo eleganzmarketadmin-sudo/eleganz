@@ -527,7 +527,15 @@ export default function MonProfilExpertPage() {
         </>
       )}
 
-      {profil?.status === "APPROVED" && (
+      {/* Corrigé le 12 nov. 2026 (retour client) — accepterInvite() n'exige
+          PAS d'être APPROVED (seulement une candidature minimale, voir son
+          commentaire) : un expert encore PENDING_REVIEW/REJECTED pouvait
+          donc obtenir un engagement actif sans jamais le voir ici, tant que
+          sa candidature n'était pas approuvée pour l'annuaire public —
+          confusion garantie ("pourquoi je n'ai pas accès si la boutique dit
+          m'avoir invité ?"). On affiche ce bloc dès qu'un engagement existe,
+          indépendamment du statut de la candidature. */}
+      {(profil?.status === "APPROVED" || engagements.length > 0) && (
         <div className={styles.section}>
           <h2>{t("experts_mesBoutiquesTitre")}</h2>
           {engagements.length === 0 ? (

@@ -151,6 +151,13 @@ export class ExpertsController {
     return this.experts.listerEnAttente();
   }
 
+  @Get("admin/approuves")
+  @UseGuards(JwtAuthGuard)
+  listerApprouves(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user);
+    return this.experts.listerApprouves();
+  }
+
   @Patch("admin/:id/approuver")
   @UseGuards(JwtAuthGuard)
   approuver(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string, @Body() dto: ModererExpertDto) {

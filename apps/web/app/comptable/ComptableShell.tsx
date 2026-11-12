@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
+import { api } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
@@ -53,6 +54,21 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   const navRef = useRef<HTMLElement>(null);
   useScrollNavActifEnVue(navRef, pathname ?? "");
 
+  // Indication (sans bloquer la navigation, le serveur reste la seule
+  // véritable barrière — voir ComptableService.agenda/exportDossierFinancement)
+  // des liens non inclus dans le bouquet actuel de l'abonné, demandée dans le
+  // retour client du 12 nov. 2026 ("masquer/indiquer dans la nav les liens
+  // correspondant à des fonctionnalités non incluses dans le bouquet actuel").
+  const [fonctionnalitesBouquet, setFonctionnalitesBouquet] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get<{ bouquet: { featuresJson?: Record<string, unknown> } | null }>("/comptable/subscription")
+      .then((s) => setFonctionnalitesBouquet(s.bouquet?.featuresJson ?? {}))
+      .catch(() => setFonctionnalitesBouquet(null));
+  }, [user]);
+
   useEffect(() => {
     if (!loading && !user) router.replace("/comptable/connexion");
   }, [loading, user, router]);
@@ -63,18 +79,22 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   // .navSeparateur) : "Activité quotidienne" (usage fréquent), "Pilotage"
   // (suivi financier, dont le Dossier de financement — anciennement accessible
   // uniquement en lien profond depuis /comptable/chiffres) et "Compte".
-  const GROUPES_NAV = [
+  // `cleFonctionnalite` (optionnelle, typée explicitement pour éviter toute
+  // ambiguïté d'inférence TS sur un tableau à formes mixtes) indique la
+  // fonctionnalité de bouquet dont ce lien dépend — voir fonctionnalitesBouquet.
+  type LienNav = { href: string; label: string; icone: string; cleFonctionnalite?: string };
+  const GROUPES_NAV: { liens: LienNav[] }[] = [
     {
       liens: [
         { href: "/comptable", label: t("nav_accueil"), icone: "🏠" },
         { href: "/comptable/activites", label: t("nav_mesActivites"), icone: "📋" },
-        { href: "/comptable/agenda", label: t("nav_agenda"), icone: "📅" },
+        { href: "/comptable/agenda", label: t("nav_agenda"), icone: "📅", cleFonctionnalite: "rappelsAgenda" },
       ],
     },
     {
       liens: [
         { href: "/comptable/chiffres", label: t("nav_chiffres"), icone: "📊" },
-        { href: "/comptable/dossier-financement", label: t("titre_dossierFinancement"), icone: "💰" },
+        { href: "/comptable/dossier-financement", label: t("titre_dossierFinancement"), icone: "💰", cleFonctionnalite: "exportDossierFinancement" },
       ],
     },
     {
@@ -127,14 +147,20 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
           <div className={styles.navGroupe} key={indexGroupe}>
             {groupe.liens.map((lien) => {
               const actif = pathname === lien.href;
+              const nonInclus =
+                lien.cleFonctionnalite && fonctionnalitesBouquet
+                  ? fonctionnalitesBouquet[lien.cleFonctionnalite] !== true
+                  : false;
               return (
                 <Link
                   key={lien.href}
                   href={lien.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  title={nonInclus ? t("abo_nonInclusBouquet") : undefined}
                 >
                   <span aria-hidden="true">{lien.icone}</span> {lien.label}
+                  {nonInclus && <span aria-hidden="true"> 🔒</span>}
                 </Link>
               );
             })}

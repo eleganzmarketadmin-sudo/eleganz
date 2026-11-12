@@ -225,19 +225,17 @@ export class ExpertsService {
   // --- Annuaire public (status APPROVED uniquement) ------------------------
 
   async rechercher(q?: string) {
+    // `domaines` est un tableau scalaire (String[]) : Prisma n'offre pas de
+    // `contains`/`insensitive` dessus (seulement `has`/`hasSome`, en égalité
+    // exacte et sensible à la casse) — contrairement à `headline`/`bio`. Ça
+    // rendait la recherche par domaine incohérente avec la recherche texte
+    // libre (corrigé le 12 nov. 2026, retour client) : "crédit" ne trouvait
+    // jamais un domaine stocké "Montage dossier crédit", "risque" ne
+    // matchait pas "Risque". L'annuaire reste de taille modeste, donc on
+    // filtre `domaines` en mémoire plutôt que de complexifier la requête
+    // avec du SQL brut pour ce seul champ.
     const experts = await this.prisma.expertProfile.findMany({
-      where: {
-        status: ExpertStatus.APPROVED,
-        ...(q
-          ? {
-              OR: [
-                { headline: { contains: q, mode: "insensitive" } },
-                { bio: { contains: q, mode: "insensitive" } },
-                { domaines: { has: q } },
-              ],
-            }
-          : {}),
-      },
+      where: { status: ExpertStatus.APPROVED },
       select: {
         id: true,
         headline: true,
@@ -251,7 +249,14 @@ export class ExpertsService {
       },
       orderBy: { createdAt: "desc" },
     });
-    return experts;
+    if (!q) return experts;
+    const recherche = q.toLowerCase();
+    return experts.filter(
+      (e) =>
+        e.headline?.toLowerCase().includes(recherche) ||
+        e.bio?.toLowerCase().includes(recherche) ||
+        e.domaines.some((d) => d.toLowerCase().includes(recherche)),
+    );
   }
 
   // Jamais les documents (CV, diplômes...) ni les références : réservés à
@@ -293,6 +298,24 @@ export class ExpertsService {
         references: true,
       },
       orderBy: { createdAt: "asc" },
+    });
+  }
+
+  // Ajouté le 12 nov. 2026 (retour client) — la route suspendre() existait
+  // déjà côté API mais aucun écran admin ne listait les experts déjà
+  // APPROVED (listerEnAttente ne montre que PENDING_REVIEW) : impossible de
+  // trouver un bouton "Suspendre" une fois la candidature approuvée.
+  listerApprouves() {
+    return this.prisma.expertProfile.findMany({
+      where: { status: ExpertStatus.APPROVED },
+      select: {
+        id: true,
+        headline: true,
+        domaines: true,
+        createdAt: true,
+        user: { select: { fullName: true, email: true, phone: true } },
+      },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -390,6 +413,14 @@ export class ExpertsService {
     });
     if (!invite) {
       throw new NotFoundException("Lien d'invitation introuvable.");
+    }
+    // Corrigé le 12 nov. 2026 (retour client) — seul accepterInvite()
+    // comparait expiresAt à la date courante ; cet aperçu renvoyait tel
+    // quel le statut stocké (resté "PENDING" tant que personne n'a cliqué),
+    // donc le front affichait un bouton "Accepter" actif sur un lien expiré
+    // depuis des semaines, et l'échec n'apparaissait qu'après le clic.
+    if (invite.status === ShopExpertInviteStatus.PENDING && invite.expiresAt < new Date()) {
+      return { ...invite, status: ShopExpertInviteStatus.EXPIRED };
     }
     return invite;
   }

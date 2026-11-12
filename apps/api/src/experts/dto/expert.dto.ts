@@ -1,4 +1,16 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsOptional, IsString, IsUrl, MaxLength, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  MaxLength,
+  MinLength,
+} from "class-validator";
 import { ExpertDocumentType, ExpertProfileTemplate, ShopExpertScope } from "@eleganz/database";
 
 // Liste exportée pour être réutilisée par le guard/les contrôleurs sans
@@ -121,7 +133,12 @@ export class InviteExpertDto {
   @IsIn(SCOPES_EXPERT, { each: true })
   scopes!: ShopExpertScope[];
 
+  // Corrigé le 12 nov. 2026 (retour client) — sans ces décorateurs, une
+  // valeur absurde (chaîne, décimal, négatif) traversait la validation et
+  // ne survivait qu'à la coercition JS implicite du service (`> 0`), fragile.
   @IsOptional()
+  @IsInt()
+  @Min(1)
   dureeValiditeJours?: number;
 }
 

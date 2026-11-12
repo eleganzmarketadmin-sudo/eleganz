@@ -38,12 +38,13 @@ const LIBELLE_ETAT: Record<EtatEcheance, string> = {
  * avec une date d'échéance renseignée et un solde non réglé, déclenchent
  * une relance.
  *
- * Pas encore branché sur un vrai planificateur (même limite que
- * BillingService.processTrialExpirations — voir son TODO) : exécuté pour
- * l'instant à la demande via POST /admin/echeancier/run. Chaque exécution
- * renvoie une notification pour chaque ligne encore dans sa fenêtre de
- * relance (J-3 à J+∞) ; destiné à tourner une fois par jour, pas plusieurs
- * fois dans la même journée, pour ne pas créer de doublons.
+ * Déclenchable manuellement via POST /admin/echeancier/run ET branché sur
+ * CronJobsService (corrigé le 12 nov. 2026 — ce commentaire affirmait encore
+ * à tort qu'aucun planificateur n'était en place), qui l'exécute une fois
+ * par jour à 3h. Chaque exécution renvoie une notification pour chaque ligne
+ * encore dans sa fenêtre de relance (J-3 à J+∞) ; pensé pour tourner une
+ * fois par jour, pas plusieurs fois dans la même journée, pour ne pas créer
+ * de doublons.
  */
 @Injectable()
 export class EcheancierService {

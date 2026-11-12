@@ -405,6 +405,127 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
     visibleFaq: true,
   },
 
+  // ───────────────────────── Mon assistant ─────────────────────────
+  // Ajouté le 12 nov. 2026 (retour client) — jusqu'ici, aucune fiche ne
+  // couvrait ELEGANZ Secourable ("Mon assistant"), seul module sans aucune
+  // entrée dans le Centre d'aide / FAQ publique.
+  {
+    slug: "seed-comptable-presentation",
+    titre: "Qu'est-ce que Mon assistant (ELEGANZ Secourable) ?",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "comptable", "secourable", "activité", "carnet", "indépendant"],
+    contenuAgent:
+      "Mon assistant (nom interne « ELEGANZ Secourable ») est un module de suivi financier simple, détaché du " +
+      "catalogue et des boutiques : n'importe quel compte ELEGANZ peut l'utiliser pour suivre une ou plusieurs " +
+      "« activités » (un commerce, une location, un petit business informel) sans avoir besoin d'ouvrir une " +
+      "boutique Gestion. Il a sa propre reconnexion dédiée (/comptable/connexion, depuis le 11 nov. 2026) : un " +
+      "compte déjà connecté côté Gestion ou Marketplace doit tout de même se reconnecter pour accéder à Mon " +
+      "assistant. Chaque activité suit des entrées de caisse rapides, des dettes/créances/emprunts, des loyers " +
+      "attendus (si l'activité inclut de la location) et des versements de travailleurs.",
+    contenuClient:
+      "Mon assistant vous aide à garder une trace simple de vos entrées et sorties d'argent, de vos dettes et " +
+      "créances, et de vos échéances à venir — pour une ou plusieurs activités, sans avoir besoin d'une boutique " +
+      "en ligne. Connectez-vous depuis /comptable/connexion avec votre compte ELEGANZ habituel.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-comptable-saisie-rapide",
+    titre: "Enregistrer une entrée dans le carnet (Journal rapide)",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "carnet", "saisie", "entrée", "sortie", "hors ligne"],
+    contenuAgent:
+      "Le Journal rapide (Carnet) de chaque activité permet de saisir en quelques secondes une entrée ou une " +
+      "sortie d'argent avec un montant, une catégorie et une note facultative. La saisie fonctionne même hors " +
+      "connexion (OfflineSyncProvider) : les entrées saisies sans réseau sont mises en file d'attente et se " +
+      "synchronisent automatiquement au retour de la connexion (ou via le bouton « X en attente » visible dans " +
+      "l'en-tête). Si un client dit qu'une saisie « a disparu », vérifiez d'abord si elle est toujours listée " +
+      "comme en attente de synchronisation plutôt que perdue.",
+    contenuClient:
+      "1. Ouvrez votre activité, puis « Journal rapide ».\n" +
+      "2. Indiquez le montant, choisissez entrée ou sortie, et une catégorie.\n" +
+      "3. Ajoutez une note si besoin, puis validez.\n" +
+      "4. Sans connexion, la saisie reste enregistrée sur votre appareil et s'envoie automatiquement dès que " +
+      "vous retrouvez du réseau.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-comptable-dettes-creances",
+    titre: "Suivre une dette, une créance ou un emprunt",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "dette", "créance", "emprunt", "échéance", "rappel"],
+    contenuAgent:
+      "Une « dette » Mon assistant couvre trois cas (champ type : DETTE, CREANCE, EMPRUNT) selon qui doit à qui. " +
+      "Chacune a une date d'échéance facultative ; si elle est renseignée, l'échéance apparaît automatiquement " +
+      "dans les rappels de la page d'accueil (toujours visibles, même sans le bouquet Agenda) et dans la vue " +
+      "Agenda complète (fonctionnalité de bouquet). Une dette/créance se marque « réglée » une fois le paiement " +
+      "fait — elle reste consultable dans l'historique mais sort des rappels actifs.",
+    contenuClient:
+      "1. Depuis votre activité, ouvrez « Dettes & créances » puis « Ajouter ».\n" +
+      "2. Choisissez le type (vous devez à quelqu'un, quelqu'un vous doit, ou un emprunt), indiquez le montant, " +
+      "le nom de la contrepartie et une date d'échéance si vous la connaissez.\n" +
+      "3. Dès l'échéance approche, un rappel apparaît automatiquement sur votre page d'accueil.\n" +
+      "4. Une fois payée, marquez-la « réglée » — elle reste visible dans l'historique.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-comptable-loyers-versements",
+    titre: "Suivre des loyers attendus et des versements de travailleurs",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "loyer", "location", "versement", "travailleur", "salaire"],
+    contenuAgent:
+      "Pour une activité de location, chaque unité (ComptableRentalUnit) génère ses échéances de loyer attendues " +
+      "(ComptableRentPayment) ; pour une activité avec des employés ou journaliers, chaque versement attendu se " +
+      "suit via ComptableWorkerRemittance. Les deux alimentent les mêmes rappels (page d'accueil) et la même vue " +
+      "Agenda que les dettes/créances — voir fiche « Suivre une dette, une créance ou un emprunt ».",
+    contenuClient:
+      "1. Pour un loyer : ouvrez « Unités locatives », ajoutez l'unité puis enregistrez chaque paiement de loyer " +
+      "reçu — les échéances non encore payées apparaissent dans vos rappels.\n" +
+      "2. Pour un versement à un travailleur : ouvrez « Versements », ajoutez le travailleur et la date attendue " +
+      "du versement, puis marquez-le réglé une fois le paiement fait.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-comptable-bouquets",
+    titre: "Choisir un bouquet Mon assistant (Essentiel, Pro, Premium)",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "bouquet", "essentiel", "pro", "premium", "abonnement", "agenda", "dossier de financement"],
+    contenuAgent:
+      "Depuis le 14 oct. 2026, Mon assistant a trois bouquets payants (ComptablePlan, modifiables sans " +
+      "redéploiement depuis /admin/tarifs) : Essentiel (offre historique, 1 activité, aucune fonctionnalité " +
+      "premium), Pro (jusqu'à 5 activités, historique illimité, comparaison entre activités, vue Agenda " +
+      "complète) et Premium (activités illimitées, toutes les fonctionnalités Pro + export du dossier de " +
+      "financement bancaire). Le sélecteur de bouquet est sur /comptable/abonnement (ajouté le 12 nov. 2026 — " +
+      "auparavant l'écran ne gérait que la fréquence de facturation mensuelle/annuelle, sans aucun moyen de " +
+      "changer de bouquet). Les abonnés déjà actifs avant l'introduction des bouquets ont été rattachés une " +
+      "fois pour toutes au bouquet Pro (jamais Essentiel, pour ne perdre aucun accès déjà utilisé). Un changement " +
+      "de bouquet prend effet immédiatement, la facturation suit au prochain cycle.",
+    contenuClient:
+      "1. Ouvrez « Abonnement » dans Mon assistant.\n" +
+      "2. Comparez les trois bouquets (Essentiel, Pro, Premium) et leurs fonctionnalités, puis cliquez sur celui " +
+      "que vous voulez.\n" +
+      "3. Le changement est immédiat ; votre facturation suit au prochain cycle.\n" +
+      "4. Un lien de menu verrouillé (🔒) signifie une fonctionnalité non incluse dans votre bouquet actuel — " +
+      "passez à un bouquet supérieur pour y accéder.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-comptable-export-synthese-dossier",
+    titre: "Exporter une synthèse ou un dossier de financement",
+    categorie: "Mon assistant",
+    motsCles: ["mon assistant", "export", "synthèse", "pdf", "excel", "dossier de financement", "banque"],
+    contenuAgent:
+      "La page Chiffres propose une synthèse périodique exportable en PDF ou Excel (tous bouquets). Le dossier " +
+      "de financement bancaire (PDF avec bandeau d'avertissement intégré, jamais présenté comme un état financier " +
+      "certifié) n'est lui disponible que pour le bouquet Premium — un appel direct à l'export sans ce bouquet " +
+      "renvoie une erreur explicite nommant le bouquet actuel. Si un client Pro ou Essentiel demande ce dossier, " +
+      "proposez un passage au bouquet Premium depuis /comptable/abonnement.",
+    contenuClient:
+      "1. Pour une synthèse : ouvrez « Chiffres », choisissez une période puis « Exporter » (PDF ou Excel).\n" +
+      "2. Pour le dossier de financement bancaire (réservé au bouquet Premium) : ouvrez « Dossier de " +
+      "financement » dans le menu. S'il est verrouillé, passez au bouquet Premium depuis « Abonnement ».",
+    visibleFaq: true,
+  },
+
   // ─────────────── Pour les agents ELEGANZ (Centre de pilotage) ───────────────
   {
     slug: "seed-admin-trancher-litige",

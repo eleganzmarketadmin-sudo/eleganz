@@ -1,4 +1,4 @@
-import { ArrayMinSize, IsArray, IsEnum, IsOptional } from "class-validator";
+import { ArrayMinSize, IsArray, IsEnum, IsInt, IsOptional, Min } from "class-validator";
 import { MenuAdmin } from "@eleganz/database";
 
 // Invitation d'un expert externe au niveau plateforme (16 oct. 2026, point 2
@@ -13,5 +13,7 @@ export class InvitePlatformExpertDto {
   scopes!: MenuAdmin[];
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
   dureeValiditeJours?: number;
 }

@@ -207,9 +207,17 @@ export class ComptableService {
   }
 
   async listEntries(userId: string, activityId?: string, depuis?: string, jusqu_a?: string) {
+    // Corrigé le 12 nov. 2026 (retour client) — la vue "toutes activités"
+    // (sans activityId) incluait encore les activités archivées, contraire
+    // à dashboard/reminders/agenda qui filtrent déjà archived:false ; une
+    // activité archivée "pour faire le tri" continuait donc à polluer ces
+    // listes globales. Un accès direct à UNE activité précise (activityId
+    // fourni) reste volontairement possible même si elle est archivée.
     const activityIds = activityId
       ? [activityId]
-      : (await this.prisma.comptableActivity.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+      : (
+          await this.prisma.comptableActivity.findMany({ where: { userId, archived: false }, select: { id: true } })
+        ).map((a) => a.id);
     if (activityId) await this.getOwnedActivity(userId, activityId);
 
     return this.prisma.comptableEntry.findMany({
@@ -246,7 +254,9 @@ export class ComptableService {
   async listDebts(userId: string, activityId?: string, type?: ComptableDebtType) {
     const activityIds = activityId
       ? [activityId]
-      : (await this.prisma.comptableActivity.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+      : (
+          await this.prisma.comptableActivity.findMany({ where: { userId, archived: false }, select: { id: true } })
+        ).map((a) => a.id);
     if (activityId) await this.getOwnedActivity(userId, activityId);
 
     const dettes = await this.prisma.comptableDebt.findMany({
@@ -310,7 +320,9 @@ export class ComptableService {
   async listRentalUnits(userId: string, activityId?: string) {
     const activityIds = activityId
       ? [activityId]
-      : (await this.prisma.comptableActivity.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+      : (
+          await this.prisma.comptableActivity.findMany({ where: { userId, archived: false }, select: { id: true } })
+        ).map((a) => a.id);
     if (activityId) await this.getOwnedActivity(userId, activityId);
     return this.prisma.comptableRentalUnit.findMany({
       where: { activityId: { in: activityIds }, active: true },
@@ -373,7 +385,9 @@ export class ComptableService {
   async listWorkerRemittances(userId: string, activityId?: string) {
     const activityIds = activityId
       ? [activityId]
-      : (await this.prisma.comptableActivity.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+      : (
+          await this.prisma.comptableActivity.findMany({ where: { userId, archived: false }, select: { id: true } })
+        ).map((a) => a.id);
     if (activityId) await this.getOwnedActivity(userId, activityId);
     return this.prisma.comptableWorkerRemittance.findMany({
       where: { activityId: { in: activityIds } },
@@ -585,7 +599,15 @@ export class ComptableService {
       }
     }
     for (const c of creancesOuvertes) {
-      if (c.dueDate && c.dueDate <= dansSeptJours) {
+      if (!c.dueDate) continue;
+      // Corrigé le 12 nov. 2026 (retour client) — une créance déjà échue
+      // tombait dans le même panier "aVenir" qu'une créance future, avec le
+      // même libellé "attendue" : impossible de distinguer un client qui
+      // doit relancer une créance en retard de deux mois d'un simple rappel
+      // à 5 jours. Alignée sur le traitement déjà appliqué aux dettes/loyers.
+      if (c.dueDate <= maintenant) {
+        urgents.push({ label: `Créance en retard — ${c.counterpartyName}`, detail: c.activity.name, refType: "debt", refId: c.id });
+      } else if (c.dueDate <= dansSeptJours) {
         aVenir.push({ label: `Créance attendue — ${c.counterpartyName}`, detail: c.activity.name, refType: "debt", refId: c.id });
       }
     }

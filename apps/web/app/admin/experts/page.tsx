@@ -33,6 +33,14 @@ interface CandidatureExpert {
   references: ReferenceCandidature[];
 }
 
+interface ExpertApprouve {
+  id: string;
+  headline: string;
+  domaines: string[];
+  createdAt: string;
+  user: { fullName: string; email?: string | null; phone?: string | null };
+}
+
 const CLE_TYPE_DOCUMENT: Record<string, string> = {
   CV: "experts_typeCv",
   DIPLOME: "experts_typeDiplome",
@@ -48,22 +56,32 @@ const CLE_TYPE_DOCUMENT: Record<string, string> = {
 function AdminExpertsContent() {
   const { t } = useLocale();
   const [candidatures, setCandidatures] = useState<CandidatureExpert[]>([]);
+  // Ajouté le 12 nov. 2026 (retour client) — jusqu'ici, un expert disparaissait
+  // de cet écran dès qu'il était approuvé, sans qu'aucun bouton "Suspendre"
+  // n'existe nulle part dans l'UI admin (la route API existait déjà, seule
+  // cette liste + ce bouton manquaient).
+  const [approuves, setApprouves] = useState<ExpertApprouve[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [enCours, setEnCours] = useState<string | null>(null);
 
   function recharger() {
-    api
-      .get<CandidatureExpert[]>("/experts/admin/en-attente")
-      .then(setCandidatures)
+    Promise.all([
+      api.get<CandidatureExpert[]>("/experts/admin/en-attente"),
+      api.get<ExpertApprouve[]>("/experts/admin/approuves"),
+    ])
+      .then(([enAttente, approuvesData]) => {
+        setCandidatures(enAttente);
+        setApprouves(approuvesData);
+      })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
   }
 
   useEffect(recharger, []);
 
-  async function moderer(id: string, action: "approuver" | "rejeter") {
+  async function moderer(id: string, action: "approuver" | "rejeter" | "suspendre") {
     setEnCours(id);
     setErreur(null);
     try {
@@ -153,6 +171,46 @@ function AdminExpertsContent() {
                 onClick={() => moderer(c.id, "rejeter")}
               >
                 {t("admexperts_rejeter")}
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+
+      <h2 className={styles.titre} style={{ marginTop: "32px" }}>
+        {t("admexperts_approuvesTitre")}
+      </h2>
+      {approuves.length === 0 ? (
+        <p className={styles.messageVide}>{t("admexperts_aucunApprouve")}</p>
+      ) : (
+        approuves.map((e) => (
+          <div className={styles.candidature} key={e.id}>
+            <div className={styles.entete}>
+              <span>
+                {e.user.fullName} — {e.user.email ?? e.user.phone ?? "—"}
+              </span>
+              <span>{formatDate(e.createdAt)}</span>
+            </div>
+            <p className={styles.headline}>{e.headline}</p>
+            <div className={styles.domaines}>
+              {e.domaines.map((d) => (
+                <span className={styles.domaine} key={d}>
+                  {d}
+                </span>
+              ))}
+            </div>
+            <div className={styles.actions} style={{ marginTop: "12px" }}>
+              <input
+                placeholder={t("admexperts_placeholderNote")}
+                value={notes[e.id] ?? ""}
+                onChange={(ev) => setNotes((prev) => ({ ...prev, [e.id]: ev.target.value }))}
+              />
+              <button
+                className={styles.boutonRejeter}
+                disabled={enCours === e.id}
+                onClick={() => moderer(e.id, "suspendre")}
+              >
+                {t("admexperts_suspendre")}
               </button>
             </div>
           </div>

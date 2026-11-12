@@ -7,12 +7,23 @@ import { formatDate } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
+interface Bouquet {
+  id: string;
+  name: string;
+  monthlyPrice: string;
+  yearlyPrice: string;
+  maxActivities: number | null;
+  featuresJson: Record<string, unknown>;
+}
+
 interface Subscription {
   billingStatus: "FREE_PERIOD" | "PAYMENT_DUE" | "ACTIVE" | "SUSPENDED";
   freeTrialStartedAt: string;
   activatedAt: string;
   plan: "MONTHLY" | "YEARLY" | null;
   renewsAt: string | null;
+  bouquetId: string | null;
+  bouquet: Bouquet | null;
 }
 
 interface Tarification {
@@ -28,22 +39,37 @@ const CLES_STATUT: Record<string, string> = {
   SUSPENDED: "abo_statutSuspendu",
 };
 
+// Les 4 fonctionnalités de bouquet Secourable (voir
+// comptable-plans.service.ts) — mêmes clés de traduction que l'écran
+// /admin/tarifs (section Mon assistant), réutilisées ici pour que l'abonné
+// voie exactement ce que chaque bouquet inclut.
+const CLES_FONCTIONNALITES_COMPTABLE: { cle: string; cleTrad: string }[] = [
+  { cle: "historiqueIllimite", cleTrad: "admtarifs_cpt_historiqueIllimite" },
+  { cle: "comparaisonPeriodes", cleTrad: "admtarifs_cpt_comparaisonPeriodes" },
+  { cle: "rappelsAgenda", cleTrad: "admtarifs_cpt_rappelsAgenda" },
+  { cle: "exportDossierFinancement", cleTrad: "admtarifs_cpt_exportDossierFinancement" },
+];
+
 function AbonnementContenu() {
   const { t } = useLocale();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tarification, setTarification] = useState<Tarification | null>(null);
+  const [bouquets, setBouquets] = useState<Bouquet[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  const [bouquetEnCours, setBouquetEnCours] = useState<string | null>(null);
 
   function recharger() {
     Promise.all([
       api.get<Subscription>("/comptable/subscription"),
       api.get<Tarification>("/platform-settings/comptable-pricing", false),
+      api.get<Bouquet[]>("/comptable/plans", false),
     ])
-      .then(([s, tp]) => {
+      .then(([s, tp, b]) => {
         setSubscription(s);
         setTarification(tp);
+        setBouquets(b);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
@@ -61,6 +87,19 @@ function AbonnementContenu() {
       setErreur(err instanceof ApiError ? err.message : t("abo_choixImpossible"));
     } finally {
       setEnCours(false);
+    }
+  }
+
+  async function choisirBouquet(bouquetId: string) {
+    setBouquetEnCours(bouquetId);
+    setErreur(null);
+    try {
+      await api.post("/comptable/subscription/bouquet", { bouquetId });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("abo_choixImpossible"));
+    } finally {
+      setBouquetEnCours(null);
     }
   }
 
@@ -95,6 +134,41 @@ function AbonnementContenu() {
           <span>{t("abo_formuleChoisie")}</span>
           <span>{subscription.plan === "YEARLY" ? t("abo_annuelle") : subscription.plan === "MONTHLY" ? t("abo_mensuelle") : t("abo_nonChoisie")}</span>
         </div>
+      </div>
+
+      <h2 style={{ marginBottom: "16px" }}>{t("abo_choisirBouquet")}</h2>
+      <div className={styles.bouquets}>
+        {bouquets.map((b) => {
+          const actif = b.id === subscription.bouquetId;
+          const fonctionnalites = CLES_FONCTIONNALITES_COMPTABLE.filter(({ cle }) => b.featuresJson[cle] === true);
+          return (
+            <button
+              key={b.id}
+              type="button"
+              className={`${styles.carteBouquet} ${actif ? styles.carteBouquetActive : ""}`}
+              disabled={bouquetEnCours !== null}
+              onClick={() => !actif && choisirBouquet(b.id)}
+            >
+              <strong>{b.name}</strong>
+              <p className={styles.prixBouquet}>
+                {b.monthlyPrice} $ {t("abonnement_parMois")}
+              </p>
+              {b.maxActivities != null && (
+                <p className={styles.note}>
+                  {t("abo_activitesMax")} : {b.maxActivities}
+                </p>
+              )}
+              {fonctionnalites.length > 0 && (
+                <ul className={styles.listeFonctionnalites}>
+                  {fonctionnalites.map(({ cleTrad }) => (
+                    <li key={cleTrad}>{t(cleTrad)}</li>
+                  ))}
+                </ul>
+              )}
+              {actif && <span className={styles.badgeChoisi}>{t("abonnement_bouquetActuelBadge")}</span>}
+            </button>
+          );
+        })}
       </div>
 
       <h2 style={{ marginBottom: "16px" }}>{t("abo_choisirFormule")}</h2>
