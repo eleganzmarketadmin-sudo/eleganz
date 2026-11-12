@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
+import { ChampQuantite } from "../../components/ChampQuantite";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
@@ -368,12 +369,11 @@ function CaisseContent() {
                           </span>
                         )}
                       </span>
-                      <input
+                      <ChampQuantite
                         className={styles.ligneTicketQte}
-                        type="number"
                         min={1}
                         value={ligne.quantity}
-                        onChange={(e) => modifierQuantite(i, Number(e.target.value))}
+                        onChange={(qte) => modifierQuantite(i, qte)}
                       />
                       <input
                         className={`${styles.ligneTicketPrix} ${prixModifie ? styles.ligneTicketPrixModifie : ""}`}

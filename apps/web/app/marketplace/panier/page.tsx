@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCart } from "../../lib/cart-context";
 import { formatMoney } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
+import { ChampQuantite } from "../../components/ChampQuantite";
 import styles from "./page.module.css";
 
 export default function PanierPage() {
@@ -32,13 +33,12 @@ export default function PanierPage() {
             {(l.size || l.color) && ` — ${[l.size, l.color].filter(Boolean).join(" · ")}`}
             <div className={styles.boutique}>{l.shopName}</div>
           </div>
-          <input
+          <ChampQuantite
             className={styles.qte}
-            type="number"
             min={1}
             max={l.stockDisponible}
             value={l.quantity}
-            onChange={(e) => modifierQuantite(l.variantId, Number(e.target.value))}
+            onChange={(qte) => modifierQuantite(l.variantId, qte)}
           />
           <span className={styles.montant}>{formatMoney(l.quantity * l.unitPrice, l.currency)}</span>
           <button className={styles.retirer} onClick={() => retirer(l.variantId)}>

@@ -6,6 +6,7 @@ import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
 import { RetourLien } from "../../../components/RetourLien";
 import { PrixPromo, RubanPromo, RubanNouveau } from "../../../components/PrixPromo";
+import { ChampQuantite } from "../../../components/ChampQuantite";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
 import { formatMoney } from "../../../lib/money";
@@ -202,13 +203,12 @@ export default function ProduitClient({ id }: { id: string }) {
             <label htmlFor="quantite" style={{ fontSize: "0.875rem" }}>
               {t("produit_quantite")}
             </label>
-            <input
+            <ChampQuantite
               id="quantite"
-              type="number"
               min={1}
               max={variante.stockQty}
               value={quantite}
-              onChange={(e) => setQuantite(Math.max(1, Math.min(Number(e.target.value) || 1, variante.stockQty)))}
+              onChange={(qte) => setQuantite(Math.max(1, Math.min(qte, variante.stockQty)))}
               style={{ width: "80px", padding: "8px" }}
             />
           </div>
