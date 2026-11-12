@@ -352,6 +352,7 @@ function SelecteurMultiple({
       <label>{label}</label>
       <select
         multiple
+        autoComplete="off"
         value={selection}
         onChange={(e) => onChangeSelection(Array.from(e.target.selectedOptions, (o) => o.value))}
         style={{ minHeight: "84px" }}
