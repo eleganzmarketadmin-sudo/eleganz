@@ -11,10 +11,12 @@ import { useEffect } from "react";
  * en Marketplace à la prochaine visite de "/", sans repasser par le menu de
  * choix de module.
  *
- * Volontairement PAS lié à une connexion/un compte : beaucoup d'acheteurs
- * naviguent ou commandent sans jamais créer de compte (voir
- * marketplace/commande/page.tsx) — "déjà venu" est le bon signal ici, pas
- * "déjà authentifié".
+ * Volontairement PAS lié à une connexion/un compte : même si passer une
+ * commande exige aujourd'hui un compte (voir marketplace/commande/page.tsx),
+ * un visiteur peut très bien parcourir longuement le catalogue avant de se
+ * décider à en créer un — "déjà venu" est le bon signal ici, pas "déjà
+ * authentifié", justement pour ne pas perdre ce visiteur-là en le renvoyant
+ * sans arrêt au portail de choix de module.
  */
 export function MarqueurVisiteMarketplace() {
   useEffect(() => {

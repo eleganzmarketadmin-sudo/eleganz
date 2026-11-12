@@ -45,7 +45,12 @@ export class MarketplaceCatalogService {
           // Filtre "page boutique publique" (prompt du 15 oct. 2026, point 6).
           ...(dto.shopSlug ? { slug: dto.shopSlug } : {}),
         },
-        ...(dto.category ? { category: dto.category } : {}),
+        // Insensible à la casse (12 nov. 2026, retour client) — défensif :
+        // le référentiel ProductCategory impose la casse exacte à la
+        // création, mais rien n'empêche un ancien produit ou une future
+        // intégration externe d'écrire la même catégorie avec une casse
+        // différente ; autant que le filtre la retrouve quand même.
+        ...(dto.category ? { category: { equals: dto.category, mode: "insensitive" } } : {}),
         ...(dto.q
           ? {
               OR: [

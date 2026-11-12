@@ -34,6 +34,38 @@ const CATEGORIES_PAR_DEFAUT = [
   "Autre",
 ];
 
+/**
+ * Rattrapage du filtre catégorie Marketplace (12 nov. 2026, retour client
+ * sur le parcours d'achat) — avant ce référentiel (16 oct. 2026), le champ
+ * `Product.category` était une saisie libre par boutique. Le filtre de la
+ * Marketplace compare désormais ce champ EXACTEMENT au nom choisi dans le
+ * référentiel : un produit resté sur son ancien libellé libre ("Accessoires",
+ * "Robes & boubous"…) ne correspond plus jamais à aucune valeur du menu et
+ * devient invisible à tout filtre catégorie, même quand l'équivalent
+ * référentiel est sans ambiguïté.
+ *
+ * Cette table ne couvre QUE les anciens libellés dont l'équivalent est
+ * certain — jamais un libellé qui pourrait désigner plusieurs rayons à la
+ * fois ("Costumes", "Ensembles", "Chemises", "Vestes & manteaux" restent
+ * volontairement en dehors : database ne recoupe pas le genre/l'usage visé
+ * par la boutique, un rattrapage automatique risquerait de mal classer
+ * l'article plutôt que de simplement le rendre filtrable). Ces cas restants
+ * se corrigent à la main depuis Gestion → Catalogue, où le formulaire ne
+ * propose plus que le référentiel.
+ *
+ * Idempotent par construction : une fois un produit basculé sur la valeur
+ * de droite, il ne correspond plus jamais à la clé de gauche, donc relancer
+ * cette passe à chaque démarrage ne fait rien de plus — pas besoin d'un
+ * indicateur "déjà fait" comme pour `rattraperVisibleFaqSeed`.
+ */
+const RATTRAPAGE_CATEGORIES_LIBRES: Record<string, string> = {
+  Accessoires: "Bijoux & Accessoires",
+  Bijoux: "Bijoux & Accessoires",
+  Sportswear: "Sport & Loisirs",
+  Maroquinerie: "Sacs & Maroquinerie",
+  "Robes & boubous": "Mode femme",
+};
+
 @Injectable()
 export class CatalogService implements OnModuleInit {
   private readonly logger = new Logger(CatalogService.name);
@@ -62,6 +94,27 @@ export class CatalogService implements OnModuleInit {
       // Non bloquant pour le démarrage de l'API — au pire la liste reste
       // vide et les boutiques peuvent encore en ajouter manuellement.
       this.logger.error("Amorçage du référentiel de catégories échoué", err as Error);
+    }
+    await this.rattraperCategoriesLibres();
+  }
+
+  private async rattraperCategoriesLibres() {
+    try {
+      for (const [ancien, nouveau] of Object.entries(RATTRAPAGE_CATEGORIES_LIBRES)) {
+        const resultat = await this.prisma.product.updateMany({
+          where: { category: ancien },
+          data: { category: nouveau },
+        });
+        if (resultat.count > 0) {
+          this.logger.log(
+            `Rattrapage catégorie : ${resultat.count} produit(s) "${ancien}" → "${nouveau}".`,
+          );
+        }
+      }
+    } catch (err) {
+      // Non bloquant pour le démarrage de l'API — au pire certains produits
+      // restent filtrables uniquement en recherche texte, pas par catégorie.
+      this.logger.error("Rattrapage des catégories libres échoué", err as Error);
     }
   }
 
