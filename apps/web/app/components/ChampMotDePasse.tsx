@@ -23,7 +23,19 @@ export function ChampMotDePasse({ className, ...props }: Props) {
 
   return (
     <div className={styles.conteneur}>
+      {/* `name="password"` par défaut (12 nov. 2026, signalement "page de
+          connexion figée") — aucun champ de mot de passe de la plateforme
+          n'avait d'attribut `name`, y compris l'identifiant associé sur
+          chaque page de connexion. Sans lui, une soumission native du
+          navigateur (si jamais le gestionnaire onSubmit React ne s'est pas
+          attaché — hydratation ratée, extension navigateur, etc., voir
+          layout.tsx) ne transmet AUCUNE donnée et recharge silencieusement
+          la même page vide, sans la moindre erreur — exactement le
+          symptôme "clique sur Se connecter, l'écran flashe et revient
+          comme si de rien n'était". `{...props}` reste après pour qu'un
+          appelant qui précise déjà son propre `name` garde la main. */}
       <input
+        name="password"
         {...props}
         type={visible ? "text" : "password"}
         className={className}

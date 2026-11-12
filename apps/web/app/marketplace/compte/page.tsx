@@ -90,6 +90,7 @@ function ComptePageContenu() {
           <label htmlFor="identifiant">{t("compte_emailOuTelephone")}</label>
           <input
             id="identifiant"
+            name="identifiant"
             value={identifiant}
             onChange={(e) => setIdentifiant(e.target.value)}
             required

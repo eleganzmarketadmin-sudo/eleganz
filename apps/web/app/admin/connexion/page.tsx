@@ -48,6 +48,7 @@ export default function AdminConnexionPage() {
             <label htmlFor="identifiant">{t("adminconnexion_email")}</label>
             <input
               id="identifiant"
+              name="identifiant"
               type="text"
               autoComplete="username"
               value={identifiant}

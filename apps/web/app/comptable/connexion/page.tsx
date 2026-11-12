@@ -57,6 +57,7 @@ export default function ConnexionComptablePage() {
             <label htmlFor="identifiant">{t("compte_emailOuTelephone")}</label>
             <input
               id="identifiant"
+              name="identifiant"
               type="text"
               autoComplete="username"
               value={identifiant}
