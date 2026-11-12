@@ -5,6 +5,18 @@ import { getToken } from "./api";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 /**
+ * URL publique (sans authentification) d'un document, utilisable comme lien
+ * partageable — ex. dans un message WhatsApp (12 nov. 2026, demande :
+ * "donner la possibilité à la boutique de partager la facture après
+ * paiement effectif via whatsapp"). Voir DocumentsService.renderPdfPublic
+ * côté API : restreint aux documents liés à une commande Marketplace
+ * (l'identifiant UUID, non énumérable, tient lieu de jeton d'accès).
+ */
+export function construireUrlPdfPublique(documentId: string): string {
+  return `${API_BASE}/documents/public/${documentId}/pdf`;
+}
+
+/**
  * Ouvre un document PDF protégé par jeton dans un nouvel onglet. Un simple
  * lien <a href> ne peut pas porter l'en-tête Authorization, donc on
  * récupère le PDF nous-mêmes et on ouvre l'URL mémoire obtenue.

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { DocumentType } from "@eleganz/database";
+import { DocumentType, Prisma } from "@eleganz/database";
 import { renderDocumentPdf } from "./pdf-renderer";
 import { construireClasseurExcel } from "../common/xlsx.util";
 import { AdminSettingsService } from "../admin-settings/admin-settings.service";
@@ -38,6 +38,32 @@ const NON_HOMOLOGATED_TYPES: DocumentType[] = [
   DocumentType.CREDIT_NOTE,
   DocumentType.DELIVERY_NOTE,
 ];
+
+// Extrait de renderPdf/renderPdfPublic (12 nov. 2026) — même jeu de relations
+// chargées quel que soit le mode d'accès (authentifié par boutique, ou
+// public par lien de partage), seul le `where` du findFirst diffère.
+const DOCUMENT_INCLUDE_POUR_PDF = {
+  shop: {
+    select: {
+      name: true,
+      invoiceAddress: true,
+      invoicePhone: true,
+      invoiceLogoUrl: true,
+      invoiceFooterNote: true,
+    },
+  },
+  posSale: { include: { lines: true, payments: true } },
+  shopOrder: {
+    include: {
+      lines: { include: { variant: { include: { product: true } } } },
+      order: { select: { currency: true } },
+    },
+  },
+} satisfies Prisma.CommercialDocumentInclude;
+
+type DocumentAvecRelationsPourPdf = Prisma.CommercialDocumentGetPayload<{
+  include: typeof DOCUMENT_INCLUDE_POUR_PDF;
+}>;
 
 @Injectable()
 export class DocumentsService {
@@ -194,29 +220,36 @@ export class DocumentsService {
   async renderPdf(shopId: string, documentId: string) {
     const document = await this.prisma.commercialDocument.findFirst({
       where: { id: documentId, shopId },
-      include: {
-        shop: {
-          select: {
-            name: true,
-            invoiceAddress: true,
-            invoicePhone: true,
-            invoiceLogoUrl: true,
-            invoiceFooterNote: true,
-          },
-        },
-        posSale: { include: { lines: true, payments: true } },
-        shopOrder: {
-          include: {
-            lines: { include: { variant: { include: { product: true } } } },
-            order: { select: { currency: true } },
-          },
-        },
-      },
+      include: DOCUMENT_INCLUDE_POUR_PDF,
     });
     if (!document) {
       throw new NotFoundException("Document introuvable pour cette boutique.");
     }
+    return this.rendrerDocumentCharge(document);
+  }
 
+  /**
+   * Variante publique, sans authentification (12 nov. 2026, demande :
+   * "donner la possibilité à la boutique de partager la facture... via
+   * whatsapp"). L'identifiant du document (UUID v4, non énumérable) tient
+   * lieu de jeton d'accès — même principe qu'un lien de partage "toute
+   * personne disposant du lien" (facture Stripe, Google Docs, etc.). Volontai-
+   * rement restreint aux documents liés à une commande Marketplace
+   * (shopOrder) : un ticket de caisse (posSale) n'a pas de client identifié à
+   * qui envoyer ce lien et ne doit jamais être exposé publiquement.
+   */
+  async renderPdfPublic(documentId: string) {
+    const document = await this.prisma.commercialDocument.findFirst({
+      where: { id: documentId, shopOrderId: { not: null } },
+      include: DOCUMENT_INCLUDE_POUR_PDF,
+    });
+    if (!document) {
+      throw new NotFoundException("Document introuvable.");
+    }
+    return this.rendrerDocumentCharge(document);
+  }
+
+  private async rendrerDocumentCharge(document: DocumentAvecRelationsPourPdf) {
     const [logo, parametresPlateforme] = await Promise.all([
       this.recupererLogo(document.shop.invoiceLogoUrl),
       this.adminSettings.get(),

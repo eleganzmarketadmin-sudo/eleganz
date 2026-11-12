@@ -6,7 +6,7 @@ import { StatusTag } from "../../components/StatusTag";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
-import { ouvrirDocumentPdf } from "../../lib/pdf";
+import { ouvrirDocumentPdf, construireUrlPdfPublique } from "../../lib/pdf";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
@@ -60,6 +60,15 @@ interface ShopOrder {
 function versLienWhatsapp(numero: string): string {
   const chiffres = numero.replace(/[^\d]/g, "");
   return `https://wa.me/${chiffres}`;
+}
+
+/**
+ * Variante avec un message pré-rempli (paramètre `text` du lien wa.me) —
+ * utilisée pour le partage de facture (12 nov. 2026).
+ */
+function versLienWhatsappAvecMessage(numero: string, message: string): string {
+  const chiffres = numero.replace(/[^\d]/g, "");
+  return `https://wa.me/${chiffres}?text=${encodeURIComponent(message)}`;
 }
 
 // Reflet côté écran de ALLOWED_TRANSITIONS (orders.service.ts) — seulement
@@ -292,6 +301,56 @@ function CommandesContent() {
     }
   }
 
+  /**
+   * Partage la facture par WhatsApp (12 nov. 2026, demande : "donner la
+   * possibilité à la boutique de partager la facture après paiement
+   * effectif via whatsapp automatiquement au numéro whatsapp renseigné par
+   * le client"). Option choisie par l'utilisateur : bouton "Partager" en 1
+   * clic, gratuit — génère la facture, ouvre WhatsApp pré-adressé au client
+   * avec un lien de consultation, l'envoi final reste un geste manuel de la
+   * boutique (pas d'automatisation complète, qui exigerait un compte
+   * WhatsApp Business API payant que l'utilisateur devrait créer lui-même).
+   *
+   * La fenêtre WhatsApp est ouverte de façon SYNCHRONE au clic (même
+   * raisonnement que ouvrirDocumentPdf dans lib/pdf.ts) pour ne pas être
+   * bloquée par les bloqueurs de popup des navigateurs mobiles, puis
+   * redirigée vers le lien wa.me une fois la facture générée.
+   */
+  async function partagerFactureWhatsapp(so: ShopOrder) {
+    if (!so.order.buyerWhatsapp) return;
+    let fenetre: Window | null = null;
+    try {
+      fenetre = window.open("", "_blank");
+    } catch {
+      fenetre = null;
+    }
+    setEnCours(so.id);
+    setErreur(null);
+    try {
+      const document = await api.post<{ id: string }>(
+        `/shops/${currentShop!.id}/documents/shop-order/${so.id}`,
+        { type: "INVOICE_INTERNAL" },
+      );
+      const lienFacture = construireUrlPdfPublique(document.id);
+      const nomClient = so.order.buyer?.fullName ?? t("gcmd_acheteurFallback");
+      const message = t("gcmd_messageWhatsappFacture")
+        .replace("{{client}}", nomClient)
+        .replace("{{boutique}}", currentShop!.name)
+        .replace("{{lien}}", lienFacture);
+      const lienWhatsapp = versLienWhatsappAvecMessage(so.order.buyerWhatsapp, message);
+      if (fenetre && !fenetre.closed) {
+        fenetre.location.href = lienWhatsapp;
+      } else {
+        window.open(lienWhatsapp, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      fenetre?.close();
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_generationDocumentImpossible"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
@@ -436,6 +495,15 @@ function CommandesContent() {
               <button className={styles.boutonAction} onClick={() => imprimerBonLivraison(so.id)}>
                 {t("gcmd_imprimerBonLivraison")}
               </button>
+              {HUMEUR_PAR_STATUT[so.status] === "paye" && so.order.buyerWhatsapp && (
+                <button
+                  className={styles.boutonAction}
+                  disabled={enCours === so.id}
+                  onClick={() => partagerFactureWhatsapp(so)}
+                >
+                  {t("gcmd_partagerFactureWhatsapp")}
+                </button>
+              )}
               {!["DISPUTED", "CANCELLED", "REFUNDED", "CLOSED"].includes(so.status) && (
                 <button
                   className={`${styles.boutonAction} ${styles.boutonAnnuler}`}
