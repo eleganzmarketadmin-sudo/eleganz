@@ -560,4 +560,79 @@ export class CatalogService implements OnModuleInit {
       return misAJour;
     });
   }
+
+  /**
+   * Supprime une variante (13 nov. 2026, signalement : "il n'y a pas de
+   * possibilité/option de supprimer un produit et/ou une donnée ou une
+   * variante liée à ce produit"). Refusée dès qu'elle porte le moindre
+   * historique commercial réel — vente en caisse (saleLines), commande
+   * Marketplace (orderLines) ou réception de stock valorisée (receptions,
+   * utilisée pour le CUMP) — pour ne jamais faire disparaître une pièce
+   * justificative déjà émise (ticket, facture) ni fausser une valorisation
+   * de stock déjà calculée. Un simple stock initial/ajustement sans la
+   * moindre vente (StockMovement seul) n'empêche pas la suppression : ces
+   * mouvements sont alors supprimés avec la variante, rien d'autre n'y
+   * fait référence. Dans le cas bloqué, la boutique garde la main en
+   * remettant le stock à 0 (ajustement) plutôt qu'en supprimant.
+   */
+  async deleteVariant(shopId: string, productId: string, variantId: string) {
+    const variante = await this.prisma.variant.findFirstOrThrow({
+      where: { id: variantId, productId, product: { shopId } },
+      include: {
+        _count: { select: { saleLines: true, orderLines: true, receptions: true } },
+      },
+    });
+    if (
+      variante._count.saleLines > 0 ||
+      variante._count.orderLines > 0 ||
+      variante._count.receptions > 0
+    ) {
+      throw new ConflictException(
+        "Cette variante a déjà été vendue ou réceptionnée en stock — elle ne peut plus être supprimée sans perdre l'historique commercial. Mettez plutôt son stock à 0 pour qu'elle ne soit plus proposée à la vente.",
+      );
+    }
+    await this.prisma.$transaction([
+      this.prisma.priceTier.deleteMany({ where: { variantId } }),
+      this.prisma.stockMovement.deleteMany({ where: { variantId } }),
+      this.prisma.variant.delete({ where: { id: variantId } }),
+    ]);
+    return { deleted: true };
+  }
+
+  /**
+   * Supprime un article entier (produit + toutes ses variantes) — même
+   * principe et même garde-fou que `deleteVariant` : refusé si au moins une
+   * variante porte un historique commercial réel, ou si l'article a déjà
+   * reçu un avis client (Review, toujours lié à une commande réelle). Le
+   * message invite alors à dépublier plutôt qu'à supprimer.
+   */
+  async deleteProduct(shopId: string, productId: string) {
+    const produit = await this.prisma.product.findFirstOrThrow({
+      where: { id: productId, shopId },
+      include: {
+        variants: {
+          include: {
+            _count: { select: { saleLines: true, orderLines: true, receptions: true } },
+          },
+        },
+        _count: { select: { reviews: true } },
+      },
+    });
+    const varianteAvecHistorique = produit.variants.find(
+      (v) => v._count.saleLines > 0 || v._count.orderLines > 0 || v._count.receptions > 0,
+    );
+    if (varianteAvecHistorique || produit._count.reviews > 0) {
+      throw new ConflictException(
+        "Cet article a déjà été vendu, réceptionné en stock ou a reçu un avis client — il ne peut plus être supprimé sans perdre l'historique commercial. Dépubliez-le plutôt (« Retirer de la Marketplace ») et mettez son stock à 0.",
+      );
+    }
+    const variantIds = produit.variants.map((v) => v.id);
+    await this.prisma.$transaction([
+      this.prisma.priceTier.deleteMany({ where: { variantId: { in: variantIds } } }),
+      this.prisma.stockMovement.deleteMany({ where: { variantId: { in: variantIds } } }),
+      this.prisma.variant.deleteMany({ where: { productId } }),
+      this.prisma.product.delete({ where: { id: productId } }),
+    ]);
+    return { deleted: true };
+  }
 }

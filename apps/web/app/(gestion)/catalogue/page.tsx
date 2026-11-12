@@ -364,6 +364,8 @@ function SelecteurMultiple({
       </select>
       <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
         <input
+          name="selecteurMultipleNouvelleValeur"
+          autoComplete="off"
           placeholder={t("cat_nouvelleValeur")}
           value={nouvelleValeur}
           onChange={(e) => setNouvelleValeur(e.target.value)}
@@ -654,18 +656,24 @@ function NouvelleVariante({
         onAjouterValeur={(v) => ajouterOption("COLOR", v)}
       />
       <input
+        name="nouvelleVarianteePrixAchat"
+        autoComplete="off"
         placeholder={t("cat_placeholderPrixAchat")}
         type="number"
         value={prixAchat}
         onChange={(e) => setPrixAchat(e.target.value)}
       />
       <input
+        name="nouvelleVariantePrixVente"
+        autoComplete="off"
         placeholder={t("cat_placeholderPrixVente")}
         type="number"
         value={prixVente}
         onChange={(e) => setPrixVente(e.target.value)}
       />
       <input
+        name="nouvelleVarianteStock"
+        autoComplete="off"
         placeholder={t("cat_placeholderStockInitial")}
         type="number"
         value={stock}
@@ -852,6 +860,26 @@ function CatalogueContent() {
   }
 
   /**
+   * Suppression d'un article (13 nov. 2026, signalement : "il n'y a pas de
+   * possibilité/option de supprimer un produit"). Refusée côté API si
+   * l'article a déjà un historique commercial (voir le commentaire de
+   * CatalogService.deleteProduct) — le message d'erreur renvoyé par l'API
+   * explique alors d'utiliser « Retirer de la Marketplace » plutôt que de
+   * supprimer.
+   */
+  async function supprimerProduit(produit: Product) {
+    if (!currentShop) return;
+    if (!window.confirm(t("cat_confirmerSuppressionArticle").replace("{{nom}}", produit.name))) return;
+    setErreur(null);
+    try {
+      await api.delete(`/shops/${currentShop.id}/products/${produit.id}`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_suppressionArticleImpossible"));
+    }
+  }
+
+  /**
    * Étiquette "Nouveau" / "Nouvel arrivage" (2 nov. 2026, demande boutique) —
    * simple bascule, comme publier/dépublier juste au-dessus.
    */
@@ -1034,6 +1062,25 @@ function CatalogueContent() {
     }
   }
 
+  /**
+   * Suppression d'une variante (13 nov. 2026, même signalement que
+   * supprimerProduit plus haut). Même garde-fou côté API (voir le
+   * commentaire de CatalogService.deleteVariant) : refusée si la variante a
+   * déjà un historique commercial, avec un message qui invite à remettre
+   * son stock à 0 plutôt qu'à la supprimer.
+   */
+  async function supprimerVariante(produitId: string, variante: Variant) {
+    if (!currentShop) return;
+    if (!window.confirm(t("cat_confirmerSuppressionVariante").replace("{{reference}}", variante.sku))) return;
+    setErreur(null);
+    try {
+      await api.delete(`/shops/${currentShop.id}/products/${produitId}/variants/${variante.id}`);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_suppressionVarianteImpossible"));
+    }
+  }
+
   async function modifierNomProduit(produit: Product) {
     if (!currentShop) return;
     const saisie = window.prompt(t("cat_inviteNomArticle"), produit.name);
@@ -1146,11 +1193,26 @@ function CatalogueContent() {
         onChange={(e) => setRecherche(e.target.value)}
       />
 
+      {/* 13 nov. 2026 (signalement : "depuis la mise en place de la référence
+          produit automatique, l'ajout des nouveaux articles garde les
+          informations des produits précédemment saisis par défaut et sans
+          possibilité de supprimer") — ces champs n'avaient jamais
+          `autoComplete="off"` (seul le champ catégorie l'avait, ajouté pour
+          cette même raison le 16 oct. 2026) : le navigateur propose donc ses
+          propres suggestions de saisies précédentes (nom, prix, stock,
+          valeurs taille/couleur), que l'application elle-même ne peut pas
+          effacer — ce n'est devenu vraiment gênant qu'après le 10 nov. 2026,
+          quand la référence (SKU) a cessé d'être un champ à ressaisir à la
+          main à chaque article, ce qui concentrait auparavant l'attention et
+          masquait ces suggestions. Corrigé ici et dans NouvelleVariante /
+          SelecteurMultiple plus haut dans ce fichier. */}
       <div className={styles.nouveauProduit}>
         <div className={styles.champ}>
           <label htmlFor="nom">{t("cat_nouvelArticle")}</label>
           <input
             id="nom"
+            name="nouveauProduitNom"
+            autoComplete="off"
             placeholder={t("cat_placeholderNomArticle")}
             value={nomNouveau}
             onChange={(e) => setNomNouveau(e.target.value)}
@@ -1164,6 +1226,8 @@ function CatalogueContent() {
           <label htmlFor="description">{t("cat_descriptionArticle")}</label>
           <textarea
             id="description"
+            name="nouveauProduitDescription"
+            autoComplete="off"
             placeholder={t("cat_placeholderDescriptionArticle")}
             value={descriptionNouveau}
             onChange={(e) => setDescriptionNouveau(e.target.value)}
@@ -1251,6 +1315,15 @@ function CatalogueContent() {
                     {t("cat_publierSurLaMarketplace")}
                   </button>
                 )}
+                <button
+                  type="button"
+                  className={styles.boutonSupprimer}
+                  style={{ padding: "4px 10px", minHeight: "32px", fontSize: "0.8125rem" }}
+                  title={t("cat_supprimerArticleAide")}
+                  onClick={() => supprimerProduit(produit)}
+                >
+                  {t("cat_supprimerArticle")}
+                </button>
               </span>
             </div>
             <p
@@ -1286,6 +1359,7 @@ function CatalogueContent() {
                     <th className={styles.colChiffre}>{t("cat_colPromo")}</th>
                     <th className={styles.colChiffre}>{t("cat_colPrixDeGros")}</th>
                     <th className={styles.colChiffre}>{t("cat_colStock")}</th>
+                    <th className={styles.colChiffre}>{t("cat_colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1372,10 +1446,20 @@ function CatalogueContent() {
                             ✎
                           </button>
                         </td>
+                        <td className={styles.colChiffre}>
+                          <button
+                            type="button"
+                            className={styles.boutonSupprimerDiscret}
+                            title={t("cat_supprimerVarianteAide")}
+                            onClick={() => supprimerVariante(produit.id, v)}
+                          >
+                            🗑
+                          </button>
+                        </td>
                       </tr>
                       {grosOuvert && (
                         <tr>
-                          <td colSpan={7} style={{ padding: 0 }}>
+                          <td colSpan={8} style={{ padding: 0 }}>
                             <PrixDeGros produitId={produit.id} variante={v} onChange={recharger} />
                           </td>
                         </tr>

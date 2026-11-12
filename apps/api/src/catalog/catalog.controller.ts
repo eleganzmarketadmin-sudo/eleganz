@@ -44,6 +44,19 @@ export class CatalogController {
     return this.catalogService.updateProduct(shopId, productId, dto);
   }
 
+  /**
+   * Suppression d'un article entier (13 nov. 2026, signalement : "il n'y a
+   * pas de possibilité/option de supprimer un produit"). Voir le
+   * commentaire de CatalogService.deleteProduct pour le garde-fou : refusée
+   * si au moins une variante a déjà été vendue, réceptionnée en stock, ou
+   * si l'article a reçu un avis client.
+   */
+  @Delete(":productId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  deleteProduct(@Param("shopId") shopId: string, @Param("productId") productId: string) {
+    return this.catalogService.deleteProduct(shopId, productId);
+  }
+
   @Post(":productId/images/upload-url")
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
   creerUrlUploadImage(
@@ -150,6 +163,21 @@ export class CatalogController {
     @Param("tierId") tierId: string,
   ) {
     return this.catalogService.removePriceTier(shopId, productId, variantId, tierId);
+  }
+
+  /**
+   * Suppression d'une variante (13 nov. 2026, même signalement que
+   * deleteProduct juste au-dessus). Voir le commentaire de
+   * CatalogService.deleteVariant pour le garde-fou.
+   */
+  @Delete(":productId/variants/:variantId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.STOCK_KEEPER)
+  deleteVariant(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+  ) {
+    return this.catalogService.deleteVariant(shopId, productId, variantId);
   }
 }
 

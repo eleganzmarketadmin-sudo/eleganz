@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
@@ -208,6 +208,15 @@ function ParametresContent() {
   const [adresse, setAdresse] = useState("");
   const [telephone, setTelephone] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  // Upload direct du logo (13 nov. 2026, signalement : "pour les url de
+  // logo des boutique prière donner la possibilité en plus du lien de
+  // charger une image") — même principe que le téléversement des photos
+  // d'article en Catalogue : URL signée R2, le fichier ne transite jamais
+  // par notre serveur. Remplit simplement `logoUrl`, exactement comme si la
+  // boutique avait collé le lien à la main — le champ URL reste disponible
+  // en parallèle pour qui héberge déjà son logo ailleurs.
+  const [televersementLogoEnCours, setTeleversementLogoEnCours] = useState(false);
+  const inputLogoRef = useRef<HTMLInputElement>(null);
   const [noteBasPage, setNoteBasPage] = useState("");
   // Choix du type de facture par défaut à la caisse (demande du 11 nov. 2026)
   // — "" = aucune préférence (comportement historique de la caisse,
@@ -291,6 +300,38 @@ function ParametresContent() {
       );
     } finally {
       setEnregistrement(false);
+    }
+  }
+
+  async function televerserLogo(fichier: File) {
+    if (!currentShop) return;
+    setTeleversementLogoEnCours(true);
+    setErreur(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/shops/${currentShop.id}/invoice-settings/logo-upload-url`,
+        { contentType: fichier.type },
+      );
+      const envoi = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fichier.type },
+        body: fichier,
+      });
+      if (!envoi.ok) {
+        throw new Error(t("param_erreurEnvoiLogoReseau"));
+      }
+      setLogoUrl(publicUrl);
+    } catch (err) {
+      // Même distinction qu'en Catalogue (ImagesProduit.televerserPhoto) :
+      // `fetch` vers le stockage objet échoue en `TypeError` dès que la
+      // requête n'atteint jamais le serveur (CORS, réseau, URL expirée).
+      if (err instanceof TypeError) {
+        setErreur(t("param_erreurEnvoiLogoReseau"));
+      } else {
+        setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("param_erreurEnvoiLogo"));
+      }
+    } finally {
+      setTeleversementLogoEnCours(false);
     }
   }
 
@@ -437,6 +478,32 @@ function ParametresContent() {
               placeholder="https://…/logo.png"
               maxLength={500}
             />
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--espace-3)", marginTop: "var(--espace-1)" }}>
+              <button
+                type="button"
+                className={styles.boutonSecondaire}
+                disabled={televersementLogoEnCours}
+                onClick={() => inputLogoRef.current?.click()}
+              >
+                {televersementLogoEnCours ? t("param_televersementLogoEnCours") : t("param_televerserLogo")}
+              </button>
+              <input
+                ref={inputLogoRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: "none" }}
+                disabled={televersementLogoEnCours}
+                onChange={(e) => {
+                  const fichier = e.target.files?.[0];
+                  e.target.value = "";
+                  if (fichier) televerserLogo(fichier);
+                }}
+              />
+              {logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="" className={styles.logoApercu} />
+              )}
+            </div>
           </div>
           <div className={styles.champ}>
             <label htmlFor="noteBasPage">{t("param_labelNoteBasPage")}</label>

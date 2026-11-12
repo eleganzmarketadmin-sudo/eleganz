@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
@@ -67,7 +68,10 @@ function ecransEffectifs(staff: { role: StaffRole; menuItemsOverride: MenuGestio
 
 @Injectable()
 export class ShopsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   /**
    * Un compte = une boutique (18 oct. 2026, demande explicite "éviter des
@@ -214,6 +218,22 @@ export class ShopsService {
         ...(dto.defaultInvoiceType !== undefined && { defaultInvoiceType: dto.defaultInvoiceType }),
       },
     });
+  }
+
+  /**
+   * URL signée pour téléverser directement le logo de la boutique (13 nov.
+   * 2026, signalement : "pour les url de logo des boutique prière donner la
+   * possibilité en plus du lien de charger une image") — même principe que
+   * CatalogService.creerUrlUploadImage pour les photos d'article, via
+   * StorageService.creerUrlUpload généralisé (déjà utilisé par le module
+   * Experts). L'écran Paramètres envoie ensuite l'URL publique obtenue à
+   * `updateInvoiceSettings` comme si elle avait été collée à la main — le
+   * champ URL existant reste donc disponible en parallèle, pour une
+   * boutique qui héberge déjà son logo ailleurs.
+   */
+  async creerUrlUploadLogo(shopId: string, contentType: string) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.storage.creerUrlUpload(`shops/${shopId}/logo`, contentType);
   }
 
   /**

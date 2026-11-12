@@ -225,6 +225,46 @@
   color: var(--color-cobalt-texte);
 }
 
+/* Bouton de suppression (13 nov. 2026, signalement : "il n'y a pas de
+   possibilité/option de supprimer un produit et/ou une donnée ou une
+   variante liée à ce produit") — même couleur d'alerte que .erreur, pour
+   signaler visuellement une action destructrice avant la confirmation. */
+.boutonSupprimer {
+  background: var(--color-surface);
+  color: var(--color-flamme);
+  border: 2px solid var(--color-flamme);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSupprimer:hover {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
+.boutonSupprimer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonSupprimerDiscret {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--espace-1);
+  font-size: 0.8125rem;
+  color: var(--color-flamme);
+  min-width: 28px;
+  min-height: 28px;
+  vertical-align: middle;
+}
+
+.boutonSupprimerDiscret:hover {
+  text-decoration: underline;
+}
+
 .ajoutVariante {
   padding: var(--espace-3) var(--espace-4);
   display: flex;

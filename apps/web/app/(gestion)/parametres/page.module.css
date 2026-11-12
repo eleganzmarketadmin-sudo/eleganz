@@ -60,6 +60,40 @@
   cursor: not-allowed;
 }
 
+/* Bouton "Téléverser une image" pour le logo (13 nov. 2026, signalement :
+   "pour les url de logo des boutique prière donner la possibilité en plus
+   du lien de charger une image") — même style secondaire que dans
+   Catalogue (.boutonSecondaire), pour rester visuellement distinct du
+   bouton d'enregistrement principal du formulaire. */
+.boutonSecondaire {
+  align-self: flex-start;
+  background: var(--color-surface);
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSecondaire:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logoApercu {
+  max-width: 120px;
+  max-height: 60px;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
 .erreur {
   background: var(--color-flamme);
   color: #fff;

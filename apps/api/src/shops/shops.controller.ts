@@ -4,6 +4,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { RequestLogoUploadDto } from "./dto/request-logo-upload.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -64,6 +65,19 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   updateInvoiceSettings(@Param("shopId") shopId: string, @Body() dto: UpdateInvoiceSettingsDto) {
     return this.shopsService.updateInvoiceSettings(shopId, dto);
+  }
+
+  /**
+   * Étape 1 de l'upload direct du logo (13 nov. 2026) — même principe que
+   * CatalogController.creerUrlUploadImage : renvoie une URL signée R2 pour
+   * l'envoi direct depuis le navigateur, puis l'URL publique définitive à
+   * transmettre à `updateInvoiceSettings` (voir ShopsService.creerUrlUploadLogo).
+   */
+  @Post(":shopId/invoice-settings/logo-upload-url")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  creerUrlUploadLogo(@Param("shopId") shopId: string, @Body() dto: RequestLogoUploadDto) {
+    return this.shopsService.creerUrlUploadLogo(shopId, dto.contentType);
   }
 
   // Correctif de sécurité (16 oct. 2026, point 2 des propositions du 16 oct.

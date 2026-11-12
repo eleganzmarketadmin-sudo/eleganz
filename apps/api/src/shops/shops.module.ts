@@ -4,9 +4,10 @@ import { ShopsController } from "./shops.controller";
 import { AdminShopsController } from "./admin-shops.controller";
 import { ShopMembershipGuard } from "./shop-membership.guard";
 import { AuthModule } from "../auth/auth.module";
+import { StorageModule } from "../storage/storage.module";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, StorageModule],
   providers: [ShopsService, ShopMembershipGuard],
   controllers: [ShopsController, AdminShopsController],
   // Ré-exporte AuthModule (donc JwtAuthGuard) : tout module import ShopsModule
