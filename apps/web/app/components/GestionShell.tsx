@@ -12,6 +12,7 @@ import { Footer } from "./Footer";
 import { NotificationBell } from "./NotificationBell";
 import { ChatWidget } from "./ChatWidget";
 import { AccueilLien } from "./AccueilLien";
+import { ModulesMenu } from "./ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
@@ -64,6 +65,10 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
       <div className={styles.enveloppeFixe}>
         <header className={styles.entete}>
           <div className={styles.marqueBloc}>
+            {/* Volet "passerelle entre modules" (demande du 13 nov. 2026 :
+                "ajouter les 3 barres/volet vertical à tous les modules") —
+                voir le commentaire détaillé dans AdminShell.tsx. */}
+            <ModulesMenu />
             <LogoMark size={30} />
             <div>
               <div className={styles.marque}>

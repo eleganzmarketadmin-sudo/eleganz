@@ -11,6 +11,7 @@ import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
+import { ModulesMenu } from "../components/ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
@@ -120,10 +121,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           toujours pas effective") — voir aussi GestionShell. */}
       <div className={styles.enveloppeFixe}>
         <header className={styles.entete}>
-          <span className={styles.marque}>
-            <LogoMark size={28} />
-            ELEGANZ <span>Centre de pilotage</span>
-          </span>
+          {/* Volet "passerelle entre modules" (demande du 13 nov. 2026 :
+              "ajouter les 3 barres/volet vertical à tous les modules") —
+              jusqu'ici réservé aux en-têtes publics (SiteHeader,
+              MarketplaceHeader), maintenant aussi dans chaque espace
+              authentifié pour rejoindre un autre module sans repasser par
+              l'accueil. */}
+          <div className={styles.groupeMarque}>
+            <ModulesMenu />
+            <span className={styles.marque}>
+              <LogoMark size={28} />
+              ELEGANZ <span>Centre de pilotage</span>
+            </span>
+          </div>
           <div className={styles.enteteActions}>
             <AccueilLien />
             <NotificationBell />

@@ -20,6 +20,12 @@
   padding: var(--espace-3) var(--espace-4);
 }
 
+.groupeMarque {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
 .marque {
   display: flex;
   align-items: center;
