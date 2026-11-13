@@ -99,6 +99,15 @@ export class FiscalSimulationService {
           montantBase = Math.max(resultatNet, 0);
           break;
         case "RETENUE":
+        // CONTRIBUTION ajouté le 13 nov. 2026 (mise en place des obligations
+        // sociales d'ELEGANZ elle-même — CNSS, INPP, ONEM) : ces cotisations
+        // parafiscales se calculent toujours sur la masse salariale, jamais
+        // sur le chiffre d'affaires. Avant ce correctif, une règle
+        // CONTRIBUTION simulable (ex. "13%") tombait dans le `default`
+        // ci-dessous et était donc estimée sur le chiffre d'affaires — un
+        // montant sans rapport avec la charge sociale réelle, silencieux
+        // puisque la règle restait "simulable".
+        case "CONTRIBUTION":
           base = "Charges de personnel (compte 661)";
           montantBase = chargesPersonnel;
           break;
