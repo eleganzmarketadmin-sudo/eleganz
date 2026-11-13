@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
+import { getToken } from "../lib/api";
 import { useShop } from "../lib/shop-context";
 import { GestionShell } from "./GestionShell";
 
@@ -17,8 +18,12 @@ export function ProtectedGestionPage({ children }: { children: React.ReactNode }
   const { shops, currentShop, loading: shopLoading } = useShop();
   const router = useRouter();
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié pendant
+  // le court instant où le contexte React n'a pas encore répercuté `user`.
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !getToken()) {
       router.replace("/connexion");
     }
   }, [authLoading, user, router]);

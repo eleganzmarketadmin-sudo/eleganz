@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth";
-import { api, ApiError } from "../../lib/api";
+import { api, ApiError, getToken } from "../../lib/api";
 import { formatDate, formatMoney } from "../../lib/money";
 import { StatusTag } from "../../components/StatusTag";
 import { useLocale } from "../../lib/i18n/LocaleContext";
@@ -101,8 +101,11 @@ export default function CommandesPage() {
   const [motifLitige, setMotifLitige] = useState("");
   const [envoiLitigeEnCours, setEnvoiLitigeEnCours] = useState(false);
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié.
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !getToken()) {
       router.replace("/marketplace/compte?retour=/marketplace/commandes");
     }
   }, [authLoading, user, router]);

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
+import { getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
@@ -35,8 +36,12 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
     { href: "/livreur/profil", label: t("livr_monProfil") },
   ];
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié pendant
+  // le court instant où le contexte React n'a pas encore répercuté `user`.
   useEffect(() => {
-    if (!loading && !user) router.replace("/livreur/connexion");
+    if (!loading && !user && !getToken()) router.replace("/livreur/connexion");
   }, [loading, user, router]);
 
   if (loading || !user) return null;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
-import { api, ApiError } from "../../lib/api";
+import { api, ApiError, getToken } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
@@ -292,8 +292,11 @@ export default function ProfilPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié.
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !getToken()) {
       router.replace("/marketplace/compte?retour=/marketplace/profil");
     }
   }, [loading, user, router]);

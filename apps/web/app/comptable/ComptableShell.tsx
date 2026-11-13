@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
-import { api } from "../lib/api";
+import { api, getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
@@ -69,8 +69,12 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
       .catch(() => setFonctionnalitesBouquet(null));
   }, [user]);
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié pendant
+  // le court instant où le contexte React n'a pas encore répercuté `user`.
   useEffect(() => {
-    if (!loading && !user) router.replace("/comptable/connexion");
+    if (!loading && !user && !getToken()) router.replace("/comptable/connexion");
   }, [loading, user, router]);
 
   if (loading || !user) return null;

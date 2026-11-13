@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { useCart } from "../../lib/cart-context";
-import { api, ApiError } from "../../lib/api";
+import { api, ApiError, getToken } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
@@ -52,8 +52,11 @@ export default function CommandePage() {
   const [adressesEnregistrees, setAdressesEnregistrees] = useState<AdresseEnregistree[]>([]);
   const [adresseChoisieId, setAdresseChoisieId] = useState("");
 
+  // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+  // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+  // tort vers la connexion un utilisateur fraîchement authentifié.
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !getToken()) {
       router.replace("/marketplace/compte?retour=/marketplace/commande");
     }
   }, [authLoading, user, router]);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth";
 import { useShop } from "../../../lib/shop-context";
-import { api, ApiError } from "../../../lib/api";
+import { api, ApiError, getToken } from "../../../lib/api";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { formatMoney } from "../../../lib/money";
 import styles from "./page.module.css";
@@ -77,7 +77,10 @@ export default function NouvelleBoutiquePage() {
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) router.replace("/connexion");
+    // Voir le commentaire détaillé dans AdminShell.tsx (13 nov. 2026) : on
+    // revérifie le jeton stocké avant de rediriger, pour ne pas renvoyer à
+    // tort vers la connexion un utilisateur fraîchement authentifié.
+    if (!authLoading && !user && !getToken()) router.replace("/connexion");
   }, [authLoading, user, router]);
 
   useEffect(() => {

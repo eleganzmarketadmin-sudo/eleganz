@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
-import { api } from "../lib/api";
+import { api, getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
@@ -89,8 +89,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const ecransAutorises = menuItems ?? (user?.role ? MENUS_PAR_ROLE_ADMIN[user.role] : undefined) ?? LIENS.map((l) => l.menu);
   const liens = LIENS.filter((l) => ecransAutorises.includes(l.menu));
 
+  // (13 nov. 2026, signalement "connexion réussie mais revient à la page de
+  // connexion") — se fier uniquement à `user` (contexte React) pour décider
+  // de rediriger expose une fenêtre de course : juste après login(), le
+  // jeton est déjà écrit dans localStorage de façon synchrone, mais le
+  // contexte AuthProvider peut prendre un rendu de plus à répercuter le
+  // nouvel utilisateur ici — si cette coquille vérifie juste avant ce
+  // rendu, elle renvoie à tort vers la connexion un utilisateur pourtant
+  // bien authentifié. On revérifie donc directement le jeton stocké avant
+  // de rediriger ; le serveur reste de toute façon la seule vraie barrière
+  // (JwtAuthGuard côté API).
   useEffect(() => {
-    if (!loading && !user) router.replace("/admin/connexion");
+    if (!loading && !user && !getToken()) router.replace("/admin/connexion");
   }, [loading, user, router]);
 
   if (loading || !user) return null;
