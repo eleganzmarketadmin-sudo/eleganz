@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuard
 import type { Response } from "express";
 import { FinanceService } from "./finance.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
+import { FiscalRemittanceService } from "./fiscal-remittance.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { FiscalSimulationService } from "./fiscal-simulation.service";
@@ -13,6 +14,7 @@ import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
 import { renderRapportAnnuelPptx } from "./rapport-annuel-pptx-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
+import { CreateFiscalRemittanceDto, UpdateFiscalRemittanceDto } from "./dto/fiscal-remittance.dto";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
 import { LoansService } from "./loans.service";
@@ -38,6 +40,7 @@ export class FinanceController {
   constructor(
     private readonly financeService: FinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
+    private readonly fiscalRemittanceService: FiscalRemittanceService,
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
     private readonly fiscalSimulation: FiscalSimulationService,
@@ -191,6 +194,16 @@ export class FinanceController {
   simulationFiscale(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
     const { fromDate, toDate } = this.periode(from, to);
     return this.fiscalSimulation.simulerShop(shopId, fromDate, toDate);
+  }
+
+  // Relevé fiscal — simulation + reversements réels (13 nov. 2026,
+  // signalement : "aucune option pour voir les récap/relevés ... pour la
+  // déclaration ou contre-vérification ... et pour les reversements").
+  @Get("releve-fiscal")
+  @RequiresGestionFeature("financeAvancee")
+  releveFiscal(@Param("shopId") shopId: string, @Query("from") from?: string, @Query("to") to?: string) {
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.fiscalSimulation.releveShop(shopId, fromDate, toDate);
   }
 
   // Analytique et prévisions (docs/ARCHITECTURE_FINANCE.md §8octies) —
@@ -429,5 +442,45 @@ export class FinanceController {
     @Body("motif") motif: string,
   ) {
     return this.fiscalRulesService.reactivateForShop(shopId, ruleId, user.id, motif || "Réactivation");
+  }
+
+  // Reversements réels d'une règle fiscale boutique (13 nov. 2026, voir
+  // FiscalRemittanceService). Lecture ouverte comme le reste du module,
+  // écriture réservée à OWNER/MANAGER/ACCOUNTANT comme les règles elles-mêmes.
+  @Get("fiscal-rules/:ruleId/remittances")
+  listRemittances(@Param("shopId") shopId: string, @Param("ruleId") ruleId: string) {
+    return this.fiscalRemittanceService.listForShopRule(shopId, ruleId);
+  }
+
+  @Post("fiscal-rules/:ruleId/remittances")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  createRemittance(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateFiscalRemittanceDto,
+  ) {
+    return this.fiscalRemittanceService.createForShopRule(shopId, ruleId, user.id, dto);
+  }
+
+  @Patch("fiscal-rules/:ruleId/remittances/:remittanceId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  updateRemittance(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @Param("remittanceId") remittanceId: string,
+    @Body() dto: UpdateFiscalRemittanceDto,
+  ) {
+    return this.fiscalRemittanceService.updateForShopRule(shopId, ruleId, remittanceId, dto);
+  }
+
+  @Delete("fiscal-rules/:ruleId/remittances/:remittanceId")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  deleteRemittance(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @Param("remittanceId") remittanceId: string,
+  ) {
+    return this.fiscalRemittanceService.deleteForShopRule(shopId, ruleId, remittanceId);
   }
 }

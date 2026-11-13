@@ -145,4 +145,67 @@ export class FiscalSimulationService {
     if (!m) return null;
     return Number(m[1].replace(",", "."));
   }
+
+  // --- Relevé (simulation + reversements réels) --------------------------
+  // 13 nov. 2026, signalement : "aucune option pour voir les récap/relevés
+  // (par types d'impôt/retenue etc.) qu'on peut s'en servir ... pour la
+  // déclaration ou contre-vérification ... et pour les reversements". La
+  // simulation seule (ci-dessus) ne dit que ce qui est estimé dû ; le relevé
+  // y ajoute ce qui a RÉELLEMENT été reversé (FiscalRemittance), ligne par
+  // ligne, y compris pour les règles non simulables (IRPP, INPP) qui ont
+  // quand même des reversements à suivre.
+
+  async releveShop(shopId: string, from: Date, to: Date) {
+    return this.releve(FiscalRuleScope.SHOP, shopId, from, to);
+  }
+
+  async relevePlatform(from: Date, to: Date) {
+    return this.releve(FiscalRuleScope.PLATFORM, null, from, to);
+  }
+
+  private async releve(scope: FiscalRuleScope, shopId: string | null, from: Date, to: Date) {
+    const simulation = await this.simuler(scope, shopId, from, to);
+
+    const ruleIds = [
+      ...simulation.lignes.map((l) => l.ruleId),
+      ...simulation.nonSimulables.map((r) => r.ruleId),
+    ];
+    const reversements = ruleIds.length
+      ? await this.prisma.fiscalRemittance.findMany({
+          where: { ruleId: { in: ruleIds }, periodFrom: { lte: to }, periodTo: { gte: from } },
+          orderBy: { paidAt: "desc" },
+        })
+      : [];
+
+    const parRegle = new Map<string, { verse: number; declare: number }>();
+    for (const r of reversements) {
+      const cumul = parRegle.get(r.ruleId) ?? { verse: 0, declare: 0 };
+      cumul.verse += Number(r.paidAmount);
+      cumul.declare += r.declaredAmount != null ? Number(r.declaredAmount) : 0;
+      parRegle.set(r.ruleId, cumul);
+    }
+
+    const lignes = simulation.lignes.map((l) => {
+      const montantVerse = parRegle.get(l.ruleId)?.verse ?? 0;
+      return {
+        ...l,
+        montantVerse,
+        solde: Math.round((l.montantEstime - montantVerse) * 100) / 100,
+      };
+    });
+
+    const nonSimulables = simulation.nonSimulables.map((r) => ({
+      ...r,
+      montantVerse: parRegle.get(r.ruleId)?.verse ?? 0,
+      montantDeclare: parRegle.get(r.ruleId)?.declare ?? 0,
+    }));
+
+    return {
+      ...simulation,
+      lignes,
+      nonSimulables,
+      totalVerse: reversements.reduce((s, r) => s + Number(r.paidAmount), 0),
+      reversements,
+    };
+  }
 }

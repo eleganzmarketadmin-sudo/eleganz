@@ -1878,7 +1878,8 @@ model FiscalRule {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  versions FiscalRuleVersion[]
+  versions    FiscalRuleVersion[]
+  remittances FiscalRemittance[]
 
   @@index([shopId])
   @@index([scope])
@@ -1897,6 +1898,37 @@ model FiscalRuleVersion {
   effectiveDate DateTime
   status        FiscalRuleStatus
   createdAt     DateTime         @default(now())
+
+  @@index([ruleId])
+}
+
+// Suivi des reversements effectifs (13 nov. 2026, signalement : "aucune
+// option pour voir les récap/relevés ... qu'on peut s'en servir ... pour
+// la déclaration ou contre-vérification ... et pour les reversements") —
+// une ligne par paiement RÉELLEMENT effectué à l'État ou à la CNSS,
+// jamais une prévision (l'estimation reste du côté de
+// FiscalSimulationService ; voir releveShop/relevePlatform qui les
+// combine). Plusieurs lignes pour une même règle et une même période
+// couvrent un paiement fractionné — le total versé d'une période est leur
+// somme, jamais un remplacement. Rattachée à une FiscalRule et jamais à
+// un scope/shopId propre : le périmètre SHOP/PLATFORM se déduit déjà de
+// la règle, comme pour FiscalRuleVersion ci-dessus.
+model FiscalRemittance {
+  id             String     @id @default(uuid())
+  ruleId         String
+  rule           FiscalRule @relation(fields: [ruleId], references: [id])
+  periodLabel    String // ex. "Janvier 2027", "T1 2027"
+  periodFrom     DateTime
+  periodTo       DateTime
+  declaredAmount Decimal?   @db.Decimal(14, 2) // montant déclaré/dû, si connu avec certitude (sinon laissé vide, voir simulation)
+  paidAmount     Decimal    @db.Decimal(14, 2)
+  devise         String     @default("USD")
+  dueDate        DateTime?
+  paidAt         DateTime   @default(now())
+  reference      String? // n° de bordereau, de quittance ou de virement
+  note           String?
+  authorId       String?
+  createdAt      DateTime   @default(now())
 
   @@index([ruleId])
 }

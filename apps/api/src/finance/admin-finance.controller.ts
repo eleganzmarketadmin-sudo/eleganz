@@ -15,6 +15,7 @@ import type { Response } from "express";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AccountingService } from "./accounting.service";
 import { FiscalRulesService } from "./fiscal-rules.service";
+import { FiscalRemittanceService } from "./fiscal-remittance.service";
 import { AccountingQueryService } from "./accounting-query.service";
 import { ClosureService } from "./closure.service";
 import { DossierValidationService } from "./dossier-validation.service";
@@ -38,6 +39,7 @@ import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
 import { renderRapportAnnuelPptx } from "./rapport-annuel-pptx-renderer";
 import { CreateFiscalRuleDto, UpdateFiscalRuleDto } from "./dto/fiscal-rule.dto";
+import { CreateFiscalRemittanceDto, UpdateFiscalRemittanceDto } from "./dto/fiscal-remittance.dto";
 import { UpdateBusinessPlanDto, CreateLoanScenarioDto, UpdateLoanScenarioDto } from "./dto/business-plan.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -62,6 +64,7 @@ export class AdminFinanceController {
   constructor(
     private readonly adminFinanceService: AdminFinanceService,
     private readonly fiscalRulesService: FiscalRulesService,
+    private readonly fiscalRemittanceService: FiscalRemittanceService,
     private readonly accountingQuery: AccountingQueryService,
     private readonly closureService: ClosureService,
     private readonly dossierValidation: DossierValidationService,
@@ -156,6 +159,16 @@ export class AdminFinanceController {
     requireAdmin(user);
     const { fromDate, toDate } = this.periode(from, to);
     return this.fiscalSimulation.simulerPlateforme(fromDate, toDate);
+  }
+
+  // Relevé fiscal — simulation + reversements réels (13 nov. 2026,
+  // signalement : "aucune option pour voir les récap/relevés ... pour la
+  // déclaration ou contre-vérification ... et pour les reversements").
+  @Get("releve-fiscal")
+  releveFiscal(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.fiscalSimulation.relevePlatform(fromDate, toDate);
   }
 
   // Dossier de validation externe SYSCOHADA — ELEGANZ elle-même (chantier
@@ -521,5 +534,45 @@ export class AdminFinanceController {
   ) {
     requireAdmin(user);
     return this.fiscalRulesService.reactivateForPlatform(ruleId, user.id, motif || "Réactivation");
+  }
+
+  // Reversements réels d'une règle fiscale PLATFORM (13 nov. 2026, voir
+  // FiscalRemittanceService). Utilisés par le relevé fiscal ci-dessus et
+  // consultables en détail (contre-vérification) depuis l'écran.
+  @Get("fiscal-rules/:ruleId/remittances")
+  listRemittances(@CurrentUser() user: AuthenticatedUser, @Param("ruleId") ruleId: string) {
+    requireAdmin(user);
+    return this.fiscalRemittanceService.listForPlatformRule(ruleId);
+  }
+
+  @Post("fiscal-rules/:ruleId/remittances")
+  createRemittance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("ruleId") ruleId: string,
+    @Body() dto: CreateFiscalRemittanceDto,
+  ) {
+    requireAdmin(user);
+    return this.fiscalRemittanceService.createForPlatformRule(ruleId, user.id, dto);
+  }
+
+  @Patch("fiscal-rules/:ruleId/remittances/:remittanceId")
+  updateRemittance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("ruleId") ruleId: string,
+    @Param("remittanceId") remittanceId: string,
+    @Body() dto: UpdateFiscalRemittanceDto,
+  ) {
+    requireAdmin(user);
+    return this.fiscalRemittanceService.updateForPlatformRule(ruleId, remittanceId, dto);
+  }
+
+  @Delete("fiscal-rules/:ruleId/remittances/:remittanceId")
+  deleteRemittance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("ruleId") ruleId: string,
+    @Param("remittanceId") remittanceId: string,
+  ) {
+    requireAdmin(user);
+    return this.fiscalRemittanceService.deleteForPlatformRule(ruleId, remittanceId);
   }
 }

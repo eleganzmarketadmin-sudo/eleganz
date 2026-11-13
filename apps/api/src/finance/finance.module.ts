@@ -3,6 +3,7 @@ import { ShopsModule } from "../shops/shops.module";
 import { FinanceService } from "./finance.service";
 import { FinanceController } from "./finance.controller";
 import { FiscalRulesService } from "./fiscal-rules.service";
+import { FiscalRemittanceService } from "./fiscal-remittance.service";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AdminFinanceController } from "./admin-finance.controller";
 import { AccountingSeedService } from "./accounting-seed.service";
@@ -42,6 +43,7 @@ import { LoansService } from "./loans.service";
   providers: [
     FinanceService,
     FiscalRulesService,
+    FiscalRemittanceService,
     AdminFinanceService,
     AccountingSeedService,
     AccountingService,
