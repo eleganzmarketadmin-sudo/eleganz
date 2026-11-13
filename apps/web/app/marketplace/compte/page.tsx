@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth, ApiError } from "../../lib/auth";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import { ChampMotDePasse } from "../../components/ChampMotDePasse";
@@ -19,7 +19,6 @@ export default function ComptePage() {
 function ComptePageContenu() {
   const { login, register } = useAuth();
   const { t } = useLocale();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [onglet, setOnglet] = useState<"connexion" | "inscription">("connexion");
   const [fullName, setFullName] = useState("");
@@ -47,7 +46,11 @@ function ComptePageContenu() {
         }
         await register({ fullName, identifiant, motDePasse, role: "BUYER" });
       }
-      router.push(destination());
+      // Voir le commentaire détaillé dans admin/connexion/page.tsx (13 nov.
+      // 2026) : navigation complète plutôt que router.push(), pour ne pas
+      // dépendre d'une requête RSC côté client qui peut rester bloquée sur
+      // un réseau lent/instable.
+      window.location.href = destination();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("compte_operationImpossible"));
     } finally {

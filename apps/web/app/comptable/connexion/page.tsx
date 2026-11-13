@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
@@ -22,7 +21,6 @@ import styles from "./page.module.css";
 export default function ConnexionComptablePage() {
   const { login } = useAuth();
   const { t } = useLocale();
-  const router = useRouter();
   const [identifiant, setIdentifiant] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -34,7 +32,11 @@ export default function ConnexionComptablePage() {
     setEnCours(true);
     try {
       await login(identifiant, motDePasse, "comptable");
-      router.push("/comptable");
+      // Voir le commentaire détaillé dans admin/connexion/page.tsx (13 nov.
+      // 2026) : navigation complète plutôt que router.push(), pour ne pas
+      // dépendre d'une requête RSC côté client qui peut rester bloquée sur
+      // un réseau lent/instable.
+      window.location.href = "/comptable";
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cconnexion_erreur"));
     } finally {
