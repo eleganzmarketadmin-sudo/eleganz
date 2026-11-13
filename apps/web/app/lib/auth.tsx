@@ -45,6 +45,32 @@ function decodeJwtPayload(token: string): AuthUser | null {
   }
 }
 
+/**
+ * Vérifie que le jeton tout juste écrit par setToken() est réellement
+ * relisible (13 nov. 2026, signalement "connexion réussie mais revient à
+ * la connexion", persistant malgré le passage à window.location.href pour
+ * la redirection post-connexion) — si localStorage refuse silencieusement
+ * l'écriture (navigation privée stricte, extension de confidentialité,
+ * quota dépassé, cookies/stockage bloqués par une politique du
+ * navigateur…), setToken() avale l'erreur (voir son propre try/catch dans
+ * api.ts) et l'état React `user` reste correct en mémoire sur l'écran
+ * actuel — mais dès qu'on quitte la page (changement d'onglet, et surtout
+ * le rechargement complet déclenché après connexion), ce jeton jamais
+ * vraiment stocké disparaît : la page suivante se retrouve sans session,
+ * et la garde d'authentification renvoie vers la connexion, en boucle,
+ * sans la moindre erreur visible jusqu'ici. On transforme cet échec
+ * silencieux en erreur explicite affichée à l'écran plutôt que de laisser
+ * deviner une boucle muette.
+ */
+function verifierSessionPersistee(accessToken: string): void {
+  if (getToken() !== accessToken) {
+    throw new ApiError(
+      "Connexion acceptée par le serveur, mais ce navigateur refuse d'enregistrer la session (cookies/stockage local bloqués — navigation privée stricte, extension de confidentialité, ou réglage de confidentialité du navigateur). Essayez une fenêtre de navigation normale, désactivez le blocage des cookies/du stockage pour ce site, ou essayez un autre navigateur.",
+      0,
+    );
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         false,
       );
       setToken(accessToken);
+      verifierSessionPersistee(accessToken);
       setUser(decodeJwtPayload(accessToken));
     },
     [],
@@ -112,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         false,
       );
       setToken(accessToken);
+      verifierSessionPersistee(accessToken);
       setUser(decodeJwtPayload(accessToken));
     },
     [],
