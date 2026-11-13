@@ -125,6 +125,14 @@ model PlatformSettings {
   // renseigne pas, rien n'est déduit ni affiché à leur place.
   platformFiscalLegalName String?
   platformFiscalIdNumber  String?
+  // RCCM distinct du NIF (13 nov. 2026, signalement point 4 : "pour les
+  // identité fiscale prevoyez des champs à completer même dans les
+  // parametres") — jusqu'ici, `platformFiscalIdNumber` combinait NIU/RCCM
+  // dans un seul champ (placeholder "NIU / RCCM"), alors qu'en RDC le NIF
+  // (numéro impôt, ce que `platformFiscalIdNumber` représente maintenant
+  // seul) et le RCCM (registre de commerce) sont deux identifiants distincts
+  // exigés séparément sur la plupart des déclarations et documents.
+  platformFiscalRccm     String?
   platformFiscalAddress   String?
   platformFiscalRegime    String?
   platformFoundedAt       DateTime?
@@ -1847,6 +1855,29 @@ enum FiscalRuleCategory {
   AUTRE
 }
 
+// Barème par tranches (13 nov. 2026, signalement point 3 : "rendre possible
+// les réajustements de plage de taux à partir du centre de pilotage") — deux
+// façons réelles dont la RDC utilise des plages de taux :
+// - PALIER : une seule tranche s'applique, choisie par une valeur de
+//   référence distincte du montant imposé (ex. INPP : le taux dépend de
+//   l'effectif de l'entreprise — 1-50/51-300/>300 travailleurs — mais
+//   s'applique à 100 % de la masse salariale, jamais fractionné par
+//   tranche). Entièrement simulable : FiscalSimulationService choisit la
+//   tranche dont [min,max] contient `trancheReferenceValeur` et applique son
+//   taux comme un taux simple.
+// - PROGRESSIF : chaque tranche s'applique à sa portion du revenu LUI-MÊME
+//   (ex. IRPP : 3 % de 0 à 1.944.000 FC, 15 % de 1.944.001 à 21.600.000 FC,
+//   etc., par personne). Volontairement JAMAIS calculé automatiquement sur
+//   une masse agrégée (compte 661 total) : appliquer un barème individuel à
+//   une somme collective surestimerait l'impôt, chaque palier ne s'appliquant
+//   qu'au revenu de CHAQUE salarié, pas à leur total. Reste donc toujours
+//   listé "non simulable automatiquement", les tranches étant affichées pour
+//   référence et modifiables ici tant qu'une paie individuelle n'existe pas.
+enum FiscalRuleTrancheMode {
+  PALIER
+  PROGRESSIF
+}
+
 // Statuts du §5.5 du prompt. VERIFIEE existe dans le modèle mais n'a pas
 // encore de flux d'invitation de professionnel réel à cette phase (voir
 // docs/ARCHITECTURE_FINANCE.md §7) — n'atteindre ce statut que par bascule
@@ -1877,6 +1908,15 @@ model FiscalRule {
   lastModifiedBy   String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+
+  // Barème par tranches — voir FiscalRuleTrancheMode ci-dessus. Tous
+  // facultatifs : une règle sans `tranches` garde l'ancien comportement
+  // (taux simple parsé depuis `rateOrFormula`), inchangé pour toutes les
+  // règles déjà créées avant le 13 nov. 2026.
+  trancheMode            FiscalRuleTrancheMode?
+  tranches               Json? // [{ min: number, max: number|null, taux: number }], triées par min croissant
+  trancheReferenceValeur Decimal?               @db.Decimal(14, 2) // ex. l'effectif actuel, pour choisir la tranche en mode PALIER
+  trancheReferenceLabel  String? // ex. "Effectif (nombre de travailleurs)"
 
   versions    FiscalRuleVersion[]
   remittances FiscalRemittance[]

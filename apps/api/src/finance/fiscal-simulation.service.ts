@@ -19,6 +19,17 @@ interface RegleNonSimulable {
   label: string;
   rateOrFormula: string;
   motif: string;
+  // Barème configuré pour référence (13 nov. 2026, signalement point 3) —
+  // affiché même quand la règle n'est pas simulable automatiquement (cas de
+  // PROGRESSIF, voir FiscalRuleTrancheMode dans schema.prisma), pour que
+  // l'admin voie les plages réelles sans avoir à rouvrir le formulaire.
+  tranches?: Tranche[];
+}
+
+interface Tranche {
+  min: number;
+  max: number | null;
+  taux: number;
 }
 
 /**
@@ -75,6 +86,61 @@ export class FiscalSimulationService {
     const nonSimulables: RegleNonSimulable[] = [];
 
     for (const regle of regles) {
+      const { base, montantBase } = this.baseParCategorie(regle.category, ca, resultatNet, chargesPersonnel);
+      const tranches = this.normaliserTranches(regle.tranches);
+
+      if (tranches && tranches.length > 0 && regle.trancheMode) {
+        if (regle.trancheMode === "PALIER") {
+          // PALIER : une seule tranche s'applique, choisie par une valeur de
+          // référence distincte du montant imposé (ex. INPP par effectif).
+          const refValeur =
+            regle.trancheReferenceValeur != null ? Number(regle.trancheReferenceValeur) : null;
+          const trancheChoisie =
+            refValeur != null
+              ? tranches.find((tr) => refValeur >= tr.min && (tr.max == null || refValeur <= tr.max))
+              : undefined;
+          if (!trancheChoisie) {
+            nonSimulables.push({
+              ruleId: regle.id,
+              label: regle.label,
+              rateOrFormula: regle.rateOrFormula,
+              motif: regle.trancheReferenceValeur == null
+                ? `Barème par palier configuré, mais "${regle.trancheReferenceLabel ?? "la valeur de référence"}" n'est pas renseigné — aucune tranche ne peut être choisie.`
+                : `Barème par palier configuré, mais aucune tranche ne couvre la valeur de référence actuelle (${regle.trancheReferenceLabel ?? "référence"} = ${refValeur}).`,
+              tranches,
+            });
+            continue;
+          }
+          lignes.push({
+            ruleId: regle.id,
+            label: regle.label,
+            category: regle.category,
+            rateOrFormula: regle.rateOrFormula,
+            base,
+            montantBase,
+            taux: trancheChoisie.taux,
+            montantEstime: Math.round(montantBase * (trancheChoisie.taux / 100) * 100) / 100,
+          });
+          continue;
+        }
+
+        // PROGRESSIF : chaque tranche ne s'applique qu'à la portion de
+        // revenu de CHAQUE personne (ex. IRPP), jamais à une masse agrégée —
+        // l'appliquer à `montantBase` (le total du compte 661, par exemple)
+        // surestimerait l'impôt. Jamais deviné : toujours non simulable,
+        // tranches affichées pour référence et modifiables depuis le Centre
+        // de pilotage.
+        nonSimulables.push({
+          ruleId: regle.id,
+          label: regle.label,
+          rateOrFormula: regle.rateOrFormula,
+          motif:
+            "Barème progressif par tranche de revenu individuel — une simulation sur une masse agrégée surestimerait l'impôt (chaque tranche s'applique au revenu de chaque personne, jamais à leur somme). Non simulable automatiquement tant qu'une paie individuelle n'est pas suivie.",
+          tranches,
+        });
+        continue;
+      }
+
       const taux = this.parserTaux(regle.rateOrFormula);
       if (taux === null) {
         nonSimulables.push({
@@ -85,35 +151,6 @@ export class FiscalSimulationService {
             "Le taux ou la formule n'est pas un pourcentage simple — simulation automatique impossible, calcul manuel nécessaire.",
         });
         continue;
-      }
-
-      let base: string;
-      let montantBase: number;
-      switch (regle.category) {
-        case "TVA":
-          base = "Chiffre d'affaires (produits)";
-          montantBase = ca;
-          break;
-        case "IMPOT":
-          base = "Résultat net (si positif, sinon 0)";
-          montantBase = Math.max(resultatNet, 0);
-          break;
-        case "RETENUE":
-        // CONTRIBUTION ajouté le 13 nov. 2026 (mise en place des obligations
-        // sociales d'ELEGANZ elle-même — CNSS, INPP, ONEM) : ces cotisations
-        // parafiscales se calculent toujours sur la masse salariale, jamais
-        // sur le chiffre d'affaires. Avant ce correctif, une règle
-        // CONTRIBUTION simulable (ex. "13%") tombait dans le `default`
-        // ci-dessous et était donc estimée sur le chiffre d'affaires — un
-        // montant sans rapport avec la charge sociale réelle, silencieux
-        // puisque la règle restait "simulable".
-        case "CONTRIBUTION":
-          base = "Charges de personnel (compte 661)";
-          montantBase = chargesPersonnel;
-          break;
-        default:
-          base = "Chiffre d'affaires (produits) — base approximative par défaut";
-          montantBase = ca;
       }
 
       lignes.push({
@@ -144,6 +181,59 @@ export class FiscalSimulationService {
     const m = rateOrFormula.trim().match(/^(\d+(?:[.,]\d+)?)\s*%$/);
     if (!m) return null;
     return Number(m[1].replace(",", "."));
+  }
+
+  private baseParCategorie(
+    category: string,
+    ca: number,
+    resultatNet: number,
+    chargesPersonnel: number,
+  ): { base: string; montantBase: number } {
+    switch (category) {
+      case "TVA":
+        return { base: "Chiffre d'affaires (produits)", montantBase: ca };
+      case "IMPOT":
+        return { base: "Résultat net (si positif, sinon 0)", montantBase: Math.max(resultatNet, 0) };
+      case "RETENUE":
+      // CONTRIBUTION ajouté le 13 nov. 2026 (mise en place des obligations
+      // sociales d'ELEGANZ elle-même — CNSS, INPP, ONEM) : ces cotisations
+      // parafiscales se calculent toujours sur la masse salariale, jamais
+      // sur le chiffre d'affaires. Avant ce correctif, une règle
+      // CONTRIBUTION simulable (ex. "13%") tombait dans le `default`
+      // ci-dessous et était donc estimée sur le chiffre d'affaires — un
+      // montant sans rapport avec la charge sociale réelle, silencieux
+      // puisque la règle restait "simulable".
+      case "CONTRIBUTION":
+        return { base: "Charges de personnel (compte 661)", montantBase: chargesPersonnel };
+      default:
+        return { base: "Chiffre d'affaires (produits) — base approximative par défaut", montantBase: ca };
+    }
+  }
+
+  // Les tranches viennent de la base comme Prisma.JsonValue (forme non
+  // garantie à la compilation) — jamais fait confiance sans validation :
+  // une tranche malformée (champ manquant, type incorrect) est purement et
+  // simplement ignorée plutôt que de risquer un calcul silencieusement faux.
+  private normaliserTranches(valeur: unknown): Tranche[] | null {
+    if (!Array.isArray(valeur)) return null;
+    const tranches: Tranche[] = [];
+    for (const item of valeur) {
+      if (
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as Record<string, unknown>).min === "number" &&
+        typeof (item as Record<string, unknown>).taux === "number"
+      ) {
+        const max = (item as Record<string, unknown>).max;
+        tranches.push({
+          min: (item as Record<string, unknown>).min as number,
+          max: typeof max === "number" ? max : null,
+          taux: (item as Record<string, unknown>).taux as number,
+        });
+      }
+    }
+    if (tranches.length === 0) return null;
+    return tranches.sort((a, b) => a.min - b.min);
   }
 
   // --- Relevé (simulation + reversements réels) --------------------------

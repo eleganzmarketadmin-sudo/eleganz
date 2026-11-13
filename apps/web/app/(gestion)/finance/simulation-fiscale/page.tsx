@@ -43,6 +43,7 @@ interface RegleNonSimulable {
   motif: string;
   montantVerse: number;
   montantDeclare: number;
+  tranches?: { min: number; max: number | null; taux: number }[];
 }
 
 interface Releve {
@@ -368,6 +369,14 @@ function SimulationFiscaleContenu() {
                 {releve.nonSimulables.map((r) => (
                   <li key={r.ruleId} style={{ marginBottom: "8px" }}>
                     <strong>{r.label}</strong> ({r.rateOrFormula}) — {r.motif}
+                    {r.tranches && r.tranches.length > 0 && (
+                      <div style={{ fontSize: "0.85rem", margin: "4px 0", color: "var(--color-texte-muted)" }}>
+                        {t("sim_baremeReference")} :{" "}
+                        {r.tranches
+                          .map((tr) => `${f(tr.min)}${tr.max != null ? ` – ${f(tr.max)}` : "+"} : ${tr.taux} %`)
+                          .join(" · ")}
+                      </div>
+                    )}
                     <br />
                     {t("sim_colVerse")}: {f(r.montantVerse)} $
                     {r.montantDeclare > 0 && <> — {t("rev_montantDeclare")}: {f(r.montantDeclare)} $</>}

@@ -64,6 +64,7 @@ export class AdminSettingsService {
         ...(dto.chatWidgetEnabled !== undefined && { chatWidgetEnabled: dto.chatWidgetEnabled }),
         ...(dto.platformFiscalLegalName !== undefined && { platformFiscalLegalName: dto.platformFiscalLegalName || null }),
         ...(dto.platformFiscalIdNumber !== undefined && { platformFiscalIdNumber: dto.platformFiscalIdNumber || null }),
+        ...(dto.platformFiscalRccm !== undefined && { platformFiscalRccm: dto.platformFiscalRccm || null }),
         ...(dto.platformFiscalAddress !== undefined && { platformFiscalAddress: dto.platformFiscalAddress || null }),
         ...(dto.platformFiscalRegime !== undefined && { platformFiscalRegime: dto.platformFiscalRegime || null }),
         ...(dto.platformFoundedAt !== undefined && { platformFoundedAt: dto.platformFoundedAt ? new Date(dto.platformFoundedAt) : null }),

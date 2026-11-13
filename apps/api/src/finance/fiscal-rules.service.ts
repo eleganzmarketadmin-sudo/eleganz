@@ -41,6 +41,10 @@ export class FiscalRulesService {
           effectiveFrom: new Date(champs.effectiveFrom),
           effectiveTo: champs.effectiveTo ? new Date(champs.effectiveTo) : undefined,
           sourceReference: champs.sourceReference,
+          trancheMode: champs.trancheMode,
+          tranches: champs.tranches as unknown as object[] | undefined,
+          trancheReferenceValeur: champs.trancheReferenceValeur,
+          trancheReferenceLabel: champs.trancheReferenceLabel,
           // Une règle créée par la boutique elle-même n'est jamais
           // automatiquement "vérifiée" (§5.5) — elle part toujours au
           // statut CONFIGUREE (configurée par l'entreprise), jamais VERIFIEE.
@@ -73,6 +77,7 @@ export class FiscalRulesService {
         where: { id: ruleId },
         data: {
           ...champs,
+          tranches: champs.tranches as unknown as object[] | undefined,
           effectiveFrom: champs.effectiveFrom ? new Date(champs.effectiveFrom) : undefined,
           effectiveTo: champs.effectiveTo ? new Date(champs.effectiveTo) : undefined,
           lastModifiedBy: authorId,
@@ -148,6 +153,10 @@ export class FiscalRulesService {
           effectiveFrom: new Date(champs.effectiveFrom),
           effectiveTo: champs.effectiveTo ? new Date(champs.effectiveTo) : undefined,
           sourceReference: champs.sourceReference,
+          trancheMode: champs.trancheMode,
+          tranches: champs.tranches as unknown as object[] | undefined,
+          trancheReferenceValeur: champs.trancheReferenceValeur,
+          trancheReferenceLabel: champs.trancheReferenceLabel,
           status: FiscalRuleStatus.CONFIGUREE,
           lastModifiedBy: authorId,
         },
@@ -177,6 +186,7 @@ export class FiscalRulesService {
         where: { id: ruleId },
         data: {
           ...champs,
+          tranches: champs.tranches as unknown as object[] | undefined,
           effectiveFrom: champs.effectiveFrom ? new Date(champs.effectiveFrom) : undefined,
           effectiveTo: champs.effectiveTo ? new Date(champs.effectiveTo) : undefined,
           lastModifiedBy: authorId,

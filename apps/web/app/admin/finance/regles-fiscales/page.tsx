@@ -14,6 +14,12 @@ import styles from "./page.module.css";
 // de boutique (séparation imposée côté API — voir
 // docs/ARCHITECTURE_FINANCE.md §3.2).
 
+interface Tranche {
+  min: number;
+  max: number | null;
+  taux: number;
+}
+
 interface RegleFiscale {
   id: string;
   label: string;
@@ -23,6 +29,21 @@ interface RegleFiscale {
   sourceReference: string | null;
   effectiveFrom: string;
   status: "PROPOSEE" | "CONFIGUREE" | "VERIFIEE" | "OBSOLETE";
+  // Barème par tranches (13 nov. 2026, signalement point 3) — voir
+  // FiscalRuleTrancheMode dans schema.prisma. `null`/absent = règle à taux
+  // simple, comportement inchangé pour toute règle créée avant ce champ.
+  trancheMode?: "PALIER" | "PROGRESSIF" | null;
+  tranches?: Tranche[] | null;
+  trancheReferenceValeur?: string | number | null;
+  trancheReferenceLabel?: string | null;
+}
+
+// Une ligne de tranche dans le formulaire — champs texte (contrôlés),
+// convertis en nombre seulement à la soumission.
+interface TrancheFormulaire {
+  min: string;
+  max: string;
+  taux: string;
 }
 
 const CLES_STATUT: Record<RegleFiscale["status"], string> = {
@@ -65,6 +86,36 @@ function ReglesFiscalesAdminContenu() {
   // POST), sans dupliquer les champs.
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Barème par tranches (13 nov. 2026, signalement point 3 : "rendre
+  // possible les réajustements de plage de taux à partir du centre de
+  // pilotage") — panneau optionnel du même formulaire, jamais un second
+  // formulaire séparé.
+  const [trancheActif, setTrancheActif] = useState(false);
+  const [trancheMode, setTrancheMode] = useState<"PALIER" | "PROGRESSIF">("PALIER");
+  const [trancheReferenceLabel, setTrancheReferenceLabel] = useState("");
+  const [trancheReferenceValeur, setTrancheReferenceValeur] = useState("");
+  const [tranches, setTranches] = useState<TrancheFormulaire[]>([{ min: "", max: "", taux: "" }]);
+
+  function ajouterTranche() {
+    setTranches((ts) => [...ts, { min: "", max: "", taux: "" }]);
+  }
+
+  function retirerTranche(index: number) {
+    setTranches((ts) => ts.filter((_, i) => i !== index));
+  }
+
+  function modifierTranche(index: number, champ: keyof TrancheFormulaire, valeur: string) {
+    setTranches((ts) => ts.map((t, i) => (i === index ? { ...t, [champ]: valeur } : t)));
+  }
+
+  function resetTranches() {
+    setTrancheActif(false);
+    setTrancheMode("PALIER");
+    setTrancheReferenceLabel("");
+    setTrancheReferenceValeur("");
+    setTranches([{ min: "", max: "", taux: "" }]);
+  }
+
   function recharger() {
     setChargement(true);
     api
@@ -85,6 +136,7 @@ function ReglesFiscalesAdminContenu() {
     setSourceReference("");
     setEffectiveFrom(new Date().toISOString().slice(0, 10));
     setMotif("");
+    resetTranches();
   }
 
   function demarrerModification(r: RegleFiscale) {
@@ -100,6 +152,22 @@ function ReglesFiscalesAdminContenu() {
     setMotif("");
     setMessage(null);
     setErreur(null);
+
+    if (r.trancheMode && r.tranches && r.tranches.length > 0) {
+      setTrancheActif(true);
+      setTrancheMode(r.trancheMode);
+      setTrancheReferenceLabel(r.trancheReferenceLabel ?? "");
+      setTrancheReferenceValeur(r.trancheReferenceValeur != null ? String(r.trancheReferenceValeur) : "");
+      setTranches(
+        r.tranches.map((t) => ({
+          min: String(t.min),
+          max: t.max != null ? String(t.max) : "",
+          taux: String(t.taux),
+        })),
+      );
+    } else {
+      resetTranches();
+    }
   }
 
   async function soumettre(e: React.FormEvent) {
@@ -108,6 +176,31 @@ function ReglesFiscalesAdminContenu() {
     setEnCours(true);
     setErreur(null);
     setMessage(null);
+
+    // Barème — n'envoie des tranches que si le panneau est actif et qu'au
+    // moins une ligne a ses 2 champs requis (min, taux) remplis ; sinon
+    // envoie des `null` explicites pour effacer un barème précédemment
+    // configuré (une modification peut aussi bien désactiver un barème).
+    const trancheLignesValides = tranches
+      .filter((t) => t.min.trim() !== "" && t.taux.trim() !== "")
+      .map((t) => ({
+        min: Number(t.min),
+        max: t.max.trim() === "" ? undefined : Number(t.max),
+        taux: Number(t.taux),
+      }));
+    const champsBareme =
+      trancheActif && trancheLignesValides.length > 0
+        ? {
+            trancheMode,
+            tranches: trancheLignesValides,
+            trancheReferenceValeur:
+              trancheMode === "PALIER" && trancheReferenceValeur.trim() !== ""
+                ? Number(trancheReferenceValeur)
+                : undefined,
+            trancheReferenceLabel: trancheMode === "PALIER" ? trancheReferenceLabel || undefined : undefined,
+          }
+        : { trancheMode: null, tranches: null, trancheReferenceValeur: null, trancheReferenceLabel: null };
+
     const champs = {
       label,
       category,
@@ -115,6 +208,7 @@ function ReglesFiscalesAdminContenu() {
       baseCalcul: baseCalcul || undefined,
       effectiveFrom: new Date(effectiveFrom).toISOString(),
       sourceReference: sourceReference || undefined,
+      ...champsBareme,
       motif,
     };
     try {
@@ -189,6 +283,79 @@ function ReglesFiscalesAdminContenu() {
             <input placeholder={t("rfi_baseCalcul")} value={baseCalcul} onChange={(e) => setBaseCalcul(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
             <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
             <input placeholder={t("rfi_sourceReglementaire")} value={sourceReference} onChange={(e) => setSourceReference(e.target.value)} style={{ minHeight: 40, padding: 8 }} />
+
+            <div style={{ width: "100%", border: "1px solid #ddd", borderRadius: 4, padding: "10px 12px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
+                <input type="checkbox" checked={trancheActif} onChange={(e) => setTrancheActif(e.target.checked)} />
+                {t("rfi_baremeActif")}
+              </label>
+
+              {trancheActif && (
+                <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4 }}>{t("rfi_baremeMode")}</label>
+                    <select value={trancheMode} onChange={(e) => setTrancheMode(e.target.value as "PALIER" | "PROGRESSIF")} style={{ minHeight: 36 }}>
+                      <option value="PALIER">{t("rfi_baremeModePalier")}</option>
+                      <option value="PROGRESSIF">{t("rfi_baremeModeProgressif")}</option>
+                    </select>
+                    <p style={{ fontSize: "0.8rem", color: "var(--color-texte-muted)", marginTop: 4 }}>
+                      {trancheMode === "PALIER" ? t("rfi_baremeNotePalier") : t("rfi_baremeNoteProgressif")}
+                    </p>
+                  </div>
+
+                  {trancheMode === "PALIER" && (
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                      <input
+                        placeholder={t("rfi_baremeReferenceLabelPlaceholder")}
+                        value={trancheReferenceLabel}
+                        onChange={(e) => setTrancheReferenceLabel(e.target.value)}
+                        style={{ minHeight: 36, padding: 8, minWidth: 260 }}
+                      />
+                      <input
+                        type="number"
+                        placeholder={t("rfi_baremeReferenceValeur")}
+                        value={trancheReferenceValeur}
+                        onChange={(e) => setTrancheReferenceValeur(e.target.value)}
+                        style={{ minHeight: 36, padding: 8, width: 180 }}
+                      />
+                    </div>
+                  )}
+
+                  {tranches.map((tr, i) => (
+                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        type="number"
+                        placeholder={t("rfi_trancheDe")}
+                        value={tr.min}
+                        onChange={(e) => modifierTranche(i, "min", e.target.value)}
+                        style={{ minHeight: 36, padding: 8, width: 150 }}
+                      />
+                      <input
+                        type="number"
+                        placeholder={t("rfi_trancheA")}
+                        value={tr.max}
+                        onChange={(e) => modifierTranche(i, "max", e.target.value)}
+                        style={{ minHeight: 36, padding: 8, width: 170 }}
+                      />
+                      <input
+                        type="number"
+                        placeholder={t("rfi_trancheTaux")}
+                        value={tr.taux}
+                        onChange={(e) => modifierTranche(i, "taux", e.target.value)}
+                        style={{ minHeight: 36, padding: 8, width: 100 }}
+                      />
+                      <button type="button" className={styles.retirer} onClick={() => retirerTranche(i)} disabled={tranches.length <= 1}>
+                        {t("rfi_trancheRetirer")}
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={ajouterTranche} style={{ alignSelf: "flex-start" }}>
+                    {t("rfi_trancheAjouter")}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <input
               placeholder={editingId ? t("rfi_placeholderMotifModification") : t("admrfi_placeholderMotif")}
               value={motif}
@@ -229,7 +396,17 @@ function ReglesFiscalesAdminContenu() {
                   <tr key={r.id} style={{ opacity: r.status === "OBSOLETE" ? 0.5 : 1 }}>
                     <td>{r.label}</td>
                     <td>{t(CLES_CATEGORIE[r.category])}</td>
-                    <td>{r.rateOrFormula}</td>
+                    <td>
+                      {r.rateOrFormula}
+                      {r.trancheMode && r.tranches && r.tranches.length > 0 && (
+                        <>
+                          {" "}
+                          <span style={{ fontSize: "0.8rem", color: "var(--color-texte-muted)" }}>
+                            ({r.trancheMode === "PALIER" ? "Palier" : "Progressif"}, {r.tranches.length})
+                          </span>
+                        </>
+                      )}
+                    </td>
                     <td>{new Date(r.effectiveFrom).toLocaleDateString("fr-FR")}</td>
                     <td>{t(CLES_STATUT[r.status])}</td>
                     <td>

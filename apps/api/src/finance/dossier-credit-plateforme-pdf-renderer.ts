@@ -45,7 +45,10 @@ export function renderDossierCreditPlateformePdf(dossier: DossierCreditPlateform
     doc.text(`Raison sociale : ${dossier.identiteFiscale.fiscalLegalName}`);
   }
   if (dossier.identiteFiscale.fiscalIdNumber) {
-    doc.text(`Identifiant fiscal : ${dossier.identiteFiscale.fiscalIdNumber}`);
+    doc.text(`NIF : ${dossier.identiteFiscale.fiscalIdNumber}`);
+  }
+  if (dossier.identiteFiscale.fiscalRccm) {
+    doc.text(`RCCM : ${dossier.identiteFiscale.fiscalRccm}`);
   }
   if (dossier.identiteFiscale.fiscalAddress) {
     doc.text(`Adresse : ${dossier.identiteFiscale.fiscalAddress}`);

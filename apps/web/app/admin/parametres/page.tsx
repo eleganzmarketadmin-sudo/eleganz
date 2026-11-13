@@ -29,6 +29,12 @@ interface PlatformSettings {
   // /admin/platform-settings les acceptait déjà — seul l'écran manquait.
   platformFiscalLegalName?: string | null;
   platformFiscalIdNumber?: string | null;
+  // RCCM distinct du NIF (13 nov. 2026, signalement point 4 : "pour les
+  // identité fiscale prevoyez des champs à completer même dans les
+  // parametres") — platformFiscalIdNumber combinait jusqu'ici NIU/RCCM dans
+  // un seul champ, alors que le NIF et le RCCM sont deux identifiants
+  // distincts en RDC, exigés séparément sur la plupart des déclarations.
+  platformFiscalRccm?: string | null;
   platformFiscalAddress?: string | null;
   platformFiscalRegime?: string | null;
   platformFoundedAt?: string | null;
@@ -83,9 +89,10 @@ const CLES_CANAUX_NOTIFICATION: {
 // oct. 2026, point 3) — formulaire séparé du bloc "Coordonnées & réseaux
 // sociaux" ci-dessous, avec son propre bouton d'enregistrement, pour ne
 // jamais mélanger les deux PATCH dans la même soumission.
-const CLES_CHAMPS_FISCAL: { cle: "platformFiscalLegalName" | "platformFiscalIdNumber" | "platformFiscalAddress" | "platformFiscalRegime"; labelCle: string; placeholder: string }[] = [
+const CLES_CHAMPS_FISCAL: { cle: "platformFiscalLegalName" | "platformFiscalIdNumber" | "platformFiscalRccm" | "platformFiscalAddress" | "platformFiscalRegime"; labelCle: string; placeholder: string }[] = [
   { cle: "platformFiscalLegalName", labelCle: "admparam_fiscalRaisonSociale", placeholder: "Ex. ELEGANZ SARL" },
-  { cle: "platformFiscalIdNumber", labelCle: "admparam_fiscalNumeroId", placeholder: "Ex. NIU / RCCM" },
+  { cle: "platformFiscalIdNumber", labelCle: "admparam_fiscalNumeroId", placeholder: "Ex. 01-234-N56789Q" },
+  { cle: "platformFiscalRccm", labelCle: "admparam_fiscalRccm", placeholder: "Ex. CD/KNG/RCCM/24-B-00123" },
   { cle: "platformFiscalAddress", labelCle: "admparam_fiscalAdresse", placeholder: "Ex. Siège social — Kinshasa" },
   { cle: "platformFiscalRegime", labelCle: "admparam_fiscalRegime", placeholder: "Ex. Régime du réel" },
 ];
@@ -254,6 +261,7 @@ function ParametresContent() {
       const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
         platformFiscalLegalName: valeurs.platformFiscalLegalName,
         platformFiscalIdNumber: valeurs.platformFiscalIdNumber,
+        platformFiscalRccm: valeurs.platformFiscalRccm,
         platformFiscalAddress: valeurs.platformFiscalAddress,
         platformFiscalRegime: valeurs.platformFiscalRegime,
         platformFoundedAt: valeurs.platformFoundedAt,

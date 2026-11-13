@@ -150,6 +150,13 @@ export class UpdatePlatformSettingsDto {
   @MaxLength(100)
   platformFiscalIdNumber?: string;
 
+  // RCCM distinct du NIF (13 nov. 2026, signalement point 4) — voir
+  // schema.prisma, PlatformSettings.platformFiscalRccm.
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  platformFiscalRccm?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(300)

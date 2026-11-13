@@ -12,6 +12,7 @@ export interface DossierCreditPlateforme {
   identiteFiscale: {
     fiscalLegalName: string | null;
     fiscalIdNumber: string | null;
+    fiscalRccm: string | null;
     fiscalAddress: string | null;
     fiscalRegime: string | null;
   };
@@ -130,6 +131,7 @@ export class AdminFinanceService {
       identiteFiscale: {
         fiscalLegalName: settings?.platformFiscalLegalName ?? null,
         fiscalIdNumber: settings?.platformFiscalIdNumber ?? null,
+        fiscalRccm: settings?.platformFiscalRccm ?? null,
         fiscalAddress: settings?.platformFiscalAddress ?? null,
         fiscalRegime: settings?.platformFiscalRegime ?? null,
       },
