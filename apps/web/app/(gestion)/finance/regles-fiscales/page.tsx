@@ -73,6 +73,11 @@ function ReglesFiscalesContent() {
   const [sourceReference, setSourceReference] = useState("");
   const [motif, setMotif] = useState("");
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  // Modification d'une règle existante (13 nov. 2026, signalement : "on n'a
+  // pas la possibilité de modifier les règles après leur ajout") — même
+  // correctif que côté Centre de pilotage (admin/finance/regles-fiscales) :
+  // `editingId` bascule ce même formulaire en mode édition.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   function recharger() {
     if (!currentShop) return;
@@ -115,28 +120,56 @@ function ReglesFiscalesContent() {
     }
   }
 
-  async function creerRegle(e: React.FormEvent) {
+  function resetFormulaireRegle() {
+    setEditingId(null);
+    setLabel("");
+    setCategory("TVA");
+    setRateOrFormula("");
+    setBaseCalcul("");
+    setSourceReference("");
+    setEffectiveFrom(new Date().toISOString().slice(0, 10));
+    setMotif("");
+  }
+
+  function demarrerModificationRegle(r: RegleFiscale) {
+    setEditingId(r.id);
+    setLabel(r.label);
+    setCategory(r.category);
+    setRateOrFormula(r.rateOrFormula);
+    setBaseCalcul(r.baseCalcul ?? "");
+    setSourceReference(r.sourceReference ?? "");
+    setEffectiveFrom(r.effectiveFrom.slice(0, 10));
+    // Motif volontairement vide : la raison de la MODIFICATION n'est pas
+    // celle, déjà enregistrée, de la création d'origine.
+    setMotif("");
+    setErreur(null);
+    setConfirmation(null);
+  }
+
+  async function soumettreRegle(e: React.FormEvent) {
     e.preventDefault();
     if (!currentShop || !label || !rateOrFormula || !motif) return;
     setEnregistrementEnCours(true);
     setErreur(null);
     setConfirmation(null);
+    const champs = {
+      label,
+      category,
+      rateOrFormula,
+      baseCalcul: baseCalcul || undefined,
+      effectiveFrom: new Date(effectiveFrom).toISOString(),
+      sourceReference: sourceReference || undefined,
+      motif,
+    };
     try {
-      await api.post(`/shops/${currentShop.id}/finance/fiscal-rules`, {
-        label,
-        category,
-        rateOrFormula,
-        baseCalcul: baseCalcul || undefined,
-        effectiveFrom: new Date(effectiveFrom).toISOString(),
-        sourceReference: sourceReference || undefined,
-        motif,
-      });
-      setLabel("");
-      setRateOrFormula("");
-      setBaseCalcul("");
-      setSourceReference("");
-      setMotif("");
-      setConfirmation(t("rfi_regleEnregistree"));
+      if (editingId) {
+        await api.patch(`/shops/${currentShop.id}/finance/fiscal-rules/${editingId}`, champs);
+        setConfirmation(t("rfi_regleModifiee"));
+      } else {
+        await api.post(`/shops/${currentShop.id}/finance/fiscal-rules`, champs);
+        setConfirmation(t("rfi_regleEnregistree"));
+      }
+      resetFormulaireRegle();
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
@@ -154,6 +187,20 @@ function ReglesFiscalesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("rfi_archivageImpossible"));
+    }
+  }
+
+  // Réactivation (13 nov. 2026, même signalement) — l'archivage était
+  // jusqu'ici un aller sans retour depuis cet écran.
+  async function reactiver(regleId: string) {
+    if (!currentShop) return;
+    const motifReactivation = window.prompt(t("rfi_promptMotifReactivation"));
+    if (!motifReactivation) return;
+    try {
+      await api.post(`/shops/${currentShop.id}/finance/fiscal-rules/${regleId}/reactivate`, { motif: motifReactivation });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("rfi_reactivationImpossible"));
     }
   }
 
@@ -212,8 +259,10 @@ function ReglesFiscalesContent() {
             </button>
           </form>
 
-          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>{t("rfi_nouvelleRegle")}</h3>
-          <form className={styles.formulaire} onSubmit={creerRegle} style={{ marginBottom: "24px" }}>
+          <h3 style={{ fontSize: "1rem", marginBottom: "12px" }}>
+            {editingId ? t("rfi_modifier") : t("rfi_nouvelleRegle")}
+          </h3>
+          <form className={styles.formulaire} onSubmit={soumettreRegle} style={{ marginBottom: "24px" }}>
             <div className={styles.champ}>
               <label htmlFor="label">{t("rfi_intitule")}</label>
               <input id="label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("rfi_placeholderIntitule")} />
@@ -246,11 +295,27 @@ function ReglesFiscalesContent() {
             </div>
             <div className={styles.champ}>
               <label htmlFor="motif">{t("rfi_motifRegle")}</label>
-              <input id="motif" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder={t("rfi_placeholderMotif")} />
+              <input
+                id="motif"
+                value={motif}
+                onChange={(e) => setMotif(e.target.value)}
+                placeholder={editingId ? t("rfi_placeholderMotifModification") : t("rfi_placeholderMotif")}
+              />
             </div>
-            <button className={styles.bouton} type="submit" disabled={enregistrementEnCours || !label || !rateOrFormula || !motif}>
-              {enregistrementEnCours ? t("cha_enregistrementEnCours") : t("rfi_ajouterRegle")}
-            </button>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button className={styles.bouton} type="submit" disabled={enregistrementEnCours || !label || !rateOrFormula || !motif}>
+                {enregistrementEnCours
+                  ? t("cha_enregistrementEnCours")
+                  : editingId
+                    ? t("rfi_enregistrerModifications")
+                    : t("rfi_ajouterRegle")}
+              </button>
+              {editingId && (
+                <button type="button" className={styles.boutonSecondaire} onClick={resetFormulaireRegle}>
+                  {t("rfi_annulerModification")}
+                </button>
+              )}
+            </div>
           </form>
 
           {regles.length === 0 ? (
@@ -277,9 +342,18 @@ function ReglesFiscalesContent() {
                     <td>{new Date(r.effectiveFrom).toLocaleDateString("fr-FR")}</td>
                     <td>{t(CLES_STATUT[r.status])}</td>
                     <td>
-                      {r.status !== "OBSOLETE" && (
-                        <button className={styles.retirer} onClick={() => archiver(r.id)}>
-                          {t("rfi_archiver")}
+                      {r.status !== "OBSOLETE" ? (
+                        <>
+                          <button className={styles.modifier} onClick={() => demarrerModificationRegle(r)}>
+                            {t("rfi_modifier")}
+                          </button>
+                          <button className={styles.retirer} onClick={() => archiver(r.id)}>
+                            {t("rfi_archiver")}
+                          </button>
+                        </>
+                      ) : (
+                        <button className={styles.reactiver} onClick={() => reactiver(r.id)}>
+                          {t("rfi_reactiver")}
                         </button>
                       )}
                     </td>

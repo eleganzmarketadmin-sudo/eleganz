@@ -68,6 +68,36 @@
   font-weight: 600;
 }
 
+/* Modifier/Réactiver/Annuler (13 nov. 2026, signalement : "on n'a pas la
+   possibilité de modifier les règles [...] ni les désactiver") — .modifier
+   et .reactiver complètent .retirer (archiver) ; .boutonSecondaire sert au
+   bouton "Annuler la modification" du formulaire basculé en mode édition. */
+.modifier {
+  background: none;
+  border: none;
+  color: var(--color-cobalt-texte);
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: var(--espace-3);
+}
+
+.reactiver {
+  background: none;
+  border: none;
+  color: var(--color-vert-paiement);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSecondaire {
+  background: var(--color-surface);
+  color: var(--color-texte-muted);
+  border: 1px solid var(--color-texte-muted);
+  padding: var(--espace-3) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+}
+
 .erreur {
   background: var(--color-flamme);
   color: #fff;

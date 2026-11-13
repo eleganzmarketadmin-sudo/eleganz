@@ -512,4 +512,14 @@ export class AdminFinanceController {
     requireAdmin(user);
     return this.fiscalRulesService.archiveForPlatform(ruleId, user.id, motif || "Archivage");
   }
+
+  @Post("fiscal-rules/:ruleId/reactivate")
+  reactivateFiscalRule(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("ruleId") ruleId: string,
+    @Body("motif") motif: string,
+  ) {
+    requireAdmin(user);
+    return this.fiscalRulesService.reactivateForPlatform(ruleId, user.id, motif || "Réactivation");
+  }
 }

@@ -419,4 +419,15 @@ export class FinanceController {
   ) {
     return this.fiscalRulesService.archiveForShop(shopId, ruleId, user.id, motif || "Archivage");
   }
+
+  @Post("fiscal-rules/:ruleId/reactivate")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  reactivateFiscalRule(
+    @Param("shopId") shopId: string,
+    @Param("ruleId") ruleId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body("motif") motif: string,
+  ) {
+    return this.fiscalRulesService.reactivateForShop(shopId, ruleId, user.id, motif || "Réactivation");
+  }
 }

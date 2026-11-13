@@ -75,6 +75,39 @@
   font-size: 0.8125rem;
 }
 
+/* Modifier/Réactiver (13 nov. 2026, signalement : "on n'a pas la
+   possibilité de modifier les règles [...] ni les désactiver") — .modifier
+   et .reactiver complètent .retirer (archiver), qui restait jusqu'ici la
+   seule action disponible sur une règle déjà créée. */
+.modifier {
+  border: 1px solid var(--color-ink);
+  background: var(--color-surface);
+  padding: 4px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  margin-right: var(--espace-2);
+}
+
+.reactiver {
+  border: 1px solid var(--color-vert-paiement);
+  background: var(--color-surface);
+  color: var(--color-vert-paiement);
+  padding: 4px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.boutonSecondaire {
+  border: 1px solid var(--color-texte-muted);
+  background: var(--color-surface);
+  color: var(--color-texte-muted);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+}
+
 /* 10 nov. 2026 (tableaux sur mobile) : un tableau large ne tient jamais
    sur la largeur d'un téléphone en portrait — sans ce conteneur, les
    colonnes de droite étaient soit coupées soit écrasées, visibles

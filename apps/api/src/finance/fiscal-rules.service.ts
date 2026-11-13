@@ -107,6 +107,22 @@ export class FiscalRulesService {
     });
   }
 
+  /**
+   * Réactivation d'une règle archivée (13 nov. 2026, signalement : "on n'a
+   * pas la possibilité de [...] désactiver" une règle) — jusqu'ici,
+   * `archiveForShop`/`archiveForPlatform` menaient à un aller sans retour
+   * (statut OBSOLETE, aucun moyen de revenir en arrière sans passer par la
+   * base de données). Même logique que l'archivage : repasse par
+   * `setStatus`, avec un motif tracé, vers CONFIGUREE (jamais VERIFIEE,
+   * qu'une réactivation seule ne saurait rétablir).
+   */
+  async reactivateForShop(shopId: string, ruleId: string, authorId: string, motif: string) {
+    await this.prisma.fiscalRule.findFirstOrThrow({
+      where: { id: ruleId, scope: FiscalRuleScope.SHOP, shopId },
+    });
+    return this.setStatus(ruleId, FiscalRuleStatus.CONFIGUREE, authorId, motif);
+  }
+
   // --- ELEGANZ elle-même (scope=PLATFORM) --------------------------------
 
   listForPlatform() {
@@ -200,6 +216,14 @@ export class FiscalRulesService {
       where: { ruleId, rule: { scope: FiscalRuleScope.PLATFORM } },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /** Réactivation d'une règle plateforme archivée — voir reactivateForShop. */
+  async reactivateForPlatform(ruleId: string, authorId: string, motif: string) {
+    await this.prisma.fiscalRule.findFirstOrThrow({
+      where: { id: ruleId, scope: FiscalRuleScope.PLATFORM },
+    });
+    return this.setStatus(ruleId, FiscalRuleStatus.CONFIGUREE, authorId, motif);
   }
 
   private async setStatus(ruleId: string, status: FiscalRuleStatus, authorId: string, motif: string) {
