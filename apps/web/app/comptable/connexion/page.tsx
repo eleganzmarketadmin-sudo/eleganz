@@ -50,7 +50,11 @@ export default function ConnexionComptablePage() {
         <p>{t("cconnexion_texteMarque")}</p>
       </div>
       <div className={styles.panneauForm}>
-        <form className={styles.form} onSubmit={soumettre}>
+        {/* suppressHydrationWarning sur le <form> (13 nov. 2026, voir
+            ChampMotDePasse.tsx) — une extension (gestionnaire de mots de
+            passe) peut ajouter des attributs directement sur <form> avant
+            l'hydratation. */}
+        <form className={styles.form} onSubmit={soumettre} suppressHydrationWarning>
           <h2 style={{ marginBottom: "24px" }}>{t("cconnexion_titre")}</h2>
           {erreur && <div className={styles.erreur}>{erreur}</div>}
           <div className={styles.champ}>
@@ -63,6 +67,7 @@ export default function ConnexionComptablePage() {
               value={identifiant}
               onChange={(e) => setIdentifiant(e.target.value)}
               required
+              suppressHydrationWarning
             />
           </div>
           <div className={styles.champ}>

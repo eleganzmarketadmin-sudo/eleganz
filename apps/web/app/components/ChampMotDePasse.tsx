@@ -22,7 +22,21 @@ export function ChampMotDePasse({ className, ...props }: Props) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className={styles.conteneur}>
+    // suppressHydrationWarning sur le conteneur ET sur l'input (13 nov.
+    // 2026, signalement "même problème qu'avec Edge, étendu à Chrome") —
+    // le correctif du 12 nov. (b71b689) posait suppressHydrationWarning
+    // seulement sur <html>/<body> dans layout.tsx, ce qui ne couvre QUE les
+    // nœuds eux-mêmes, jamais leurs descendants : un gestionnaire de mots
+    // de passe qui injecte une icône ou un attribut (ex.
+    // data-com.agilebits.*, data-lpignore, data-1p-ignore) précisément dans
+    // CE conteneur — un wrapper position:relative autour d'un champ mot de
+    // passe avec un bouton-icône superposé est exactement la forme que ces
+    // extensions ciblent — provoquait toujours une erreur d'hydratation
+    // #418 non couverte par le correctif précédent, et donc toujours le
+    // symptôme "figé" décrit à nouveau le 13 nov. Champ et conteneur
+    // couverts séparément, puisque suppressHydrationWarning n'agit que sur
+    // le nœud où il est posé, jamais sur ses enfants.
+    <div className={styles.conteneur} suppressHydrationWarning>
       {/* `name="password"` par défaut (12 nov. 2026, signalement "page de
           connexion figée") — aucun champ de mot de passe de la plateforme
           n'avait d'attribut `name`, y compris l'identifiant associé sur
@@ -40,6 +54,7 @@ export function ChampMotDePasse({ className, ...props }: Props) {
         type={visible ? "text" : "password"}
         className={className}
         style={{ paddingRight: "44px", width: "100%" }}
+        suppressHydrationWarning
       />
       <button
         type="button"

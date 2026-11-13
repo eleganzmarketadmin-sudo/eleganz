@@ -72,7 +72,11 @@ function ComptePageContenu() {
         </button>
       </div>
 
-      <form onSubmit={soumettre}>
+      {/* suppressHydrationWarning sur le <form> (13 nov. 2026, voir
+          ChampMotDePasse.tsx) — une extension (gestionnaire de mots de
+          passe) peut ajouter des attributs directement sur <form> avant
+          l'hydratation. */}
+      <form onSubmit={soumettre} suppressHydrationWarning>
         {erreur && <div className={styles.erreur}>{erreur}</div>}
 
         {onglet === "inscription" && (
@@ -94,6 +98,7 @@ function ComptePageContenu() {
             value={identifiant}
             onChange={(e) => setIdentifiant(e.target.value)}
             required
+            suppressHydrationWarning
           />
         </div>
         <div className={styles.champ}>
