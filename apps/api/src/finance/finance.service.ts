@@ -181,14 +181,18 @@ export class FinanceService {
       // ci-dessous pour celle-ci (point challengé n°2, corrigé le 14 oct. 2026).
       creditClientAccorde: Number(customers._sum.creditBalance ?? 0),
       creancesMarketplace411,
-      // Commission marketplace : ShopOrder.commissionAmount n'est actuellement
-      // jamais calculé par l'API (voir docs/ARCHITECTURE_FINANCE.md §2) — ce
-      // champ reflète donc la réalité (toujours 0) plutôt qu'une estimation
-      // inventée, avec le statut explicite ci-dessous.
+      // Commission marketplace : ShopOrder.commissionAmount est calculé par
+      // OrdersService à chaque commande (taux du bouquet Marketplace, sinon
+      // PlatformSettings.marketplaceCommissionRateDefault, sinon 0 — avec
+      // exonération tant que la boutique est dans sa période
+      // marketplaceCommissionFreeMonths depuis Shop.freeTrialStartedAt,
+      // 14 nov. 2026). Ce champ reste à 0 pour une boutique sans taux
+      // configuré ou encore exonérée, pas parce que le calcul est absent.
       commissionMarketplace,
       statut: {
         resultat: "estimation — non certifié, non audité",
-        commission: "non implémentée côté marketplace à ce jour",
+        commission:
+          "calculée par commande (taux par bouquet/plateforme, avec exonération configurable) — reste à 0 tant qu'aucun taux n'est fixé ou que la boutique est encore exonérée",
         dettesFournisseurs:
           "solde cumulé, sans historique détaillé des mouvements à cette phase",
         creancesMarketplace411:

@@ -88,7 +88,8 @@ export class AdminFinanceService {
       parSource: { abonnementsBoutique, fraisLivreur, abonnementsComptable },
       commissionMarketplace: {
         montant: Number(shopOrders._sum.commissionAmount ?? 0),
-        statut: "non implémentée — ShopOrder.commissionAmount n'est calculé nulle part dans l'API à ce jour",
+        statut:
+          "calculée par commande (OrdersService, taux par bouquet/plateforme, avec exonération configurable depuis le Centre de pilotage) — reste à 0 tant qu'aucun taux n'est fixé ou que la boutique est encore exonérée",
       },
       statut:
         "estimation à partir des opérations enregistrées — non certifié, ne remplace pas une comptabilité réglementaire",

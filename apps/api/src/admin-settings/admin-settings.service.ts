@@ -45,6 +45,9 @@ export class AdminSettingsService {
         ...(dto.marketplaceCommissionRateDefault !== undefined && {
           marketplaceCommissionRateDefault: dto.marketplaceCommissionRateDefault,
         }),
+        ...(dto.marketplaceCommissionFreeMonths !== undefined && {
+          marketplaceCommissionFreeMonths: dto.marketplaceCommissionFreeMonths,
+        }),
         ...(dto.aiCreditUnitPrice !== undefined && { aiCreditUnitPrice: dto.aiCreditUnitPrice }),
         ...(dto.smsWhatsappPremiumEnabled !== undefined && {
           smsWhatsappPremiumEnabled: dto.smsWhatsappPremiumEnabled,

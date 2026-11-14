@@ -82,6 +82,18 @@ model PlatformSettings {
   // jamais une valeur de départ inventée.
   marketplaceCommissionRateDefault Decimal? @db.Decimal(5, 2)
 
+  // Exonération de commission Marketplace (14 nov. 2026, demande : "le
+  // paiement bénéficiera des mêmes conditions d'exemption que les
+  // boutiques dans Gestion... la durée doit être modifiable également dans
+  // le centre de pilotage") — décomptée depuis Shop.freeTrialStartedAt
+  // (même date de départ que l'exonération du frais d'ouverture Gestion,
+  // déjà posée à la création de chaque boutique), avec sa propre durée
+  // indépendante : Gestion reste à 90 jours par défaut
+  // (Shop.freeTrialDurationDays), la Marketplace à 6 mois par défaut ici.
+  // Tant que la boutique est dans cette période, la commission calculée à
+  // la commande (OrdersService) reste à 0 quel que soit le taux ci-dessus.
+  marketplaceCommissionFreeMonths Int @default(6)
+
   // Services à la carte (14 oct. 2026, plan commercial) — tarification
   // configurable depuis le Centre de pilotage, sans redéploiement.
   // Crédits IA : prix USD d'un crédit, utilisé pour calculer le montant de

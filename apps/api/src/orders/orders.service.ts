@@ -145,22 +145,46 @@ export class OrdersService {
       // ici (pas recalculée a posteriori) pour que le taux facturé soit celui
       // en vigueur au moment de la vente, même si l'admin le change ensuite —
       // même principe que le taux de change (docs/PROJECT_STATUS.md).
+      //
+      // Exonération (14 nov. 2026, demande : "le paiement bénéficiera des
+      // mêmes conditions d'exemption que les boutiques dans Gestion... la
+      // durée doit être modifiable également dans le centre de pilotage") :
+      // décomptée depuis Shop.freeTrialStartedAt (même date de départ que
+      // l'exonération du frais d'ouverture Gestion, posée à la création de
+      // chaque boutique — voir ShopsService.create), mais avec sa propre
+      // durée indépendante (PlatformSettings.marketplaceCommissionFreeMonths,
+      // 6 mois par défaut). Même convention que BillingService.
+      // processTrialExpirations pour une boutique sans freeTrialStartedAt
+      // (données anciennes/irrégulières) : on ne prend jamais une commission
+      // sur une date de départ inconnue, donc la boutique reste exonérée.
       const shopIds = [...byShop.keys()];
       const [shopsAvecBouquet, platformSettings] = await Promise.all([
         tx.shop.findMany({
           where: { id: { in: shopIds } },
-          select: { id: true, marketplaceBouquet: { select: { commissionRate: true } } },
+          select: {
+            id: true,
+            freeTrialStartedAt: true,
+            marketplaceBouquet: { select: { commissionRate: true } },
+          },
         }),
         tx.platformSettings.findUnique({
           where: { id: "platform" },
-          select: { marketplaceCommissionRateDefault: true },
+          select: { marketplaceCommissionRateDefault: true, marketplaceCommissionFreeMonths: true },
         }),
       ]);
+      const moisExoneration = platformSettings?.marketplaceCommissionFreeMonths ?? 0;
+      const now = new Date();
       const tauxParBoutique = new Map(
-        shopsAvecBouquet.map((s) => [
-          s.id,
-          Number(s.marketplaceBouquet?.commissionRate ?? platformSettings?.marketplaceCommissionRateDefault ?? 0),
-        ]),
+        shopsAvecBouquet.map((s) => {
+          if (!s.freeTrialStartedAt) return [s.id, 0];
+          const finExoneration = new Date(s.freeTrialStartedAt);
+          finExoneration.setMonth(finExoneration.getMonth() + moisExoneration);
+          if (now < finExoneration) return [s.id, 0];
+          return [
+            s.id,
+            Number(s.marketplaceBouquet?.commissionRate ?? platformSettings?.marketplaceCommissionRateDefault ?? 0),
+          ];
+        }),
       );
 
       const order = await tx.order.create({

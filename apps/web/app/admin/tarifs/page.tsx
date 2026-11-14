@@ -782,13 +782,19 @@ function TarifsBoutiquesSection() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [tauxDefaut, setTauxDefaut] = useState("");
+  const [moisExoneration, setMoisExoneration] = useState("");
   const [chargementTaux, setChargementTaux] = useState(true);
   const [enCoursTaux, setEnCoursTaux] = useState(false);
 
   useEffect(() => {
     api
-      .get<{ marketplaceCommissionRateDefault: string | null }>("/admin/platform-settings")
-      .then((s) => setTauxDefaut(s.marketplaceCommissionRateDefault ?? ""))
+      .get<{ marketplaceCommissionRateDefault: string | null; marketplaceCommissionFreeMonths: number }>(
+        "/admin/platform-settings",
+      )
+      .then((s) => {
+        setTauxDefaut(s.marketplaceCommissionRateDefault ?? "");
+        setMoisExoneration(String(s.marketplaceCommissionFreeMonths));
+      })
       .catch(() => {})
       .finally(() => setChargementTaux(false));
   }, []);
@@ -800,6 +806,7 @@ function TarifsBoutiquesSection() {
     try {
       await api.patch("/admin/platform-settings", {
         marketplaceCommissionRateDefault: tauxDefaut ? Number(tauxDefaut) : null,
+        marketplaceCommissionFreeMonths: Number(moisExoneration),
       });
       setMessage(t("admtarifs_boutiques_tauxDefautEnregistre"));
     } catch (err) {
@@ -871,6 +878,14 @@ function TarifsBoutiquesSection() {
               placeholder="ex. 5"
               value={tauxDefaut}
               onChange={(e) => setTauxDefaut(e.target.value)}
+            />
+          </label>
+          <label className={styles.champ}>
+            <span>{t("admtarifs_boutiques_moisExonerationCommission")}</span>
+            <input
+              placeholder="ex. 6"
+              value={moisExoneration}
+              onChange={(e) => setMoisExoneration(e.target.value)}
             />
           </label>
         </div>

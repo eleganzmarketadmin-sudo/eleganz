@@ -99,6 +99,14 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   marketplaceCommissionRateDefault?: number;
 
+  // Exonération de commission Marketplace (14 nov. 2026) — nombre de mois
+  // sans reversement de commission, décomptés depuis Shop.freeTrialStartedAt.
+  // Voir le commentaire sur PlatformSettings.marketplaceCommissionFreeMonths.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  marketplaceCommissionFreeMonths?: number;
+
   // Services à la carte (14 oct. 2026, plan commercial) — voir
   // AiCreditsModule et schema.prisma pour le détail de chaque champ.
   @IsOptional()
