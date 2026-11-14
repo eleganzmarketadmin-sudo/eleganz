@@ -271,6 +271,107 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "période choisie : ventes, achats, charges et la commission prélevée par ELEGANZ sur les ventes marketplace.",
     visibleFaq: true,
   },
+  // Dossier de crédit + Business Model Canvas (14 nov. 2026, demande :
+  // "actualiser tous les guides... de toutes les nouvelles fonctionnalités")
+  // — le dossier de crédit lui-même existait déjà avant aujourd'hui mais
+  // n'avait jamais eu de fiche d'aide ; le Canvas est l'ajout du jour.
+  {
+    slug: "seed-credit-dossier-business-plan",
+    titre: "Remplir son dossier de crédit (business plan et Business Model Canvas)",
+    categorie: "Facturation",
+    motsCles: ["crédit", "dossier", "business plan", "canvas", "business model canvas", "prêt", "financement"],
+    contenuAgent:
+      "Le Dossier de crédit (Gestion → Finance → Dossier de crédit) sert à préparer une demande de financement " +
+      "auprès d'une institution partenaire. Il réunit un business plan narratif (marché, concurrence, besoins, " +
+      "risques et leur mitigation, scénarios chiffrés) et, depuis le 14 nov. 2026, un Business Model Canvas en 9 " +
+      "blocs (segments de clientèle, proposition de valeur, canaux, relation client, sources de revenus, " +
+      "ressources clés, activités clés, partenaires clés, structure de coûts) — un seul bouton « Enregistrer » " +
+      "pour les deux. Le Canvas est entièrement facultatif (tous les champs sont nullable) : une boutique peut " +
+      "avoir un dossier complet sans jamais le remplir. L'export PDF du dossier (dossier-credit-pdf-shared.ts) " +
+      "n'ajoute la section Canvas que si au moins un des 9 champs est renseigné — jamais 9 blocs vides affichés " +
+      "pour rien.",
+    contenuClient:
+      "1. Dans Gestion → Finance → Dossier de crédit, remplissez votre business plan (marché, risques, " +
+      "scénarios...).\n" +
+      "2. Juste en dessous, remplissez si vous le souhaitez votre Business Model Canvas — un résumé en 9 blocs de " +
+      "votre modèle économique, utile pour qu'une institution comprenne votre activité en un coup d'œil.\n" +
+      "3. Cliquez une seule fois sur « Enregistrer » : business plan et Canvas sont sauvegardés ensemble.\n" +
+      "4. Exportez le PDF pour le transmettre vous-même, ou partagez directement le dossier avec une institution " +
+      "partenaire (voir la fiche « Partager son dossier avec une institution financière »).",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-credit-partager-institution",
+    titre: "Partager son dossier avec une institution financière partenaire",
+    categorie: "Facturation",
+    motsCles: ["institution", "partager", "accès", "décision", "prêt", "décaissement", "microfinance", "banque"],
+    contenuAgent:
+      "Depuis Gestion → Finance → Institutions, le propriétaire ou un manager choisit une institution déjà " +
+      "partenaire ELEGANZ (liste tirée de /institutions/catalogue — uniquement les institutions au statut ACTIVE, " +
+      "jamais une institution en attente de validation ou refusée) et partage son dossier crédit avec elle. " +
+      "L'institution voit alors le dossier et peut décider (accorder/refuser), avec montant, taux et durée. Une " +
+      "décision accordée devient décaissable depuis cette même page : la boutique choisit un compte de trésorerie " +
+      "de réception, et le prêt est enregistré comme un prêt classique en Finance. Révoquer un accès ne supprime " +
+      "aucune décision déjà rendue, seulement la visibilité future du dossier pour cette institution.",
+    contenuClient:
+      "1. Dans Gestion → Finance → Institutions, choisissez une institution dans la liste et cliquez sur " +
+      "« Partager ».\n" +
+      "2. L'institution consulte votre dossier crédit et rend une décision — suivez-la dans « Décisions reçues ».\n" +
+      "3. Si la décision est accordée, un bouton « Décaisser » apparaît : indiquez un libellé et le compte où " +
+      "recevoir les fonds pour l'enregistrer dans votre comptabilité.\n" +
+      "4. Vous pouvez révoquer l'accès d'une institution à tout moment depuis « Accès actuels ».",
+    visibleFaq: true,
+  },
+
+  // ─────────── Institutions financières partenaires (portail dédié) ───────────
+  // Ajouté le 14 nov. 2026 — jusqu'ici aucune fiche ne couvrait ce portail,
+  // ni côté institution elle-même, ni côté auto-inscription/validation.
+  {
+    slug: "seed-institution-inscription",
+    titre: "Créer son compte institution et attendre la validation ELEGANZ",
+    categorie: "Institutions",
+    motsCles: ["institution", "inscription", "compte", "validation", "en attente", "microfinance", "banque", "coopérative"],
+    contenuAgent:
+      "Depuis le 14 nov. 2026, une institution n'a plus besoin d'être créée par un admin ELEGANZ pour démarrer : " +
+      "elle peut créer elle-même son compte sur /institution/inscription (accessible aussi depuis le volet de " +
+      "navigation ☰, carte « Institutions financières »). Ce formulaire crée le compte ELEGANZ ET le profil " +
+      "institution en une fois, mais ce profil démarre toujours au statut PENDING — jamais actif immédiatement. " +
+      "Tant qu'un admin ELEGANZ n'a pas approuvé la demande (Centre de pilotage → Institutions), l'institution " +
+      "voit seulement un écran « en attente de validation » : aucune boutique, aucune décision, rien d'autre " +
+      "n'est accessible (revérifié côté serveur sur chaque route, pas seulement masqué à l'écran). La création " +
+      "manuelle par un admin reste aussi possible en parallèle (statut ACTIVE immédiat, pour un partenaire déjà " +
+      "connu) — les deux chemins coexistent, ni l'un ni l'autre n'a été retiré.",
+    contenuClient:
+      "1. Rendez-vous sur /institution/inscription (ou ouvrez le menu ☰ puis « Institutions financières »).\n" +
+      "2. Renseignez le nom et le type de votre institution, vos coordonnées de contact, puis vos identifiants de " +
+      "connexion (email ou téléphone + mot de passe).\n" +
+      "3. Votre demande est transmise à l'équipe ELEGANZ pour validation — vous ne pouvez pas encore consulter de " +
+      "dossier ni prendre de décision pendant cette attente, c'est normal.\n" +
+      "4. Dès l'approbation, reconnectez-vous sur /institution/connexion : votre tableau de bord devient " +
+      "pleinement accessible.",
+    visibleFaq: true,
+  },
+  {
+    slug: "seed-institution-decider-pret",
+    titre: "Examiner un dossier boutique et décider d'un prêt",
+    categorie: "Institutions",
+    motsCles: ["institution", "décision", "prêt", "accorder", "refuser", "décaissement", "échéance"],
+    contenuAgent:
+      "Une fois son compte actif, l'institution voit (/institution) la liste des boutiques qui lui ont " +
+      "explicitement partagé leur dossier (ShopInstitutionAccess, status ACTIVE — jamais plus que ce qu'une " +
+      "boutique a choisi de partager, revérifié à chaque appel). Elle ouvre le dossier (business plan + Business " +
+      "Model Canvas s'il est rempli), puis rend une décision (accordé/refusé, montant, taux, durée, note). Une " +
+      "décision accordée n'est PAS automatiquement décaissée : c'est la boutique qui déclenche le décaissement de " +
+      "son côté (voir fiche « Partager son dossier »). Une fois décaissé, l'institution peut suivre les échéances " +
+      "du prêt depuis « Mes prêts ».",
+    contenuClient:
+      "1. Dans votre tableau de bord institution, ouvrez « Boutiques » pour voir celles qui vous ont partagé leur " +
+      "dossier.\n" +
+      "2. Consultez le dossier de crédit (business plan et, s'il existe, le Business Model Canvas).\n" +
+      "3. Rendez votre décision : accordé ou refusé, avec montant, taux annuel, durée et une note si besoin.\n" +
+      "4. Suivez vos décisions et vos prêts décaissés depuis « Décisions » et « Mes prêts ».",
+    visibleFaq: true,
+  },
 
   // ───────────────────────── Équipe & Livreurs ─────────────────────────
   {
@@ -561,5 +662,24 @@ export const SEED_ARTICLES: Prisma.GuideArticleCreateManyInput[] = [
       "liste par défaut du rôle. C'est la même restriction côté API que côté écran : un rôle qui ne voit pas un " +
       "menu ne peut pas non plus appeler ses routes directement. Si un collègue dit « je ne vois pas tel menu », " +
       "vérifiez d'abord son rôle, puis si un ADMIN_SUPER lui a déjà fait un choix explicite différent de son rôle.",
+  },
+  {
+    slug: "seed-admin-institutions-gerer",
+    titre: "Gérer les institutions financières partenaires (créer, approuver, refuser)",
+    categorie: "Administration ELEGANZ",
+    motsCles: ["admin", "institution", "approuver", "refuser", "en attente", "pending", "créer", "microfinance"],
+    contenuAgent:
+      "Centre de pilotage → Institutions (réservé ADMIN_SUPER) gère deux chemins de création en parallèle depuis " +
+      "le 14 nov. 2026 : (1) création manuelle par un admin — promeut un compte ELEGANZ déjà existant (doit être " +
+      "BUYER, jamais un rôle déjà pris), statut ACTIVE immédiat, pour un partenaire déjà convenu hors plateforme ; " +
+      "(2) auto-inscription par l'institution elle-même (/institution/inscription), toujours au statut PENDING. " +
+      "Pour une ligne PENDING, deux boutons : « Approuver » (même opération que « Réactiver » — statut passe à " +
+      "ACTIVE, efface un refus précédent) et « Refuser » (statut REJECTED, avec une note facultative affichée " +
+      "ensuite à l'institution sur SON PROPRE portail — jamais réaffichée ici à l'admin après coup, donc notez " +
+      "le motif ailleurs si vous devez vous en souvenir). Une institution REJECTED peut toujours être approuvée " +
+      "plus tard si la décision change. « Suspendre »/« Réactiver » restent réservés aux institutions déjà " +
+      "ACTIVE/SUSPENDED (jamais affichés sur une ligne PENDING/REJECTED, qui a ses propres boutons). Une " +
+      "institution non-ACTIVE (PENDING/REJECTED/SUSPENDED) ne peut rien faire de réel dans son portail — " +
+      "revérifié côté serveur sur chaque route (exigerInstitutionActive), pas seulement masqué à l'écran.",
   },
 ];
