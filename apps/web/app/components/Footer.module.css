@@ -2,6 +2,10 @@
   margin-top: auto;
   background: var(--color-encre-fixe);
   color: rgba(255, 255, 255, 0.82);
+  /* 15 nov. 2026 : voir le commentaire de LogoMark (Logo.tsx) — même cas
+     que les en-têtes Gestion/Admin/Comptable/Institution/Livreur/Market. */
+  --logo-colonne: #fff;
+  --logo-aretes: var(--color-cobalt-sur-fonce);
 }
 
 .contenu {

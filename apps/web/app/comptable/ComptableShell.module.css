@@ -14,6 +14,11 @@
 .entete {
   background: var(--color-encre-fixe);
   color: #fff;
+  /* 15 nov. 2026 : voir le commentaire de LogoMark (Logo.tsx) — sur ce fond
+     fixe-sombre, la colonne du logo (Encre) se fondait dans le fond, et
+     les arêtes (Cobalt brut) tombaient à ~1.8:1. */
+  --logo-colonne: #fff;
+  --logo-aretes: var(--color-cobalt-sur-fonce);
   display: flex;
   align-items: center;
   justify-content: space-between;
