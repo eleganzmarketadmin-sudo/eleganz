@@ -107,6 +107,13 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   marketplaceCommissionFreeMonths?: number;
 
+  // Plancher de la commission Marketplace, en montant absolu USD (14 nov.
+  // 2026) — voir PlatformSettings.marketplaceCommissionMinAmount.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  marketplaceCommissionMinAmount?: number;
+
   // Commission ELEGANZ sur les prêts décaissés via le portail institutions
   // (14 nov. 2026) — voir PlatformSettings.institutionLoanCommissionRateDefault.
   @IsOptional()

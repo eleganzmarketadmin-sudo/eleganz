@@ -783,17 +783,24 @@ function TarifsBoutiquesSection() {
   const [message, setMessage] = useState<string | null>(null);
   const [tauxDefaut, setTauxDefaut] = useState("");
   const [moisExoneration, setMoisExoneration] = useState("");
+  // Plancher de la commission Marketplace (14 nov. 2026, demande : "ajouter
+  // également la commission minimum à la vente") — voir le commentaire sur
+  // PlatformSettings.marketplaceCommissionMinAmount.
+  const [montantMinCommission, setMontantMinCommission] = useState("");
   const [chargementTaux, setChargementTaux] = useState(true);
   const [enCoursTaux, setEnCoursTaux] = useState(false);
 
   useEffect(() => {
     api
-      .get<{ marketplaceCommissionRateDefault: string | null; marketplaceCommissionFreeMonths: number }>(
-        "/admin/platform-settings",
-      )
+      .get<{
+        marketplaceCommissionRateDefault: string | null;
+        marketplaceCommissionFreeMonths: number;
+        marketplaceCommissionMinAmount: string | null;
+      }>("/admin/platform-settings")
       .then((s) => {
         setTauxDefaut(s.marketplaceCommissionRateDefault ?? "");
         setMoisExoneration(String(s.marketplaceCommissionFreeMonths));
+        setMontantMinCommission(s.marketplaceCommissionMinAmount ?? "");
       })
       .catch(() => {})
       .finally(() => setChargementTaux(false));
@@ -807,6 +814,7 @@ function TarifsBoutiquesSection() {
       await api.patch("/admin/platform-settings", {
         marketplaceCommissionRateDefault: tauxDefaut ? Number(tauxDefaut) : null,
         marketplaceCommissionFreeMonths: Number(moisExoneration),
+        marketplaceCommissionMinAmount: montantMinCommission ? Number(montantMinCommission) : null,
       });
       setMessage(t("admtarifs_boutiques_tauxDefautEnregistre"));
     } catch (err) {
@@ -886,6 +894,18 @@ function TarifsBoutiquesSection() {
               placeholder="ex. 6"
               value={moisExoneration}
               onChange={(e) => setMoisExoneration(e.target.value)}
+            />
+          </label>
+          <label className={styles.champ}>
+            {/* Libellé générique réutilisé tel quel (voir
+                admtarifs_institutions_montantMin, même formulation "Montant
+                minimum de la commission ($)") plutôt que de dupliquer une
+                clé i18n identique. */}
+            <span>{t("admtarifs_institutions_montantMin")}</span>
+            <input
+              placeholder={t("admtarifs_institutions_placeholderAucunSeuil")}
+              value={montantMinCommission}
+              onChange={(e) => setMontantMinCommission(e.target.value)}
             />
           </label>
         </div>

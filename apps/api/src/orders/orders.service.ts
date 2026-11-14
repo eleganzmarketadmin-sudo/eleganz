@@ -169,7 +169,11 @@ export class OrdersService {
         }),
         tx.platformSettings.findUnique({
           where: { id: "platform" },
-          select: { marketplaceCommissionRateDefault: true, marketplaceCommissionFreeMonths: true },
+          select: {
+            marketplaceCommissionRateDefault: true,
+            marketplaceCommissionFreeMonths: true,
+            marketplaceCommissionMinAmount: true,
+          },
         }),
       ]);
       const moisExoneration = platformSettings?.marketplaceCommissionFreeMonths ?? 0;
@@ -213,10 +217,18 @@ export class OrdersService {
             create: [...byShop.entries()].map(([shopId, items]) => {
               const subtotal = items.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
               const taux = tauxParBoutique.get(shopId) ?? 0;
+              // Plancher (14 nov. 2026) : ne relève que la commission
+              // réellement due (taux > 0, donc ni exonérée ni désactivée) —
+              // voir PlatformSettings.marketplaceCommissionMinAmount. Une
+              // boutique à 0 % reste à 0, jamais relevée artificiellement.
+              let commissionAmount = Math.round(subtotal * (taux / 100) * 100) / 100;
+              if (taux > 0 && platformSettings?.marketplaceCommissionMinAmount != null) {
+                commissionAmount = Math.max(commissionAmount, Number(platformSettings.marketplaceCommissionMinAmount));
+              }
               return {
                 shopId,
                 subtotal,
-                commissionAmount: Math.round(subtotal * (taux / 100) * 100) / 100,
+                commissionAmount,
                 lines: { create: items },
               };
             }),

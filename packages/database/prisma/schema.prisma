@@ -94,6 +94,15 @@ model PlatformSettings {
   // la commande (OrdersService) reste à 0 quel que soit le taux ci-dessus.
   marketplaceCommissionFreeMonths Int @default(6)
 
+  // Plancher de la commission Marketplace ci-dessus, en montant absolu USD
+  // (14 nov. 2026, demande : "ajouter également la commission minimum à la
+  // vente") — même principe que institutionLoanCommissionMinAmount plus
+  // bas : nullable = aucun plancher. Ne s'applique QUE si un taux est
+  // réellement en vigueur pour la vente (boutique hors exonération ET taux
+  // > 0) ; une boutique exonérée ou sans taux configuré reste à 0, jamais
+  // relevée artificiellement par ce plancher (voir OrdersService).
+  marketplaceCommissionMinAmount Decimal? @db.Decimal(14, 2)
+
   // Commission ELEGANZ sur les prêts décaissés via le portail institutions
   // (14 nov. 2026, demande : "commission sur les prêts accordés... qu'on
   // peut paramétrer, désactiver ou modifier à partir du centre de
