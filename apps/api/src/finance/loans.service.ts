@@ -70,16 +70,31 @@ export class LoansService {
     // pilotage, voir PlatformSettings.institutionLoanCommissionRateDefault)
     // — figée au décaissement, comme la commission marketplace
     // (OrdersService) : le taux facturé reste celui en vigueur à ce
-    // moment-là, même si l'admin le change ensuite.
+    // moment-là, même si l'admin le change ensuite. Plancher/plafond ajoutés
+    // le 14 nov. 2026 ("1% du montant avec un minimum de 100 $ et un maximum
+    // de 1000 $") : chacun optionnel et indépendant — un seuil non renseigné
+    // ne s'applique simplement pas.
     const platformSettings = await this.prisma.platformSettings.findUnique({
       where: { id: "platform" },
-      select: { institutionLoanCommissionRateDefault: true },
+      select: {
+        institutionLoanCommissionRateDefault: true,
+        institutionLoanCommissionMinAmount: true,
+        institutionLoanCommissionMaxAmount: true,
+      },
     });
     const taux = platformSettings?.institutionLoanCommissionRateDefault
       ? Number(platformSettings.institutionLoanCommissionRateDefault)
       : 0;
     const montant = Number(decision.montant);
-    const institutionCommissionAmount = taux > 0 ? Math.round(montant * (taux / 100) * 100) / 100 : null;
+    let institutionCommissionAmount: number | null = taux > 0 ? Math.round(montant * (taux / 100) * 100) / 100 : null;
+    if (institutionCommissionAmount !== null) {
+      if (platformSettings?.institutionLoanCommissionMinAmount != null) {
+        institutionCommissionAmount = Math.max(institutionCommissionAmount, Number(platformSettings.institutionLoanCommissionMinAmount));
+      }
+      if (platformSettings?.institutionLoanCommissionMaxAmount != null) {
+        institutionCommissionAmount = Math.min(institutionCommissionAmount, Number(platformSettings.institutionLoanCommissionMaxAmount));
+      }
+    }
 
     const loan = await this.prisma.loan.create({
       data: {

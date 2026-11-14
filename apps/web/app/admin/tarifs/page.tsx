@@ -915,10 +915,18 @@ function TarifsBoutiquesSection() {
  * DÉCAISSEMENT (LoansService.obtenirPretViaDecision), jamais recalculé
  * rétroactivement sur les prêts déjà décaissés si ce taux change ensuite —
  * même principe que la commission Marketplace ci-dessus.
+ *
+ * Plancher/plafond ajoutés le 14 nov. 2026 (demande : "1% du montant avec un
+ * minimum de 100 $ et un maximum de 1000 $, le min et max doivent également
+ * être configurables") — mêmes champs nullables indépendants, appliqués par
+ * LoansService après le calcul du taux : commission = clamp(montant * taux
+ * / 100, min, max). Un seuil laissé vide ne s'applique simplement pas.
  */
 function TarifsInstitutionsSection() {
   const { t } = useLocale();
   const [taux, setTaux] = useState("");
+  const [montantMin, setMontantMin] = useState("");
+  const [montantMax, setMontantMax] = useState("");
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -926,8 +934,16 @@ function TarifsInstitutionsSection() {
 
   useEffect(() => {
     api
-      .get<{ institutionLoanCommissionRateDefault: string | null }>("/admin/platform-settings")
-      .then((s) => setTaux(s.institutionLoanCommissionRateDefault ?? ""))
+      .get<{
+        institutionLoanCommissionRateDefault: string | null;
+        institutionLoanCommissionMinAmount: string | null;
+        institutionLoanCommissionMaxAmount: string | null;
+      }>("/admin/platform-settings")
+      .then((s) => {
+        setTaux(s.institutionLoanCommissionRateDefault ?? "");
+        setMontantMin(s.institutionLoanCommissionMinAmount ?? "");
+        setMontantMax(s.institutionLoanCommissionMaxAmount ?? "");
+      })
       .catch(() => {})
       .finally(() => setChargement(false));
   }, []);
@@ -939,6 +955,8 @@ function TarifsInstitutionsSection() {
     try {
       await api.patch("/admin/platform-settings", {
         institutionLoanCommissionRateDefault: taux ? Number(taux) : null,
+        institutionLoanCommissionMinAmount: montantMin ? Number(montantMin) : null,
+        institutionLoanCommissionMaxAmount: montantMax ? Number(montantMax) : null,
       });
       setMessage(t("admtarifs_institutions_enregistre"));
     } catch (err) {
@@ -963,6 +981,14 @@ function TarifsInstitutionsSection() {
           <label className={styles.champ}>
             <span>{t("admtarifs_institutions_taux")}</span>
             <input placeholder={t("admtarifs_institutions_placeholderDesactive")} value={taux} onChange={(e) => setTaux(e.target.value)} />
+          </label>
+          <label className={styles.champ}>
+            <span>{t("admtarifs_institutions_montantMin")}</span>
+            <input placeholder={t("admtarifs_institutions_placeholderAucunSeuil")} value={montantMin} onChange={(e) => setMontantMin(e.target.value)} />
+          </label>
+          <label className={styles.champ}>
+            <span>{t("admtarifs_institutions_montantMax")}</span>
+            <input placeholder={t("admtarifs_institutions_placeholderAucunSeuil")} value={montantMax} onChange={(e) => setMontantMax(e.target.value)} />
           </label>
         </div>
       )}

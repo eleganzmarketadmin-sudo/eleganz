@@ -104,6 +104,17 @@ model PlatformSettings {
   // la simple décision d'accord, qui ne déplace encore aucun fonds.
   institutionLoanCommissionRateDefault Decimal? @db.Decimal(5, 2)
 
+  // Plancher/plafond de la commission ci-dessus, en montant absolu dans la
+  // devise du prêt (14 nov. 2026, demande : "par exemple 1% du montant avec
+  // un minimum de 100 $ et un maximum de 1000 $", min/max également
+  // configurables). Nullable chacun indépendamment : un seuil non renseigné
+  // ne s'applique simplement pas (pas de plancher, ou pas de plafond), même
+  // principe "nullable = désactivé" que le taux ci-dessus. Appliqués
+  // ensemble au moment du décaissement (LoansService.obtenirPretViaDecision) :
+  // commission = clamp(montant * taux / 100, min, max).
+  institutionLoanCommissionMinAmount Decimal? @db.Decimal(14, 2)
+  institutionLoanCommissionMaxAmount Decimal? @db.Decimal(14, 2)
+
   // Services à la carte (14 oct. 2026, plan commercial) — tarification
   // configurable depuis le Centre de pilotage, sans redéploiement.
   // Crédits IA : prix USD d'un crédit, utilisé pour calculer le montant de

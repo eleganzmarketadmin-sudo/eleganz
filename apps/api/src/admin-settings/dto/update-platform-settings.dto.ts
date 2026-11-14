@@ -114,6 +114,18 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   institutionLoanCommissionRateDefault?: number;
 
+  // Plancher/plafond en montant absolu (14 nov. 2026) — voir le commentaire
+  // sur PlatformSettings.institutionLoanCommissionMinAmount/MaxAmount.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  institutionLoanCommissionMinAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  institutionLoanCommissionMaxAmount?: number;
+
   // Services à la carte (14 oct. 2026, plan commercial) — voir
   // AiCreditsModule et schema.prisma pour le détail de chaque champ.
   @IsOptional()

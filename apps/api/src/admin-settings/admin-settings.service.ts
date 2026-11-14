@@ -51,6 +51,12 @@ export class AdminSettingsService {
         ...(dto.institutionLoanCommissionRateDefault !== undefined && {
           institutionLoanCommissionRateDefault: dto.institutionLoanCommissionRateDefault,
         }),
+        ...(dto.institutionLoanCommissionMinAmount !== undefined && {
+          institutionLoanCommissionMinAmount: dto.institutionLoanCommissionMinAmount,
+        }),
+        ...(dto.institutionLoanCommissionMaxAmount !== undefined && {
+          institutionLoanCommissionMaxAmount: dto.institutionLoanCommissionMaxAmount,
+        }),
         ...(dto.aiCreditUnitPrice !== undefined && { aiCreditUnitPrice: dto.aiCreditUnitPrice }),
         ...(dto.smsWhatsappPremiumEnabled !== undefined && {
           smsWhatsappPremiumEnabled: dto.smsWhatsappPremiumEnabled,
