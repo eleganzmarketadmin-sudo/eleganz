@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
-const TYPES_INSTITUTION = ["MICROFINANCE", "BANQUE", "COOPERATIVE", "AUTRE"] as const;
+export const TYPES_INSTITUTION = ["MICROFINANCE", "BANQUE", "COOPERATIVE", "AUTRE"] as const;
 export type TypeInstitution = (typeof TYPES_INSTITUTION)[number];
 
 // Création d'une institution partenaire (14 nov. 2026, décision verrouillée :
@@ -46,4 +46,14 @@ export class UpdateInstitutionDto {
   @IsOptional()
   @IsString()
   contactPhone?: string;
+}
+
+// Refus d'une auto-inscription institution (14 nov. 2026) — voir
+// AdminInstitutionsService.reject. Le motif est facultatif : un admin peut
+// refuser sans justification, mais s'il en donne une, elle est affichée
+// telle quelle à l'institution sur son propre portail (Institution.rejectionNote).
+export class RejectInstitutionDto {
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

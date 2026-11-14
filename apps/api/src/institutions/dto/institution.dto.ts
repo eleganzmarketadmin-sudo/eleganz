@@ -1,4 +1,5 @@
-import { IsBoolean, IsIn, IsOptional, IsString, IsNumber, Min, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, IsNumber, Min, MinLength } from "class-validator";
+import { TYPES_INSTITUTION, TypeInstitution } from "../../admin-institutions/dto/admin-institutions.dto";
 
 // Accès accordé par une boutique à une institution déjà partenaire ELEGANZ
 // (14 nov. 2026) — voir ShopInstitutionAccess dans schema.prisma. La
@@ -43,4 +44,29 @@ export class CreateLoanDecisionDto {
   @IsOptional()
   @IsBoolean()
   autoriserSuiviRemboursement?: boolean;
+}
+
+// Auto-inscription institution (14 nov. 2026, revirement sur la décision
+// initiale — voir le commentaire sur InstitutionStatus dans schema.prisma) :
+// le compte ELEGANZ existe déjà à ce stade (créé juste avant via
+// POST /auth/register avec role=INSTITUTION_STAFF, même séquence que
+// DeliveryService.registerDriver pour les livreurs) ; ce DTO ne porte donc
+// plus d'identifiant, seulement le profil institution lui-même, toujours
+// créé au statut PENDING (voir InstitutionPortalService.inscrire), jamais
+// ACTIVE directement.
+export class RegisterInstitutionDto {
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsIn(TYPES_INSTITUTION)
+  type!: TypeInstitution;
+
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
 }

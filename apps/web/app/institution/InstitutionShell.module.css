@@ -98,6 +98,26 @@
   margin: 0 auto;
 }
 
+.ecranStatut {
+  max-width: 48ch;
+  margin: var(--espace-7) auto;
+  text-align: center;
+}
+
+.ecranStatut h2 {
+  margin-bottom: var(--espace-3);
+}
+
+.ecranStatut p {
+  color: var(--color-texte-muted);
+}
+
+.motifRefus {
+  margin-top: var(--espace-4);
+  font-style: italic;
+  color: var(--color-ink) !important;
+}
+
 @media (max-width: 560px) {
   .entete {
     flex-wrap: wrap;

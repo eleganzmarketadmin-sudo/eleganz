@@ -100,6 +100,16 @@
   color: #fff;
 }
 
+.badgePending {
+  background: var(--color-or, #d4a017);
+  color: var(--color-encre-fixe);
+}
+
+.badgeRejected {
+  background: var(--color-ink);
+  color: #fff;
+}
+
 .boutonPetit {
   border: none;
   padding: 4px 10px;

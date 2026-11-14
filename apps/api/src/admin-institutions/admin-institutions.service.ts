@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { UserRole } from "@eleganz/database";
+import { InstitutionStatus, UserRole } from "@eleganz/database";
 import { CreateInstitutionDto, UpdateInstitutionDto } from "./dto/admin-institutions.dto";
 
 /**
@@ -73,8 +73,34 @@ export class AdminInstitutionsService {
     });
   }
 
+  // Sert aussi bien à suspendre/réactiver une institution déjà active
+  // qu'à APPROUVER une auto-inscription PENDING (même action côté base :
+  // passer status à ACTIVE) — voir /admin/institutions/page.tsx, qui
+  // affiche "Approuver" plutôt que "Réactiver" selon le statut courant.
   async setStatus(institutionId: string, status: "ACTIVE" | "SUSPENDED") {
     await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
-    return this.prisma.institution.update({ where: { id: institutionId }, data: { status } });
+    return this.prisma.institution.update({
+      where: { id: institutionId },
+      data: {
+        status,
+        // Efface un refus précédent dès qu'un admin approuve/réactive —
+        // sinon un motif de refus obsolète resterait affiché à l'institution
+        // alors qu'elle est redevenue active.
+        ...(status === InstitutionStatus.ACTIVE && { rejectionNote: null }),
+      },
+    });
+  }
+
+  // Refus explicite d'une auto-inscription (14 nov. 2026) — distinct de
+  // setStatus(SUSPENDED) : une institution REJECTED n'a jamais été
+  // approuvée, alors que SUSPENDED suppose qu'elle l'a été puis mise en
+  // pause. Le motif, s'il est donné, est affiché tel quel à l'institution
+  // sur son propre portail (voir Institution.rejectionNote).
+  async reject(institutionId: string, note?: string) {
+    await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
+    return this.prisma.institution.update({
+      where: { id: institutionId },
+      data: { status: InstitutionStatus.REJECTED, rejectionNote: note?.trim() || null },
+    });
   }
 }

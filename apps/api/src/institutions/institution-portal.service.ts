@@ -1,9 +1,28 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { BusinessPlanService } from "../finance/business-plan.service";
 import { LoansService } from "../finance/loans.service";
-import { CreateLoanDecisionDto } from "./dto/institution.dto";
-import { FiscalRuleScope, LoanDecisionStatut } from "@eleganz/database";
+import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
+import { FiscalRuleScope, InstitutionStatus, LoanDecisionStatut } from "@eleganz/database";
+
+/**
+ * Garde réutilisée par chaque méthode du portail ci-dessous qui donne accès
+ * à un contenu réel (jamais par `monProfil`/`me` tout seul, ni par
+ * `inscrire` — une institution doit pouvoir consulter son propre statut et
+ * s'inscrire sans déjà être active). Distincte d'un rôle Nest : le statut
+ * d'une Institution change dans le temps (PENDING → ACTIVE/REJECTED,
+ * ACTIVE ↔ SUSPENDED), contrairement au rôle du compte, fixé une fois pour
+ * toutes à l'inscription.
+ */
+export function exigerInstitutionActive(institution: { status: InstitutionStatus }): void {
+  if (institution.status === InstitutionStatus.ACTIVE) return;
+  const messages: Record<string, string> = {
+    [InstitutionStatus.PENDING]: "Votre inscription est en attente de validation par l'équipe ELEGANZ.",
+    [InstitutionStatus.REJECTED]: "Votre demande d'inscription en tant qu'institution partenaire a été refusée par ELEGANZ.",
+    [InstitutionStatus.SUSPENDED]: "Votre compte institution a été suspendu par ELEGANZ.",
+  };
+  throw new ForbiddenException(messages[institution.status] ?? "Votre compte institution n'est pas actif.");
+}
 
 /**
  * Côté institution du portail (14 nov. 2026) : une institution ne voit
@@ -27,6 +46,29 @@ export class InstitutionPortalService {
       throw new NotFoundException("Ce compte n'a pas de profil institution.");
     }
     return institution;
+  }
+
+  // Auto-inscription (14 nov. 2026, revirement sur la décision initiale
+  // "sur invitation uniquement") — le compte ELEGANZ (role=INSTITUTION_STAFF)
+  // existe déjà à cet instant (voir RegisterInstitutionDto) ; ce profil est
+  // toujours créé au statut PENDING, jamais ACTIVE directement : seul un
+  // admin ELEGANZ peut l'activer (AdminInstitutionsService.setStatus) ou le
+  // refuser (AdminInstitutionsService.reject).
+  async inscrire(userId: string, dto: RegisterInstitutionDto) {
+    const dejaExistant = await this.prisma.institution.findUnique({ where: { userId } });
+    if (dejaExistant) {
+      throw new ConflictException("Ce compte a déjà un profil institution.");
+    }
+    return this.prisma.institution.create({
+      data: {
+        userId,
+        name: dto.name,
+        type: dto.type,
+        contactEmail: dto.contactEmail,
+        contactPhone: dto.contactPhone,
+        status: InstitutionStatus.PENDING,
+      },
+    });
   }
 
   private async verifierAcces(institutionId: string, shopId: string) {

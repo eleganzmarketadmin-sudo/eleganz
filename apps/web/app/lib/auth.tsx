@@ -14,7 +14,7 @@ export interface InscriptionInfos {
   fullName: string;
   identifiant: string; // email ou téléphone
   motDePasse: string;
-  role?: "SHOP_OWNER" | "BUYER" | "DRIVER";
+  role?: "SHOP_OWNER" | "BUYER" | "DRIVER" | "INSTITUTION_STAFF";
 }
 
 interface AuthContextValue {

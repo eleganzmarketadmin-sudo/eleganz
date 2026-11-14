@@ -2203,15 +2203,30 @@ enum InstitutionType {
 enum InstitutionStatus {
   ACTIVE
   SUSPENDED
+  // Auto-inscription (14 nov. 2026, revirement du jour — voir le
+  // commentaire sur Institution ci-dessous) : une institution qui vient de
+  // créer elle-même son compte reste ici tant qu'un admin ELEGANZ n'a pas
+  // statué. Jamais ACTIVE par défaut dans ce cas (voir
+  // InstitutionPortalService.inscrire) — seule la création manuelle par un
+  // admin (AdminInstitutionsService.create) reste ACTIVE d'emblée.
+  PENDING
+  // Décision explicite de refus par un admin (distincte de SUSPENDED, qui
+  // suppose une institution déjà approuvée puis mise en pause) — voir
+  // Institution.rejectionNote pour le motif éventuellement communiqué.
+  REJECTED
 }
 
 // Institution financière partenaire (14 nov. 2026 — microfinances, banques,
 // coopératives recommandant ELEGANZ Gestion à leurs clients de l'informel).
-// Décision verrouillée : aucune auto-inscription en tant qu'institution —
-// même principe que la promotion d'un compte admin
-// (AdminTeamService.grantAdminRole) : la personne crée d'abord un compte
-// ELEGANZ normal, puis un administrateur ELEGANZ la promeut ici
-// (AdminInstitutionsService) une fois le partenariat réellement négocié.
+// Revirement du jour (14 nov. 2026) sur la décision initiale "aucune
+// auto-inscription" : une institution peut désormais créer elle-même son
+// compte (voir /institution/inscription et InstitutionPortalService.inscrire),
+// mais reste au statut PENDING — sans aucun accès réel au portail
+// (voir exigerInstitutionActive) — tant qu'un admin ELEGANZ ne l'a pas
+// explicitement approuvée (AdminInstitutionsService.setStatus/reject). La
+// création manuelle par un admin (AdminInstitutionsService.create, à partir
+// d'un compte ELEGANZ déjà existant) reste possible en parallèle, pour les
+// partenariats négociés directement, et reste ACTIVE d'emblée.
 // Une seule personne de contact par institution pour cette première
 // version (comme Driver : un User ↔ un profil) — une institution voulant
 // plusieurs connexions se voit créer plusieurs comptes ELEGANZ par l'admin
@@ -2226,6 +2241,11 @@ model Institution {
   contactEmail String?
   contactPhone String?
   status       InstitutionStatus  @default(ACTIVE)
+  // Motif communiqué par l'admin à une institution refusée (statut
+  // REJECTED) — facultatif, affiché tel quel sur son propre portail
+  // (jamais réécrit ni interprété) pour qu'elle comprenne pourquoi, sans
+  // avoir à solliciter le support.
+  rejectionNote String?           @db.Text
   createdAt    DateTime           @default(now())
 
   shopAccess ShopInstitutionAccess[]
