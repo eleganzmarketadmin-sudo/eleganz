@@ -217,6 +217,20 @@ export class ShopsService {
           invoiceFooterNote: dto.invoiceFooterNote || null,
         }),
         ...(dto.defaultInvoiceType !== undefined && { defaultInvoiceType: dto.defaultInvoiceType }),
+        // Facture normalisée auto-déclarée (14 nov. 2026) — on horodate
+        // uniquement la transition false→true (utile pour le support/l'admin,
+        // voir docs/COMPLIANCE_FACTURE_NORMALISEE.md) ; repasser à false
+        // efface l'horodatage plutôt que de garder la date d'une activation
+        // qui n'est plus en vigueur.
+        ...(dto.normalisationAutoDeclaree !== undefined && {
+          normalisationAutoDeclaree: dto.normalisationAutoDeclaree,
+          normalisationAutoDeclareeDepuis:
+            dto.normalisationAutoDeclaree && !boutique.normalisationAutoDeclaree
+              ? new Date()
+              : dto.normalisationAutoDeclaree
+                ? undefined
+                : null,
+        }),
       },
     });
   }

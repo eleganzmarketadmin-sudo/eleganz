@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from "class-validator";
 
 /**
  * Identité d'une boutique sur ses documents imprimés (factures, bons de
@@ -42,4 +42,12 @@ export class UpdateInvoiceSettingsDto {
   @ValidateIf((o) => o.defaultInvoiceType !== null)
   @IsIn(["INVOICE_INTERNAL", "INVOICE_FISCAL"])
   defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
+
+  // Facture normalisée auto-déclarée (14 nov. 2026) — voir le commentaire du
+  // champ Shop.normalisationAutoDeclaree dans le schéma : la boutique active
+  // ceci elle-même, distinct de fiscalHomologationConfirmed (jamais modifié
+  // par ce DTO, réservé à admin-shops.controller.ts).
+  @IsOptional()
+  @IsBoolean()
+  normalisationAutoDeclaree?: boolean;
 }

@@ -50,6 +50,18 @@ const DOCUMENT_INCLUDE_POUR_PDF = {
       invoicePhone: true,
       invoiceLogoUrl: true,
       invoiceFooterNote: true,
+      // Présentation de facture normalisée auto-déclarée (14 nov. 2026) —
+      // voir le commentaire de Shop.normalisationAutoDeclaree : seulement
+      // affichée sur le document si la boutique a elle-même activé ce
+      // réglage ; jamais lié à fiscalHomologationConfirmed/INVOICE_FISCAL.
+      normalisationAutoDeclaree: true,
+      fiscalLegalName: true,
+      fiscalLegalForm: true,
+      fiscalIdNumber: true,
+      fiscalAddress: true,
+      fiscalJurisdiction: true,
+      fiscalRegime: true,
+      fiscalVatRegistered: true,
     },
   },
   posSale: { include: { lines: true, payments: true } },
@@ -262,6 +274,23 @@ export class DocumentsService {
       platformWebsite: parametresPlateforme.website,
       platformSupportEmail: parametresPlateforme.supportEmail,
       platformSupportPhone: parametresPlateforme.supportPhone,
+      // Présentation normalisée auto-déclarée (14 nov. 2026, voir
+      // Shop.normalisationAutoDeclaree) — n'imprime le bloc d'identité
+      // fiscale que si la boutique a elle-même activé ce réglage ; jamais
+      // affiché par défaut, et jamais présenté comme une homologation DGI
+      // confirmée (voir le texte rendu dans pdf-renderer.ts).
+      normalisationAutoDeclaree: document.shop.normalisationAutoDeclaree,
+      identiteFiscale: document.shop.normalisationAutoDeclaree
+        ? {
+            fiscalLegalName: document.shop.fiscalLegalName,
+            fiscalLegalForm: document.shop.fiscalLegalForm,
+            fiscalIdNumber: document.shop.fiscalIdNumber,
+            fiscalAddress: document.shop.fiscalAddress,
+            fiscalJurisdiction: document.shop.fiscalJurisdiction,
+            fiscalRegime: document.shop.fiscalRegime,
+            fiscalVatRegistered: document.shop.fiscalVatRegistered,
+          }
+        : null,
     };
 
     if (document.posSale) {

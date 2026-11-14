@@ -16,6 +16,23 @@ export interface PaiementDocumentPdf {
   amount: number;
 }
 
+/**
+ * Identité fiscale et juridique de la boutique (14 nov. 2026, prompt
+ * "AJOUTER les identifications fiscales et juridiques de la boutique") —
+ * reprend les mêmes champs que le module Finance ("Règles fiscales"), pour
+ * affichage uniquement sur le document quand la boutique a activé la
+ * présentation normalisée auto-déclarée (`normalisationAutoDeclaree`).
+ */
+export interface IdentiteFiscaleDocumentPdf {
+  fiscalLegalName?: string | null;
+  fiscalLegalForm?: string | null;
+  fiscalIdNumber?: string | null;
+  fiscalAddress?: string | null;
+  fiscalJurisdiction?: string | null;
+  fiscalRegime?: string | null;
+  fiscalVatRegistered?: boolean | null;
+}
+
 export interface DonneesDocumentPdf {
   shopName: string;
   documentTypeLabel: string;
@@ -52,6 +69,18 @@ export interface DonneesDocumentPdf {
   platformWebsite?: string | null;
   platformSupportEmail?: string | null;
   platformSupportPhone?: string | null;
+  /**
+   * Présentation normalisée auto-déclarée (14 nov. 2026, voir
+   * Shop.normalisationAutoDeclaree dans schema.prisma) — active l'affichage
+   * du bloc d'identité fiscale ci-dessous et adapte le texte de bas de
+   * page. Ne modifie jamais `isFiscallyHomologated` ni le type réel du
+   * document (toujours INVOICE_INTERNAL dans ce cas, jamais INVOICE_FISCAL)
+   * — ce n'est qu'une présentation plus complète choisie par la boutique
+   * elle-même, jamais une déclaration d'homologation DGI réelle. Voir
+   * docs/COMPLIANCE_FACTURE_NORMALISEE.md.
+   */
+  normalisationAutoDeclaree?: boolean;
+  identiteFiscale?: IdentiteFiscaleDocumentPdf | null;
 }
 
 const LARGEUR_TICKET = 226; // ~80mm, format imprimante de caisse courant (prompt §6)
@@ -100,6 +129,28 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
   if (donnees.shopPhone) {
     doc.fontSize(7.5).text(`Tél. ${donnees.shopPhone}`, { align: "center" });
   }
+
+  // Bloc d'identité fiscale — uniquement si la boutique a activé la
+  // présentation normalisée auto-déclarée (14 nov. 2026). Jamais affiché par
+  // défaut, jamais de donnée inventée : uniquement ce que la boutique a
+  // renseigné elle-même dans Paramètres.
+  if (donnees.normalisationAutoDeclaree && donnees.identiteFiscale) {
+    const fi = donnees.identiteFiscale;
+    doc.moveDown(0.2);
+    doc.font("Helvetica").fontSize(7);
+    const ligneRaison = [fi.fiscalLegalName, fi.fiscalLegalForm]
+      .filter((v): v is string => Boolean(v))
+      .join(" — ");
+    if (ligneRaison) doc.text(ligneRaison, { align: "center" });
+    if (fi.fiscalIdNumber) doc.text(`Id. ${fi.fiscalIdNumber}`, { align: "center" });
+    if (fi.fiscalAddress) doc.text(fi.fiscalAddress, { align: "center" });
+    const ligneRegime = [fi.fiscalJurisdiction, fi.fiscalRegime]
+      .filter((v): v is string => Boolean(v))
+      .join(" — ");
+    if (ligneRegime) doc.text(ligneRegime, { align: "center" });
+    if (fi.fiscalVatRegistered) doc.text("Assujetti à la TVA", { align: "center" });
+  }
+
   doc.moveDown(0.5);
   doc.fontSize(8).text(`N° ${donnees.number}`, { align: "center" });
   doc.text(
@@ -166,7 +217,9 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     .text(
       donnees.isFiscallyHomologated
         ? "Document fiscal homologué DGI."
-        : "Document non homologué par la DGI — à conserver pour votre comptabilité interne.",
+        : donnees.normalisationAutoDeclaree
+          ? "Présentation normalisée auto-déclarée par la boutique — en attente de connexion à la plateforme DGI, non homologuée."
+          : "Document non homologué par la DGI — à conserver pour votre comptabilité interne.",
       { align: "center" },
     );
   doc.fillColor("#000");

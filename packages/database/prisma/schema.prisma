@@ -503,6 +503,23 @@ model Shop {
   fiscalExercice        String? // ex. "01/01-31/12"
   fiscalVatRegistered   Boolean @default(false)
 
+  // Facture normalisée auto-déclarée par la boutique (14 nov. 2026, demande :
+  // "choisir par la boutique elle-même en activant l'utilisation de la
+  // facture normalisée, le temps qu'on mette en place les API DGI par
+  // boutique") — volontairement un champ DISTINCT de
+  // `fiscalHomologationConfirmed` ci-dessus, qui reste réservé à une vraie
+  // confirmation d'homologation DGI par un administrateur ELEGANZ après
+  // démarche réelle (voir docs/COMPLIANCE_FACTURE_NORMALISEE.md : "jamais
+  // homologuée auto-déclarée"). Ce champ-ci n'autorise JAMAIS le type
+  // INVOICE_FISCAL ni isFiscallyHomologated=true (DocumentsService.
+  // verifierTypeAutorise ne le regarde pas) : il active seulement une mise
+  // en page plus complète (identité fiscale imprimée en entier) sur les
+  // documents INVOICE_INTERNAL déjà émis, explicitement annotée "présentation
+  // auto-déclarée, en attente de connexion DGI" sur le document lui-même —
+  // jamais présentée comme une homologation confirmée.
+  normalisationAutoDeclaree       Boolean   @default(false)
+  normalisationAutoDeclareeDepuis DateTime?
+
   // Monétisation — champs admin-configurables, aucune valeur figée dans le code
   freeTrialStartedAt   DateTime?
   freeTrialDurationDays Int      @default(90) // décision #3 : 3 mois par défaut, modifiable en admin

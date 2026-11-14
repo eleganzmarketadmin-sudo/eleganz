@@ -22,6 +22,30 @@ interface ShopDetails {
   invoiceFooterNote?: string | null;
   fiscalHomologationConfirmed: boolean;
   defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
+  // Facture normalisée auto-déclarée (14 nov. 2026) — voir le commentaire du
+  // champ Shop.normalisationAutoDeclaree dans schema.prisma : distinct de
+  // fiscalHomologationConfirmed, jamais mélangé avec lui.
+  normalisationAutoDeclaree?: boolean;
+  normalisationAutoDeclareeDepuis?: string | null;
+}
+
+// Identité fiscale et juridique de la boutique (14 nov. 2026, demande :
+// "AJOUTER les identifications fiscales et juridiques de la boutique dans
+// le menu paramètre de chaque boutique") — même forme que Finance > Règles
+// fiscales (apps/web/app/(gestion)/finance/regles-fiscales/page.tsx), qui
+// reste le lieu d'origine de ces champs ; dupliquée ici pour un accès direct
+// depuis Paramètres, avec son propre état et sa propre soumission,
+// indépendants du formulaire "documents imprimés" ci-dessous (convention de
+// cette page : une section logique = un état et une soumission à elle).
+interface IdentiteFiscale {
+  fiscalLegalName: string | null;
+  fiscalLegalForm: string | null;
+  fiscalIdNumber: string | null;
+  fiscalAddress: string | null;
+  fiscalJurisdiction: string | null;
+  fiscalRegime: string | null;
+  fiscalExercice: string | null;
+  fiscalVatRegistered: boolean;
 }
 
 interface Compte {
@@ -227,9 +251,21 @@ function ParametresContent() {
   // jamais la boutique elle-même qui s'auto-déclare homologuée.
   const [typeFactureDefaut, setTypeFactureDefaut] = useState("");
   const [homologationConfirmee, setHomologationConfirmee] = useState(false);
+  // Facture normalisée auto-déclarée (14 nov. 2026) — case à cocher dans ce
+  // même formulaire "documents imprimés", mais champ totalement distinct de
+  // fiscalHomologationConfirmed/homologationConfirmee ci-dessus : voir le
+  // commentaire de Shop.normalisationAutoDeclaree dans schema.prisma.
+  const [normalisationAutoDeclaree, setNormalisationAutoDeclaree] = useState(false);
   const [slug, setSlug] = useState("");
   const [publiee, setPubliee] = useState(false);
   const [lienCopie, setLienCopie] = useState(false);
+
+  // Identité fiscale et juridique (14 nov. 2026) — formulaire et soumission
+  // indépendants, voir l'interface IdentiteFiscale ci-dessus.
+  const [identiteFiscale, setIdentiteFiscale] = useState<IdentiteFiscale | null>(null);
+  const [chargementIdentiteFiscale, setChargementIdentiteFiscale] = useState(true);
+  const [erreurIdentiteFiscale, setErreurIdentiteFiscale] = useState<string | null>(null);
+  const [confirmationIdentiteFiscale, setConfirmationIdentiteFiscale] = useState<string | null>(null);
 
   // Description publique de la boutique (14 nov. 2026, demande : "zone
   // description briève de la boutique sur la page propre de la boutique...
@@ -278,6 +314,7 @@ function ParametresContent() {
         setNoteBasPage(shop.invoiceFooterNote ?? "");
         setTypeFactureDefaut(shop.defaultInvoiceType ?? "");
         setHomologationConfirmee(Boolean(shop.fiscalHomologationConfirmed));
+        setNormalisationAutoDeclaree(Boolean(shop.normalisationAutoDeclaree));
         setSlug(shop.slug);
         setPubliee(shop.isPubliclyListed);
         setDescription(shop.description ?? "");
@@ -288,6 +325,18 @@ function ParametresContent() {
         ),
       )
       .finally(() => setChargement(false));
+  }, [currentShop]);
+
+  useEffect(() => {
+    if (!currentShop) return;
+    setChargementIdentiteFiscale(true);
+    api
+      .get<IdentiteFiscale>(`/shops/${currentShop.id}/finance/fiscal-identity`)
+      .then(setIdentiteFiscale)
+      .catch((err) =>
+        setErreurIdentiteFiscale(err instanceof ApiError ? err.message : t("param_erreurChargement")),
+      )
+      .finally(() => setChargementIdentiteFiscale(false));
   }, [currentShop]);
 
   async function enregistrer(e: React.FormEvent) {
@@ -303,6 +352,7 @@ function ParametresContent() {
         invoiceLogoUrl: logoUrl,
         invoiceFooterNote: noteBasPage,
         defaultInvoiceType: typeFactureDefaut || null,
+        normalisationAutoDeclaree,
       });
       setConfirmation(t("param_confirmationEnregistrement"));
     } catch (err) {
@@ -313,6 +363,40 @@ function ParametresContent() {
       );
     } finally {
       setEnregistrement(false);
+    }
+  }
+
+  async function enregistrerIdentiteFiscale(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!currentShop) return;
+    const form = new FormData(e.currentTarget);
+    setErreurIdentiteFiscale(null);
+    setConfirmationIdentiteFiscale(null);
+    try {
+      const miseAJour = {
+        fiscalLegalName: (form.get("fiscalLegalName") as string) || undefined,
+        fiscalLegalForm: (form.get("fiscalLegalForm") as string) || undefined,
+        fiscalIdNumber: (form.get("fiscalIdNumber") as string) || undefined,
+        fiscalAddress: (form.get("fiscalAddress") as string) || undefined,
+        fiscalJurisdiction: (form.get("fiscalJurisdiction") as string) || undefined,
+        fiscalRegime: (form.get("fiscalRegime") as string) || undefined,
+        fiscalExercice: (form.get("fiscalExercice") as string) || undefined,
+        fiscalVatRegistered: form.get("fiscalVatRegistered") === "on",
+      };
+      await api.patch(`/shops/${currentShop.id}/finance/fiscal-identity`, miseAJour);
+      setIdentiteFiscale((prev) => ({
+        fiscalLegalName: miseAJour.fiscalLegalName ?? prev?.fiscalLegalName ?? null,
+        fiscalLegalForm: miseAJour.fiscalLegalForm ?? prev?.fiscalLegalForm ?? null,
+        fiscalIdNumber: miseAJour.fiscalIdNumber ?? prev?.fiscalIdNumber ?? null,
+        fiscalAddress: miseAJour.fiscalAddress ?? prev?.fiscalAddress ?? null,
+        fiscalJurisdiction: miseAJour.fiscalJurisdiction ?? prev?.fiscalJurisdiction ?? null,
+        fiscalRegime: miseAJour.fiscalRegime ?? prev?.fiscalRegime ?? null,
+        fiscalExercice: miseAJour.fiscalExercice ?? prev?.fiscalExercice ?? null,
+        fiscalVatRegistered: miseAJour.fiscalVatRegistered,
+      }));
+      setConfirmationIdentiteFiscale(t("rfi_infosEnregistrees"));
+    } catch (err) {
+      setErreurIdentiteFiscale(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     }
   }
 
@@ -565,10 +649,80 @@ function ParametresContent() {
                 : t("param_typeFactureDefautNoteNonHomologuee")}
             </p>
           </div>
+          <div className={styles.champ} style={{ flexDirection: "row", alignItems: "flex-start", gap: "8px" }}>
+            <input
+              id="normalisationAutoDeclaree"
+              type="checkbox"
+              checked={normalisationAutoDeclaree}
+              onChange={(e) => setNormalisationAutoDeclaree(e.target.checked)}
+              style={{ marginTop: "3px" }}
+            />
+            <label htmlFor="normalisationAutoDeclaree">
+              {t("param_normalisationAutoDeclareeLabel")}
+              <p className={styles.note} style={{ marginTop: "4px" }}>
+                {t("param_normalisationAutoDeclareeNote")}
+              </p>
+            </label>
+          </div>
           <button className={styles.bouton} type="submit" disabled={enregistrement}>
             {enregistrement ? t("param_enregistrementEnCours") : t("param_enregistrer")}
           </button>
         </form>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sousTitre}>{t("rfi_infosEntreprise")}</h2>
+        <p className={styles.note}>{t("param_identiteFiscaleNote")}</p>
+
+        {erreurIdentiteFiscale && <div className={styles.erreur}>{erreurIdentiteFiscale}</div>}
+        {confirmationIdentiteFiscale && <div className={styles.confirmation}>{confirmationIdentiteFiscale}</div>}
+
+        {chargementIdentiteFiscale ? (
+          <p className={styles.note}>{t("commun_chargement")}</p>
+        ) : (
+          <form className={styles.formulaire} onSubmit={enregistrerIdentiteFiscale}>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalLegalName">{t("rfi_denomination")}</label>
+              <input id="fiscalLegalName" name="fiscalLegalName" defaultValue={identiteFiscale?.fiscalLegalName ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalLegalForm">{t("rfi_formeJuridique")}</label>
+              <input id="fiscalLegalForm" name="fiscalLegalForm" defaultValue={identiteFiscale?.fiscalLegalForm ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalIdNumber">{t("rfi_numeroIdFiscal")}</label>
+              <input id="fiscalIdNumber" name="fiscalIdNumber" defaultValue={identiteFiscale?.fiscalIdNumber ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalAddress">{t("rfi_adresseFiscale")}</label>
+              <input id="fiscalAddress" name="fiscalAddress" defaultValue={identiteFiscale?.fiscalAddress ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalJurisdiction">{t("rfi_juridictionFiscale")}</label>
+              <input id="fiscalJurisdiction" name="fiscalJurisdiction" defaultValue={identiteFiscale?.fiscalJurisdiction ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalRegime">{t("rfi_regimeDeclare")}</label>
+              <input id="fiscalRegime" name="fiscalRegime" defaultValue={identiteFiscale?.fiscalRegime ?? ""} />
+            </div>
+            <div className={styles.champ}>
+              <label htmlFor="fiscalExercice">{t("rfi_exerciceComptable")}</label>
+              <input id="fiscalExercice" name="fiscalExercice" placeholder="01/01-31/12" defaultValue={identiteFiscale?.fiscalExercice ?? ""} />
+            </div>
+            <div className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+              <input
+                id="fiscalVatRegistered"
+                name="fiscalVatRegistered"
+                type="checkbox"
+                defaultChecked={identiteFiscale?.fiscalVatRegistered ?? false}
+              />
+              <label htmlFor="fiscalVatRegistered">{t("rfi_assujettieTva")}</label>
+            </div>
+            <button className={styles.bouton} type="submit">
+              {t("rfi_enregistrerInfos")}
+            </button>
+          </form>
+        )}
       </section>
 
       {currentShop && (
