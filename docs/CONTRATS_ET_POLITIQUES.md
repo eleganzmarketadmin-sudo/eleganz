@@ -60,7 +60,13 @@ des pages clés) avant de relivrer le fichier à l'utilisateur.
 
 - `docs/COMPLIANCE_FACTURE_NORMALISEE.md` — cadre de la facture normalisée RDC,
   repris dans le Contrat Vendeur (article 8).
-- Modèle de statuts de constitution (produit le 14 novembre 2026, non conservé
-  dans ce dépôt, livré directement à l'utilisateur) — l'identité juridique
-  d'ELEGANZ à compléter dans les trois documents ci-dessus doit rester
-  cohérente avec celle qui sera retenue dans les statuts définitifs.
+- `docs/DOSSIER_GROUP_ELEGANZ.md` — dossier complet de constitution et de
+  conformité numérique de GROUP ELEGANZ SARL (statuts à 26 articles, pièces
+  GUCE, contrats numériques, guide, registre Excel), produit le 14 novembre
+  2026 à partir d'un dossier fourni par l'utilisateur. Les pièces 10 (contrat
+  vendeur marketplace) et 14 (CGU Marketplace) de ce dossier complètent, pour
+  la seule composante Marketplace, les deux premiers documents du tableau
+  ci-dessus ; les trois ensembles doivent être harmonisés par un conseil
+  juridique avant publication définitive. Ce dossier contient également le
+  modèle de statuts de constitution à jour (remplace la version mentionnée
+  ci-dessous, non conservée dans ce dépôt).
