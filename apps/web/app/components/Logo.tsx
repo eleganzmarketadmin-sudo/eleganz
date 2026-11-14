@@ -1,31 +1,41 @@
 /**
- * Marque ELEGANZ (12 oct. 2026) : un losange coupé en quatre, une couleur de
- * marque par quartier (Cobalt, Flamme, Or, Magenta Sape) — la même
- * construction géométrique qu'un carré de pochette plié en quatre pointes,
- * ou qu'un motif de tissu wax/Kuba à losanges. Aplats pleins uniquement,
- * jamais de dégradé ni d'ombre, conformément à docs/DESIGN_SYSTEM.md. Sert
- * de point focal "fun" dans l'en-tête sans sortir du système de couleurs.
+ * Marque ELEGANZ — « La Gemme » (15 nov. 2026). Remplace l'ancien losange à
+ * quatre quartiers : un monogramme E taillé à facettes, choisi par le client
+ * après comparaison de plusieurs pistes (voir le canevas de proposition de
+ * marque). Trois éléments, aplats pleins, conformément à
+ * docs/DESIGN_SYSTEM.md :
+ *   - la colonne (Encre #15171C) — la colonne vertébrale qui tient
+ *     l'ensemble, l'assistant et le centre de pilotage en arrière-plan ;
+ *   - les trois arêtes (Cobalt #17408A) — chacune taillée en pointe plutôt
+ *     que carrée, comme Gestion, Market et Livreur : des usages distincts,
+ *     une seule structure ;
+ *   - la pointe (Or #D9A61A) — un seul reflet, jamais plusieurs : la marque
+ *     reste sobre.
+ * Vérifié lisible jusqu'à 24 px (taille favicon) sur le canevas de
+ * proposition. Les sources SVG sont conservées dans docs/marque/.
  */
 export function LogoMark({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 40 40"
+      viewBox="0 0 100 100"
       aria-hidden="true"
       className={className}
       style={{ flexShrink: 0 }}
     >
-      <polygon points="20,20 20,2 38,20" fill="#17408a" />
-      <polygon points="20,20 38,20 20,38" fill="#c83e1f" />
-      <polygon points="20,20 20,38 2,20" fill="#d9a61a" />
-      <polygon points="20,20 2,20 20,2" fill="#a62368" />
+      <path d="M18,10 L32,10 L32,90 L18,90 Z" fill="#15171c" />
+      <path d="M32,10 L80,10 L70,26 L32,26 Z" fill="#17408a" />
+      <path d="M32,46 L62,46 L58,58 L32,58 Z" fill="#17408a" />
+      <path d="M32,74 L70,74 L80,90 L32,90 Z" fill="#17408a" />
+      <path d="M74,10 L80,10 L73,17 Z" fill="#d9a61a" />
     </svg>
   );
 }
 
-/** Les quatre teintes de la marque, dans l'ordre utilisé par LogoMark — pour
- * la bande de séparation sous les en-têtes (voir *Shell.module.css). */
+/** Les quatre couleurs de marque (palette de docs/DESIGN_SYSTEM.md), pour la
+ * bande de séparation sous les en-têtes (voir *Shell.module.css) — un motif
+ * à la manière du tissu wax, indépendant du monogramme LogoMark ci-dessus. */
 export const COULEURS_MARQUE = ["#17408a", "#c83e1f", "#d9a61a", "#a62368"];
 
 export function BandeMarque({ className }: { className?: string }) {
