@@ -44,6 +44,16 @@
   color: var(--color-ink);
 }
 
+.boutonRecherche {
+  padding: var(--espace-3) var(--espace-4);
+  border: 2px solid var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-weight: 600;
+  min-height: var(--touche-min);
+  cursor: pointer;
+}
+
 .grille {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

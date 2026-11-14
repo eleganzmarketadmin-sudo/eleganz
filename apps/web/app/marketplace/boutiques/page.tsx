@@ -96,6 +96,23 @@ function BoutiquesContenu() {
     };
   }, [paysChoisiId]);
 
+  // Filtrage au fur et à mesure de la saisie (14 nov. 2026, signalement :
+  // "la recherche d'une boutique n'a pas de bouton pour lancer la
+  // recherche et/ou ne filtre pas au fur à mesure qu'on évolue dans la
+  // saisie") — `recherche` (ce que la personne tape) et `requeteActive`
+  // (ce qui est réellement envoyé à l'API) étaient déjà deux états
+  // distincts, mais rien ne les reliait avant une soumission explicite du
+  // formulaire : taper ne déclenchait donc aucune recherche tant qu'on
+  // n'appuyait pas sur Entrée. On relie maintenant les deux avec un léger
+  // délai (laisse le temps de finir un mot avant d'interroger l'API à
+  // chaque lettre), tout en gardant la soumission du formulaire (Entrée ou
+  // le nouveau bouton ci-dessous) pour lancer la recherche immédiatement
+  // sans attendre ce délai.
+  useEffect(() => {
+    const minuteur = setTimeout(() => setRequeteActive(recherche), 400);
+    return () => clearTimeout(minuteur);
+  }, [recherche]);
+
   useEffect(() => {
     let annule = false;
     setChargement(true);
@@ -139,6 +156,9 @@ function BoutiquesContenu() {
           value={recherche}
           onChange={(e) => setRecherche(e.target.value)}
         />
+        <button type="submit" className={styles.boutonRecherche}>
+          {t("accueil_rechercheProduitBouton")}
+        </button>
         <select
           aria-label={t("zonesLivraison_pays")}
           value={paysChoisiId}
