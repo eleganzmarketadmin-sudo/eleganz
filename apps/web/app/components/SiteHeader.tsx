@@ -57,8 +57,14 @@ export function SiteHeader() {
               de le laisser choisir où se connecter — jamais un module choisi
               à sa place. `/#outils` (chemin absolu) plutôt que `#outils` :
               ce bouton est aussi monté sur /a-propos, qui n'a pas cette
-              section. */}
-          <Link href="/#outils" className={styles.connexion}>
+              section.
+              `?portail=1` ajouté le 14 nov. 2026 (voir middleware.ts) : un
+              visiteur déjà venu sur la Marketplace est maintenant redirigé
+              vers elle dès "/", avant même le rendu du portail — sans ce
+              paramètre, ce bouton le renverrait aussitôt vers la Marketplace
+              au lieu du portail de choix de module qu'il vient justement de
+              demander en cliquant ici. */}
+          <Link href="/?portail=1#outils" className={styles.connexion}>
             {t("action_seConnecter")}
           </Link>
         </div>

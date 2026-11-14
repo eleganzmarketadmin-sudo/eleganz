@@ -17,6 +17,13 @@ import { useEffect } from "react";
  * décider à en créer un — "déjà venu" est le bon signal ici, pas "déjà
  * authentifié", justement pour ne pas perdre ce visiteur-là en le renvoyant
  * sans arrêt au portail de choix de module.
+ *
+ * Pose aussi un COOKIE équivalent (14 nov. 2026, voir middleware.ts) : le
+ * localStorage ci-dessous reste lu par l'effet de secours de page.tsx
+ * (ex. cookies bloqués), mais c'est le cookie qui permet au serveur de
+ * basculer "/" vers la Marketplace avant même d'envoyer le HTML du
+ * portail — localStorage n'est lisible que dans le navigateur, trop tard
+ * pour éviter le flash de l'ancienne page de garde.
  */
 export function MarqueurVisiteMarketplace() {
   useEffect(() => {
@@ -25,6 +32,17 @@ export function MarqueurVisiteMarketplace() {
     } catch {
       // Navigateur privé / stockage bloqué : tant pis, l'accueil restera
       // simplement le portail de choix de module à chaque visite.
+    }
+    try {
+      // Un an, chemin racine : lu par middleware.ts sur chaque visite de
+      // "/". `samesite=lax` suffit (navigation top-level classique) et
+      // laisse le cookie fonctionner aussi bien en http:// local qu'en
+      // https:// en production, sans attribut `secure` qui casserait le
+      // développement local.
+      document.cookie = "eleganz_marketplace_visite=1; path=/; max-age=31536000; samesite=lax";
+    } catch {
+      // Cookies bloqués : le middleware ne verra rien, l'effet de secours
+      // de page.tsx (localStorage) prend le relais après hydratation.
     }
   }, []);
 

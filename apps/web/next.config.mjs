@@ -37,6 +37,23 @@ const nextConfig = {
           },
         ],
       },
+      // 14 nov. 2026 (signalement récurrent "connexion en boucle, il faut
+      // vider les cookies") — le correctif précédent (voir
+      // scripts/inject-sw-version.js) change le CONTENU de sw.js à chaque
+      // déploiement pour que le service worker purge lui-même les anciens
+      // caches, mais ne dit rien sur la mise en cache HTTP de sw.js
+      // lui-même : sans en-tête explicite, un navigateur (ou un
+      // intermédiaire entre lui et Railway) peut continuer de servir une
+      // ancienne copie de sw.js pendant un moment après le déploiement,
+      // retardant d'autant la prise d'effet du correctif — exactement le
+      // genre de délai qui fait dire "le problème persiste après la mise à
+      // jour". `no-cache` (= revalider systématiquement, pas "ne jamais
+      // mettre en cache") force chaque visite à vérifier auprès du serveur
+      // si une nouvelle version existe avant de réutiliser quoi que ce soit.
+      {
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache, must-revalidate" }],
+      },
     ];
   },
 };
