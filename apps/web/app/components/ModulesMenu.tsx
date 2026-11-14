@@ -116,6 +116,20 @@ export function ModulesMenu() {
             </Link>
           </div>
 
+          {/* Portail institutions financières (14 nov. 2026, demande :
+              "rajouter dans le volet vertical de navigation le lien... qui
+              va conduire à l'espace institution financières") — à la suite
+              des quatre modules en libre accès, car ce portail reste sur
+              invitation ELEGANZ uniquement (voir schema.prisma::Institution) :
+              ce lien aide une institution déjà partenaire à retrouver sa
+              connexion, jamais une inscription libre. */}
+          <div className={`${styles.carteModule} ${styles.institution}`}>
+            <p className={styles.question}>{t("accueil_questionInstitution")}</p>
+            <Link href="/institution/connexion" className={styles.lienModule} onClick={fermer}>
+              {t("accueil_ouvrirPortailInstitution")}
+            </Link>
+          </div>
+
           <div className={styles.separateur} />
 
           <Link href="/aide" className={styles.lienBas} onClick={fermer}>

@@ -130,6 +130,14 @@
   border-left-color: var(--color-or-texte);
 }
 
+/* Portail institutions (14 nov. 2026) — accent "encre" plutôt qu'une des
+   quatre couleurs déjà prises (cobalt/magenta/vert-paiement/or), pour
+   distinguer ce lien réservé aux partenaires déjà invités des quatre
+   modules en libre accès ci-dessus. */
+.institution {
+  border-left-color: var(--color-ink);
+}
+
 .question {
   font-size: 0.9375rem;
   line-height: 1.4;
