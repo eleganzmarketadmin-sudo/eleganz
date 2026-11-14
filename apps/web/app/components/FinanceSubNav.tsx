@@ -30,6 +30,10 @@ const GESTION_COURANTE = [
   // Prêts réellement obtenus (19 oct. 2026) — distinct du simulateur
   // ci-dessus, purement théorique.
   { href: "/finance/prets", label: "Prêts obtenus" },
+  // Portail institutions (14 nov. 2026) — partager son dossier crédit avec
+  // une microfinance/banque/coopérative partenaire ELEGANZ, suivre ses
+  // décisions et décaisser le prêt accordé.
+  { href: "/finance/institutions", label: "Institutions financières" },
   // Rapport annuel (demande du 16 oct. 2026, point 3) — export PDF/Word/PowerPoint.
   { href: "/finance/rapport-annuel", label: "Rapport annuel" },
 ];

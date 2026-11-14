@@ -906,6 +906,75 @@ function TarifsBoutiquesSection() {
   );
 }
 
+/**
+ * Commission ELEGANZ sur les prêts décaissés via le portail institutions
+ * (14 nov. 2026) — réponse du propriétaire, point 4 : "Option 4 mais qu'on
+ * peut paramétrer, desactiver ou modifier à partir du centre de pilotage".
+ * Champ nullable (voir PlatformSettings.institutionLoanCommissionRateDefault) :
+ * vide = commission désactivée, une valeur = taux appliqué AU MOMENT DU
+ * DÉCAISSEMENT (LoansService.obtenirPretViaDecision), jamais recalculé
+ * rétroactivement sur les prêts déjà décaissés si ce taux change ensuite —
+ * même principe que la commission Marketplace ci-dessus.
+ */
+function TarifsInstitutionsSection() {
+  const { t } = useLocale();
+  const [taux, setTaux] = useState("");
+  const [chargement, setChargement] = useState(true);
+  const [enCours, setEnCours] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<{ institutionLoanCommissionRateDefault: string | null }>("/admin/platform-settings")
+      .then((s) => setTaux(s.institutionLoanCommissionRateDefault ?? ""))
+      .catch(() => {})
+      .finally(() => setChargement(false));
+  }, []);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        institutionLoanCommissionRateDefault: taux ? Number(taux) : null,
+      });
+      setMessage(t("admtarifs_institutions_enregistre"));
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>{t("admtarifs_institutions_titre")}</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        {t("admtarifs_institutions_note")}
+      </p>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {!chargement && (
+        <div className={styles.planChamps}>
+          <label className={styles.champ}>
+            <span>{t("admtarifs_institutions_taux")}</span>
+            <input placeholder={t("admtarifs_institutions_placeholderDesactive")} value={taux} onChange={(e) => setTaux(e.target.value)} />
+          </label>
+        </div>
+      )}
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          {t("admtarifs_boutiques_enregistrerTauxDefaut")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface TauxChangeHistorique {
   id: string;
   cdfPerUsd: string;
@@ -1336,6 +1405,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>{t("admtarifs_sectionFacturationBoutiques")}</h2>
       <TarifsBoutiquesSection />
+
+      <h2 className={styles.sectionTitre}>{t("admtarifs_institutions_titre")}</h2>
+      <TarifsInstitutionsSection />
 
       <h2 className={styles.sectionTitre}>{t("admtarifs_sectionTarifsLivreurs")}</h2>
       <TarifsLivreursSection />

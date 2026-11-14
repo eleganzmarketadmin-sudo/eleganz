@@ -115,9 +115,17 @@ export class LoansService {
   }
 
   /** Prêts décaissés via le portail d'une institution donnée. */
+  // Inclut le nom de la boutique (contrairement à listForShop/listForPlatform,
+  // où le périmètre est déjà connu de l'appelant) : le portail institution
+  // couvre potentiellement plusieurs boutiques à la fois, donc chaque ligne
+  // doit se suffire à elle-même pour l'affichage (14 nov. 2026).
   listForInstitution(institutionId: string) {
     return this.prisma.loan
-      .findMany({ where: { institutionId }, orderBy: { dateObtention: "desc" } })
+      .findMany({
+        where: { institutionId },
+        include: { shop: { select: { id: true, name: true, slug: true } } },
+        orderBy: { dateObtention: "desc" },
+      })
       .then((loans) => loans.map((l) => this.serialiser(l)));
   }
 

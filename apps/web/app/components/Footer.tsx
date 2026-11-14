@@ -7,13 +7,15 @@ import { LogoMark, BandeMarque } from "./Logo";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import styles from "./Footer.module.css";
 
-const CLES_TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable", string> = {
+const CLES_TAGLINES: Record<"accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable" | "institution", string> = {
   accueil: "footer_tagline_accueil",
   gestion: "footer_tagline_gestion",
   admin: "footer_tagline_admin",
   marketplace: "footer_tagline_marketplace",
   livreur: "footer_tagline_livreur",
   comptable: "footer_tagline_comptable",
+  // Portail institutions (14 nov. 2026) — septième variante du pied de page commun.
+  institution: "footer_tagline_institution",
 };
 
 interface CoordonneesPlateforme {
@@ -39,7 +41,7 @@ interface CoordonneesPlateforme {
 export function Footer({
   variante,
 }: {
-  variante: "accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable";
+  variante: "accueil" | "gestion" | "admin" | "marketplace" | "livreur" | "comptable" | "institution";
 }) {
   const { t } = useLocale();
   const [contact, setContact] = useState<CoordonneesPlateforme | null>(null);

@@ -20,7 +20,7 @@ export interface InscriptionInfos {
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  login: (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable") => Promise<void>;
+  login: (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable" | "institution") => Promise<void>;
   register: (infos: InscriptionInfos) => Promise<void>;
   logout: () => void;
 }
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // pas à cet espace. Omis par /marketplace/compte (Marketplace + "Mon
   // assistant"/Secourable), qui reste ouvert à tout compte ELEGANZ.
   const login = useCallback(
-    async (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable") => {
+    async (identifiant: string, motDePasse: string, espace?: "admin" | "livreur" | "gestion" | "comptable" | "institution") => {
       const estEmail = identifiant.includes("@");
       const { accessToken } = await api.post<{ accessToken: string }>(
         "/auth/login",

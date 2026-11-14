@@ -64,6 +64,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/experts", label: t("nav_experts"), menu: "EXPERTS" },
     { href: "/admin/messagerie", label: t("nav_messagerie"), menu: "MESSAGERIE" },
     { href: "/admin/equipe", label: t("nav_equipeAdmin"), menu: "EQUIPE_ADMIN" },
+    // Institutions financières partenaires (14 nov. 2026) — rattaché au même
+    // écran "EQUIPE_ADMIN" (réservé à ADMIN_SUPER par défaut, voir
+    // MENUS_PAR_ROLE_ADMIN ci-dessus) que la gestion de l'équipe admin : les
+    // deux attribuent un rôle à un compte existant (ici INSTITUTION_STAFF),
+    // ce qui doit rester aussi verrouillé — voir AdminInstitutionsController
+    // (requireSuperAdmin). Pas de nouvelle valeur MenuAdmin dédiée pour
+    // éviter une migration seulement pour un filtre de menu.
+    { href: "/admin/institutions", label: t("nav_institutions"), menu: "EQUIPE_ADMIN" },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme"), menu: "PARAMETRES_PLATEFORME" },
     { href: "/admin/centre-aide", label: t("nav_centreAide"), menu: "CENTRE_AIDE" },
     // Guide développeur/architecture (demande du 11 nov. 2026) — pas de clé
