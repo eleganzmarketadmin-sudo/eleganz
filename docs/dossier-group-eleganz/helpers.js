@@ -5,8 +5,29 @@
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
-  PageBreak,
+  PageBreak, ImageRun,
 } = require("docx");
+const fs = require("fs");
+const path = require("path");
+
+// Marque ELEGANZ "La Gemme" (15 nov. 2026) — logoRun()/logoParagraph() ajoutés
+// après que le client a demandé l'ajout du logo, choisi parmi plusieurs
+// pistes présentées, sur les documents du dossier. PNG pré-rendu (plutôt
+// qu'un SVG, non supporté par docx-js) depuis docs/marque/gemme-monogramme.svg.
+const LOGO_PATH = path.join(__dirname, "assets", "gemme.png");
+const LOGO_DATA = fs.readFileSync(LOGO_PATH);
+
+function logoRun(sizePx = 34) {
+  return new ImageRun({
+    data: LOGO_DATA,
+    type: "png",
+    transformation: { width: sizePx, height: sizePx },
+  });
+}
+
+function logoParagraph(sizePx = 34, opts = {}) {
+  return new Paragraph({ spacing: { after: 60 }, children: [logoRun(sizePx)], ...opts });
+}
 
 const INK = "15171C";
 const COBALT = "17408A";
@@ -142,6 +163,7 @@ function signatureBlock(roleLabel, extraLines = []) {
 
 function coverPage({ kicker, title, subtitle1, subtitle2 }) {
   const out = [
+    logoParagraph(64, { spacing: { after: 160 } }),
     new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: kicker, bold: true, color: ROUGEPH, font: FONT_BODY, size: 18 })] }),
     new Paragraph({
       spacing: { before: 120, after: 80 },
@@ -207,5 +229,5 @@ async function writeDocx(children, outPath) {
 module.exports = {
   run, titleRun, h0, h1, h2, p, mixedP, bullet, note, phRun, calloutBox,
   signatureBlock, coverPage, buildDocument, writeDocx, PageBreak, Paragraph,
-  INK, COBALT, GRIS, ROUGEPH, FONT_HEAD, FONT_BODY,
+  INK, COBALT, GRIS, ROUGEPH, FONT_HEAD, FONT_BODY, logoRun, logoParagraph,
 };

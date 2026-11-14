@@ -14,7 +14,7 @@
 // rouge italique — rien n'est inventé.
 const {
   run, h0, h1, p, mixedP, bullet, note, phRun, calloutBox, signatureBlock,
-  writeDocx, PageBreak, Paragraph,
+  writeDocx, PageBreak, Paragraph, logoParagraph,
 } = require("../helpers.js");
 const { NOM_SOCIETE, RESERVE_NOM } = require("../shared.js");
 
@@ -22,6 +22,7 @@ const children = [];
 
 // ---- Couverture ----
 children.push(
+  logoParagraph(64, { spacing: { after: 160 } }),
   new Paragraph({ spacing: { after: 80 }, children: [run("MODÈLE DE TRAVAIL — À FINALISER AVEC UN NOTAIRE", { bold: true, color: "B23A48", size: 18 })] }),
   new Paragraph({ spacing: { before: 120, after: 80 }, children: [run("STATUTS DE LA SOCIÉTÉ", { font: "Cambria", bold: true, size: 40 })] }),
   new Paragraph({ spacing: { after: 40 }, children: [run(NOM_SOCIETE, { bold: true, size: 28, color: "17408A" })] }),

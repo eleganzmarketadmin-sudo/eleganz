@@ -7,6 +7,7 @@
 const {
   run, h1, h2, p, mixedP, bullet, note, phRun, calloutBox, signatureBlock,
   writeDocx, PageBreak, Paragraph, COBALT, INK, GRIS, FONT_HEAD, FONT_BODY,
+  logoRun,
 } = require("./helpers");
 const { TextRun, Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle, AlignmentType } = require("docx");
 
@@ -15,7 +16,10 @@ const RESERVE_NOM = "(dénomination proposée, sous réserve de disponibilité e
 
 function enTete(kicker, titre, sousTitre) {
   const out = [
-    new Paragraph({ spacing: { after: 40 }, children: [run(NOM_SOCIETE, { bold: true, font: FONT_HEAD, size: 18, color: GRIS })] }),
+    new Paragraph({
+      spacing: { after: 40 },
+      children: [logoRun(22), run("  " + NOM_SOCIETE, { bold: true, font: FONT_HEAD, size: 18, color: GRIS })],
+    }),
     new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: kicker, bold: true, color: "B23A48", font: FONT_BODY, size: 16 })] }),
     new Paragraph({
       spacing: { before: 40, after: 60 },
