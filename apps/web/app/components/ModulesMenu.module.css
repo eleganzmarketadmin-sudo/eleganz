@@ -138,6 +138,15 @@
   border-left-color: var(--color-ink);
 }
 
+/* Centre de pilotage (14 nov. 2026) — dernière des couleurs d'accent
+   disponibles dans la palette (cobalt/magenta/vert-paiement/or déjà prises
+   ci-dessus, ink pour Institution) : --color-or ferait doublon avec
+   --color-or-texte des Experts en thème sombre (même valeur), --color-flamme
+   reste la seule teinte encore distincte à ce stade. */
+.admin {
+  border-left-color: var(--color-flamme);
+}
+
 .question {
   font-size: 0.9375rem;
   line-height: 1.4;

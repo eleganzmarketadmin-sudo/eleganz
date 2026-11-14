@@ -130,6 +130,20 @@ export function ModulesMenu() {
             </Link>
           </div>
 
+          {/* Centre de pilotage (14 nov. 2026, demande : "ajouter le module
+              admin aux options disponibles du volet vertical") — même
+              principe que le lien institutions juste au-dessus : une carte
+              de plus dans ce volet ne donne aucun accès nouveau, la vraie
+              barrière reste le contrôle de rôle côté connexion/API
+              (AuthService.login avec espace="admin"), exactement comme un
+              visiteur qui tape /admin/connexion directement aujourd'hui. */}
+          <div className={`${styles.carteModule} ${styles.admin}`}>
+            <p className={styles.question}>{t("accueil_questionAdmin")}</p>
+            <Link href="/admin/connexion" className={styles.lienModule} onClick={fermer}>
+              {t("accueil_ouvrirCentrePilotage")}
+            </Link>
+          </div>
+
           <div className={styles.separateur} />
 
           <Link href="/aide" className={styles.lienBas} onClick={fermer}>

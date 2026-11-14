@@ -223,7 +223,20 @@ function InstitutionsAdminContenu() {
         <form onSubmit={creer} className={styles.formulaire}>
           <div className={styles.champ}>
             <label>{t("admInst_labelIdentifiant")}</label>
-            <input value={identifiant} onChange={(e) => setIdentifiant(e.target.value)} placeholder={t("admInst_placeholderIdentifiant")} required />
+            {/* autoComplete="off" (14 nov. 2026, signalement : Chrome a
+                rempli ce champ avec le nom complet de l'admin au lieu de
+                l'email/téléphone qu'il tapait, probablement à cause de la
+                présence toute proche d'un champ "Nom de l'institution") —
+                ce champ sert à retrouver un compte ELEGANZ existant, jamais
+                à en décrire un nouveau : aucune suggestion du navigateur
+                n'y a sa place. */}
+            <input
+              value={identifiant}
+              onChange={(e) => setIdentifiant(e.target.value)}
+              placeholder={t("admInst_placeholderIdentifiant")}
+              autoComplete="off"
+              required
+            />
           </div>
           <div className={styles.champ}>
             <label>{t("admInst_labelNom")}</label>
