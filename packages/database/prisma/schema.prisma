@@ -398,6 +398,12 @@ model Shop {
   // Marketplace : visibilité publique
   isPubliclyListed Boolean    @default(false)
 
+  // Description publique de la boutique (14 nov. 2026, demande : zone
+  // description affichée sur la page propre de la boutique côté
+  // Marketplace, modifiable depuis les paramètres de la boutique).
+  // Facultative, vide par défaut — aucune valeur inventée à sa place.
+  description String?
+
   // Identité affichée sur les documents imprimés (factures, bons de
   // livraison, tickets...) — personnalisable par chaque boutique (prompt
   // du 12 oct. 2026). Tous facultatifs : une boutique qui ne les renseigne

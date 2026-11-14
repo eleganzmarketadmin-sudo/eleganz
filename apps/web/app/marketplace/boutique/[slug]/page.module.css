@@ -50,6 +50,14 @@
   font-size: 0.875rem;
 }
 
+.description {
+  color: var(--color-ink);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin-top: var(--espace-2);
+  white-space: pre-wrap;
+}
+
 .section {
   border-top: 2px solid var(--color-ink);
   padding-top: var(--espace-5);

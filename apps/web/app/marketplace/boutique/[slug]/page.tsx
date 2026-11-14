@@ -21,6 +21,7 @@ interface Boutique {
   id: string;
   name: string;
   slug: string;
+  description?: string | null;
   logoUrl?: string | null;
   deliveryZones: ZoneLivraison[];
   nombreProduits: number;
@@ -181,6 +182,8 @@ export default function BoutiquePage() {
                   .join(" · ")}
               </p>
             )}
+
+            {boutique.description && <p className={styles.description}>{boutique.description}</p>}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
@@ -216,6 +217,22 @@ export class ShopsService {
           invoiceFooterNote: dto.invoiceFooterNote || null,
         }),
         ...(dto.defaultInvoiceType !== undefined && { defaultInvoiceType: dto.defaultInvoiceType }),
+      },
+    });
+  }
+
+  /**
+   * Description publique de la boutique (14 nov. 2026) — affichée sur la
+   * page propre de la boutique côté Marketplace (MarketplaceShopsService.
+   * findBySlug). Chaîne vide = efface la description, comme les autres
+   * champs facultatifs de ce module.
+   */
+  async updateDescription(shopId: string, dto: UpdateShopDescriptionDto) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(dto.description !== undefined && { description: dto.description || null }),
       },
     });
   }

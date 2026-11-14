@@ -15,6 +15,7 @@ interface ShopDetails {
   name: string;
   slug: string;
   isPubliclyListed: boolean;
+  description?: string | null;
   invoiceAddress?: string | null;
   invoicePhone?: string | null;
   invoiceLogoUrl?: string | null;
@@ -230,6 +231,17 @@ function ParametresContent() {
   const [publiee, setPubliee] = useState(false);
   const [lienCopie, setLienCopie] = useState(false);
 
+  // Description publique de la boutique (14 nov. 2026, demande : "zone
+  // description briève de la boutique sur la page propre de la boutique...
+  // le contenu doit être modifiable dans le paramètre de la boutique")  —
+  // formulaire et appel API indépendants de `enregistrer` ci-dessus (qui ne
+  // couvre que l'identité sur les documents imprimés), pour ne pas mélanger
+  // les deux dans un même état de soumission.
+  const [description, setDescription] = useState("");
+  const [enregistrementDescription, setEnregistrementDescription] = useState(false);
+  const [confirmationDescription, setConfirmationDescription] = useState<string | null>(null);
+  const [erreurDescription, setErreurDescription] = useState<string | null>(null);
+
   // Fermeture de boutique en libre-service (18 oct. 2026) — confirmation
   // par saisie exacte du nom de la boutique, même geste que les autres
   // actions irréversibles de la plateforme, pour éviter un clic accidentel
@@ -268,6 +280,7 @@ function ParametresContent() {
         setHomologationConfirmee(Boolean(shop.fiscalHomologationConfirmed));
         setSlug(shop.slug);
         setPubliee(shop.isPubliclyListed);
+        setDescription(shop.description ?? "");
       })
       .catch((err) =>
         setErreur(
@@ -300,6 +313,22 @@ function ParametresContent() {
       );
     } finally {
       setEnregistrement(false);
+    }
+  }
+
+  async function enregistrerDescription(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentShop) return;
+    setEnregistrementDescription(true);
+    setErreurDescription(null);
+    setConfirmationDescription(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/description`, { description });
+      setConfirmationDescription(t("param_descriptionBoutiqueConfirmation"));
+    } catch (err) {
+      setErreurDescription(err instanceof ApiError ? err.message : t("param_descriptionBoutiqueErreur"));
+    } finally {
+      setEnregistrementDescription(false);
     }
   }
 
@@ -646,6 +675,27 @@ function ParametresContent() {
       {currentShop && (
         <section className={styles.section}>
           <h2 className={styles.sousTitre}>{t("param_lienBoutiqueTitre")}</h2>
+
+          <form className={styles.formulaire} onSubmit={enregistrerDescription}>
+            <div className={styles.champ}>
+              <label htmlFor="descriptionBoutique">{t("param_descriptionBoutiqueLabel")}</label>
+              <textarea
+                id="descriptionBoutique"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder={t("param_descriptionBoutiquePlaceholder")}
+                maxLength={600}
+              />
+              <p className={styles.note}>{t("param_descriptionBoutiqueNote")}</p>
+            </div>
+            {erreurDescription && <div className={styles.erreur}>{erreurDescription}</div>}
+            {confirmationDescription && <div className={styles.confirmation}>{confirmationDescription}</div>}
+            <button className={styles.bouton} type="submit" disabled={enregistrementDescription}>
+              {enregistrementDescription ? t("param_enregistrementEnCours") : t("action_enregistrer")}
+            </button>
+          </form>
+
           {publiee ? (
             <>
               <p className={styles.note}>{t("param_lienBoutiqueDescription")}</p>

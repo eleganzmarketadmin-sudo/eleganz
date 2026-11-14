@@ -4,6 +4,7 @@ import { CreateShopDto } from "./dto/create-shop.dto";
 import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
+import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
 import { RequestLogoUploadDto } from "./dto/request-logo-upload.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
@@ -65,6 +66,16 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   updateInvoiceSettings(@Param("shopId") shopId: string, @Body() dto: UpdateInvoiceSettingsDto) {
     return this.shopsService.updateInvoiceSettings(shopId, dto);
+  }
+
+  // Description publique de la boutique (14 nov. 2026) — affichée sur la
+  // page propre de la boutique côté Marketplace, distincte de
+  // updateInvoiceSettings (identité sur les documents imprimés).
+  @Patch(":shopId/description")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  updateDescription(@Param("shopId") shopId: string, @Body() dto: UpdateShopDescriptionDto) {
+    return this.shopsService.updateDescription(shopId, dto);
   }
 
   /**
