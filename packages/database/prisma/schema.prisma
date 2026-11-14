@@ -94,6 +94,16 @@ model PlatformSettings {
   // la commande (OrdersService) reste à 0 quel que soit le taux ci-dessus.
   marketplaceCommissionFreeMonths Int @default(6)
 
+  // Commission ELEGANZ sur les prêts décaissés via le portail institutions
+  // (14 nov. 2026, demande : "commission sur les prêts accordés... qu'on
+  // peut paramétrer, désactiver ou modifier à partir du centre de
+  // pilotage"). Nullable = désactivée : aucune commission tant qu'un admin
+  // n'a rien fixé ici, jamais une valeur de départ inventée — même
+  // principe que marketplaceCommissionRateDefault. Appliquée au moment où
+  // le prêt est effectivement décaissé (LoansService.obtenirPret), pas à
+  // la simple décision d'accord, qui ne déplace encore aucun fonds.
+  institutionLoanCommissionRateDefault Decimal? @db.Decimal(5, 2)
+
   // Services à la carte (14 oct. 2026, plan commercial) — tarification
   // configurable depuis le Centre de pilotage, sans redéploiement.
   // Crédits IA : prix USD d'un crédit, utilisé pour calculer le montant de
@@ -175,6 +185,13 @@ enum UserRole {
   SHOP_OWNER
   SHOP_STAFF // gérant, caissier, magasinier, comptable — précisé par StaffRole
   DRIVER
+  // Portail institutions financières partenaires (14 nov. 2026 — microfinances,
+  // banques, coopératives). Jamais attribué par auto-inscription : la
+  // personne crée d'abord un compte ELEGANZ normal (comme pour devenir
+  // admin via AdminTeamService.grantAdminRole), puis un administrateur
+  // ELEGANZ la promeut via AdminInstitutionsService une fois le partenariat
+  // réellement négocié — voir le commentaire sur le modèle Institution.
+  INSTITUTION_STAFF
   ADMIN_SUPER
   ADMIN_SALES
   ADMIN_FINANCE
@@ -302,6 +319,12 @@ model User {
   expertProfile          ExpertProfile?
   expertInvitesCreated   ShopExpertInvite[]      @relation("ExpertInviteCreatedBy")
   expertEngagementsGiven ShopExpertEngagement[]  @relation("ExpertEngagementInvitedBy")
+
+  // Portail institutions (14 nov. 2026) — voir le commentaire sur le rôle
+  // INSTITUTION_STAFF et le modèle Institution ci-dessous.
+  institutionProfile          Institution?
+  shopInstitutionAccessGranted ShopInstitutionAccess[] @relation("ShopInstitutionAccessGrantedBy")
+  loanDecisionsMade           LoanDecision[]          @relation("LoanDecisionDecidedBy")
   platformExpertInvitesCreated   PlatformExpertInvite[]     @relation("PlatformExpertInviteCreatedBy")
   platformExpertEngagementsGiven PlatformExpertEngagement[] @relation("PlatformExpertEngagementInvitedBy")
   // Demandes de réinitialisation de mot de passe "solliciter l'admin de la
@@ -511,6 +534,13 @@ model Shop {
 
   // Prêts réellement obtenus (19 oct. 2026)
   loans Loan[]
+
+  // Portail institutions (14 nov. 2026) — accès accordé par CETTE boutique à
+  // une institution partenaire (jamais l'inverse), et décisions de prêt
+  // prises par une institution sur son dossier crédit. Voir le commentaire
+  // sur ShopInstitutionAccess/LoanDecision ci-dessous.
+  institutionAccess ShopInstitutionAccess[]
+  loanDecisions     LoanDecision[]
 }
 
 model ShopStaff {
@@ -2109,7 +2139,128 @@ model Loan {
 
   echeances LoanInstallment[]
 
+  // Portail institutions (14 nov. 2026) — `institutionId` null = prêt
+  // enregistré directement par la boutique/l'admin, comme avant ce
+  // portail ; renseigné = décaissé via LoansService par cette institution
+  // (voir LoanDecision, qui précède ce décaissement). `institutionCommissionAmount`
+  // est figée au décaissement (même principe que ShopOrder.commissionAmount :
+  // le taux facturé reste celui en vigueur à ce moment-là, même si l'admin
+  // le change ensuite). `suiviRemboursementParInstitution` reste à false
+  // par défaut (décompte des échéances géré comme aujourd'hui, par la
+  // boutique/l'admin) — l'institution n'y gagne le droit de comptabiliser
+  // elle-même les échéances (LoansService.comptabiliserEcheance) que si ce
+  // champ est explicitement activé, demande du 14 nov. 2026 : "suivi des
+  // remboursements optionnel".
+  institutionId                   String?
+  institution                     Institution? @relation(fields: [institutionId], references: [id])
+  institutionCommissionAmount     Decimal?     @db.Decimal(14, 2)
+  suiviRemboursementParInstitution Boolean      @default(false)
+
   @@index([scope, shopId])
+}
+
+enum InstitutionType {
+  MICROFINANCE
+  BANQUE
+  COOPERATIVE
+  AUTRE
+}
+
+enum InstitutionStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+// Institution financière partenaire (14 nov. 2026 — microfinances, banques,
+// coopératives recommandant ELEGANZ Gestion à leurs clients de l'informel).
+// Décision verrouillée : aucune auto-inscription en tant qu'institution —
+// même principe que la promotion d'un compte admin
+// (AdminTeamService.grantAdminRole) : la personne crée d'abord un compte
+// ELEGANZ normal, puis un administrateur ELEGANZ la promeut ici
+// (AdminInstitutionsService) une fois le partenariat réellement négocié.
+// Une seule personne de contact par institution pour cette première
+// version (comme Driver : un User ↔ un profil) — une institution voulant
+// plusieurs connexions se voit créer plusieurs comptes ELEGANZ par l'admin
+// pour l'instant, en attendant une vraie gestion d'équipe type ShopStaff si
+// le besoin se confirme.
+model Institution {
+  id           String             @id @default(uuid())
+  userId       String             @unique
+  user         User               @relation(fields: [userId], references: [id])
+  name         String
+  type         InstitutionType
+  contactEmail String?
+  contactPhone String?
+  status       InstitutionStatus  @default(ACTIVE)
+  createdAt    DateTime           @default(now())
+
+  shopAccess ShopInstitutionAccess[]
+  decisions  LoanDecision[]
+  loans      Loan[]
+}
+
+// Accès accordé par UNE BOUTIQUE à une institution déjà partenaire ELEGANZ
+// (14 nov. 2026, décision verrouillée : "seulement celles qui l'invitent
+// explicitement" — jamais l'inverse, et jamais une institution ne voit une
+// boutique qui ne l'a pas choisie). Pas de flux invitation/acceptation à
+// deux temps comme ShopExpertInvite/ShopExpertEngagement : l'institution
+// est déjà un partenaire vérifié par ELEGANZ (voir Institution), donc
+// l'action de la boutique accorde l'accès immédiatement — seule la boutique
+// agit, et seule la boutique peut révoquer (`status`/`revokedAt`, même
+// convention que ShopExpertEngagement).
+model ShopInstitutionAccess {
+  id              String                     @id @default(uuid())
+  shopId          String
+  shop            Shop                       @relation(fields: [shopId], references: [id])
+  institutionId   String
+  institution     Institution                @relation(fields: [institutionId], references: [id])
+  status          ShopExpertEngagementStatus @default(ACTIVE)
+  grantedByUserId String
+  grantedBy       User                       @relation("ShopInstitutionAccessGrantedBy", fields: [grantedByUserId], references: [id])
+  createdAt       DateTime                   @default(now())
+  revokedAt       DateTime?
+
+  @@unique([shopId, institutionId])
+  @@index([shopId])
+  @@index([institutionId])
+}
+
+enum LoanDecisionStatut {
+  ACCORDE
+  REFUSE
+}
+
+// Décision d'une institution sur le dossier crédit d'une boutique (14 nov.
+// 2026, demande : "consultation + décision enregistrée... accordé/refusé,
+// montant, taux, durée"). Distincte du décaissement réel (Loan) : une
+// décision ACCORDE n'a encore déplacé aucun fonds — c'est seulement en
+// décaissant (LoansService, `loanId` alors renseigné ici) qu'un vrai Loan
+// est créé et comptabilisé, avec la commission ELEGANZ éventuelle. Comme
+// Loan.scenarioId, `scenarioId` est une référence libre (pas de @relation)
+// au LoanScenario d'origine — purement informatif.
+model LoanDecision {
+  id              String             @id @default(uuid())
+  shopId          String
+  shop            Shop               @relation(fields: [shopId], references: [id])
+  institutionId   String
+  institution     Institution        @relation(fields: [institutionId], references: [id])
+  scenarioId      String?
+  statut          LoanDecisionStatut
+  montant         Decimal            @db.Decimal(14, 2)
+  tauxAnnuel      Decimal            @db.Decimal(5, 2)
+  dureeMois       Int
+  note            String?            @db.Text
+  // Préférence de l'institution pour CE prêt (14 nov. 2026, "suivi des
+  // remboursements optionnel") — recopiée sur Loan.suiviRemboursementParInstitution
+  // au décaissement (LoansService). Sans effet si statut=REFUSE.
+  autoriserSuiviRemboursement Boolean @default(false)
+  decidedByUserId String
+  decidedBy       User               @relation("LoanDecisionDecidedBy", fields: [decidedByUserId], references: [id])
+  loanId          String?            @unique
+  createdAt       DateTime           @default(now())
+
+  @@index([shopId])
+  @@index([institutionId])
 }
 
 enum LoanStatut {

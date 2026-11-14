@@ -38,4 +38,13 @@ export class CreateLoanDto {
   @IsOptional()
   @IsDateString()
   dateObtention?: string;
+
+  // Décaissement issu d'une décision ACCORDE du portail institutions (14
+  // nov. 2026) — quand renseigné, montant/tauxAnnuel/dureeMois ci-dessus
+  // sont ignorés au profit de ceux de la décision (LoansService.create),
+  // pour qu'une boutique ne puisse jamais décaisser des conditions
+  // différentes de celles réellement accordées par l'institution.
+  @IsOptional()
+  @IsString()
+  decisionId?: string;
 }

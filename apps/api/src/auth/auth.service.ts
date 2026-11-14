@@ -96,6 +96,12 @@ export class AuthService {
         "Ce compte n'a pas accès à ELEGANZ Gestion.",
       );
     }
+    // Portail institutions (14 nov. 2026) — même cloisonnement que livreur/admin/gestion ci-dessus.
+    if (dto.espace === "institution" && user.role !== "INSTITUTION_STAFF") {
+      throw new UnauthorizedException(
+        "Ce compte n'a pas accès au portail institutions ELEGANZ.",
+      );
+    }
 
     return this.issueToken(user.id, user.role);
   }

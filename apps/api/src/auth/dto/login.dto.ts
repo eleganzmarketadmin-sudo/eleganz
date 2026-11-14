@@ -26,6 +26,6 @@ export class LoginDto {
   // Omis par /marketplace/compte (Marketplace), qui reste ouvert à tout
   // compte ELEGANZ, comme avant.
   @IsOptional()
-  @IsIn(["admin", "livreur", "gestion", "comptable"])
-  espace?: "admin" | "livreur" | "gestion" | "comptable";
+  @IsIn(["admin", "livreur", "gestion", "comptable", "institution"])
+  espace?: "admin" | "livreur" | "gestion" | "comptable" | "institution";
 }

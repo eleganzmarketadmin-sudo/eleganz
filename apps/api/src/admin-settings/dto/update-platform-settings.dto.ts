@@ -107,6 +107,13 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   marketplaceCommissionFreeMonths?: number;
 
+  // Commission ELEGANZ sur les prêts décaissés via le portail institutions
+  // (14 nov. 2026) — voir PlatformSettings.institutionLoanCommissionRateDefault.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  institutionLoanCommissionRateDefault?: number;
+
   // Services à la carte (14 oct. 2026, plan commercial) — voir
   // AiCreditsModule et schema.prisma pour le détail de chaque champ.
   @IsOptional()

@@ -36,6 +36,8 @@ import { AddressesModule } from "./addresses/addresses.module";
 import { ExpertsModule } from "./experts/experts.module";
 import { CronModule } from "./cron/cron.module";
 import { GuidesModule } from "./guides/guides.module";
+import { InstitutionsModule } from "./institutions/institutions.module";
+import { AdminInstitutionsModule } from "./admin-institutions/admin-institutions.module";
 
 @Module({
   imports: [
@@ -83,6 +85,8 @@ import { GuidesModule } from "./guides/guides.module";
     ExpertsModule,
     CronModule,
     GuidesModule,
+    InstitutionsModule,
+    AdminInstitutionsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -67,6 +67,9 @@ import { LoansService } from "./loans.service";
     StockValorisationController,
     ExpensesController,
   ],
-  exports: [AccountingService],
+  // BusinessPlanService/LoansService exportés depuis le 14 nov. 2026 pour le
+  // portail institutions (InstitutionsModule) — consultation du dossier
+  // crédit d'une boutique et décaissement via une décision d'institution.
+  exports: [AccountingService, BusinessPlanService, LoansService],
 })
 export class FinanceModule {}

@@ -1,10 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AccountingService } from "./accounting.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { CreateLoanDto } from "./dto/loan.dto";
-import { FiscalRuleScope, LoanStatut } from "@eleganz/database";
+import { FiscalRuleScope, LoanDecisionStatut, LoanStatut } from "@eleganz/database";
 
 function debutDuMois(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1));
@@ -39,7 +39,111 @@ export class LoansService {
   // --- Boutique (scope=SHOP) ---------------------------------------------
 
   async create(shopId: string, dto: CreateLoanDto) {
+    // Décaissement issu d'une décision du portail institutions (14 nov.
+    // 2026) — voir `obtenirPretViaDecision` : la boutique garde la main sur
+    // le compte de trésorerie qui reçoit les fonds (`compteAccountCode`,
+    // une information que l'institution n'a pas), mais montant/taux/durée
+    // viennent de la décision déjà prise, jamais resaisis ici.
+    if (dto.decisionId) {
+      return this.obtenirPretViaDecision(shopId, dto.decisionId, dto);
+    }
     return this.obtenirPret(FiscalRuleScope.SHOP, shopId, dto);
+  }
+
+  // --- Portail institutions (14 nov. 2026) --------------------------------
+
+  private async obtenirPretViaDecision(shopId: string, decisionId: string, dto: CreateLoanDto) {
+    const decision = await this.prisma.loanDecision.findUnique({ where: { id: decisionId } });
+    if (!decision || decision.shopId !== shopId) {
+      throw new NotFoundException("Décision introuvable pour cette boutique.");
+    }
+    if (decision.statut !== LoanDecisionStatut.ACCORDE) {
+      throw new BadRequestException(
+        "Cette décision n'est pas un accord — aucun prêt ne peut être décaissé à partir d'elle.",
+      );
+    }
+    if (decision.loanId) {
+      throw new BadRequestException("Cette décision a déjà donné lieu à un décaissement.");
+    }
+
+    // Commission ELEGANZ (configurable/désactivable depuis le Centre de
+    // pilotage, voir PlatformSettings.institutionLoanCommissionRateDefault)
+    // — figée au décaissement, comme la commission marketplace
+    // (OrdersService) : le taux facturé reste celui en vigueur à ce
+    // moment-là, même si l'admin le change ensuite.
+    const platformSettings = await this.prisma.platformSettings.findUnique({
+      where: { id: "platform" },
+      select: { institutionLoanCommissionRateDefault: true },
+    });
+    const taux = platformSettings?.institutionLoanCommissionRateDefault
+      ? Number(platformSettings.institutionLoanCommissionRateDefault)
+      : 0;
+    const montant = Number(decision.montant);
+    const institutionCommissionAmount = taux > 0 ? Math.round(montant * (taux / 100) * 100) / 100 : null;
+
+    const loan = await this.prisma.loan.create({
+      data: {
+        scope: FiscalRuleScope.SHOP,
+        shopId,
+        label: dto.label,
+        scenarioId: decision.scenarioId,
+        montant: decision.montant,
+        tauxAnnuel: decision.tauxAnnuel,
+        dureeMois: decision.dureeMois,
+        devise: dto.devise ?? "USD",
+        compteAccountCode: dto.compteAccountCode,
+        dateObtention: dto.dateObtention ? new Date(dto.dateObtention) : new Date(),
+        soldeRestant: decision.montant,
+        institutionId: decision.institutionId,
+        institutionCommissionAmount,
+        suiviRemboursementParInstitution: decision.autoriserSuiviRemboursement,
+      },
+    });
+
+    await this.accounting.postLoanDisbursement({
+      id: loan.id,
+      scope: FiscalRuleScope.SHOP,
+      shopId,
+      montant: loan.montant,
+      compteAccountCode: loan.compteAccountCode,
+      label: loan.label,
+    });
+
+    await this.prisma.loanDecision.update({ where: { id: decisionId }, data: { loanId: loan.id } });
+
+    return this.serialiser(loan);
+  }
+
+  /** Prêts décaissés via le portail d'une institution donnée. */
+  listForInstitution(institutionId: string) {
+    return this.prisma.loan
+      .findMany({ where: { institutionId }, orderBy: { dateObtention: "desc" } })
+      .then((loans) => loans.map((l) => this.serialiser(l)));
+  }
+
+  /**
+   * Comptabiliser une échéance depuis le portail institution — seulement
+   * pour un prêt que CETTE institution a elle-même décaissé ET dont la
+   * boutique/l'institution a activé le suivi délégué
+   * (`suiviRemboursementParInstitution`, demande du 14 nov. 2026 : "suivi
+   * des remboursements optionnel"). Sinon, la saisie manuelle existante par
+   * la boutique/l'admin reste la seule voie — jamais remplacée, seulement
+   * complétée.
+   */
+  async comptabiliserEcheanceViaInstitution(institutionId: string, shopId: string, loanId: string, periode?: string) {
+    const loan = await this.getOwned(FiscalRuleScope.SHOP, shopId, loanId);
+    if (loan.institutionId !== institutionId || !loan.suiviRemboursementParInstitution) {
+      throw new ForbiddenException("Cette institution n'est pas autorisée à comptabiliser les échéances de ce prêt.");
+    }
+    return this.comptabiliser(FiscalRuleScope.SHOP, shopId, loanId, periode);
+  }
+
+  async listerEcheancesViaInstitution(institutionId: string, shopId: string, loanId: string) {
+    const loan = await this.getOwned(FiscalRuleScope.SHOP, shopId, loanId);
+    if (loan.institutionId !== institutionId) {
+      throw new ForbiddenException("Ce prêt n'appartient pas à cette institution.");
+    }
+    return this.echeances(FiscalRuleScope.SHOP, shopId, loanId);
   }
 
   listForShop(shopId: string) {
