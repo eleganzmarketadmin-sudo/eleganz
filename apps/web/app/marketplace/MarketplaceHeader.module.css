@@ -15,7 +15,7 @@
   color: #fff;
   /* 15 nov. 2026 : voir le commentaire de LogoMark (Logo.tsx) — même cas
      que le filet magenta ci-dessous, pour le logo lui-même. */
-  --logo-colonne: #fff;
+  --logo-colonne: var(--color-magenta-sur-fonce);
   --logo-aretes: var(--color-cobalt-sur-fonce);
   /* 10 nov. 2026 : --color-encre-fixe ne se retourne JAMAIS avec le thème,
      donc --color-magenta-texte (qui ne change qu'en mode sombre) laissait
