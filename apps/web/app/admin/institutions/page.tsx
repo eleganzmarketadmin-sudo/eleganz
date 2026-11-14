@@ -48,6 +48,20 @@ function InstitutionsAdminContenu() {
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
+  // Édition d'une institution déjà créée (14 nov. 2026, demande : "gérer
+  // (ajouter etc.)" — l'API PATCH /admin/institutions/:id existait déjà
+  // (AdminInstitutionsService.update) mais sans UI pour l'appeler ; ajouté
+  // ici plutôt qu'un nouvel écran, par cohérence avec le formulaire de
+  // création déjà présent sur cette page. L'identifiant (compte ELEGANZ
+  // rattaché) n'est jamais modifiable : changer de compte reviendrait à
+  // révoquer puis recréer l'institution, pas à la "modifier".
+  const [institutionEnEdition, setInstitutionEnEdition] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState<TypeInstitution>("MICROFINANCE");
+  const [editContactEmail, setEditContactEmail] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editEnCours, setEditEnCours] = useState(false);
+
   function recharger() {
     setChargement(true);
     api
@@ -83,6 +97,39 @@ function InstitutionsAdminContenu() {
       setErreur(err instanceof ApiError ? err.message : t("admInst_erreurGenerique"));
     } finally {
       setEnCours(false);
+    }
+  }
+
+  function ouvrirEdition(institution: Institution) {
+    setInstitutionEnEdition(institution.id);
+    setEditName(institution.name);
+    setEditType(institution.type);
+    setEditContactEmail(institution.contactEmail ?? "");
+    setEditContactPhone(institution.contactPhone ?? "");
+    setErreur(null);
+    setConfirmation(null);
+  }
+
+  async function enregistrerEdition(e: React.FormEvent) {
+    e.preventDefault();
+    if (!institutionEnEdition || !editName) return;
+    setEditEnCours(true);
+    setErreur(null);
+    setConfirmation(null);
+    try {
+      await api.patch(`/admin/institutions/${institutionEnEdition}`, {
+        name: editName,
+        type: editType,
+        contactEmail: editContactEmail || "",
+        contactPhone: editContactPhone || "",
+      });
+      setConfirmation(t("admInst_modificationReussie"));
+      setInstitutionEnEdition(null);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admInst_erreurGenerique"));
+    } finally {
+      setEditEnCours(false);
     }
   }
 
@@ -155,33 +202,78 @@ function InstitutionsAdminContenu() {
             </tr>
           </thead>
           <tbody>
-            {institutions.map((inst) => (
-              <tr key={inst.id}>
-                <td>{inst.name}</td>
-                <td>{t(`inst_type_${inst.type}`)}</td>
-                <td style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
-                  {inst.user.fullName}
-                  <br />
-                  {inst.user.email ?? inst.user.phone}
-                </td>
-                <td>
-                  <span className={`${styles.badge} ${inst.status === "ACTIVE" ? styles.badgeActive : styles.badgeSuspended}`}>
-                    {t(inst.status === "ACTIVE" ? "admInst_statutActive" : "admInst_statutSuspended")}
-                  </span>
-                </td>
-                {estSuperAdmin && (
-                  <td>
-                    <button
-                      className={styles.boutonPetit}
-                      style={{ background: inst.status === "ACTIVE" ? "var(--color-flamme)" : "var(--color-vert-paiement, #198754)" }}
-                      onClick={() => basculerStatut(inst)}
-                    >
-                      {t(inst.status === "ACTIVE" ? "admInst_suspendre" : "admInst_reactiver")}
-                    </button>
+            {institutions.map((inst) =>
+              institutionEnEdition === inst.id ? (
+                <tr key={inst.id}>
+                  <td colSpan={estSuperAdmin ? 5 : 4}>
+                    <form onSubmit={enregistrerEdition} className={styles.formulaire} style={{ padding: "var(--espace-2) 0" }}>
+                      <div className={styles.champ}>
+                        <label>{t("admInst_labelNom")}</label>
+                        <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                      </div>
+                      <div className={styles.champ}>
+                        <label>{t("admInst_labelType")}</label>
+                        <select value={editType} onChange={(e) => setEditType(e.target.value as TypeInstitution)}>
+                          {TYPES_INSTITUTION.map((tp) => (
+                            <option key={tp} value={tp}>
+                              {t(`inst_type_${tp}`)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className={styles.champ}>
+                        <label>{t("admInst_labelContactEmail")}</label>
+                        <input type="email" value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} />
+                      </div>
+                      <div className={styles.champ}>
+                        <label>{t("admInst_labelContactTelephone")}</label>
+                        <input value={editContactPhone} onChange={(e) => setEditContactPhone(e.target.value)} />
+                      </div>
+                      <button className={styles.bouton} type="submit" disabled={editEnCours || !editName}>
+                        {editEnCours ? t("dossier_genererEnCours") : t("action_enregistrer")}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.boutonSecondaire}
+                        onClick={() => setInstitutionEnEdition(null)}
+                        disabled={editEnCours}
+                      >
+                        {t("action_annuler")}
+                      </button>
+                    </form>
                   </td>
-                )}
-              </tr>
-            ))}
+                </tr>
+              ) : (
+                <tr key={inst.id}>
+                  <td>{inst.name}</td>
+                  <td>{t(`inst_type_${inst.type}`)}</td>
+                  <td style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
+                    {inst.user.fullName}
+                    <br />
+                    {inst.user.email ?? inst.user.phone}
+                  </td>
+                  <td>
+                    <span className={`${styles.badge} ${inst.status === "ACTIVE" ? styles.badgeActive : styles.badgeSuspended}`}>
+                      {t(inst.status === "ACTIVE" ? "admInst_statutActive" : "admInst_statutSuspended")}
+                    </span>
+                  </td>
+                  {estSuperAdmin && (
+                    <td style={{ display: "flex", gap: "var(--espace-2)" }}>
+                      <button className={styles.boutonPetit} onClick={() => ouvrirEdition(inst)}>
+                        {t("action_modifier")}
+                      </button>
+                      <button
+                        className={styles.boutonPetit}
+                        style={{ background: inst.status === "ACTIVE" ? "var(--color-flamme)" : "var(--color-vert-paiement, #198754)" }}
+                        onClick={() => basculerStatut(inst)}
+                      >
+                        {t(inst.status === "ACTIVE" ? "admInst_suspendre" : "admInst_reactiver")}
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       )}

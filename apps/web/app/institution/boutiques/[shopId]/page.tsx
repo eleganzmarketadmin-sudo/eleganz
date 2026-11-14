@@ -24,6 +24,15 @@ interface DossierBoutique {
   strategieCroissance: string | null;
   utilisationFonds: string | null;
   risquesMitigation: string | null;
+  canvasSegmentsClientele: string | null;
+  canvasPropositionValeur: string | null;
+  canvasCanaux: string | null;
+  canvasRelationsClients: string | null;
+  canvasSourcesRevenus: string | null;
+  canvasRessourcesClefs: string | null;
+  canvasActivitesClefs: string | null;
+  canvasPartenairesClefs: string | null;
+  canvasStructureCouts: string | null;
   scenarios: ScenarioPret[];
 }
 
@@ -47,6 +56,20 @@ const CHAMPS_DOSSIER: { cle: Exclude<keyof DossierBoutique, "scenarios">; libell
   { cle: "strategieCroissance", libelle: "credit_bpStrategieCroissance" },
   { cle: "utilisationFonds", libelle: "credit_bpUtilisationFonds" },
   { cle: "risquesMitigation", libelle: "credit_bpRisquesMitigation" },
+];
+
+// Business Model Canvas (14 nov. 2026) — lecture seule ici, même source que
+// CHAMPS_DOSSIER ci-dessus (BusinessPlanService.obtenir).
+const CHAMPS_CANVAS: { cle: Exclude<keyof DossierBoutique, "scenarios">; libelle: string }[] = [
+  { cle: "canvasSegmentsClientele", libelle: "credit_canvasSegmentsClientele" },
+  { cle: "canvasPropositionValeur", libelle: "credit_canvasPropositionValeur" },
+  { cle: "canvasCanaux", libelle: "credit_canvasCanaux" },
+  { cle: "canvasRelationsClients", libelle: "credit_canvasRelationsClients" },
+  { cle: "canvasSourcesRevenus", libelle: "credit_canvasSourcesRevenus" },
+  { cle: "canvasRessourcesClefs", libelle: "credit_canvasRessourcesClefs" },
+  { cle: "canvasActivitesClefs", libelle: "credit_canvasActivitesClefs" },
+  { cle: "canvasPartenairesClefs", libelle: "credit_canvasPartenairesClefs" },
+  { cle: "canvasStructureCouts", libelle: "credit_canvasStructureCouts" },
 ];
 
 /**
@@ -151,6 +174,20 @@ function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
         )}
         {CHAMPS_DOSSIER.every(({ cle }) => !dossier[cle]) && (
           <p style={{ color: "var(--color-texte-muted)" }}>{t("inst_dossierVide")}</p>
+        )}
+
+        {CHAMPS_CANVAS.some(({ cle }) => dossier[cle]) && (
+          <>
+            <h3 style={{ marginTop: "var(--espace-4)", marginBottom: "var(--espace-2)" }}>{t("credit_canvasTitre")}</h3>
+            {CHAMPS_CANVAS.map(({ cle, libelle }) =>
+              dossier[cle] ? (
+                <div key={cle} style={{ marginBottom: "var(--espace-3)" }}>
+                  <p style={{ fontWeight: 600, fontSize: "0.875rem" }}>{t(libelle)}</p>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{dossier[cle]}</p>
+                </div>
+              ) : null,
+            )}
+          </>
         )}
 
         <h3 style={{ marginTop: "var(--espace-4)", marginBottom: "var(--espace-2)" }}>{t("credit_bpScenariosTitre")}</h3>

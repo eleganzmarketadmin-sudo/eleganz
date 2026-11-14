@@ -13,6 +13,15 @@ export interface DossierCreditBoutiqueBusinessPlan {
   strategieCroissance: string | null;
   utilisationFonds: string | null;
   risquesMitigation: string | null;
+  canvasSegmentsClientele: string | null;
+  canvasPropositionValeur: string | null;
+  canvasCanaux: string | null;
+  canvasRelationsClients: string | null;
+  canvasSourcesRevenus: string | null;
+  canvasRessourcesClefs: string | null;
+  canvasActivitesClefs: string | null;
+  canvasPartenairesClefs: string | null;
+  canvasStructureCouts: string | null;
   scenarios: {
     id: string;
     label: string;
@@ -250,6 +259,15 @@ export class FinanceService {
         strategieCroissance: planAffaires.strategieCroissance,
         utilisationFonds: planAffaires.utilisationFonds,
         risquesMitigation: planAffaires.risquesMitigation,
+        canvasSegmentsClientele: planAffaires.canvasSegmentsClientele,
+        canvasPropositionValeur: planAffaires.canvasPropositionValeur,
+        canvasCanaux: planAffaires.canvasCanaux,
+        canvasRelationsClients: planAffaires.canvasRelationsClients,
+        canvasSourcesRevenus: planAffaires.canvasSourcesRevenus,
+        canvasRessourcesClefs: planAffaires.canvasRessourcesClefs,
+        canvasActivitesClefs: planAffaires.canvasActivitesClefs,
+        canvasPartenairesClefs: planAffaires.canvasPartenairesClefs,
+        canvasStructureCouts: planAffaires.canvasStructureCouts,
         scenarios: planAffaires.scenarios,
       },
       genereLe,

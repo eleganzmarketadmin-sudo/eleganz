@@ -39,8 +39,18 @@ export function dessinerSectionBusinessPlan(
   largeurPage: number,
   bp: DossierCreditBoutiqueBusinessPlan,
 ) {
+  const aDuCanvas =
+    bp.canvasSegmentsClientele ||
+    bp.canvasPropositionValeur ||
+    bp.canvasCanaux ||
+    bp.canvasRelationsClients ||
+    bp.canvasSourcesRevenus ||
+    bp.canvasRessourcesClefs ||
+    bp.canvasActivitesClefs ||
+    bp.canvasPartenairesClefs ||
+    bp.canvasStructureCouts;
   const aDuContenu =
-    bp.resumeExecutif || bp.descriptionActivite || bp.marcheEtClientele || bp.strategieCroissance || bp.utilisationFonds || bp.risquesMitigation || bp.scenarios.length > 0;
+    bp.resumeExecutif || bp.descriptionActivite || bp.marcheEtClientele || bp.strategieCroissance || bp.utilisationFonds || bp.risquesMitigation || aDuCanvas || bp.scenarios.length > 0;
   if (!aDuContenu) return;
 
   doc.addPage();
@@ -59,6 +69,23 @@ export function dessinerSectionBusinessPlan(
   section("Stratégie de croissance", bp.strategieCroissance);
   section("Utilisation des fonds sollicités", bp.utilisationFonds);
   section("Risques et mitigation", bp.risquesMitigation);
+
+  // Business Model Canvas (14 nov. 2026) — les 9 blocs d'Osterwalder, à la
+  // suite des sections narratives ci-dessus dans le même dessin pdfkit.
+  if (aDuCanvas) {
+    doc.moveDown(0.3);
+    doc.font("Helvetica-Bold").fontSize(11).text("Business Model Canvas");
+    doc.moveDown(0.2);
+    section("Segments de clientèle", bp.canvasSegmentsClientele);
+    section("Proposition de valeur", bp.canvasPropositionValeur);
+    section("Canaux", bp.canvasCanaux);
+    section("Relations avec les clients", bp.canvasRelationsClients);
+    section("Sources de revenus", bp.canvasSourcesRevenus);
+    section("Ressources clés", bp.canvasRessourcesClefs);
+    section("Activités clés", bp.canvasActivitesClefs);
+    section("Partenaires clés", bp.canvasPartenairesClefs);
+    section("Structure de coûts", bp.canvasStructureCouts);
+  }
 
   if (bp.scenarios.length === 0) return;
 

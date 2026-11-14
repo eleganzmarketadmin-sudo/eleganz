@@ -13,6 +13,18 @@ export class UpdateBusinessPlanDto {
   @IsOptional() @IsString() @MaxLength(4000) strategieCroissance?: string;
   @IsOptional() @IsString() @MaxLength(4000) utilisationFonds?: string;
   @IsOptional() @IsString() @MaxLength(4000) risquesMitigation?: string;
+
+  // Business Model Canvas (14 nov. 2026) — mêmes contraintes que les
+  // sections narratives ci-dessus, voir schema.prisma::BusinessPlan.
+  @IsOptional() @IsString() @MaxLength(4000) canvasSegmentsClientele?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasPropositionValeur?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasCanaux?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasRelationsClients?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasSourcesRevenus?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasRessourcesClefs?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasActivitesClefs?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasPartenairesClefs?: string;
+  @IsOptional() @IsString() @MaxLength(4000) canvasStructureCouts?: string;
 }
 
 /**

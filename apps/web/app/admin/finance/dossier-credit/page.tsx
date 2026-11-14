@@ -25,6 +25,15 @@ interface BusinessPlanPlateforme {
   strategieCroissance: string | null;
   utilisationFonds: string | null;
   risquesMitigation: string | null;
+  canvasSegmentsClientele: string | null;
+  canvasPropositionValeur: string | null;
+  canvasCanaux: string | null;
+  canvasRelationsClients: string | null;
+  canvasSourcesRevenus: string | null;
+  canvasRessourcesClefs: string | null;
+  canvasActivitesClefs: string | null;
+  canvasPartenairesClefs: string | null;
+  canvasStructureCouts: string | null;
   scenarios: ScenarioPret[];
 }
 
@@ -37,6 +46,20 @@ const CHAMPS_BUSINESS_PLAN: { cle: ChampTexteBusinessPlan; libelle: string; aide
   { cle: "strategieCroissance", libelle: "credit_bpStrategieCroissance", aide: "credit_bpStrategieCroissanceAide" },
   { cle: "utilisationFonds", libelle: "credit_bpUtilisationFonds", aide: "credit_bpUtilisationFondsAide" },
   { cle: "risquesMitigation", libelle: "credit_bpRisquesMitigation", aide: "credit_bpRisquesMitigationAide" },
+];
+
+// Business Model Canvas (14 nov. 2026) — même mécanique que côté Gestion,
+// voir (gestion)/finance/dossier-credit/page.tsx pour le commentaire complet.
+const CHAMPS_CANVAS: { cle: ChampTexteBusinessPlan; libelle: string }[] = [
+  { cle: "canvasSegmentsClientele", libelle: "credit_canvasSegmentsClientele" },
+  { cle: "canvasPropositionValeur", libelle: "credit_canvasPropositionValeur" },
+  { cle: "canvasCanaux", libelle: "credit_canvasCanaux" },
+  { cle: "canvasRelationsClients", libelle: "credit_canvasRelationsClients" },
+  { cle: "canvasSourcesRevenus", libelle: "credit_canvasSourcesRevenus" },
+  { cle: "canvasRessourcesClefs", libelle: "credit_canvasRessourcesClefs" },
+  { cle: "canvasActivitesClefs", libelle: "credit_canvasActivitesClefs" },
+  { cle: "canvasPartenairesClefs", libelle: "credit_canvasPartenairesClefs" },
+  { cle: "canvasStructureCouts", libelle: "credit_canvasStructureCouts" },
 ];
 
 // Dossier de crédit d'ELEGANZ elle-même (demande du 16 oct. 2026, point 2)
@@ -134,6 +157,15 @@ function DossierCreditPlateformeContenu() {
         strategieCroissance: businessPlan.strategieCroissance || undefined,
         utilisationFonds: businessPlan.utilisationFonds || undefined,
         risquesMitigation: businessPlan.risquesMitigation || undefined,
+        canvasSegmentsClientele: businessPlan.canvasSegmentsClientele || undefined,
+        canvasPropositionValeur: businessPlan.canvasPropositionValeur || undefined,
+        canvasCanaux: businessPlan.canvasCanaux || undefined,
+        canvasRelationsClients: businessPlan.canvasRelationsClients || undefined,
+        canvasSourcesRevenus: businessPlan.canvasSourcesRevenus || undefined,
+        canvasRessourcesClefs: businessPlan.canvasRessourcesClefs || undefined,
+        canvasActivitesClefs: businessPlan.canvasActivitesClefs || undefined,
+        canvasPartenairesClefs: businessPlan.canvasPartenairesClefs || undefined,
+        canvasStructureCouts: businessPlan.canvasStructureCouts || undefined,
       });
       setBusinessPlan(miseAJour);
       setConfirmationBp(true);
@@ -231,6 +263,22 @@ function DossierCreditPlateformeContenu() {
                   style={{ width: "100%", padding: "8px", border: "2px solid var(--color-ink)", font: "inherit" }}
                 />
                 <p style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)" }}>{t(aide)}</p>
+              </div>
+            ))}
+
+            <h3 style={{ marginTop: "24px", marginBottom: "8px" }}>{t("credit_canvasTitre")}</h3>
+            <p style={{ color: "var(--color-texte-muted)", fontSize: "0.875rem", marginBottom: "12px" }}>
+              {t("credit_canvasDescription")}
+            </p>
+            {CHAMPS_CANVAS.map(({ cle, libelle }) => (
+              <div key={cle} style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>{t(libelle)}</label>
+                <textarea
+                  rows={3}
+                  value={businessPlan[cle] ?? ""}
+                  onChange={(e) => setBusinessPlan({ ...businessPlan, [cle]: e.target.value })}
+                  style={{ width: "100%", padding: "8px", border: "2px solid var(--color-ink)", font: "inherit" }}
+                />
               </div>
             ))}
 

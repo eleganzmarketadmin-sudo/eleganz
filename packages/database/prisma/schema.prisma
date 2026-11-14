@@ -2100,6 +2100,20 @@ model BusinessPlan {
   strategieCroissance String?         @db.Text
   utilisationFonds    String?         @db.Text
   risquesMitigation   String?         @db.Text
+  // Business Model Canvas (demande du 14 nov. 2026 : "ajouter le business
+  // canvas plan" dans le dossier crédit) — les 9 blocs classiques
+  // d'Osterwalder, en complément des sections narratives ci-dessus plutôt
+  // qu'en remplacement : tous facultatifs, même principe que le reste de
+  // ce modèle.
+  canvasSegmentsClientele String?     @db.Text
+  canvasPropositionValeur String?     @db.Text
+  canvasCanaux            String?     @db.Text
+  canvasRelationsClients  String?     @db.Text
+  canvasSourcesRevenus    String?     @db.Text
+  canvasRessourcesClefs   String?     @db.Text
+  canvasActivitesClefs    String?     @db.Text
+  canvasPartenairesClefs  String?     @db.Text
+  canvasStructureCouts    String?     @db.Text
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
