@@ -7,19 +7,19 @@
 const {
   run, h1, h2, p, mixedP, bullet, note, phRun, calloutBox, signatureBlock,
   writeDocx, PageBreak, Paragraph, COBALT, INK, GRIS, FONT_HEAD, FONT_BODY,
-  logoRun,
+  letterheadHeader,
 } = require("./helpers");
 const { TextRun, Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle, AlignmentType } = require("docx");
 
 const NOM_SOCIETE = "GROUP ELEGANZ SARL";
 const RESERVE_NOM = "(dénomination proposée, sous réserve de disponibilité et d'acceptation au RCCM)";
 
+// Papier à en-tête (15 nov. 2026) : la marque + le nom de la société
+// figurent maintenant dans un en-tête de page Word répété sur chaque page
+// (voir construireDocument/letterheadHeader ci-dessous), donc enTete() —
+// qui ouvre le corps de la page 1 — n'a plus besoin de les répéter lui-même.
 function enTete(kicker, titre, sousTitre) {
   const out = [
-    new Paragraph({
-      spacing: { after: 40 },
-      children: [logoRun(22), run("  " + NOM_SOCIETE, { bold: true, font: FONT_HEAD, size: 18, color: GRIS })],
-    }),
     new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: kicker, bold: true, color: "B23A48", font: FONT_BODY, size: 16 })] }),
     new Paragraph({
       spacing: { before: 40, after: 60 },
@@ -57,7 +57,7 @@ function construireDocument({ kicker, titre, sousTitre, corps, signataires, rapp
   children.push(...piedIdentification());
   (signataires || []).forEach((label) => signatureBlock(label).forEach((x) => children.push(x)));
   if (rappel) children.push(calloutBox("Rappel", Array.isArray(rappel) ? rappel : [rappel]));
-  return writeDocx(children, outFile);
+  return writeDocx(children, outFile, { header: letterheadHeader(NOM_SOCIETE) });
 }
 
 function champ(label, ph) {

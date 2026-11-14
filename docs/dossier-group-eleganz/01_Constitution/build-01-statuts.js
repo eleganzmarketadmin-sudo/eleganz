@@ -14,7 +14,7 @@
 // rouge italique — rien n'est inventé.
 const {
   run, h0, h1, p, mixedP, bullet, note, phRun, calloutBox, signatureBlock,
-  writeDocx, PageBreak, Paragraph, logoParagraph,
+  writeDocx, PageBreak, Paragraph, logoParagraph, letterheadHeader,
 } = require("../helpers.js");
 const { NOM_SOCIETE, RESERVE_NOM } = require("../shared.js");
 
@@ -230,4 +230,4 @@ children.push(calloutBox("Rappel", [
   "Ce document ne devient un acte juridique opposable qu'après relecture, complétion de l'ensemble des champs signalés, et validation par un notaire ou un avocat inscrit en République démocratique du Congo, suivie des formalités légales de dépôt et de publicité (RCCM, greffe).",
 ]));
 
-writeDocx(children, __dirname + "/01_Statuts_GROUP_ELEGANZ_SARL.docx");
+writeDocx(children, __dirname + "/01_Statuts_GROUP_ELEGANZ_SARL.docx", { header: letterheadHeader(NOM_SOCIETE) });

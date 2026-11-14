@@ -5,7 +5,7 @@
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
-  PageBreak, ImageRun,
+  PageBreak, ImageRun, Header,
 } = require("docx");
 const fs = require("fs");
 const path = require("path");
@@ -35,6 +35,26 @@ const GRIS = "565A65";
 const ROUGEPH = "B23A48"; // placeholder marker colour
 const FONT_HEAD = "Cambria";
 const FONT_BODY = "Calibri";
+
+// Papier à en-tête (15 nov. 2026) : le logo + le nom de la société ne
+// figuraient jusqu'ici qu'une fois, dans le corps de la page 1 — absents de
+// toutes les pages suivantes des documents longs (statuts, guide, contrats
+// à plusieurs pages). Un vrai papier à en-tête répète la marque sur CHAQUE
+// page, via l'en-tête de section Word (docx Header), pas dans le corps.
+function letterheadHeader(nomSociete, sizePx = 18) {
+  return new Header({
+    children: [
+      new Paragraph({
+        spacing: { after: 0 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC", space: 4 } },
+        children: [
+          new ImageRun({ data: LOGO_DATA, type: "png", transformation: { width: sizePx, height: sizePx } }),
+          new TextRun({ text: "  " + nomSociete, bold: true, font: FONT_HEAD, size: 16, color: GRIS }),
+        ],
+      }),
+    ],
+  });
+}
 
 function run(text, opts = {}) {
   return new TextRun({ text, font: FONT_BODY, size: 21, color: INK, ...opts });
@@ -185,7 +205,7 @@ function coverPage({ kicker, title, subtitle1, subtitle2 }) {
   return out;
 }
 
-function buildDocument(children) {
+function buildDocument(children, { header } = {}) {
   return new Document({
     styles: {
       default: {
@@ -212,15 +232,16 @@ function buildDocument(children) {
             margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 },
           },
         },
+        headers: header ? { default: header } : undefined,
         children,
       },
     ],
   });
 }
 
-async function writeDocx(children, outPath) {
+async function writeDocx(children, outPath, opts = {}) {
   const fs = require("fs");
-  const doc = buildDocument(children);
+  const doc = buildDocument(children, opts);
   const buf = await Packer.toBuffer(doc);
   fs.writeFileSync(outPath, buf);
   console.log("Written:", outPath);
@@ -230,4 +251,5 @@ module.exports = {
   run, titleRun, h0, h1, h2, p, mixedP, bullet, note, phRun, calloutBox,
   signatureBlock, coverPage, buildDocument, writeDocx, PageBreak, Paragraph,
   INK, COBALT, GRIS, ROUGEPH, FONT_HEAD, FONT_BODY, logoRun, logoParagraph,
+  letterheadHeader,
 };

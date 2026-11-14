@@ -12,7 +12,7 @@
 //  - citant les sources réglementaires vérifiées de façon indépendante.
 const {
   run, h0, h1, h2, p, mixedP, bullet, note, phRun, calloutBox, signatureBlock,
-  coverPage, writeDocx, PageBreak, Paragraph,
+  coverPage, writeDocx, PageBreak, Paragraph, letterheadHeader,
 } = require("../helpers.js");
 const { NOM_SOCIETE, RESERVE_NOM } = require("../shared.js");
 
@@ -128,4 +128,4 @@ children.push(calloutBox("Rappel final", [
   "Ce guide et l'ensemble du dossier constituent des modèles de travail destinés à accélérer la préparation des démarches de " + NOM_SOCIETE + ", et non des actes ou avis juridiques définitifs.",
 ]));
 
-writeDocx(children, __dirname + "/Guide_et_mode_emploi_GROUP_ELEGANZ.docx");
+writeDocx(children, __dirname + "/Guide_et_mode_emploi_GROUP_ELEGANZ.docx", { header: letterheadHeader(NOM_SOCIETE) });
