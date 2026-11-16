@@ -2,7 +2,7 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { DossierCreditBoutique } from "./finance.service";
-import { formaterMontant, formaterDate, formaterDateHeure, dessinerSectionBusinessPlan } from "./dossier-credit-pdf-shared";
+import { formaterDate, formaterDateHeure, dessinerCorpsFinancier } from "./dossier-credit-pdf-shared";
 
 /**
  * Dossier de crédit boutique (demande du 16 oct. 2026, point 1) — pendant
@@ -53,52 +53,10 @@ export function renderDossierCreditPdf(dossier: DossierCreditBoutique): PDFKit.P
   }
   doc.moveDown(0.6);
 
-  doc.font("Helvetica-Bold").fontSize(11).text(`Historique sur ${dossier.historiqueMensuel.length} mois`);
-  doc.moveDown(0.2);
-
-  const colonnes = ["Mois", "Chiffre d'affaires", "Charges", "Résultat net"];
-  const largeurs = [largeurPage * 0.25, largeurPage * 0.25, largeurPage * 0.25, largeurPage * 0.25];
-  function dessinerLigne(cellules: string[], opts: { gras?: boolean; fond?: string } = {}) {
-    const hauteur = 18;
-    const yDepart = doc.y;
-    if (opts.fond) {
-      doc.rect(margeGauche, yDepart, largeurPage, hauteur).fill(opts.fond);
-      doc.fillColor("#000");
-    }
-    doc.font(opts.gras ? "Helvetica-Bold" : "Helvetica").fontSize(8);
-    let x = margeGauche;
-    cellules.forEach((texte, i) => {
-      doc.text(texte, x + 4, yDepart + 4, { width: largeurs[i] - 8, align: i === 0 ? "left" : "right" });
-      x += largeurs[i];
-    });
-    doc.moveTo(margeGauche, yDepart + hauteur).lineTo(margeGauche + largeurPage, yDepart + hauteur).strokeColor("#ccc").stroke();
-    doc.strokeColor("#000");
-    doc.y = yDepart + hauteur;
-  }
-  dessinerLigne(colonnes, { gras: true, fond: "#eee" });
-  for (const m of dossier.historiqueMensuel) {
-    dessinerLigne([m.mois, formaterMontant(m.chiffreAffaires), formaterMontant(m.charges), formaterMontant(m.resultatNet)]);
-  }
-
-  doc.moveDown(0.8);
-  doc.font("Helvetica-Bold").fontSize(11).text("Bilan à ce jour");
-  doc.font("Helvetica").fontSize(9);
-  doc.text(`Total actif : ${formaterMontant(dossier.bilan.totalActif)}`);
-  doc.text(`Total passif : ${formaterMontant(dossier.bilan.totalPassif)}`);
-  if (!dossier.bilan.equilibre) {
-    doc.fillColor("#b00").text("Attention : le bilan n'est pas équilibré à cette date.");
-    doc.fillColor("#000");
-  }
-  doc.moveDown(0.4);
-
-  doc.font("Helvetica-Bold").fontSize(11).text("Dettes et créances");
-  doc.font("Helvetica").fontSize(9);
-  doc.text(`Dettes fournisseurs (solde cumulé) : ${formaterMontant(dossier.dettesFournisseurs)}`);
-  doc.text(`Crédit accordé aux clients (solde cumulé) : ${formaterMontant(dossier.creditClientAccorde)}`);
-
-  // Business plan et scénarios de prêt (16 oct. 2026, point 1) — section
-  // partagée avec le dossier crédit plateforme, voir dossier-credit-pdf-shared.ts.
-  dessinerSectionBusinessPlan(doc, margeGauche, largeurPage, dossier.businessPlan);
+  // Historique + bilan + dettes/créances + business plan (16 nov. 2026,
+  // extrait dans dessinerCorpsFinancier pour être réutilisé tel quel par
+  // demande-credit-pdf-renderer.ts — voir son commentaire).
+  dessinerCorpsFinancier(doc, margeGauche, largeurPage, dossier);
 
   doc.moveDown(1);
   doc.font("Helvetica").fontSize(7.5).fillColor("#555");

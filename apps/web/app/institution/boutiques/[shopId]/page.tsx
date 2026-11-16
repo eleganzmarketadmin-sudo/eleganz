@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { InstitutionShell } from "../../InstitutionShell";
 import { api, ApiError } from "../../../lib/api";
+import { ouvrirDocumentPdf } from "../../../lib/pdf";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../../page.module.css";
 
@@ -123,6 +124,24 @@ function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
   const [erreurDecision, setErreurDecision] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState(false);
 
+  // Export PDF (16 nov. 2026, demande du propriétaire : authenticité/
+  // sécurité, toujours pouvoir extraire ou imprimer un dossier client,
+  // même pour un besoin interne) — voir InstitutionPortalController.dossierExport.
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const [erreurExport, setErreurExport] = useState<string | null>(null);
+
+  async function telechargerPdf() {
+    setExportEnCours(true);
+    setErreurExport(null);
+    try {
+      await ouvrirDocumentPdf(`/institution-portal/shops/${shopId}/dossier/export`);
+    } catch (err) {
+      setErreurExport(err instanceof Error ? err.message : t("inst_erreurGeneration"));
+    } finally {
+      setExportEnCours(false);
+    }
+  }
+
   function recharger() {
     api
       .get<DossierReponse>(`/institution-portal/shops/${shopId}/dossier`)
@@ -185,6 +204,11 @@ function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
   return (
     <div>
       <h1 className={styles.titre}>{nomBoutique ?? t("inst_dossierTitre")}</h1>
+
+      {erreurExport && <div className={styles.erreur}>{erreurExport}</div>}
+      <button className={styles.bouton} onClick={telechargerPdf} disabled={exportEnCours} style={{ marginBottom: "var(--espace-4)" }}>
+        {exportEnCours ? t("dossier_genererEnCours") : t("dossier_telechargerPdf")}
+      </button>
 
       <div className={styles.carte}>
         <h2 style={{ marginBottom: "var(--espace-3)" }}>{t("inst_dossierTitre")}</h2>

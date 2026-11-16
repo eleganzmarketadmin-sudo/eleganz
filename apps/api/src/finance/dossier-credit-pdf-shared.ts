@@ -1,7 +1,7 @@
 // Import CommonJS correct même sans `esModuleInterop` (voir
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
-import type { DossierCreditBoutiqueBusinessPlan } from "./finance.service";
+import type { DossierCreditBoutique, DossierCreditBoutiqueBusinessPlan } from "./finance.service";
 
 /**
  * Helpers partagés entre le dossier crédit boutique
@@ -156,4 +156,69 @@ export function dessinerSectionBusinessPlan(
   }
   doc.y = yGraphe + hauteurGraphe;
   doc.fillColor("#000");
+}
+
+/**
+ * Corps financier complet (historique mensuel + bilan + dettes/créances +
+ * business plan) d'un DossierCreditBoutique — extrait de
+ * dossier-credit-pdf-renderer.ts (16 nov. 2026) pour être réutilisé tel
+ * quel par demande-credit-pdf-renderer.ts : le snapshot figé dans
+ * DemandeCredit.snapshotDossierCreditJson EST exactement un
+ * DossierCreditBoutique (voir DemandeCreditService.soumettre), donc son
+ * export PDF doit afficher les mêmes chiffres, présentés de la même
+ * façon, jamais une forme réinventée au risque de diverger. N'affiche
+ * jamais l'en-tête (identité) ni le pied de page (généré le/code de
+ * vérification) : à la charge de l'appelant, qui a sa propre section
+ * d'identification (boutique, ou demandeur + boutique pour une demande).
+ */
+export function dessinerCorpsFinancier(
+  doc: PDFKit.PDFDocument,
+  margeGauche: number,
+  largeurPage: number,
+  dossier: DossierCreditBoutique,
+) {
+  doc.font("Helvetica-Bold").fontSize(11).text(`Historique sur ${dossier.historiqueMensuel.length} mois`);
+  doc.moveDown(0.2);
+
+  const colonnes = ["Mois", "Chiffre d'affaires", "Charges", "Résultat net"];
+  const largeurs = [largeurPage * 0.25, largeurPage * 0.25, largeurPage * 0.25, largeurPage * 0.25];
+  function dessinerLigne(cellules: string[], opts: { gras?: boolean; fond?: string } = {}) {
+    const hauteur = 18;
+    const yDepart = doc.y;
+    if (opts.fond) {
+      doc.rect(margeGauche, yDepart, largeurPage, hauteur).fill(opts.fond);
+      doc.fillColor("#000");
+    }
+    doc.font(opts.gras ? "Helvetica-Bold" : "Helvetica").fontSize(8);
+    let x = margeGauche;
+    cellules.forEach((texte, i) => {
+      doc.text(texte, x + 4, yDepart + 4, { width: largeurs[i] - 8, align: i === 0 ? "left" : "right" });
+      x += largeurs[i];
+    });
+    doc.moveTo(margeGauche, yDepart + hauteur).lineTo(margeGauche + largeurPage, yDepart + hauteur).strokeColor("#ccc").stroke();
+    doc.strokeColor("#000");
+    doc.y = yDepart + hauteur;
+  }
+  dessinerLigne(colonnes, { gras: true, fond: "#eee" });
+  for (const m of dossier.historiqueMensuel) {
+    dessinerLigne([m.mois, formaterMontant(m.chiffreAffaires), formaterMontant(m.charges), formaterMontant(m.resultatNet)]);
+  }
+
+  doc.moveDown(0.8);
+  doc.font("Helvetica-Bold").fontSize(11).text("Bilan à ce jour");
+  doc.font("Helvetica").fontSize(9);
+  doc.text(`Total actif : ${formaterMontant(dossier.bilan.totalActif)}`);
+  doc.text(`Total passif : ${formaterMontant(dossier.bilan.totalPassif)}`);
+  if (!dossier.bilan.equilibre) {
+    doc.fillColor("#b00").text("Attention : le bilan n'est pas équilibré à cette date.");
+    doc.fillColor("#000");
+  }
+  doc.moveDown(0.4);
+
+  doc.font("Helvetica-Bold").fontSize(11).text("Dettes et créances");
+  doc.font("Helvetica").fontSize(9);
+  doc.text(`Dettes fournisseurs (solde cumulé) : ${formaterMontant(dossier.dettesFournisseurs)}`);
+  doc.text(`Crédit accordé aux clients (solde cumulé) : ${formaterMontant(dossier.creditClientAccorde)}`);
+
+  dessinerSectionBusinessPlan(doc, margeGauche, largeurPage, dossier.businessPlan);
 }

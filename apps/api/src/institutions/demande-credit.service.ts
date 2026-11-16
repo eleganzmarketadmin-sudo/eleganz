@@ -152,7 +152,15 @@ export class DemandeCreditService {
   async detail(institutionId: string, numero: string) {
     const demande = await this.prisma.demandeCredit.findUnique({
       where: { numero },
-      include: { shop: { select: { id: true, name: true, slug: true } }, decision: true },
+      // `institution` ajouté le 16 nov. 2026 (additif, jamais consommé
+      // jusqu'ici côté écran qui connaît déjà "son" institution) pour
+      // l'export PDF (demande-credit-pdf-renderer.ts), qui a besoin du nom
+      // de l'institution sur le document sans avoir à le redemander.
+      include: {
+        shop: { select: { id: true, name: true, slug: true } },
+        decision: true,
+        institution: { select: { name: true } },
+      },
     });
     if (!demande || demande.institutionId !== institutionId) {
       throw new NotFoundException("Demande de crédit introuvable.");

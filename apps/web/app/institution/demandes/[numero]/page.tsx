@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { InstitutionShell } from "../../InstitutionShell";
 import { api, ApiError } from "../../../lib/api";
+import { ouvrirDocumentPdf } from "../../../lib/pdf";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../../page.module.css";
 
@@ -91,6 +92,24 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
   const [confirmation, setConfirmation] = useState(false);
   const [prerempli, setPrerempli] = useState(false);
 
+  // Export PDF (16 nov. 2026, demande du propriétaire : authenticité/
+  // sécurité, toujours pouvoir extraire ou imprimer un dossier client,
+  // même pour un besoin interne) — voir InstitutionPortalController.detailDemandeExport.
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const [erreurExport, setErreurExport] = useState<string | null>(null);
+
+  async function telechargerPdf() {
+    setExportEnCours(true);
+    setErreurExport(null);
+    try {
+      await ouvrirDocumentPdf(`/institution-portal/demandes/${numero}/export`);
+    } catch (err) {
+      setErreurExport(err instanceof Error ? err.message : t("inst_erreurGeneration"));
+    } finally {
+      setExportEnCours(false);
+    }
+  }
+
   function recharger() {
     api
       .get<DemandeCreditDetail>(`/institution-portal/demandes/${numero}`)
@@ -148,11 +167,16 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
       <h1 className={styles.titre} style={{ fontFamily: "monospace" }}>
         {demande.numero}
       </h1>
-      <p style={{ marginBottom: "var(--espace-4)" }}>
+      <p style={{ marginBottom: "var(--espace-3)" }}>
         <span className={`${styles.badge} ${classeBadge(demande.statut)}`}>{t(`inst_demandeStatut_${demande.statut}`)}</span>
         {" · "}
         {new Date(demande.createdAt).toLocaleDateString("fr-FR")}
       </p>
+
+      {erreurExport && <div className={styles.erreur}>{erreurExport}</div>}
+      <button className={styles.bouton} onClick={telechargerPdf} disabled={exportEnCours} style={{ marginBottom: "var(--espace-4)" }}>
+        {exportEnCours ? t("dossier_genererEnCours") : t("dossier_telechargerPdf")}
+      </button>
 
       <div className={styles.carte}>
         <h2 style={{ marginBottom: "var(--espace-3)" }}>{t("inst_demandeInfosTitre")}</h2>

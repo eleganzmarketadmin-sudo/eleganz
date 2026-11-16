@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { InstitutionPortalService } from "./institution-portal.service";
 import { InstitutionStaffService } from "./institution-staff.service";
 import { DemandeCreditService } from "./demande-credit.service";
@@ -13,6 +14,8 @@ import { InstitutionMembershipGuard } from "./institution-membership.guard";
 import { CurrentInstitutionId } from "./current-institution.decorator";
 import { InstitutionRoles } from "./institution-roles.decorator";
 import { InstitutionRole } from "@eleganz/database";
+import { renderDossierCreditPdf } from "../finance/dossier-credit-pdf-renderer";
+import { renderDemandeCreditPdf, type DemandeCreditPourPdf } from "./demande-credit-pdf-renderer";
 
 // /me et /inscription restent volontairement hors InstitutionMembershipGuard
 // (14 nov. 2026, inchangé) : une institution doit pouvoir consulter son
@@ -54,6 +57,25 @@ export class InstitutionPortalController {
   @UseGuards(InstitutionMembershipGuard)
   async dossier(@CurrentInstitutionId() institutionId: string, @Param("shopId") shopId: string) {
     return this.portal.dossier(institutionId, shopId);
+  }
+
+  // Export PDF du dossier boutique (16 nov. 2026, demande du propriétaire :
+  // "pour des raisons d'authenticité et de sécurité, porter les
+  // informations d'identification du client et donner la possibilité de
+  // les extraire ou imprimer en PDF" — jusqu'ici ce dossier n'était
+  // consultable qu'à l'écran). `this.portal.dossier` revérifie l'accès
+  // exactement comme la route ci-dessus (jamais une barrière réservée à
+  // l'écran) ; `.financier` est déjà la forme exacte attendue par
+  // renderDossierCreditPdf (même type DossierCreditBoutique que le dossier
+  // crédit boutique côté Gestion, voir finance.controller.ts).
+  @Get("shops/:shopId/dossier/export")
+  @UseGuards(InstitutionMembershipGuard)
+  async dossierExport(@CurrentInstitutionId() institutionId: string, @Param("shopId") shopId: string, @Res() res: Response) {
+    const resultat = await this.portal.dossier(institutionId, shopId);
+    const doc = renderDossierCreditPdf(resultat.financier);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="dossier-credit-${shopId}.pdf"`);
+    return doc.pipe(res);
   }
 
   @Post("shops/:shopId/decisions")
@@ -114,6 +136,26 @@ export class InstitutionPortalController {
   @UseGuards(InstitutionMembershipGuard)
   detailDemande(@CurrentInstitutionId() institutionId: string, @Param("numero") numero: string) {
     return this.demandes.detail(institutionId, numero);
+  }
+
+  // Export PDF de la candidature (16 nov. 2026, même demande que
+  // dossierExport ci-dessus) — l'identification du demandeur (nom, raison
+  // sociale, contacts) est TOUJOURS incluse dans le PDF, avec ou sans
+  // dossier financier joint (voir demande-credit-pdf-renderer.ts : une
+  // demande "libre", sans boutique ELEGANZ rattachée, n'a pas de
+  // snapshotDossierCreditJson mais garde son identification complète).
+  @Get("demandes/:numero/export")
+  @UseGuards(InstitutionMembershipGuard)
+  async detailDemandeExport(
+    @CurrentInstitutionId() institutionId: string,
+    @Param("numero") numero: string,
+    @Res() res: Response,
+  ) {
+    const demande = await this.demandes.detail(institutionId, numero);
+    const doc = renderDemandeCreditPdf(demande as unknown as DemandeCreditPourPdf);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="demande-credit-${numero}.pdf"`);
+    return doc.pipe(res);
   }
 
   @Post("demandes")
