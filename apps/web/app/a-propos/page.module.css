@@ -42,6 +42,23 @@
   line-height: 1.6;
 }
 
+/* Carré de marque à 4 couleurs (16 nov. 2026) — repris de l'ancien accueil,
+   voir page.tsx/page.module.css racine (.heroMotif/.piece) pour l'original.
+   Centré ici (hero centré, fond --color-encre-fixe) plutôt qu'en vis-à-vis
+   du texte comme sur l'accueil (hero en deux colonnes là-bas). */
+.heroMotif {
+  width: 140px;
+  height: 140px;
+  margin: var(--espace-5) auto 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.piece {
+  display: block;
+}
+
 .modules {
   flex: 1;
   display: grid;

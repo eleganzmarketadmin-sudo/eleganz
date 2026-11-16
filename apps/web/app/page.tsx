@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "./components/SiteHeader";
@@ -26,28 +26,12 @@ export default function HomePage() {
   // module ci-dessous.
   const [rechercheAccueil, setRechercheAccueil] = useState("");
 
-  // Raccourci pour un acheteur déjà venu (11 nov. 2026, amélioration
-  // "expérience grand public", point 4) — saute directement en Marketplace
-  // si ce navigateur a déjà visité la Marketplace une fois (voir
-  // MarqueurVisiteMarketplace), sans repasser par le portail de choix de
-  // module. Deux échappatoires volontaires pour ne jamais enfermer
-  // personne : `/?portail=1` et un lien direct vers `/#outils` (c'est
-  // justement ce que fait le bouton "Se connecter" du SiteHeader) laissent
-  // tous les deux voir le portail malgré tout.
-  useEffect(() => {
-    try {
-      const dejaVisiteMarketplace = localStorage.getItem("eleganz_marketplace_visite") === "1";
-      const parametres = new URLSearchParams(window.location.search);
-      const demandeExpliciteDuPortail = parametres.get("portail") === "1" || window.location.hash === "#outils";
-      if (dejaVisiteMarketplace && !demandeExpliciteDuPortail) {
-        router.replace("/marketplace");
-      }
-    } catch {
-      // Stockage indisponible (navigation privée, etc.) : on reste
-      // simplement sur le portail, comportement historique.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Cette page n'est plus jamais rendue sans ?portail=1 (voir middleware.ts,
+  // 16 nov. 2026 : "/" redirige désormais tout visiteur vers la Marketplace,
+  // sauf demande explicite du portail) — le raccourci "déjà venu sur la
+  // Marketplace ⇒ rediriger" qui vivait ici auparavant ne pouvait donc plus
+  // jamais se déclencher (demandeExpliciteDuPortail était alors toujours
+  // vrai) et a été retiré.
 
   function rechercherDepuisAccueil(e: React.FormEvent) {
     e.preventDefault();

@@ -15,6 +15,12 @@ import styles from "./page.module.css";
  * ELEGANZ Livreur (réseau ouvert à tout le monde) n'est volontairement pas
  * listé ici depuis le 13 oct. 2026 — inscription fermée, voir
  * livreur/inscription/page.tsx et delivery.service.ts.
+ *
+ * Carré de marque à 4 couleurs ajouté le 16 nov. 2026 : "/" redirige
+ * maintenant tout visiteur vers la Marketplace (voir middleware.ts), donc
+ * cet ancien motif de l'accueil (Cobalt/Flamme/Or/Magenta, repris de
+ * COULEURS_MARQUE dans Logo.tsx) n'apparaissait plus nulle part — il vit
+ * désormais ici, dans le hero de cette page.
  */
 export default function AProposPage() {
   const { t } = useLocale();
@@ -26,6 +32,12 @@ export default function AProposPage() {
       <section className={styles.hero}>
         <h1>{t("apropos_h1")}</h1>
         <p>{t("apropos_intro")}</p>
+        <div className={styles.heroMotif} aria-hidden="true">
+          <span className={styles.piece} style={{ background: "var(--color-cobalt)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-flamme)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-or)" }} />
+          <span className={styles.piece} style={{ background: "var(--color-magenta)" }} />
+        </div>
       </section>
 
       <section className={styles.modules}>
