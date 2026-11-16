@@ -365,8 +365,21 @@ function TarifsLivreursSection() {
     setErreur(null);
     setMessage(null);
     try {
-      const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_livreur_concerne")}`);
+      // Renommée le 16 nov. 2026 : run-suspension-check appelle désormais
+      // executerEscaladeFacturesLivreurs, qui renvoie un objet
+      // { relancesEnvoyees, livreursSuspendus } plutôt qu'un tableau — les
+      // deux autres actions renvoient toujours un tableau d'actions.
+      const resultat = await api.post<unknown>(chemin, {});
+      if (Array.isArray(resultat)) {
+        setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_livreur_concerne")}`);
+      } else if (resultat && typeof resultat === "object" && "relancesEnvoyees" in resultat) {
+        const r = resultat as { relancesEnvoyees: number; livreursSuspendus: number };
+        setMessage(
+          `${libelleAction} : ${r.relancesEnvoyees} ${t("admtarifs_relances_relancesEnvoyees")}, ${r.livreursSuspendus} ${t("admtarifs_livreur_concerne")}`,
+        );
+      } else {
+        setMessage(libelleAction);
+      }
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
@@ -703,8 +716,20 @@ function TarifsComptableSection() {
     setErreur(null);
     setMessage(null);
     try {
-      const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_cpt_concerne")}`);
+      // Renommée le 16 nov. 2026 : run-suspension-check appelle désormais
+      // executerEscaladeFacturesComptable, qui renvoie un objet
+      // { relancesEnvoyees, abonnesSuspendus } plutôt qu'un tableau.
+      const resultat = await api.post<unknown>(chemin, {});
+      if (Array.isArray(resultat)) {
+        setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_cpt_concerne")}`);
+      } else if (resultat && typeof resultat === "object" && "relancesEnvoyees" in resultat) {
+        const r = resultat as { relancesEnvoyees: number; abonnesSuspendus: number };
+        setMessage(
+          `${libelleAction} : ${r.relancesEnvoyees} ${t("admtarifs_relances_relancesEnvoyees")}, ${r.abonnesSuspendus} ${t("admtarifs_cpt_concerne")}`,
+        );
+      } else {
+        setMessage(libelleAction);
+      }
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
@@ -829,8 +854,20 @@ function TarifsBoutiquesSection() {
     setErreur(null);
     setMessage(null);
     try {
-      const resultat = await api.post<{ action: string }[]>(chemin, {});
-      setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_boutiques_concernee")}`);
+      // Renommée le 16 nov. 2026 : run-suspension-check appelle désormais
+      // executerEscaladeFacturesBoutiques, qui renvoie un objet
+      // { relancesEnvoyees, boutiquesSuspendues } plutôt qu'un tableau.
+      const resultat = await api.post<unknown>(chemin, {});
+      if (Array.isArray(resultat)) {
+        setMessage(`${libelleAction} : ${resultat.length} ${t("admtarifs_boutiques_concernee")}`);
+      } else if (resultat && typeof resultat === "object" && "relancesEnvoyees" in resultat) {
+        const r = resultat as { relancesEnvoyees: number; boutiquesSuspendues: number };
+        setMessage(
+          `${libelleAction} : ${r.relancesEnvoyees} ${t("admtarifs_relances_relancesEnvoyees")}, ${r.boutiquesSuspendues} ${t("admtarifs_boutiques_concernee")}`,
+        );
+      } else {
+        setMessage(libelleAction);
+      }
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("admtarifs_actionImpossible"));
     } finally {
@@ -920,6 +957,138 @@ function TarifsBoutiquesSection() {
           onClick={() => declencher(t("admtarifs_boutiques_facturationCommissions"), "/admin/billing/run-commission-billing")}
         >
           {t("admtarifs_boutiques_lancerFacturationCommissions")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface ReglagesRelances {
+  invoiceLatePenaltyRatePercent: string | null;
+  invoicePenaltyGraceDays: number;
+  reminderDay1Offset: number;
+  reminderDay2Offset: number;
+  reminderDay3Offset: number;
+  warningDayOffset: number;
+  suspensionDayOffset: number;
+  notificationsWhatsappEnabled: boolean;
+}
+
+/**
+ * Relances numérotées + pénalités de retard + réactivation (16 nov. 2026,
+ * chantier relances/recouvrement) — un seul jeu de seuils partagé par les
+ * trois domaines de facturation (boutiques/livreurs/comptable, décision du
+ * propriétaire : "tous les paliers réglables"), au lieu de le tripler comme
+ * le reste de la facturation : une seule politique de relance, un seul
+ * écran à tenir à jour. Les boutons "Suspension impayés" des trois sections
+ * ci-dessus appliquent déjà ces seuils (voir *BillingService.executerEscalade...).
+ */
+function TarifsRelancesSection() {
+  const { t } = useLocale();
+  const [tauxPenalite, setTauxPenalite] = useState("");
+  const [joursFranchise, setJoursFranchise] = useState("");
+  const [jour1, setJour1] = useState("");
+  const [jour2, setJour2] = useState("");
+  const [jour3, setJour3] = useState("");
+  const [jourAvertissement, setJourAvertissement] = useState("");
+  const [jourSuspension, setJourSuspension] = useState("");
+  const [whatsappActif, setWhatsappActif] = useState(false);
+  const [chargement, setChargement] = useState(true);
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<ReglagesRelances>("/admin/platform-settings")
+      .then((s) => {
+        setTauxPenalite(s.invoiceLatePenaltyRatePercent ?? "");
+        setJoursFranchise(String(s.invoicePenaltyGraceDays));
+        setJour1(String(s.reminderDay1Offset));
+        setJour2(String(s.reminderDay2Offset));
+        setJour3(String(s.reminderDay3Offset));
+        setJourAvertissement(String(s.warningDayOffset));
+        setJourSuspension(String(s.suspensionDayOffset));
+        setWhatsappActif(s.notificationsWhatsappEnabled);
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
+      .finally(() => setChargement(false));
+  }
+
+  useEffect(recharger, []);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        invoiceLatePenaltyRatePercent: tauxPenalite ? Number(tauxPenalite) : null,
+        invoicePenaltyGraceDays: Number(joursFranchise),
+        reminderDay1Offset: Number(jour1),
+        reminderDay2Offset: Number(jour2),
+        reminderDay3Offset: Number(jour3),
+        warningDayOffset: Number(jourAvertissement),
+        suspensionDayOffset: Number(jourSuspension),
+        notificationsWhatsappEnabled: whatsappActif,
+      });
+      setMessage(t("admtarifs_relances_enregistre"));
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  if (chargement) return <p>{t("admtarifs_relances_chargement")}</p>;
+
+  return (
+    <div className={styles.plan}>
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>{t("admtarifs_relances_titre")}</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        {t("admtarifs_relances_note")}
+      </p>
+      {message && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{message}</p>}
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_jour1")}</span>
+          <input placeholder="ex. 0" value={jour1} onChange={(e) => setJour1(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_jour2")}</span>
+          <input placeholder="ex. 3" value={jour2} onChange={(e) => setJour2(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_jour3")}</span>
+          <input placeholder="ex. 5" value={jour3} onChange={(e) => setJour3(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_jourAvertissement")}</span>
+          <input placeholder="ex. 10" value={jourAvertissement} onChange={(e) => setJourAvertissement(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_jourSuspension")}</span>
+          <input placeholder="ex. 15" value={jourSuspension} onChange={(e) => setJourSuspension(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_tauxPenalite")}</span>
+          <input placeholder={t("admtarifs_institutions_placeholderAucunSeuil")} value={tauxPenalite} onChange={(e) => setTauxPenalite(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_relances_joursFranchise")}</span>
+          <input placeholder="ex. 5" value={joursFranchise} onChange={(e) => setJoursFranchise(e.target.value)} />
+        </label>
+        <label className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+          <input type="checkbox" checked={whatsappActif} onChange={(e) => setWhatsappActif(e.target.checked)} />
+          <span>{t("admtarifs_relances_whatsappActif")}</span>
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          {t("admtarifs_enregistrerLesTarifs")}
         </button>
       </div>
     </div>
@@ -1451,6 +1620,9 @@ function TarifsContent() {
 
       <h2 className={styles.sectionTitre}>{t("admtarifs_sectionFacturationBoutiques")}</h2>
       <TarifsBoutiquesSection />
+
+      <h2 className={styles.sectionTitre}>{t("admtarifs_relances_titreSection")}</h2>
+      <TarifsRelancesSection />
 
       <h2 className={styles.sectionTitre}>{t("admtarifs_institutions_titre")}</h2>
       <TarifsInstitutionsSection />

@@ -50,6 +50,148 @@ const CLES_FONCTIONNALITES_COMPTABLE: { cle: string; cleTrad: string }[] = [
   { cle: "exportDossierFinancement", cleTrad: "admtarifs_cpt_exportDossierFinancement" },
 ];
 
+// Facturation ELEGANZ côté Secourable (16 nov. 2026, chantier relances/
+// recouvrement) — même principe que la section homonyme côté boutique et
+// côté livreur : liste des factures via GET /comptable/subscription/invoices
+// (déjà exposée, jamais consommée côté front avant ce chantier), dépôt de
+// preuve de paiement en 3 étapes, historique avec pénalité figée.
+interface FactureEleganz {
+  id: string;
+  amount: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: string;
+  kind: string;
+  reminderStage: number;
+  penaltyDays: number | null;
+  penaltyAmount: string | null;
+}
+
+const CLES_PALIER_FACTURATION: Record<number, string> = {
+  1: "admfact_palier1",
+  2: "admfact_palier2",
+  3: "admfact_palier3",
+  4: "admfact_palier4",
+  5: "admfact_palier5",
+};
+
+function FacturationElegansSection({ billingStatus }: { billingStatus: string }) {
+  const { t } = useLocale();
+  const [factures, setFactures] = useState<FactureEleganz[] | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [preuveOuverte, setPreuveOuverte] = useState<string | null>(null);
+  const [noteParFacture, setNoteParFacture] = useState<Record<string, string>>({});
+  const [enCours, setEnCours] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<FactureEleganz[]>("/comptable/subscription/invoices")
+      .then(setFactures)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("abonnement_erreurChargement")));
+  }
+
+  useEffect(recharger, []);
+
+  async function deposerPreuve(factureId: string, fichier: File) {
+    setEnCours(factureId);
+    setErreur(null);
+    setConfirmation(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/comptable/subscription/invoices/${factureId}/proof-of-payment/upload-url`,
+        { contentType: fichier.type },
+      );
+      const reponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fichier.type },
+        body: fichier,
+      });
+      if (!reponse.ok) throw new Error(t("factElg_erreurEnvoiStockage"));
+      await api.post(`/comptable/subscription/invoices/${factureId}/proof-of-payment`, {
+        fileUrl: publicUrl,
+        note: noteParFacture[factureId] || undefined,
+      });
+      setConfirmation(t("factElg_preuveDeposee"));
+      setPreuveOuverte(null);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : t("factElg_erreurEnvoiPreuve"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  if (factures === null && !erreur) return <p>{t("abonnement_chargement")}</p>;
+
+  const enAttente = (factures ?? []).filter((f) => f.status === "PENDING");
+  const historique = (factures ?? []).filter((f) => f.status !== "PENDING").slice(0, 10);
+
+  return (
+    <div style={{ marginTop: "var(--espace-5)" }}>
+      <h2 style={{ marginBottom: "16px" }}>{t("factElg_titre")}</h2>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {confirmation && <p>{confirmation}</p>}
+      {billingStatus === "SUSPENDED" && <p className={styles.erreur}>{t("factElg_noteSuspendueComptable")}</p>}
+
+      {enAttente.length === 0 ? (
+        <p>{t("factElg_aucuneFactureEnAttente")}</p>
+      ) : (
+        enAttente.map((f) => (
+          <div key={f.id} className={styles.ligne} style={{ flexDirection: "column", alignItems: "stretch", gap: "var(--espace-2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--espace-3)", flexWrap: "wrap" }}>
+              <span>
+                {f.amount} $ — {t("crd_colEcheance")} : {new Date(f.dueAt).toLocaleDateString()}
+              </span>
+              {f.reminderStage > 0 && CLES_PALIER_FACTURATION[f.reminderStage] && <span>{t(CLES_PALIER_FACTURATION[f.reminderStage])}</span>}
+            </div>
+            {preuveOuverte === f.id ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--espace-2)" }}>
+                <input
+                  type="text"
+                  placeholder={t("factElg_notePlaceholder")}
+                  value={noteParFacture[f.id] ?? ""}
+                  onChange={(e) => setNoteParFacture((n) => ({ ...n, [f.id]: e.target.value }))}
+                />
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => {
+                    const fichier = e.target.files?.[0];
+                    if (fichier) deposerPreuve(f.id, fichier);
+                  }}
+                  disabled={enCours === f.id}
+                />
+              </div>
+            ) : (
+              <button className={styles.bouton} style={{ width: "auto" }} onClick={() => setPreuveOuverte(f.id)}>
+                {t("factElg_deposerPreuve")}
+              </button>
+            )}
+          </div>
+        ))
+      )}
+
+      <h3 style={{ marginTop: "var(--espace-4)", marginBottom: "var(--espace-2)" }}>{t("factElg_historique")}</h3>
+      {historique.length === 0 ? (
+        <p>{t("factElg_aucunHistorique")}</p>
+      ) : (
+        historique.map((f) => (
+          <div key={f.id} className={styles.ligne}>
+            <span>
+              {f.amount} $ — {f.paidAt ? new Date(f.paidAt).toLocaleDateString() : ""}
+            </span>
+            <span>
+              {t("admfact_statutPayee")}
+              {f.penaltyAmount && Number(f.penaltyAmount) > 0 ? ` — ${t("admfact_penalite")} : ${f.penaltyAmount} $` : ""}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function AbonnementContenu() {
   const { t } = useLocale();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -192,6 +334,8 @@ function AbonnementContenu() {
       <p style={{ marginTop: "24px", color: "var(--color-texte-muted)", fontSize: "0.875rem" }}>
         {t("abo_noteDonneesConsultables")}
       </p>
+
+      <FacturationElegansSection billingStatus={subscription.billingStatus} />
     </div>
   );
 }

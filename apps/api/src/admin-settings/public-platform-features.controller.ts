@@ -53,4 +53,14 @@ export class PublicPlatformFeaturesController {
   alaCartePricing() {
     return this.adminSettingsService.publicAlaCartePricing();
   }
+
+  // Calendrier de relance/pénalité (16 nov. 2026, chantier relances/
+  // recouvrement) — public pour que les écrans self-service (boutique,
+  // livreur, comptable) expliquent le calendrier de relance et le taux de
+  // pénalité sans passer par l'API admin (aucune des trois catégories
+  // d'utilisateurs n'a le menu PARAMETRES_PLATEFORME/TARIFS).
+  @Get("dunning-settings")
+  dunningSettings() {
+    return this.adminSettingsService.publicDunningSettings();
+  }
 }

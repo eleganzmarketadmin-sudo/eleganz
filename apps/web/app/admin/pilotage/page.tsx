@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminShell } from "../AdminShell";
+import { StatusTag } from "../../components/StatusTag";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { EvolutionChart } from "../EvolutionChart";
@@ -9,6 +10,29 @@ import { CompteurAnime } from "../CompteurAnime";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
+
+// Répartition par module (16 nov. 2026, refonte du Centre de pilotage) —
+// voir AdminCockpitService.executiveDashboard / repartirFacturation
+// (apps/api/src/billing/revenue-breakdown.util.ts). enAttente/enRetard
+// valent `null` pour les modules sans cycle de facturation (Caisse,
+// Institutions) : le frontend n'affiche alors que facturé/encaissé.
+interface ModuleRevenu {
+  cle: "gestion" | "marketplace" | "livreur" | "secourable" | "caisse" | "institutions";
+  typeRevenu: "abonnement" | "commission" | "valeur_vendeur";
+  facture: number;
+  encaisse: number;
+  enAttente: number | null;
+  enRetard: number | null;
+}
+
+const CLES_MODULE: Record<ModuleRevenu["cle"], string> = {
+  gestion: "admpilot_mod_gestion",
+  marketplace: "admfinance_commissionMarketplace",
+  livreur: "admpilot_mod_livreur",
+  secourable: "admpilot_mod_secourable",
+  caisse: "admpilot_mod_caisse",
+  institutions: "admpilot_mod_institutions",
+};
 
 interface Dashboard {
   activity: {
@@ -26,6 +50,7 @@ interface Dashboard {
     grossOrderValue: number;
     platformRevenueByKind: Record<string, number>;
     pendingInvoicesAmount: number;
+    modules: ModuleRevenu[];
   };
   operations: { openDisputes: number };
   aiUsage: { note?: string };
@@ -211,6 +236,52 @@ function PilotageContent() {
               {formatMoney(dashboard.revenue.pendingInvoicesAmount)}
             </span>
           </div>
+        </div>
+      </div>
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitre}>{t("admpilot_revenusParModule")}</h2>
+        <div className={styles.grilleModules}>
+          {dashboard.revenue.modules.map((m) => {
+            const suiviCycle = m.enAttente !== null && m.enRetard !== null;
+            const humeur = !suiviCycle ? "neutre" : (m.enRetard ?? 0) > 0 ? "alerte" : (m.enAttente ?? 0) > 0 ? "attente" : "paye";
+            const label = suiviCycle
+              ? humeur === "alerte"
+                ? t("admpilot_colEnRetard")
+                : humeur === "attente"
+                  ? t("admpilot_colEnAttente")
+                  : t("admfact_statutPayee")
+              : t("admpilot_colEncaisse");
+            return (
+              <div className={styles.carteModule} key={m.cle}>
+                <div className={styles.carteModuleEntete}>
+                  <span className={styles.carteModuleTitre}>{t(CLES_MODULE[m.cle])}</span>
+                  <StatusTag label={label} humeur={humeur} />
+                </div>
+                <div className={styles.carteModuleLigne}>
+                  <span className={styles.carteModuleLabel}>{t("admpilot_colFacture")}</span>
+                  <span className={styles.carteModuleValeur}>{formatMoney(m.facture)}</span>
+                </div>
+                <div className={styles.carteModuleLigne}>
+                  <span className={styles.carteModuleLabel}>{t("admpilot_colEncaisse")}</span>
+                  <span className={styles.carteModuleValeur}>{formatMoney(m.encaisse)}</span>
+                </div>
+                {suiviCycle && (
+                  <>
+                    <div className={styles.carteModuleLigne}>
+                      <span className={styles.carteModuleLabel}>{t("admpilot_colEnAttente")}</span>
+                      <span className={styles.carteModuleValeur}>{formatMoney(m.enAttente ?? 0)}</span>
+                    </div>
+                    <div className={styles.carteModuleLigne}>
+                      <span className={styles.carteModuleLabel}>{t("admpilot_colEnRetard")}</span>
+                      <span className={styles.carteModuleValeur}>{formatMoney(m.enRetard ?? 0)}</span>
+                    </div>
+                  </>
+                )}
+                {m.typeRevenu === "valeur_vendeur" && <p className={styles.carteModuleNote}>{t("admpilot_noteValeurVendeur")}</p>}
+              </div>
+            );
+          })}
         </div>
       </div>
 

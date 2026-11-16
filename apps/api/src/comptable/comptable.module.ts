@@ -9,6 +9,8 @@ import { ComptablePlansController } from "./comptable-plans.controller";
 import { AdminSettingsModule } from "../admin-settings/admin-settings.module";
 import { AuthModule } from "../auth/auth.module";
 import { FinanceModule } from "../finance/finance.module";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { StorageModule } from "../storage/storage.module";
 
 // ComptableController et ComptableBillingController utilisent
 // @UseGuards(JwtAuthGuard), qui dépend de JwtService (fourni par JwtModule,
@@ -16,7 +18,7 @@ import { FinanceModule } from "../finance/finance.module";
 // résoudre les dépendances de JwtAuthGuard au démarrage et TOUT le service
 // plante (voir incident du 13 oct. 2026, docs/MAINTENANCE.md).
 @Module({
-  imports: [AdminSettingsModule, AuthModule, FinanceModule],
+  imports: [AdminSettingsModule, AuthModule, FinanceModule, NotificationsModule, StorageModule],
   providers: [ComptableService, ComptableBillingService, ComptableExportService, ComptablePlansService],
   controllers: [ComptableController, ComptableBillingController, ComptablePlansController],
   exports: [ComptableService, ComptableBillingService, ComptableExportService, ComptablePlansService],

@@ -3,9 +3,9 @@ import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { EmailSenderService } from "./email-sender.service";
-import { WhatsAppSenderService } from "./whatsapp-sender.service";
-import { SmsSenderService } from "./sms-sender.service";
+import { EmailSenderService } from "../notifications/channels/email-sender.service";
+import { WhatsAppSenderService } from "../notifications/channels/whatsapp-sender.service";
+import { SmsSenderService } from "../notifications/channels/sms-sender.service";
 import { NotificationType, PasswordResetRequestStatus } from "@eleganz/database";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 

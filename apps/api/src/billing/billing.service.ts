@@ -1,7 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { OrderStatus, PlanCategory, Prisma, ShopStatus } from "@eleganz/database";
+import { OrderStatus, PlanCategory, Prisma, ShopStatus, NotificationType } from "@eleganz/database";
 import { AccountingService } from "../finance/accounting.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
+import { calculerPenaliteRetard, joursEntiersEntre, palierCible, SeuilsFacturation, TITRE_PALIER } from "./dunning.util";
+import { StorageService } from "../storage/storage.service";
 
 // Durée d'un cycle d'abonnement Gestion quand aucun cycle n'est encore
 // suivi pour la boutique (ShopSubscription jamais encore créée pour elle) —
@@ -22,7 +26,167 @@ export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accounting: AccountingService,
+    private readonly notifications: NotificationsService,
+    private readonly storage: StorageService,
   ) {}
+
+  // --- Relances/pénalités/réactivation (16 nov. 2026, chantier relances/
+  // recouvrement) — helpers partagés par les méthodes ci-dessous. Voir
+  // dunning.util.ts pour la formule de pénalité et le calcul du palier
+  // cible, partagés avec DriverBillingService/ComptableBillingService.
+
+  private async reglagesFacturation(): Promise<SeuilsFacturation> {
+    const settings = await this.prisma.platformSettings.findUniqueOrThrow({ where: { id: "platform" } });
+    return {
+      invoiceLatePenaltyRatePercent: settings.invoiceLatePenaltyRatePercent,
+      invoicePenaltyGraceDays: settings.invoicePenaltyGraceDays,
+      reminderDay1Offset: settings.reminderDay1Offset,
+      reminderDay2Offset: settings.reminderDay2Offset,
+      reminderDay3Offset: settings.reminderDay3Offset,
+      warningDayOffset: settings.warningDayOffset,
+      suspensionDayOffset: settings.suspensionDayOffset,
+    };
+  }
+
+  private async idsAdmins(): Promise<string[]> {
+    const admins = await this.prisma.user.findMany({ where: { role: { in: [...ROLES_ADMIN] } }, select: { id: true } });
+    return admins.map((a) => a.id);
+  }
+
+  private async destinatairesBoutique(shopId: string): Promise<string[]> {
+    const shop = await this.prisma.shop.findUniqueOrThrow({
+      where: { id: shopId },
+      select: { ownerId: true, staff: { where: { active: true }, select: { userId: true } } },
+    });
+    return [shop.ownerId, ...shop.staff.map((s) => s.userId)];
+  }
+
+  private messagePourPalier(palier: number, montant: number, reglages: SeuilsFacturation): string {
+    const m = montant.toFixed(2);
+    switch (palier) {
+      case 1:
+        return `Votre facture ELEGANZ de ${m} arrive à échéance aujourd'hui. Merci de la régler depuis Facturation.`;
+      case 2:
+        return `Rappel : votre facture ELEGANZ de ${m} est en retard de paiement. Merci de la régler rapidement.`;
+      case 3:
+        return `3e relance : votre facture ELEGANZ de ${m} reste impayée. Au-delà de ${reglages.warningDayOffset} jours de retard, un avertissement de suspension sera émis.`;
+      case 4:
+        return `Avertissement : votre facture ELEGANZ de ${m} est impayée depuis plus de ${reglages.warningDayOffset} jours. Passé ${reglages.suspensionDayOffset} jours de retard, l'accès sera suspendu si elle reste impayée.`;
+      case 5:
+        return `L'accès a été suspendu pour facture impayée depuis plus de ${reglages.suspensionDayOffset} jours. Réglez vos factures en attente depuis Facturation pour qu'une demande de réactivation s'ouvre.`;
+      default:
+        return "";
+    }
+  }
+
+  private async appliquerEtapeRelance(
+    facture: { id: string; amount: Prisma.Decimal; shopId: string; shop: { ownerId: string; staff: { userId: string }[] } },
+    palier: number,
+    reglages: SeuilsFacturation,
+    opts: { manuel: boolean; adminUserId?: string },
+  ) {
+    const message = this.messagePourPalier(palier, Number(facture.amount), reglages);
+    await this.prisma.invoice.update({
+      where: { id: facture.id },
+      data: { reminderStage: palier, lastReminderSentAt: new Date() },
+    });
+    await this.prisma.invoiceReminder.create({
+      data: { invoiceId: facture.id, stage: palier, message, sentByUserId: opts.manuel ? opts.adminUserId ?? null : null },
+    });
+
+    const destinataires = [facture.shop.ownerId, ...facture.shop.staff.map((s) => s.userId)];
+    await this.notifications.notifierMulticanal(destinataires, {
+      type: palier === 5 ? NotificationType.FACTURE_SUSPENDUE : NotificationType.FACTURE_RELANCE,
+      title: TITRE_PALIER[palier] ?? "Relance de facturation",
+      body: message,
+      link: "/parametres",
+    });
+  }
+
+  /**
+   * Remplace l'ancienne `suspendOverdueShops` ET l'ancienne
+   * `EcheancierService.relancerFacturesBoutiques` pour les factures
+   * boutiques spécifiquement (16 nov. 2026, chantier relances/
+   * recouvrement) : calcule, pour chaque facture PENDING, le palier cible
+   * (`palierCible`) à partir des seuils configurés dans PlatformSettings,
+   * et ne ré-agit que si ce palier dépasse celui déjà atteint
+   * (`reminderStage`) — c'est ce qui évite qu'une relance soit renvoyée
+   * chaque jour une fois un palier atteint, contrairement au comportement
+   * précédent. À la bascule du palier 5, suspend la boutique et notifie en
+   * plus les admins (jamais seulement la boutique, pour que l'équipe sache
+   * qu'une suspension automatique vient d'avoir lieu).
+   */
+  async executerEscaladeFacturesBoutiques(maintenant = new Date()) {
+    const reglages = await this.reglagesFacturation();
+    const factures = await this.prisma.invoice.findMany({
+      where: { status: "PENDING" },
+      include: {
+        shop: {
+          select: { id: true, name: true, status: true, ownerId: true, staff: { where: { active: true }, select: { userId: true } } },
+        },
+      },
+    });
+
+    const resultats = { relancesEnvoyees: 0, boutiquesSuspendues: 0 };
+    const shopIdsASuspendre = new Set<string>();
+
+    for (const facture of factures) {
+      const jours = joursEntiersEntre(facture.dueAt, maintenant);
+      const palier = palierCible(jours, reglages);
+      if (palier <= facture.reminderStage) continue;
+
+      await this.appliquerEtapeRelance(facture, palier, reglages, { manuel: false });
+      resultats.relancesEnvoyees += 1;
+
+      if (palier === 5 && facture.shop.status !== ShopStatus.SUSPENDED) {
+        shopIdsASuspendre.add(facture.shopId);
+      }
+    }
+
+    for (const shopId of shopIdsASuspendre) {
+      await this.prisma.shop.update({
+        where: { id: shopId },
+        data: { status: ShopStatus.SUSPENDED, suspendedAt: maintenant, suspensionReason: "IMPAYE" },
+      });
+      await this.notifications.notifierMulticanal(await this.idsAdmins(), {
+        type: NotificationType.FACTURE_SUSPENDUE,
+        title: "Boutique suspendue pour impayé",
+        body: `Une boutique a été suspendue automatiquement (facture impayée depuis plus de ${reglages.suspensionDayOffset} jours).`,
+        link: "/admin/factures",
+      });
+      resultats.boutiquesSuspendues += 1;
+    }
+    return resultats;
+  }
+
+  /**
+   * Relance manuelle groupée depuis l'écran admin Factures (bouton
+   * "Envoyer une relance" avec sélection multiple) — contrairement à
+   * l'escalade automatique ci-dessus, peut renvoyer le palier déjà atteint
+   * à la demande (ne force pas d'attendre un nouveau seuil franchi), pour
+   * que l'admin puisse relancer "à la demande" une boutique précise.
+   * Chaque envoi manuel trace `sentByUserId` pour le distinguer d'un envoi
+   * automatique dans l'historique (InvoiceReminder).
+   */
+  async envoyerRelancesManuelles(invoiceIds: string[], adminUserId: string) {
+    const reglages = await this.reglagesFacturation();
+    const resultats: { invoiceId: string; action: string }[] = [];
+    for (const invoiceId of invoiceIds) {
+      const facture = await this.prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        include: { shop: { select: { ownerId: true, staff: { where: { active: true }, select: { userId: true } } } } },
+      });
+      if (!facture || facture.status !== "PENDING") {
+        resultats.push({ invoiceId, action: "ignoree_non_en_attente" });
+        continue;
+      }
+      const jours = joursEntiersEntre(facture.dueAt, new Date());
+      const palier = Math.max(palierCible(jours, reglages), facture.reminderStage || 1);
+      await this.appliquerEtapeRelance(facture, palier, reglages, { manuel: true, adminUserId });
+      resultats.push({ invoiceId, action: "relance_envoyee" });
+    }
+    return resultats;
+  }
 
   /**
    * Fait passer les boutiques dont la période gratuite est écoulée de
@@ -159,69 +323,158 @@ export class BillingService {
   }
 
   /**
-   * Suspend les boutiques dont une facture est impayée depuis plus de
-   * `graceDays` après son échéance (prompt §31 : 7 jours par défaut,
-   * entièrement configurable). Ne touche jamais aux commandes, produits,
-   * factures ou historiques déjà existants — seulement au statut d'accès.
-   */
-  async suspendOverdueShops(graceDays = 7) {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - graceDays);
-
-    const overdueInvoices = await this.prisma.invoice.findMany({
-      where: { status: "PENDING", dueAt: { lt: cutoff } },
-    });
-
-    const shopIds = [...new Set(overdueInvoices.map((i) => i.shopId))];
-    const results: { shopId: string; action: string }[] = [];
-
-    for (const shopId of shopIds) {
-      await this.prisma.shop.update({ where: { id: shopId }, data: { status: ShopStatus.SUSPENDED } });
-      results.push({ shopId, action: "suspended" });
-    }
-
-    return results;
-  }
-
-  /**
    * Réactivation après paiement confirmé. Une boutique suspendue conserve
    * tout son historique (prompt §31) — la réactivation ne fait que changer
    * le statut et solder la facture.
    *
-   * Correctif du 18 oct. 2026 (demande "payer ses arriérés avant
-   * réactivation") : jusqu'ici, régler UNE SEULE facture en retard
-   * réactivait immédiatement la boutique même s'il restait d'autres
-   * factures impayées à l'origine de la suspension — réglée ici en ne
-   * repassant le statut à ACTIVE que si plus aucune facture PENDING ne
-   * reste pour cette boutique. S'il en reste, la boutique est marquée
-   * PAYMENT_DUE (jamais laissée SUSPENDED alors qu'un paiement vient
-   * d'être reçu, pour qu'elle réapparaisse dans les relances de
-   * l'échéancier plutôt que de sembler toujours bloquée) et le solde
-   * restant est renvoyé à l'appelant.
+   * Réécrite le 16 nov. 2026 (chantier relances/recouvrement) :
+   * - fige `penaltyDays`/`penaltyAmount` via `calculerPenaliteRetard`
+   *   (jamais recalculée après coup — voir dunning.util.ts) ;
+   * - correctif du 18 oct. 2026 conservé : ne repasse ACTIVE que si plus
+   *   aucune facture PENDING ne reste pour cette boutique ;
+   * - NOUVEAU : si la boutique est déjà SUSPENDED, le paiement ne la
+   *   réactive plus JAMAIS automatiquement, même si tout est soldé — seule
+   *   `validerReactivation` (validation admin explicite) le fait. À la
+   *   place, dès que le solde tombe à zéro pour une boutique suspendue, une
+   *   `ShopReactivationRequest` s'ouvre automatiquement (décision du
+   *   propriétaire : réactivation automatique côté demande, mais toujours
+   *   soumise à validation admin) ;
+   * - envoie systématiquement un reçu de confirmation au propriétaire/
+   *   staff actif, quel que soit le canal configuré (notifierMulticanal).
    */
-  async markInvoicePaidAndReactivate(invoiceId: string) {
-    const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+  async markInvoicePaidAndReactivate(invoiceId: string, markedByUserId: string) {
+    const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId }, include: { shop: true } });
+    const reglages = await this.reglagesFacturation();
+    const paidAt = new Date();
+    const { penaltyDays, penaltyAmount } = calculerPenaliteRetard(invoice.amount, invoice.dueAt, paidAt, reglages);
 
     const autresFacturesImpayees = await this.prisma.invoice.count({
       where: { shopId: invoice.shopId, status: "PENDING", id: { not: invoiceId } },
     });
-    const reactivationComplete = autresFacturesImpayees === 0;
+    const toutSolde = autresFacturesImpayees === 0;
+    const dejaSuspendue = invoice.shop.status === ShopStatus.SUSPENDED;
+    const nouveauStatutBoutique = dejaSuspendue
+      ? ShopStatus.SUSPENDED
+      : toutSolde
+        ? ShopStatus.ACTIVE
+        : ShopStatus.PAYMENT_DUE;
 
-    const resultats = await this.prisma.$transaction([
-      this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date() } }),
-      this.prisma.shop.update({
-        where: { id: invoice.shopId },
-        data: { status: reactivationComplete ? ShopStatus.ACTIVE : ShopStatus.PAYMENT_DUE },
-      }),
+    const [factureMaj] = await this.prisma.$transaction([
+      this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt, penaltyDays, penaltyAmount } }),
+      this.prisma.shop.update({ where: { id: invoice.shopId }, data: { status: nouveauStatutBoutique } }),
     ]);
 
     // Revenu ELEGANZ reconnu au règlement effectif, jamais à la facturation
-    // (docs/ARCHITECTURE_FINANCE.md §8bis.3).
-    await this.accounting.postPlatformInvoicePaid(resultats[0], "invoice").catch((err) => {
-      this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture ${invoiceId} échouée`, err);
+    // (docs/ARCHITECTURE_FINANCE.md §8bis.3) — inclut la pénalité, qui est
+    // elle aussi un encaissement réel au moment du paiement.
+    await this.accounting
+      .postPlatformInvoicePaid({ id: factureMaj.id, amount: Number(invoice.amount) + penaltyAmount }, "invoice")
+      .catch((err) => {
+        this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture ${invoiceId} échouée`, err);
+      });
+
+    const destinataires = await this.destinatairesBoutique(invoice.shopId).catch(() => [] as string[]);
+    await this.notifications.notifierMulticanal(destinataires, {
+      type: NotificationType.PAIEMENT_RECU,
+      title: "Reçu de paiement ELEGANZ",
+      body:
+        penaltyAmount > 0
+          ? `Facture ${invoice.kind} de ${Number(invoice.amount).toFixed(2)} reçue (pénalité de retard : ${penaltyAmount.toFixed(2)} sur ${penaltyDays} jour(s)). Merci.`
+          : `Facture ${invoice.kind} de ${Number(invoice.amount).toFixed(2)} reçue. Merci.`,
+      link: "/parametres",
     });
 
-    return { ...resultats[1], facturesRestantes: autresFacturesImpayees, reactivee: reactivationComplete };
+    let demandeReactivation = null;
+    if (dejaSuspendue && toutSolde) {
+      const dejaEnAttente = await this.prisma.shopReactivationRequest.findFirst({
+        where: { shopId: invoice.shopId, status: "PENDING" },
+      });
+      demandeReactivation = dejaEnAttente ?? (await this.prisma.shopReactivationRequest.create({ data: { shopId: invoice.shopId } }));
+      if (!dejaEnAttente) {
+        await this.notifications.notifierMulticanal(await this.idsAdmins(), {
+          type: NotificationType.REACTIVATION_DEMANDE,
+          title: "Demande de réactivation",
+          body: `${invoice.shop.name} a réglé toutes ses factures — demande de réactivation en attente de validation.`,
+          link: "/admin/factures",
+        });
+      }
+    }
+
+    return {
+      ...factureMaj,
+      facturesRestantes: autresFacturesImpayees,
+      reactivee: nouveauStatutBoutique === ShopStatus.ACTIVE,
+      penaltyDays,
+      penaltyAmount,
+      demandeReactivation,
+    };
+  }
+
+  /**
+   * Validation admin d'une demande de réactivation (16 nov. 2026) — jamais
+   * automatique : même si `markInvoicePaidAndReactivate` a ouvert la
+   * demande dès solde à zéro, c'est cette méthode, déclenchée depuis
+   * l'écran admin Factures, qui fait réellement repasser la boutique
+   * ACTIVE. Revérifie le sine qua non (aucune facture PENDING) même si déjà
+   * vrai à l'ouverture de la demande, au cas où une nouvelle facture serait
+   * apparue entre-temps.
+   */
+  async validerReactivation(requestId: string, decision: "APPROVE" | "REJECT", adminUserId: string, note?: string) {
+    const demande = await this.prisma.shopReactivationRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      include: { shop: true },
+    });
+    if (demande.status !== "PENDING") {
+      throw new ConflictException("Cette demande a déjà été traitée.");
+    }
+    if (decision === "APPROVE") {
+      const impayees = await this.prisma.invoice.count({ where: { shopId: demande.shopId, status: "PENDING" } });
+      if (impayees > 0) {
+        throw new BadRequestException(`${impayees} facture(s) encore impayée(s) — la réactivation ne peut pas être validée.`);
+      }
+    }
+
+    const operations: Prisma.PrismaPromise<unknown>[] = [
+      this.prisma.shopReactivationRequest.update({
+        where: { id: requestId },
+        data: {
+          status: decision === "APPROVE" ? "APPROVED" : "REJECTED",
+          reviewedAt: new Date(),
+          reviewedByUserId: adminUserId,
+          reviewNote: note,
+        },
+      }),
+    ];
+    if (decision === "APPROVE") {
+      operations.push(
+        this.prisma.shop.update({
+          where: { id: demande.shopId },
+          data: { status: ShopStatus.ACTIVE, suspendedAt: null, suspensionReason: null },
+        }),
+      );
+    }
+    const [demandeMaj] = await this.prisma.$transaction(operations);
+
+    const destinataires = await this.destinatairesBoutique(demande.shopId);
+    await this.notifications.notifierMulticanal(destinataires, {
+      type: NotificationType.REACTIVATION_DEMANDE,
+      title: decision === "APPROVE" ? "Réactivation validée" : "Demande de réactivation refusée",
+      body:
+        decision === "APPROVE"
+          ? "Votre boutique a été réactivée."
+          : `Votre demande de réactivation a été refusée.${note ? ` Motif : ${note}` : ""}`,
+      link: "/parametres",
+    });
+
+    return demandeMaj;
+  }
+
+  listReactivationRequests(status: "PENDING" | "APPROVED" | "REJECTED" = "PENDING") {
+    return this.prisma.shopReactivationRequest.findMany({
+      where: { status },
+      include: { shop: { select: { id: true, name: true } } },
+      orderBy: { requestedAt: "desc" },
+    });
   }
 
   /**
@@ -384,6 +637,49 @@ export class BillingService {
 
   listInvoices(shopId: string) {
     return this.prisma.invoice.findMany({ where: { shopId }, orderBy: { createdAt: "desc" } });
+  }
+
+  // --- Preuves de paiement (16 nov. 2026, chantier relances/recouvrement,
+  // point "en cas d'erreur/omission") — upload direct vers R2 via URL
+  // signée, même mécanisme que StorageService.creerUrlUpload déjà utilisé
+  // pour les documents Experts/le logo de facturation. Jamais de passage
+  // par la messagerie (Conversation/Message n'a aucun champ de pièce
+  // jointe aujourd'hui) : un modèle dédié, plus simple, qui s'affiche
+  // directement et de façon compacte sur la ligne de facture admin.
+
+  creerUrlUploadPreuvePaiement(shopId: string, invoiceId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`shops/${shopId}/invoices/${invoiceId}/proofs`, contentType);
+  }
+
+  async soumettrePreuvePaiement(shopId: string, invoiceId: string, userId: string, fileUrl: string, note?: string) {
+    const invoice = await this.prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    if (invoice.shopId !== shopId) {
+      throw new BadRequestException("Cette facture n'appartient pas à cette boutique.");
+    }
+    // Même garde-fou SSRF que le reste de la plateforme (12 nov. 2026,
+    // retour client) : on ne fait jamais confiance à une URL fournie par
+    // un client sans vérifier qu'elle pointe vers notre propre bucket.
+    if (!this.storage.urlEstDansLeBucket(fileUrl)) {
+      throw new BadRequestException("Le fichier déposé n'a pas été uploadé via le lien fourni par cette page.");
+    }
+    const preuve = await this.prisma.invoicePaymentProof.create({
+      data: { invoiceId, submittedByUserId: userId, fileUrl, note },
+    });
+    await this.notifications.notifierMulticanal(await this.idsAdmins(), {
+      type: NotificationType.FACTURE_RELANCE,
+      title: "Preuve de paiement déposée",
+      body: `Une boutique a déposé une preuve de paiement pour une facture de ${Number(invoice.amount).toFixed(2)}.`,
+      link: "/admin/factures",
+    });
+    return preuve;
+  }
+
+  listPaymentProofs(invoiceId: string) {
+    return this.prisma.invoicePaymentProof.findMany({ where: { invoiceId }, orderBy: { submittedAt: "desc" } });
+  }
+
+  listReminders(invoiceId: string) {
+    return this.prisma.invoiceReminder.findMany({ where: { invoiceId }, orderBy: { sentAt: "desc" } });
   }
 
   /**

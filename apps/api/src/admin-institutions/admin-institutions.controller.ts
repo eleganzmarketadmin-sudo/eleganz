@@ -60,4 +60,13 @@ export class AdminInstitutionsController {
     requireSuperAdmin(user);
     return this.adminInstitutions.reject(institutionId, dto.note);
   }
+
+  // Rattrapage ponctuel (16 nov. 2026) — voir le commentaire sur
+  // AdminInstitutionsService.backfillInstitutionStaff. À appeler une fois
+  // après le déploiement de la gestion d'équipe institution.
+  @Post("backfill-staff")
+  backfillStaff(@CurrentUser() user: AuthenticatedUser) {
+    requireSuperAdmin(user);
+    return this.adminInstitutions.backfillInstitutionStaff();
+  }
 }

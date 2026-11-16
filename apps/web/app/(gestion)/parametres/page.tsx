@@ -75,6 +75,157 @@ interface ResultatChangementBouquet {
   renouvellement: string;
 }
 
+interface FactureEleganz {
+  id: string;
+  amount: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: string;
+  kind: string;
+  reminderStage: number;
+  penaltyDays: number | null;
+  penaltyAmount: string | null;
+}
+
+const CLES_PALIER_FACTURATION: Record<number, string> = {
+  1: "admfact_palier1",
+  2: "admfact_palier2",
+  3: "admfact_palier3",
+  4: "admfact_palier4",
+  5: "admfact_palier5",
+};
+
+/**
+ * Sous-section "Facturation ELEGANZ" de l'écran Abonnement (16 nov. 2026,
+ * chantier relances/recouvrement, §4 du plan) — jamais une nouvelle page
+ * sous `/(gestion)/factures`, qui désigne déjà les documents commerciaux de
+ * la boutique vers SES PROPRES clients : ceci concerne la facturation DE la
+ * boutique PAR la plateforme (abonnement, commissions), déjà exposée côté
+ * API (`GET /shops/:shopId/invoices`) mais jamais consommée côté front
+ * avant ce chantier. Permet de voir les factures en attente avec leur
+ * palier de relance, et de déposer une preuve de paiement (sine qua non de
+ * la réactivation automatique si la boutique est suspendue pour impayé).
+ */
+function FacturationElegansSection({ shopId, shopStatus }: { shopId: string; shopStatus: string }) {
+  const { t } = useLocale();
+  const [factures, setFactures] = useState<FactureEleganz[] | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [preuveOuverte, setPreuveOuverte] = useState<string | null>(null);
+  const [noteParFacture, setNoteParFacture] = useState<Record<string, string>>({});
+  const [enCours, setEnCours] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<FactureEleganz[]>(`/shops/${shopId}/invoices`)
+      .then(setFactures)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("abonnement_erreurChargement")));
+  }
+
+  useEffect(recharger, [shopId]);
+
+  async function deposerPreuve(factureId: string, fichier: File) {
+    setEnCours(factureId);
+    setErreur(null);
+    setConfirmation(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/shops/${shopId}/invoices/${factureId}/proof-of-payment/upload-url`,
+        { contentType: fichier.type },
+      );
+      const envoi = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": fichier.type }, body: fichier });
+      if (!envoi.ok) throw new Error(t("factElg_erreurEnvoiStockage"));
+      await api.post(`/shops/${shopId}/invoices/${factureId}/proof-of-payment`, {
+        fileUrl: publicUrl,
+        note: noteParFacture[factureId] || undefined,
+      });
+      setConfirmation(t("factElg_preuveDeposee"));
+      setPreuveOuverte(null);
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("factElg_erreurEnvoiPreuve"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  if (factures === null) return <p className={styles.note}>{t("abonnement_chargement")}</p>;
+
+  const enAttente = factures.filter((f) => f.status === "PENDING");
+  const historique = factures.filter((f) => f.status !== "PENDING");
+
+  return (
+    <div style={{ marginTop: "var(--espace-5)" }}>
+      <h3 className={styles.sousTitre}>{t("factElg_titre")}</h3>
+      {shopStatus === "SUSPENDED" && <p className={styles.erreur}>{t("factElg_noteSuspendue")}</p>}
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+      {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
+
+      {enAttente.length === 0 ? (
+        <p className={styles.note}>{t("factElg_aucuneFactureEnAttente")}</p>
+      ) : (
+        enAttente.map((f) => (
+          <div key={f.id} className={styles.champ} style={{ border: "1px solid var(--color-border)", borderRadius: "8px", padding: "var(--espace-3)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--espace-3)", alignItems: "center", justifyContent: "space-between" }}>
+              <span>
+                <strong>{f.kind}</strong> — {formatMoney(Number(f.amount))} · {t("crd_colEcheance")} : {formatDate(f.dueAt)}
+                {f.reminderStage > 0 && CLES_PALIER_FACTURATION[f.reminderStage] && (
+                  <> · {t(CLES_PALIER_FACTURATION[f.reminderStage])}</>
+                )}
+              </span>
+              <button
+                className={styles.bouton}
+                type="button"
+                onClick={() => setPreuveOuverte(preuveOuverte === f.id ? null : f.id)}
+              >
+                📎 {t("factElg_deposerPreuve")}
+              </button>
+            </div>
+            {preuveOuverte === f.id && (
+              <div style={{ marginTop: "var(--espace-3)", display: "flex", flexDirection: "column", gap: "var(--espace-2)" }}>
+                <input
+                  type="text"
+                  placeholder={t("factElg_notePlaceholder")}
+                  value={noteParFacture[f.id] ?? ""}
+                  onChange={(e) => setNoteParFacture((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  disabled={enCours === f.id}
+                  onChange={(e) => {
+                    const fichier = e.target.files?.[0];
+                    if (fichier) deposerPreuve(f.id, fichier);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ))
+      )}
+
+      <h3 className={styles.sousTitre} style={{ marginTop: "var(--espace-4)" }}>
+        {t("factElg_historique")}
+      </h3>
+      {historique.length === 0 ? (
+        <p className={styles.note}>{t("factElg_aucunHistorique")}</p>
+      ) : (
+        historique.slice(0, 10).map((f) => (
+          <div key={f.id} className={styles.champ} style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>
+              {f.kind} — {formatMoney(Number(f.amount))}
+              {f.penaltyAmount && Number(f.penaltyAmount) > 0 && (
+                <> · {t("admfact_penalite")} : {formatMoney(Number(f.penaltyAmount))}</>
+              )}
+            </span>
+            <span className={styles.note}>{f.status === "PAID" ? t("admfact_statutPayee") : f.status}</span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function ParametresContent() {
   const { currentShop, reload } = useShop();
   const { t } = useLocale();
@@ -821,6 +972,8 @@ function ParametresContent() {
                   );
                 })}
               </div>
+
+              <FacturationElegansSection shopId={currentShop.id} shopStatus={currentShop.status} />
             </>
           )}
         </section>

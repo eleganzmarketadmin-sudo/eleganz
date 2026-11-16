@@ -1,25 +1,35 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { InstitutionPortalService, exigerInstitutionActive } from "./institution-portal.service";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { InstitutionPortalService } from "./institution-portal.service";
+import { InstitutionStaffService } from "./institution-staff.service";
+import { DemandeCreditService } from "./demande-credit.service";
 import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
+import { InviteInstitutionStaffDto } from "./dto/invite-institution-staff.dto";
+import { UpdateInstitutionStaffDto } from "./dto/update-institution-staff.dto";
+import { CreerDemandeCreditLibreDto } from "./dto/demande-credit.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
+import { InstitutionMembershipGuard } from "./institution-membership.guard";
+import { CurrentInstitutionId } from "./current-institution.decorator";
+import { InstitutionRoles } from "./institution-roles.decorator";
+import { InstitutionRole } from "@eleganz/database";
 
-// Pas de garde de rôle dédiée : comme DeliveryController.me pour les
-// livreurs, l'accès est naturellement limité par la résolution du profil
-// (InstitutionPortalService.monProfil lève NotFoundException si ce compte
-// n'a pas de profil Institution) plutôt que par une classe de garde
-// séparée — même principe que le reste de l'API (JwtAuthGuard relit
-// toujours le rôle en base, voir jwt-auth.guard.ts). Depuis le 14 nov.
-// 2026, chaque route donnant accès à un contenu réel (tout sauf /me et
-// /inscription) revérifie en plus exigerInstitutionActive(moi) : un profil
-// PENDING/REJECTED/SUSPENDED existe bel et bien (NotFoundException ne
-// s'applique pas), mais ne doit rien pouvoir faire de plus que consulter
-// son propre statut et, pour PENDING, attendre la décision de l'admin.
+// /me et /inscription restent volontairement hors InstitutionMembershipGuard
+// (14 nov. 2026, inchangé) : une institution doit pouvoir consulter son
+// propre statut et s'inscrire sans déjà être active/pourvue d'une équipe.
+// Toute autre route exige depuis le 16 nov. 2026 InstitutionMembershipGuard,
+// qui résout l'institution depuis le JWT (voir le commentaire sur ce
+// guard) et remplace la répétition manuelle
+// `monProfil(user.id) + exigerInstitutionActive(moi)` qui existait ici
+// avant cette date.
 @Controller("institution-portal")
 @UseGuards(JwtAuthGuard)
 export class InstitutionPortalController {
-  constructor(private readonly portal: InstitutionPortalService) {}
+  constructor(
+    private readonly portal: InstitutionPortalService,
+    private readonly staff: InstitutionStaffService,
+    private readonly demandes: DemandeCreditService,
+  ) {}
 
   @Get("me")
   async me(@CurrentUser() user: AuthenticatedUser) {
@@ -35,64 +45,121 @@ export class InstitutionPortalController {
   }
 
   @Get("shops")
-  async mesBoutiques(@CurrentUser() user: AuthenticatedUser) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.mesBoutiques(moi.id);
+  @UseGuards(InstitutionMembershipGuard)
+  async mesBoutiques(@CurrentInstitutionId() institutionId: string) {
+    return this.portal.mesBoutiques(institutionId);
   }
 
   @Get("shops/:shopId/dossier")
-  async dossier(@CurrentUser() user: AuthenticatedUser, @Param("shopId") shopId: string) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.dossier(moi.id, shopId);
+  @UseGuards(InstitutionMembershipGuard)
+  async dossier(@CurrentInstitutionId() institutionId: string, @Param("shopId") shopId: string) {
+    return this.portal.dossier(institutionId, shopId);
   }
 
   @Post("shops/:shopId/decisions")
+  @UseGuards(InstitutionMembershipGuard)
   async decider(
+    @CurrentInstitutionId() institutionId: string,
     @CurrentUser() user: AuthenticatedUser,
     @Param("shopId") shopId: string,
     @Body() dto: CreateLoanDecisionDto,
   ) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.decider(moi.id, shopId, user.id, dto);
+    return this.portal.decider(institutionId, shopId, user.id, dto);
   }
 
   @Get("decisions")
-  async mesDecisions(@CurrentUser() user: AuthenticatedUser) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.mesDecisions(moi.id);
+  @UseGuards(InstitutionMembershipGuard)
+  async mesDecisions(@CurrentInstitutionId() institutionId: string) {
+    return this.portal.mesDecisions(institutionId);
   }
 
   @Get("loans")
-  async mesPrets(@CurrentUser() user: AuthenticatedUser) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.mesPrets(moi.id);
+  @UseGuards(InstitutionMembershipGuard)
+  async mesPrets(@CurrentInstitutionId() institutionId: string) {
+    return this.portal.mesPrets(institutionId);
   }
 
   @Post("shops/:shopId/loans/:loanId/echeances")
+  @UseGuards(InstitutionMembershipGuard)
   async comptabiliserEcheance(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentInstitutionId() institutionId: string,
     @Param("shopId") shopId: string,
     @Param("loanId") loanId: string,
     @Query("periode") periode?: string,
   ) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.comptabiliserEcheance(moi.id, shopId, loanId, periode);
+    return this.portal.comptabiliserEcheance(institutionId, shopId, loanId, periode);
   }
 
   @Get("shops/:shopId/loans/:loanId/echeances")
+  @UseGuards(InstitutionMembershipGuard)
   async listerEcheances(
-    @CurrentUser() user: AuthenticatedUser,
+    @CurrentInstitutionId() institutionId: string,
     @Param("shopId") shopId: string,
     @Param("loanId") loanId: string,
   ) {
-    const moi = await this.portal.monProfil(user.id);
-    exigerInstitutionActive(moi);
-    return this.portal.listerEcheances(moi.id, shopId, loanId);
+    return this.portal.listerEcheances(institutionId, shopId, loanId);
+  }
+
+  // Candidatures de crédit numérotées (16 nov. 2026, demande du
+  // propriétaire, point 1) — GET/:numero restent ouverts à tout membre actif
+  // (consultation), la création libre est réservée aux rôles en contact
+  // avec le demandeur.
+  @Get("demandes")
+  @UseGuards(InstitutionMembershipGuard)
+  mesDemandes(@CurrentInstitutionId() institutionId: string) {
+    return this.demandes.lister(institutionId);
+  }
+
+  @Get("demandes/:numero")
+  @UseGuards(InstitutionMembershipGuard)
+  detailDemande(@CurrentInstitutionId() institutionId: string, @Param("numero") numero: string) {
+    return this.demandes.detail(institutionId, numero);
+  }
+
+  @Post("demandes")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE, InstitutionRole.CHARGE_CLIENTELE)
+  creerDemandeLibre(
+    @CurrentInstitutionId() institutionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreerDemandeCreditLibreDto,
+  ) {
+    return this.demandes.creerLibre(institutionId, user.id, dto);
+  }
+
+  // Équipe institution (16 nov. 2026, demande du propriétaire, point 2) —
+  // mirroring les routes staff de ShopsController, réservées à
+  // ADMINISTRATEUR/GESTIONNAIRE_COMPTE (même paire de rôles qu'OWNER/MANAGER
+  // côté Gestion).
+  @Get("staff")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  listStaff(@CurrentInstitutionId() institutionId: string) {
+    return this.staff.listStaff(institutionId);
+  }
+
+  @Post("staff")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  inviteStaff(@CurrentInstitutionId() institutionId: string, @Body() dto: InviteInstitutionStaffDto) {
+    return this.staff.inviteStaff(institutionId, dto);
+  }
+
+  @Patch("staff/:staffId")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  updateStaff(
+    @CurrentInstitutionId() institutionId: string,
+    @Param("staffId") staffId: string,
+    @Body() dto: UpdateInstitutionStaffDto,
+  ) {
+    return this.staff.updateStaff(institutionId, staffId, dto);
+  }
+
+  @Delete("staff/:staffId")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  removeStaff(@CurrentInstitutionId() institutionId: string, @Param("staffId") staffId: string) {
+    return this.staff.deactivateStaff(institutionId, staffId);
   }
 }

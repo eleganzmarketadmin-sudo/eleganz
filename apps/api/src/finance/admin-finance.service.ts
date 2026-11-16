@@ -5,6 +5,7 @@ import { AccountingQueryService } from "./accounting-query.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { FiscalRuleScope } from "@eleganz/database";
 import type { DossierCreditBoutiqueBusinessPlan } from "./finance.service";
+import { repartirFacturation } from "../billing/revenue-breakdown.util";
 
 export interface DossierCreditPlateforme {
   entiteNom: string;
@@ -58,17 +59,16 @@ export class AdminFinanceService {
       this.prisma.comptableInvoice.findMany({ where: { createdAt: { gte: from, lt: to } } }),
     ]);
 
-    function repartir(lignes: { amount: unknown; status: string }[]) {
-      const facture = lignes.reduce((s, l) => s + Number(l.amount), 0);
-      const encaisse = lignes
-        .filter((l) => l.status === "PAID")
-        .reduce((s, l) => s + Number(l.amount), 0);
-      return { facture, encaisse };
-    }
-
-    const abonnementsBoutique = repartir(invoices);
-    const fraisLivreur = repartir(driverInvoices);
-    const abonnementsComptable = repartir(comptableInvoices);
+    // repartir() vivait ici en fonction locale avant le 16 nov. 2026 — voir
+    // désormais apps/api/src/billing/revenue-breakdown.util.ts
+    // (repartirFacturation), extrait en utilitaire partagé avec le Centre
+    // de pilotage (AdminCockpitService.executiveDashboard) et étendu avec
+    // enAttente/enRetard. Le résultat reste rétro-compatible : facture et
+    // encaisse gardent exactement le même sens qu'avant pour les lecteurs
+    // existants (apps/web/app/admin/finance/page.tsx).
+    const abonnementsBoutique = repartirFacturation(invoices, to);
+    const fraisLivreur = repartirFacturation(driverInvoices, to);
+    const abonnementsComptable = repartirFacturation(comptableInvoices, to);
 
     // (A) Valeur totale des transactions des vendeurs — jamais un revenu ELEGANZ.
     const valeurTotaleTransactionsVendeurs =

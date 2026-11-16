@@ -22,7 +22,31 @@ interface ProfilInstitution {
   type: "MICROFINANCE" | "BANQUE" | "COOPERATIVE" | "AUTRE";
   status: "ACTIVE" | "SUSPENDED" | "PENDING" | "REJECTED";
   rejectionNote: string | null;
+  // Rôle/menu du membre connecté au sein de SON institution (16 nov. 2026,
+  // gestion d'équipe) — calculés côté API par
+  // InstitutionPortalService.monProfil (via InstitutionStaff), jamais
+  // recalculés ici. `monMenu` pilote quels liens de navigation s'affichent
+  // ci-dessous, exactement comme GestionShell le fait avec les écrans
+  // accordés d'un ShopStaff.
+  monRole: string;
+  monMenu: string[];
+  staffActif: boolean;
 }
+
+// Mêmes clés que MenuInstitution côté API — tant que `profil` n'est pas
+// encore chargé, on affiche tout (comme `navigationActive` ci-dessous le
+// fait déjà pour le statut), pour éviter un flash de navigation vide.
+const TOUS_LES_ECRANS_INSTITUTION = [
+  "RECEPTION",
+  "ANALYSE",
+  "DECISIONS",
+  "RENDEZ_VOUS",
+  "PRETS",
+  "MESSAGERIE",
+  "RAPPORTS",
+  "EQUIPE",
+  "PARAMETRES",
+];
 
 /**
  * Coquille du portail institutions (14 nov. 2026 — microfinances, banques,
@@ -79,12 +103,20 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
   // profil (erreurProfil, cas admin/legacy), on affiche la navigation comme
   // avant — seul un profil chargé et explicitement non-ACTIVE la masque.
   const navigationActive = !profil || profil.status === "ACTIVE";
+  const monMenu = profil?.monMenu ?? TOUS_LES_ECRANS_INSTITUTION;
 
+  // "Demandes" partage l'écran RECEPTION avec "Boutiques" (les deux sont des
+  // vues de réception de dossiers/candidatures, voir le commentaire sur
+  // ECRANS_MENU dans institution/equipe/page.tsx) ; ANALYSE/RENDEZ_VOUS/
+  // MESSAGERIE/RAPPORTS/PARAMETRES n'ont pas encore d'écran dédié (Phase 2/3)
+  // donc aucun lien ici ne leur correspond encore.
   const LIENS = [
-    { href: "/institution", label: t("inst_nav_boutiques"), icone: "🏬" },
-    { href: "/institution/decisions", label: t("inst_nav_decisions"), icone: "📝" },
-    { href: "/institution/prets", label: t("inst_nav_prets"), icone: "💰" },
-  ];
+    { href: "/institution", label: t("inst_nav_boutiques"), icone: "🏬", ecran: "RECEPTION" },
+    { href: "/institution/demandes", label: t("inst_nav_demandes"), icone: "🧾", ecran: "RECEPTION" },
+    { href: "/institution/decisions", label: t("inst_nav_decisions"), icone: "📝", ecran: "DECISIONS" },
+    { href: "/institution/prets", label: t("inst_nav_prets"), icone: "💰", ecran: "PRETS" },
+    { href: "/institution/equipe", label: t("inst_nav_equipe"), icone: "👥", ecran: "EQUIPE" },
+  ].filter((lien) => monMenu.includes(lien.ecran));
 
   return (
     <div className={styles.cadre}>

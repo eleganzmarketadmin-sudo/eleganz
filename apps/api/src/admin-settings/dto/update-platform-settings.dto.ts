@@ -204,4 +204,49 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsDateString()
   platformFoundedAt?: string;
+
+  // Relances numérotées + pénalités de retard (16 nov. 2026, chantier
+  // relances/recouvrement) — tous les paliers sont réglables (décision du
+  // propriétaire), partagés par les trois domaines de facturation
+  // (boutiques/livreurs/comptable) : une seule politique, un seul écran.
+  // Validés strictement croissants par AdminSettingsService.update() via
+  // dunning.util.validerSeuilsCroissants avant écriture.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  invoiceLatePenaltyRatePercent?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  invoicePenaltyGraceDays?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  reminderDay1Offset?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  reminderDay2Offset?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  reminderDay3Offset?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  warningDayOffset?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  suspensionDayOffset?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  notificationsWhatsappEnabled?: boolean;
 }

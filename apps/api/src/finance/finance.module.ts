@@ -70,6 +70,11 @@ import { LoansService } from "./loans.service";
   // BusinessPlanService/LoansService exportés depuis le 14 nov. 2026 pour le
   // portail institutions (InstitutionsModule) — consultation du dossier
   // crédit d'une boutique et décaissement via une décision d'institution.
-  exports: [AccountingService, BusinessPlanService, LoansService],
+  // FinanceService exporté depuis le 16 nov. 2026 (gestion de crédit PME
+  // complète, DemandeCredit) : InstitutionsModule a besoin de
+  // FinanceService.dossierCredit() pour figer les vrais chiffres financiers
+  // d'une boutique au moment de la réception d'une demande — jusqu'ici
+  // InstitutionPortalService ne lisait que le narratif BusinessPlan.
+  exports: [AccountingService, BusinessPlanService, LoansService, FinanceService],
 })
 export class FinanceModule {}

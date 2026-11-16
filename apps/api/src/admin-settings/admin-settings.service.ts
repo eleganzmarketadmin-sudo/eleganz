@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
+import { validerSeuilsCroissants } from "../billing/dunning.util";
 
 const ID_SINGLETON = "platform";
 
@@ -22,7 +23,33 @@ export class AdminSettingsService {
   }
 
   async update(dto: UpdatePlatformSettingsDto) {
-    await this.get(); // garantit que la ligne existe avant la mise à jour
+    const actuels = await this.get(); // garantit que la ligne existe avant la mise à jour
+
+    // Validation des seuils de relance (16 nov. 2026, chantier relances/
+    // recouvrement) : on ne valide que si AU MOINS un des 5 seuils est
+    // envoyé dans cette requête — superpose le reste des seuils actuels en
+    // base pour vérifier la cohérence du jeu complet, pas seulement des
+    // champs envoyés isolément (un admin pourrait n'envoyer que
+    // suspensionDayOffset et le faire passer sous warningDayOffset actuel).
+    const unSeuilEnvoye =
+      dto.reminderDay1Offset !== undefined ||
+      dto.reminderDay2Offset !== undefined ||
+      dto.reminderDay3Offset !== undefined ||
+      dto.warningDayOffset !== undefined ||
+      dto.suspensionDayOffset !== undefined;
+    if (unSeuilEnvoye) {
+      const erreur = validerSeuilsCroissants({
+        invoiceLatePenaltyRatePercent: actuels.invoiceLatePenaltyRatePercent,
+        invoicePenaltyGraceDays: actuels.invoicePenaltyGraceDays,
+        reminderDay1Offset: dto.reminderDay1Offset ?? actuels.reminderDay1Offset,
+        reminderDay2Offset: dto.reminderDay2Offset ?? actuels.reminderDay2Offset,
+        reminderDay3Offset: dto.reminderDay3Offset ?? actuels.reminderDay3Offset,
+        warningDayOffset: dto.warningDayOffset ?? actuels.warningDayOffset,
+        suspensionDayOffset: dto.suspensionDayOffset ?? actuels.suspensionDayOffset,
+      });
+      if (erreur) throw new BadRequestException(erreur);
+    }
+
     return this.prisma.platformSettings.update({
       where: { id: ID_SINGLETON },
       data: {
@@ -83,8 +110,39 @@ export class AdminSettingsService {
         ...(dto.platformFiscalAddress !== undefined && { platformFiscalAddress: dto.platformFiscalAddress || null }),
         ...(dto.platformFiscalRegime !== undefined && { platformFiscalRegime: dto.platformFiscalRegime || null }),
         ...(dto.platformFoundedAt !== undefined && { platformFoundedAt: dto.platformFoundedAt ? new Date(dto.platformFoundedAt) : null }),
+        ...(dto.invoiceLatePenaltyRatePercent !== undefined && {
+          invoiceLatePenaltyRatePercent: dto.invoiceLatePenaltyRatePercent,
+        }),
+        ...(dto.invoicePenaltyGraceDays !== undefined && { invoicePenaltyGraceDays: dto.invoicePenaltyGraceDays }),
+        ...(dto.reminderDay1Offset !== undefined && { reminderDay1Offset: dto.reminderDay1Offset }),
+        ...(dto.reminderDay2Offset !== undefined && { reminderDay2Offset: dto.reminderDay2Offset }),
+        ...(dto.reminderDay3Offset !== undefined && { reminderDay3Offset: dto.reminderDay3Offset }),
+        ...(dto.warningDayOffset !== undefined && { warningDayOffset: dto.warningDayOffset }),
+        ...(dto.suspensionDayOffset !== undefined && { suspensionDayOffset: dto.suspensionDayOffset }),
+        ...(dto.notificationsWhatsappEnabled !== undefined && {
+          notificationsWhatsappEnabled: dto.notificationsWhatsappEnabled,
+        }),
       },
     });
+  }
+
+  /**
+   * Lecture publique des seuils de relance/pénalité (16 nov. 2026) — pas de
+   * données sensibles, utile pour qu'un écran self-service (boutique,
+   * livreur, comptable) explique à l'avance le calendrier de relance sans
+   * passer par l'API admin.
+   */
+  async publicDunningSettings() {
+    const settings = await this.get();
+    return {
+      invoiceLatePenaltyRatePercent: settings.invoiceLatePenaltyRatePercent,
+      invoicePenaltyGraceDays: settings.invoicePenaltyGraceDays,
+      reminderDay1Offset: settings.reminderDay1Offset,
+      reminderDay2Offset: settings.reminderDay2Offset,
+      reminderDay3Offset: settings.reminderDay3Offset,
+      warningDayOffset: settings.warningDayOffset,
+      suspensionDayOffset: settings.suspensionDayOffset,
+    };
   }
 
   /**

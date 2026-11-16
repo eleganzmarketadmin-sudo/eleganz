@@ -1,8 +1,11 @@
 import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { NotificationType } from "@eleganz/database";
+import { NotificationChannel, NotificationType } from "@eleganz/database";
 import { PushSenderService } from "../push/push-sender.service";
 import { PushSubscriptionsService } from "../push/push-subscriptions.service";
+import { EmailSenderService } from "./channels/email-sender.service";
+import { SmsSenderService } from "./channels/sms-sender.service";
+import { WhatsAppSenderService } from "./channels/whatsapp-sender.service";
 
 /**
  * Notifications in-app (15 oct. 2026, demande UX point 7) — fondation
@@ -23,6 +26,9 @@ export class NotificationsService {
     private readonly prisma: PrismaService,
     private readonly pushSender: PushSenderService,
     private readonly pushSubscriptions: PushSubscriptionsService,
+    private readonly email: EmailSenderService,
+    private readonly sms: SmsSenderService,
+    private readonly whatsapp: WhatsAppSenderService,
   ) {}
 
   async notifierUtilisateurs(
@@ -99,6 +105,93 @@ export class NotificationsService {
     if (echecs > 0) {
       this.logger.warn(`${echecs}/${abonnements.length} envoi(s) push en échec pour "${params.title}"`);
     }
+  }
+
+  /**
+   * Variante de `notifierUtilisateurs` qui fait AUSSI partir le message par
+   * email/SMS/WhatsApp (16 nov. 2026, chantier relances/recouvrement de
+   * facturation — décision explicite du propriétaire d'élargir les canaux
+   * de relance au-delà de l'in-app+push). Réservée aux relances de
+   * facturation (BillingService/DriverBillingService/
+   * ComptableBillingService) : le reste de la plateforme continue d'appeler
+   * `notifierUtilisateurs` et reste in-app+push uniquement, par choix
+   * assumé (pas de bascule générale sans décision explicite).
+   *
+   * Chaque canal externe est gardé par le même double verrou que
+   * `notifierUtilisateurs` applique déjà au push : l'interrupteur
+   * PlatformSettings correspondant ET `estConfigure()` (clé d'API présente
+   * côté serveur) — jamais l'un sans l'autre, pour ne jamais prétendre
+   * avoir envoyé un message qui ne partira nulle part.
+   */
+  async notifierMulticanal(
+    userIds: string[],
+    params: { type: NotificationType; title: string; body: string; link?: string },
+  ) {
+    await this.notifierUtilisateurs(userIds, params);
+    if (userIds.length === 0) return;
+
+    const settings = await this.prisma.platformSettings.findUnique({
+      where: { id: "platform" },
+      select: { notificationsEmailEnabled: true, notificationsSmsEnabled: true, notificationsWhatsappEnabled: true },
+    });
+    const emailActif = Boolean(settings?.notificationsEmailEnabled) && this.email.estConfigure();
+    const smsActif = Boolean(settings?.notificationsSmsEnabled) && this.sms.estConfigure();
+    const whatsappActif = Boolean(settings?.notificationsWhatsappEnabled) && this.whatsapp.estConfigure();
+    if (!emailActif && !smsActif && !whatsappActif) return;
+
+    const uniques = [...new Set(userIds)];
+    const utilisateurs = await this.prisma.user.findMany({
+      where: { id: { in: uniques } },
+      select: { id: true, email: true, phone: true },
+    });
+
+    const envois: Promise<void>[] = [];
+    for (const u of utilisateurs) {
+      if (emailActif && u.email) {
+        envois.push(
+          this.email
+            .envoyer(u.email, params.title, params.body)
+            .then((ok) => this.tracerEnvoiCanal(u.id, params, NotificationChannel.EMAIL, ok)),
+        );
+      }
+      const texteCourt = `${params.title} — ${params.body}`;
+      if (smsActif && u.phone) {
+        envois.push(
+          this.sms.envoyer(u.phone, texteCourt).then((ok) => this.tracerEnvoiCanal(u.id, params, NotificationChannel.SMS, ok)),
+        );
+      }
+      if (whatsappActif && u.phone) {
+        envois.push(
+          this.whatsapp
+            .envoyer(u.phone, texteCourt)
+            .then((ok) => this.tracerEnvoiCanal(u.id, params, NotificationChannel.WHATSAPP, ok)),
+        );
+      }
+    }
+    const resultats = await Promise.allSettled(envois);
+    const echecs = resultats.filter((r) => r.status === "rejected").length;
+    if (echecs > 0) {
+      this.logger.warn(`${echecs}/${envois.length} envoi(s) multicanal en échec pour "${params.title}"`);
+    }
+  }
+
+  // N'écrit une ligne Notification pour ce canal que si l'envoi a
+  // effectivement réussi — sinon on logue l'échec sans laisser croire
+  // (channel: EMAIL/SMS/WHATSAPP en base) qu'un message est parti alors
+  // qu'il n'est jamais arrivé.
+  private async tracerEnvoiCanal(
+    userId: string,
+    params: { type: NotificationType; title: string; body: string; link?: string },
+    canal: NotificationChannel,
+    envoye: boolean,
+  ) {
+    if (!envoye) {
+      this.logger.warn(`Échec d'envoi ${canal} pour l'utilisateur ${userId} ("${params.title}")`);
+      return;
+    }
+    await this.prisma.notification.create({
+      data: { userId, type: params.type, title: params.title, body: params.body, link: params.link, channel: canal },
+    });
   }
 
   list(userId: string, options: { nonLuesSeulement?: boolean } = {}) {

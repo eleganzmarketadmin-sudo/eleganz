@@ -4,7 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AccountingService } from "./accounting.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { CreateLoanDto } from "./dto/loan.dto";
-import { FiscalRuleScope, LoanDecisionStatut, LoanStatut } from "@eleganz/database";
+import { DemandeCreditStatut, FiscalRuleScope, LoanDecisionStatut, LoanStatut } from "@eleganz/database";
 
 function debutDuMois(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1));
@@ -125,6 +125,17 @@ export class LoansService {
     });
 
     await this.prisma.loanDecision.update({ where: { id: decisionId }, data: { loanId: loan.id } });
+
+    // Raccroche au cycle de vie de la DemandeCredit d'origine (16 nov.
+    // 2026), quand cette décision en découle — petit hook, LoansService ne
+    // connaît rien d'autre de DemandeCredit. `decision` ci-dessus n'a pas de
+    // `select` explicite, donc `demandeCreditId` y figure déjà.
+    if (decision.demandeCreditId) {
+      await this.prisma.demandeCredit.update({
+        where: { id: decision.demandeCreditId },
+        data: { statut: DemandeCreditStatut.DECAISSEE },
+      });
+    }
 
     return this.serialiser(loan);
   }
@@ -336,7 +347,22 @@ export class LoansService {
       },
     });
 
+    // Raccroche au cycle de vie de la DemandeCredit d'origine (16 nov.
+    // 2026) — seuls les prêts décaissés via une institution peuvent en
+    // avoir une (voir obtenirPretViaDecision ci-dessus), d'où le filtre sur
+    // loan.institutionId avant d'interroger LoanDecision.
+    if (loan.institutionId) {
+      await this.majStatutDemandeCredit(loanId, nouveauSolde <= 0 ? DemandeCreditStatut.SOLDEE : DemandeCreditStatut.EN_REMBOURSEMENT);
+    }
+
     return { loanId, statut: "comptabilisee" as StatutEcheance, capital, interet };
+  }
+
+  private async majStatutDemandeCredit(loanId: string, statut: DemandeCreditStatut) {
+    const decision = await this.prisma.loanDecision.findUnique({ where: { loanId }, select: { demandeCreditId: true } });
+    if (decision?.demandeCreditId) {
+      await this.prisma.demandeCredit.update({ where: { id: decision.demandeCreditId }, data: { statut } });
+    }
   }
 
   private async echeances(scope: FiscalRuleScope, shopId: string | null, loanId: string) {

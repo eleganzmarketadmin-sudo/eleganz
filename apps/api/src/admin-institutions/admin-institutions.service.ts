@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { InstitutionStatus, UserRole } from "@eleganz/database";
+import { InstitutionRole, InstitutionStatus, UserRole } from "@eleganz/database";
 import { CreateInstitutionDto, UpdateInstitutionDto } from "./dto/admin-institutions.dto";
 
 /**
@@ -45,9 +45,15 @@ export class AdminInstitutionsService {
       throw new ConflictException("Ce compte est déjà rattaché à une institution.");
     }
 
-    const [, institution] = await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: utilisateur.id }, data: { role: UserRole.INSTITUTION_STAFF } }),
-      this.prisma.institution.create({
+    // Transaction interactive (pas la forme tableau utilisée plus haut dans
+    // ce fichier) : la ligne InstitutionStaff ci-dessous a besoin de l'id de
+    // l'Institution tout juste créée — même raison et même principe que
+    // InstitutionPortalService.inscrire (16 nov. 2026, gestion d'équipe) :
+    // InstitutionMembershipGuard s'appuie exclusivement sur InstitutionStaff,
+    // donc toute institution créée ici doit en ressortir déjà pourvue.
+    const institution = await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: utilisateur.id }, data: { role: UserRole.INSTITUTION_STAFF } });
+      const institutionCreee = await tx.institution.create({
         data: {
           userId: utilisateur.id,
           name: dto.name,
@@ -55,8 +61,12 @@ export class AdminInstitutionsService {
           contactEmail: dto.contactEmail,
           contactPhone: dto.contactPhone,
         },
-      }),
-    ]);
+      });
+      await tx.institutionStaff.create({
+        data: { institutionId: institutionCreee.id, userId: utilisateur.id, role: InstitutionRole.ADMINISTRATEUR },
+      });
+      return institutionCreee;
+    });
     return institution;
   }
 
@@ -102,5 +112,33 @@ export class AdminInstitutionsService {
       where: { id: institutionId },
       data: { status: InstitutionStatus.REJECTED, rejectionNote: note?.trim() || null },
     });
+  }
+
+  /**
+   * Rattrapage ponctuel, réservé à l'administration ELEGANZ (16 nov. 2026,
+   * gestion d'équipe côté institution) — même principe que
+   * AccountingService.backfillMissingSalesRevenue : crée la ligne
+   * InstitutionStaff(ADMINISTRATEUR) manquante pour chaque Institution déjà
+   * créée AVANT cette fonctionnalité (`create`/`inscrire` en créent déjà une
+   * automatiquement depuis cette date). Idempotent : relancer ne recrée
+   * rien pour une institution déjà pourvue. Action manuelle, exécutée une
+   * fois au déploiement, jamais appelée automatiquement.
+   */
+  async backfillInstitutionStaff() {
+    const institutionsSansEquipe = await this.prisma.institution.findMany({
+      where: { staff: { none: {} } },
+      select: { id: true, userId: true },
+    });
+    if (institutionsSansEquipe.length === 0) {
+      return { creees: 0 };
+    }
+    await this.prisma.institutionStaff.createMany({
+      data: institutionsSansEquipe.map((institution) => ({
+        institutionId: institution.id,
+        userId: institution.userId,
+        role: InstitutionRole.ADMINISTRATEUR,
+      })),
+    });
+    return { creees: institutionsSansEquipe.length };
   }
 }

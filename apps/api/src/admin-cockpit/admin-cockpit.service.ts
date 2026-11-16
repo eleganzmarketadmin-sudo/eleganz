@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ShopStatus } from "@eleganz/database";
+import { repartirFacturation } from "../billing/revenue-breakdown.util";
 
 @Injectable()
 export class AdminCockpitService {
@@ -16,6 +17,7 @@ export class AdminCockpitService {
    * vendeurs comme des bénéfices de la plateforme ».
    */
   async executiveDashboard() {
+    const maintenant = new Date();
     const [
       shopsByStatus,
       totalShops,
@@ -24,9 +26,12 @@ export class AdminCockpitService {
       productsOutOfStock,
       ordersByStatus,
       grossOrderValue,
-      platformRevenueByKind,
-      pendingInvoicesAmount,
       openDisputes,
+      invoiceLines,
+      driverInvoiceLines,
+      comptableInvoiceLines,
+      posSalesTotal,
+      institutionsCommissionTotal,
     ] = await Promise.all([
       this.prisma.shop.groupBy({ by: ["status"], _count: { _all: true } }),
       this.prisma.shop.count(),
@@ -35,10 +40,100 @@ export class AdminCockpitService {
       this.prisma.variant.count({ where: { stockQty: 0 } }),
       this.prisma.shopOrder.groupBy({ by: ["status"], _count: { _all: true } }),
       this.prisma.order.aggregate({ _sum: { totalAmount: true } }),
-      this.prisma.invoice.groupBy({ by: ["kind"], where: { status: "PAID" }, _sum: { amount: true } }),
-      this.prisma.invoice.aggregate({ where: { status: "PENDING" }, _sum: { amount: true } }),
       this.prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }),
+      // Lignes complètes plutôt que des agrégats (16 nov. 2026, refonte du
+      // Centre de pilotage) : nécessaire pour répartir facture/encaissé/en
+      // attente/en retard par ligne via repartirFacturation (comparaison
+      // dueAt vs maintenant, impossible à faire dans un aggregate() Prisma
+      // sans une requête par tranche). Volumétrie encore modeste à ce stade
+      // de la plateforme — même compromis que EcheancierService/AdminFinanceService.
+      this.prisma.invoice.findMany({ select: { amount: true, status: true, dueAt: true, kind: true } }),
+      this.prisma.driverInvoice.findMany({ select: { amount: true, status: true, dueAt: true } }),
+      this.prisma.comptableInvoice.findMany({ select: { amount: true, status: true, dueAt: true } }),
+      this.prisma.posSale.aggregate({ where: { status: { not: "CANCELLED" } }, _sum: { totalAmount: true } }),
+      // Commission ELEGANZ sur prêts décaissés via le portail institutions —
+      // reconnue au décaissement (jamais un cycle attente/retard, voir
+      // Loan.institutionCommissionAmount dans le schéma) : tous les prêts
+      // avec institutionId comptent, quel que soit leur statut de
+      // remboursement actuel.
+      this.prisma.loan.aggregate({
+        where: { institutionId: { not: null } },
+        _sum: { institutionCommissionAmount: true },
+      }),
     ]);
+
+    // Revenu ELEGANZ par nature (frais d'ouverture, abonnements, crédits
+    // IA, ...) et total en attente — dérivés en JS des lignes déjà
+    // chargées ci-dessus plutôt que par deux requêtes groupBy/aggregate
+    // séparées comme avant le 16 nov. 2026 : mêmes chiffres, une requête de
+    // moins.
+    const platformRevenueByKind: Record<string, number> = {};
+    let pendingInvoicesAmount = 0;
+    for (const ligne of invoiceLines) {
+      const montant = Number(ligne.amount);
+      if (ligne.status === "PAID") {
+        platformRevenueByKind[ligne.kind] = (platformRevenueByKind[ligne.kind] ?? 0) + montant;
+      } else if (ligne.status === "PENDING") {
+        pendingInvoicesAmount += montant;
+      }
+    }
+
+    // Répartition par module (16 nov. 2026, refonte du Centre de pilotage,
+    // plan §4) — un module = une carte côté frontend, chacune avec le même
+    // triptyque revenu/en attente/en retard quand il a un sens pour ce
+    // module. "gestion" regroupe tout Invoice hors commission marketplace
+    // (frais d'ouverture, abonnements, crédits IA, ...) ; "marketplace" isole
+    // la commission ELEGANZ Market (kind: "commission") de ces abonnements,
+    // qui est un revenu de nature différente. "caisse" (POS) et
+    // "institutions" (commission sur prêts) n'ont pas de cycle de
+    // facturation attente/retard — enAttente/enRetard valent `null` pour
+    // que le frontend n'affiche pas ces deux colonnes pour ces deux cartes.
+    const facturesGestion = invoiceLines.filter((l) => l.kind !== "commission");
+    const facturesCommissionMarketplace = invoiceLines.filter((l) => l.kind === "commission");
+    const totalVentesCaisse = Number(posSalesTotal._sum.totalAmount ?? 0);
+    const totalCommissionInstitutions = Number(institutionsCommissionTotal._sum.institutionCommissionAmount ?? 0);
+
+    const modules = [
+      {
+        cle: "gestion" as const,
+        typeRevenu: "abonnement" as const,
+        ...repartirFacturation(facturesGestion, maintenant),
+      },
+      {
+        cle: "marketplace" as const,
+        typeRevenu: "commission" as const,
+        ...repartirFacturation(facturesCommissionMarketplace, maintenant),
+      },
+      {
+        cle: "livreur" as const,
+        typeRevenu: "abonnement" as const,
+        ...repartirFacturation(driverInvoiceLines, maintenant),
+      },
+      {
+        cle: "secourable" as const,
+        typeRevenu: "abonnement" as const,
+        ...repartirFacturation(comptableInvoiceLines, maintenant),
+      },
+      {
+        // Valeur des ventes Caisse — PAS un revenu ELEGANZ (comme
+        // grossOrderValue ci-dessous), seulement la valeur transactionnelle
+        // des vendeurs sur ce module.
+        cle: "caisse" as const,
+        typeRevenu: "valeur_vendeur" as const,
+        facture: totalVentesCaisse,
+        encaisse: totalVentesCaisse,
+        enAttente: null,
+        enRetard: null,
+      },
+      {
+        cle: "institutions" as const,
+        typeRevenu: "commission" as const,
+        facture: totalCommissionInstitutions,
+        encaisse: totalCommissionInstitutions,
+        enAttente: null,
+        enRetard: null,
+      },
+    ];
 
     return {
       activity: {
@@ -62,10 +157,10 @@ export class AdminCockpitService {
         // Revenu réellement acquis par la plateforme, par nature (frais
         // d'ouverture, abonnements, crédits IA, ...), calculé uniquement sur
         // les factures effectivement payées.
-        platformRevenueByKind: Object.fromEntries(
-          platformRevenueByKind.map((r) => [r.kind, Number(r._sum.amount ?? 0)]),
-        ),
-        pendingInvoicesAmount: Number(pendingInvoicesAmount._sum.amount ?? 0),
+        platformRevenueByKind,
+        pendingInvoicesAmount,
+        // Détail par module (16 nov. 2026) — voir commentaire ci-dessus.
+        modules,
       },
       operations: {
         openDisputes,

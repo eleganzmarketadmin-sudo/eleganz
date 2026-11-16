@@ -17,6 +17,14 @@ export class CreateLoanDecisionDto {
   @IsIn(["ACCORDE", "REFUSE"])
   statut!: "ACCORDE" | "REFUSE";
 
+  // Rattache cette décision à une candidature numérotée (16 nov. 2026) —
+  // optionnel : une décision prise sans DemandeCredit (flux antérieur au 16
+  // nov. 2026, ou institution qui déciderait directement sans passer par
+  // une demande numérotée) garde ce champ absent, sans jamais être bloquée.
+  @IsOptional()
+  @IsString()
+  demandeCreditId?: string;
+
   @IsOptional()
   @IsString()
   scenarioId?: string;

@@ -2,8 +2,17 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { PrismaService } from "../prisma/prisma.service";
 import { BusinessPlanService } from "../finance/business-plan.service";
 import { LoansService } from "../finance/loans.service";
+import { FinanceService } from "../finance/finance.service";
+import { ecransInstitutionEffectifs } from "./institution-staff.service";
 import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
-import { FiscalRuleScope, InstitutionStatus, LoanDecisionStatut } from "@eleganz/database";
+import {
+  DemandeCreditStatut,
+  FiscalRuleScope,
+  InstitutionRole,
+  InstitutionStatus,
+  LoanDecisionStatut,
+  MenuInstitution,
+} from "@eleganz/database";
 
 /**
  * Garde réutilisée par chaque méthode du portail ci-dessous qui donne accès
@@ -37,15 +46,39 @@ export class InstitutionPortalService {
     private readonly prisma: PrismaService,
     private readonly businessPlan: BusinessPlanService,
     private readonly loans: LoansService,
+    private readonly finance: FinanceService,
   ) {}
 
-  /** Résout le profil Institution du compte connecté — jamais un id pris ailleurs que le JWT. */
+  /**
+   * Résout le profil Institution du compte connecté — jamais un id pris
+   * ailleurs que le JWT. Résout en priorité via InstitutionStaff (16 nov.
+   * 2026, gestion d'équipe) : c'est la seule table qui couvre aussi bien le
+   * contact historique (grandfathered en ADMINISTRATEUR) que tout membre
+   * invité depuis. `institution.userId` reste un filet de sécurité pour une
+   * institution créée avant cette fonctionnalité et pas encore couverte par
+   * le rattrapage ponctuel (AdminInstitutionsService.backfillInstitutionStaff)
+   * — seulement ici, sur /me qui reste volontairement hors
+   * InstitutionMembershipGuard ; les autres routes exigent, elles, que le
+   * rattrapage ait déjà eu lieu.
+   */
   async monProfil(userId: string) {
+    const staff = await this.prisma.institutionStaff.findUnique({
+      where: { userId },
+      include: { institution: true },
+    });
+    if (staff) {
+      return { ...staff.institution, monRole: staff.role, monMenu: ecransInstitutionEffectifs(staff), staffActif: staff.active };
+    }
     const institution = await this.prisma.institution.findUnique({ where: { userId } });
     if (!institution) {
       throw new NotFoundException("Ce compte n'a pas de profil institution.");
     }
-    return institution;
+    return {
+      ...institution,
+      monRole: InstitutionRole.ADMINISTRATEUR,
+      monMenu: Object.values(MenuInstitution),
+      staffActif: true,
+    };
   }
 
   // Auto-inscription (14 nov. 2026, revirement sur la décision initiale
@@ -59,15 +92,26 @@ export class InstitutionPortalService {
     if (dejaExistant) {
       throw new ConflictException("Ce compte a déjà un profil institution.");
     }
-    return this.prisma.institution.create({
-      data: {
-        userId,
-        name: dto.name,
-        type: dto.type,
-        contactEmail: dto.contactEmail,
-        contactPhone: dto.contactPhone,
-        status: InstitutionStatus.PENDING,
-      },
+    // Crée dans la même transaction la ligne InstitutionStaff(ADMINISTRATEUR)
+    // de ce contact (16 nov. 2026, gestion d'équipe) — InstitutionMembershipGuard
+    // s'appuie exclusivement sur InstitutionStaff, jamais sur
+    // Institution.userId directement, donc toute nouvelle institution doit en
+    // ressortir déjà pourvue, même encore PENDING.
+    return this.prisma.$transaction(async (tx) => {
+      const institution = await tx.institution.create({
+        data: {
+          userId,
+          name: dto.name,
+          type: dto.type,
+          contactEmail: dto.contactEmail,
+          contactPhone: dto.contactPhone,
+          status: InstitutionStatus.PENDING,
+        },
+      });
+      await tx.institutionStaff.create({
+        data: { institutionId: institution.id, userId, role: InstitutionRole.ADMINISTRATEUR },
+      });
+      return institution;
     });
   }
 
@@ -90,17 +134,49 @@ export class InstitutionPortalService {
     return acces.map((a) => a.shop);
   }
 
+  /**
+   * Dossier consulté par une institution sur une boutique qui lui a
+   * accordé l'accès. Enrichi le 16 nov. 2026 : avant cette date, seul le
+   * narratif BusinessPlan était renvoyé — jamais les vrais chiffres
+   * financiers de la boutique. `financier` reste une lecture LIVE (donc
+   * potentiellement différente du snapshot figé dans une DemandeCredit déjà
+   * soumise, voir DemandeCreditService) : utile pour une première
+   * consultation avant toute soumission, ou pour suivre l'évolution d'une
+   * boutique entre deux demandes.
+   */
   async dossier(institutionId: string, shopId: string) {
     await this.verifierAcces(institutionId, shopId);
-    return this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId);
+    const [businessPlan, financier] = await Promise.all([
+      this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId),
+      this.finance.dossierCredit(shopId),
+    ]);
+    return { businessPlan, financier };
   }
 
+  /**
+   * Enregistre le verdict final d'une institution. Depuis le 16 nov. 2026,
+   * `dto.demandeCreditId` (optionnel) rattache cette décision à une
+   * candidature numérotée (voir DemandeCredit) : vérifiée ici pour
+   * appartenir bien à cette institution et cette boutique, puis refermée
+   * sur ACCORDEE/REFUSEE — jamais une resaisie manuelle, pour que le statut
+   * de la demande reste toujours le reflet exact de la dernière décision
+   * prise sur elle.
+   */
   async decider(institutionId: string, shopId: string, userId: string, dto: CreateLoanDecisionDto) {
     await this.verifierAcces(institutionId, shopId);
+
+    if (dto.demandeCreditId) {
+      const demande = await this.prisma.demandeCredit.findUnique({ where: { id: dto.demandeCreditId } });
+      if (!demande || demande.institutionId !== institutionId || demande.shopId !== shopId) {
+        throw new ForbiddenException("Cette demande de crédit n'appartient pas à cette boutique et à votre institution.");
+      }
+    }
+
     const decision = await this.prisma.loanDecision.create({
       data: {
         shopId,
         institutionId,
+        demandeCreditId: dto.demandeCreditId,
         scenarioId: dto.scenarioId,
         statut: dto.statut === "ACCORDE" ? LoanDecisionStatut.ACCORDE : LoanDecisionStatut.REFUSE,
         montant: dto.montant,
@@ -111,6 +187,14 @@ export class InstitutionPortalService {
         decidedByUserId: userId,
       },
     });
+
+    if (dto.demandeCreditId) {
+      await this.prisma.demandeCredit.update({
+        where: { id: dto.demandeCreditId },
+        data: { statut: dto.statut === "ACCORDE" ? DemandeCreditStatut.ACCORDEE : DemandeCreditStatut.REFUSEE },
+      });
+    }
+
     return { ...decision, montant: Number(decision.montant), tauxAnnuel: Number(decision.tauxAnnuel) };
   }
 

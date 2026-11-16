@@ -45,6 +45,37 @@ export interface DossierCreditBoutique {
   };
   historiqueMensuel: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[];
   bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
+  // Décomposition fine du bilan et du compte de résultat (16 nov. 2026,
+  // ajoutée pour le scoring/l'analyse crédit du portail Institutions —
+  // voir DemandeCredit) : contrairement à `bilan` ci-dessus (liste plate,
+  // conservée inchangée pour ses autres usages), ces deux blocs regroupent
+  // les comptes par rubrique SYSCOHADA (immobilisé/circulant/trésorerie,
+  // capitaux propres/dettes financières/circulant) — nécessaire pour
+  // calculer un ratio d'endettement ou de liquidité, impossible à partir
+  // des seuls totaux `bilan.totalActif/totalPassif`.
+  bilanNormalise: {
+    actif: {
+      immobilise: { code: string; label: string; montant: number }[];
+      circulant: { code: string; label: string; montant: number }[];
+      tresorerie: { code: string; label: string; montant: number }[];
+    };
+    passif: {
+      capitauxPropres: { code: string; label: string; montant: number }[];
+      dettesFinancieres: { code: string; label: string; montant: number }[];
+      circulant: { code: string; label: string; montant: number }[];
+    };
+    totalActif: number;
+    totalPassif: number;
+    equilibre: boolean;
+  };
+  compteDeResultat: {
+    periode: { from: string; to: string };
+    resultatExploitation: number;
+    resultatFinancier: number;
+    resultatActivitesOrdinaires: number;
+    resultatHAO: number;
+    resultatNetAvantImpot: number;
+  };
   dettesFournisseurs: number;
   creditClientAccorde: number;
   businessPlan: DossierCreditBoutiqueBusinessPlan;
@@ -219,17 +250,38 @@ export class FinanceService {
    * indépendant. Toujours calculé à la volée, jamais persisté : ce n'est
    * pas un état financier certifié, seulement un dossier préparatoire à
    * joindre à une demande de crédit auprès d'une institution financière.
+   *
+   * Enrichi le 16 nov. 2026 (bilanNormalise/compteDeResultat) pour le
+   * portail Institutions : avant cette date, une institution partenaire ne
+   * consultait que le narratif du BusinessPlan (voir
+   * InstitutionPortalService.dossier) — jamais les vrais chiffres. Ces deux
+   * blocs supplémentaires permettent de calculer des ratios (endettement,
+   * liquidité, marge) côté DemandeCredit/scoring, impossible à partir des
+   * seuls totaux `bilan.totalActif/totalPassif`.
    */
   async dossierCredit(shopId: string, nombreMois = 6): Promise<DossierCreditBoutique> {
-    const [shop, identite, historiqueMensuel, bilan, supplier, customers, planAffaires] = await Promise.all([
-      this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { name: true, createdAt: true } }),
-      this.fiscalIdentity(shopId),
-      this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, Math.min(Math.max(nombreMois, 1), 24)),
-      this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, new Date()),
-      this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
-      this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
-      this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId),
-    ]);
+    const moisBornes = Math.min(Math.max(nombreMois, 1), 24);
+    const maintenant = new Date();
+    // Même fenêtre que celle parcourue mois par mois par evolutionMensuelle
+    // ci-dessous (de `-(moisBornes-1)` mois jusqu'à aujourd'hui) — pour que
+    // compteDeResultatNormalise porte sur exactement la période déjà
+    // affichée dans historiqueMensuel, jamais une fenêtre différente qui
+    // induirait en erreur un analyste comparant les deux blocs.
+    const debutPeriode = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - (moisBornes - 1), 1));
+    const finPeriode = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() + 1, 1));
+
+    const [shop, identite, historiqueMensuel, bilan, bilanNormalise, compteDeResultatNormalise, supplier, customers, planAffaires] =
+      await Promise.all([
+        this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { name: true, createdAt: true } }),
+        this.fiscalIdentity(shopId),
+        this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, moisBornes),
+        this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, maintenant),
+        this.accountingQuery.bilanNormalise(FiscalRuleScope.SHOP, shopId, maintenant),
+        this.accountingQuery.compteDeResultatNormalise(FiscalRuleScope.SHOP, shopId, debutPeriode, finPeriode),
+        this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
+        this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
+        this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId),
+      ]);
 
     const genereLe = new Date().toISOString();
     const codeVerification = createHash("sha256")
@@ -250,6 +302,21 @@ export class FinanceService {
       },
       historiqueMensuel,
       bilan: { totalActif: bilan.totalActif, totalPassif: bilan.totalPassif, equilibre: bilan.equilibre },
+      bilanNormalise: {
+        actif: bilanNormalise.actif,
+        passif: bilanNormalise.passif,
+        totalActif: bilanNormalise.totalActif,
+        totalPassif: bilanNormalise.totalPassif,
+        equilibre: bilanNormalise.equilibre,
+      },
+      compteDeResultat: {
+        periode: compteDeResultatNormalise.periode,
+        resultatExploitation: compteDeResultatNormalise.exploitation.resultat,
+        resultatFinancier: compteDeResultatNormalise.financier.resultat,
+        resultatActivitesOrdinaires: compteDeResultatNormalise.resultatActivitesOrdinaires,
+        resultatHAO: compteDeResultatNormalise.hao.resultat,
+        resultatNetAvantImpot: compteDeResultatNormalise.resultatNetAvantImpot,
+      },
       dettesFournisseurs: Number(supplier._sum.balanceOwed ?? 0),
       creditClientAccorde: Number(customers._sum.creditBalance ?? 0),
       businessPlan: {

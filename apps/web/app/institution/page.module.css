@@ -118,3 +118,11 @@
   background: var(--color-or, #d4a017);
   color: var(--color-encre-fixe);
 }
+
+/* Statuts intermédiaires d'une DemandeCredit (16 nov. 2026) — ni accordée/
+   décaissée (badgeAccorde), ni refusée (badgeRefuse) : RECUE, EN_ANALYSE,
+   RENDEZ_VOUS_PLANIFIE, EN_DECISION. */
+.badgeNeutre {
+  background: var(--color-texte-muted);
+  color: #fff;
+}

@@ -111,3 +111,58 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Revenus par module (16 nov. 2026, refonte du Centre de pilotage) — une
+   carte par module plutôt que les tuiles plates ci-dessus, vocabulaire
+   StatusTag/humeur réutilisé depuis /admin/suivi-commandes. */
+
+.grilleModules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--espace-3);
+}
+
+.carteModule {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+}
+
+.carteModuleEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-3);
+}
+
+.carteModuleTitre {
+  font-weight: 600;
+}
+
+.carteModuleLigne {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--espace-1) 0;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.carteModuleLigne:last-child {
+  border-bottom: none;
+}
+
+.carteModuleLabel {
+  color: var(--color-texte-muted);
+}
+
+.carteModuleValeur {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.carteModuleNote {
+  margin-top: var(--espace-2);
+  font-size: 0.75rem;
+  color: var(--color-texte-muted);
+}

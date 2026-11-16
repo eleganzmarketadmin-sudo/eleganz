@@ -179,6 +179,33 @@ model PlatformSettings {
   platformFiscalRegime    String?
   platformFoundedAt       DateTime?
 
+  // Relances/pénalités/suspension — boutiques, livreurs ET comptable/
+  // Secourable (16 nov. 2026, chantier relances/recouvrement ; généralisé
+  // aux trois domaines sur demande explicite du propriétaire). Une seule
+  // politique partagée plutôt que des réglages triplés par domaine — choix
+  // de simplicité assumé, séparable plus tard sans retrait de colonne si
+  // l'usage réel le justifie. invoiceLatePenaltyRatePercent nullable =
+  // pénalité désactivée, jamais une valeur de départ inventée (même
+  // convention que marketplaceCommissionRateDefault ci-dessus).
+  invoiceLatePenaltyRatePercent Decimal? @db.Decimal(5, 2)
+  invoicePenaltyGraceDays       Int      @default(5)
+  // Paliers en jours après l'échéance, tous réglables (décision du
+  // propriétaire) — doivent rester strictement croissants, voir
+  // AdminSettingsService.update() pour la validation appliquée à la mise à
+  // jour. Les libellés "1re/2e/3e relance" de l'écran admin Factures
+  // supposent cet ordre.
+  reminderDay1Offset  Int @default(0)
+  reminderDay2Offset  Int @default(3)
+  reminderDay3Offset  Int @default(5)
+  warningDayOffset    Int @default(10)
+  suspensionDayOffset Int @default(15)
+  // Email/SMS existent déjà ci-dessus (notificationsEmailEnabled/
+  // notificationsSmsEnabled) ; seul WhatsApp manquait comme interrupteur
+  // dédié — les trois sont consultés par
+  // NotificationsService.notifierMulticanal, utilisé uniquement pour les
+  // relances de facturation (le reste de la plateforme reste in-app+push).
+  notificationsWhatsappEnabled Boolean @default(false)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -345,6 +372,11 @@ model User {
   institutionProfile          Institution?
   shopInstitutionAccessGranted ShopInstitutionAccess[] @relation("ShopInstitutionAccessGrantedBy")
   loanDecisionsMade           LoanDecision[]          @relation("LoanDecisionDecidedBy")
+  // Équipe institution (16 nov. 2026) — voir le commentaire sur
+  // InstitutionStaff. Relation 1-1 optionnelle : un compte ELEGANZ
+  // n'appartient qu'à une seule institution au plus.
+  institutionStaffProfile    InstitutionStaff?
+  demandesCreditSoumises     DemandeCredit[]         @relation("DemandeCreditSoumisePar")
   platformExpertInvitesCreated   PlatformExpertInvite[]     @relation("PlatformExpertInviteCreatedBy")
   platformExpertEngagementsGiven PlatformExpertEngagement[] @relation("PlatformExpertEngagementInvitedBy")
   // Demandes de réinitialisation de mot de passe "solliciter l'admin de la
@@ -450,6 +482,17 @@ model Shop {
   mode             ShopMode   @default(PRIVATE)
   status           ShopStatus @default(PENDING_VALIDATION)
 
+  // Provenance de la suspension (16 nov. 2026, chantier relances/recouvrement)
+  // — `AdminShopsController.suspend` (discrétionnaire, n'importe quelle
+  // raison) et `BillingService.executerEscaladeFacturesBoutiques` (impayé,
+  // palier 5) écrivent tous les deux ShopStatus.SUSPENDED sans ce champ ;
+  // seule sa valeur permet à l'admin/au front de distinguer les deux cas
+  // après coup (ex. proposer le flux de réactivation uniquement pour
+  // "IMPAYE"). Chaîne libre, jamais un enum fermé, pour rester extensible
+  // sans migration.
+  suspendedAt      DateTime?
+  suspensionReason String? // "IMPAYE" | "ADMIN"
+
   // Marketplace : visibilité publique
   isPubliclyListed Boolean    @default(false)
 
@@ -545,6 +588,7 @@ model Shop {
   customers      ShopCustomer[]
   subscriptions  ShopSubscription[]
   platformInvoices Invoice[]
+  reactivationRequests ShopReactivationRequest[]
   creditWallet   AiCreditWallet?
   auditLogs      AuditLog[]
   reviews        Review[]
@@ -578,6 +622,9 @@ model Shop {
   // sur ShopInstitutionAccess/LoanDecision ci-dessous.
   institutionAccess ShopInstitutionAccess[]
   loanDecisions     LoanDecision[]
+  // Demandes de crédit numérotées soumises auprès d'institutions
+  // partenaires (16 nov. 2026) — voir le commentaire sur DemandeCredit.
+  demandesCredit    DemandeCredit[]
 }
 
 model ShopStaff {
@@ -1456,8 +1503,15 @@ model Driver {
   billingStatus      DriverBillingStatus @default(FREE_PERIOD)
   freeTrialStartedAt DateTime?
 
+  // Voir le commentaire sur Shop.suspendedAt/suspensionReason — même
+  // mécanisme (16 nov. 2026, chantier relances/recouvrement), appliqué ici
+  // par DriverBillingService.executerEscaladeFacturesLivreurs.
+  suspendedAt      DateTime?
+  suspensionReason String? // "IMPAYE" | "ADMIN"
+
   deliveries ShopOrder[]
   invoices   DriverInvoice[]
+  reactivationRequests DriverReactivationRequest[]
 }
 
 enum DriverBillingStatus {
@@ -1558,7 +1612,21 @@ model Invoice {
   kind      String   // "opening_fee" | "subscription" | "ai_credits" | ...
   createdAt DateTime @default(now())
 
+  // Relances/pénalités (16 nov. 2026, chantier relances/recouvrement) —
+  // reminderStage : 0=aucune, 1/2/3=relances numérotées (J0/J+3/J+5),
+  // 4=avertissement de suspension imminente (J+10), 5=suspension notifiée
+  // (J+15). N'avance jamais à rebours ; voir BillingService.palierCible.
+  // penaltyDays/penaltyAmount : figés UNE SEULE FOIS par
+  // BillingService.markInvoicePaidAndReactivate au moment du paiement,
+  // jamais recalculés après coup — null tant que non payée.
+  reminderStage      Int       @default(0)
+  lastReminderSentAt DateTime?
+  penaltyDays        Int?
+  penaltyAmount      Decimal?  @db.Decimal(12, 2)
+
   aiCreditTopUp AiCreditTopUp?
+  reminders     InvoiceReminder[]
+  paymentProofs InvoicePaymentProof[]
 }
 
 model DriverInvoice {
@@ -1571,6 +1639,132 @@ model DriverInvoice {
   status    String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
   kind      String   // "opening_fee" | "subscription"
   createdAt DateTime @default(now())
+
+  // Voir le commentaire détaillé sur Invoice ci-dessus — même mécanisme,
+  // appliqué ici aux factures livreur (DriverBillingService).
+  reminderStage      Int       @default(0)
+  lastReminderSentAt DateTime?
+  penaltyDays        Int?
+  penaltyAmount      Decimal?  @db.Decimal(12, 2)
+
+  reminders     DriverInvoiceReminder[]
+  paymentProofs DriverInvoicePaymentProof[]
+}
+
+// ---------------------------------------------------------------------------
+// RELANCES, DEMANDES DE RÉACTIVATION ET PREUVES DE PAIEMENT — BOUTIQUES ET
+// LIVREURS (16 nov. 2026, chantier relances/recouvrement). Même triplication
+// que le reste de la facturation (Invoice/DriverInvoice/ComptableInvoice,
+// BillingService/DriverBillingService/ComptableBillingService) plutôt
+// qu'une abstraction polymorphe — voir le bloc équivalent "COMPTABLE" après
+// ComptableInvoice ci-dessous pour le troisième domaine.
+//
+// Historique append-only des relances envoyées — Invoice.reminderStage/
+// DriverInvoice.reminderStage est le palier COURANT (ce que le cron doit
+// lire pour savoir s'il faut agir) ; cette table est l'historique complet
+// (ce que l'écran admin Factures affiche par facture). sentByUserId null =
+// envoi automatique (cron quotidien), renseigné = relance manuelle
+// déclenchée depuis Factures. `canaux` trace les canaux réellement
+// utilisés pour CET envoi (ex. ["IN_APP","EMAIL"]) — chaque canal effectif
+// est de plus journalisé comme une ligne Notification à part portant ce
+// NotificationChannel, voir NotificationsService.notifierMulticanal.
+enum ReactivationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model InvoiceReminder {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  stage      Int
+  message    String   @db.Text
+  canaux     String[] @default([])
+  sentAt     DateTime @default(now())
+  sentByUserId String?
+
+  @@index([invoiceId])
+}
+
+model DriverInvoiceReminder {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  invoice    DriverInvoice @relation(fields: [invoiceId], references: [id])
+  stage      Int
+  message    String   @db.Text
+  canaux     String[] @default([])
+  sentAt     DateTime @default(now())
+  sentByUserId String?
+
+  @@index([invoiceId])
+}
+
+// Créée automatiquement par markInvoicePaidAndReactivate dès que (a)
+// l'entité est suspendue ET (b) plus aucune facture PENDING ne reste —
+// jamais par une action du client (décision du 16 nov. 2026 : réactivation
+// automatique, mais toujours soumise à validation admin explicite). Le
+// statut de l'entité (Shop.status, Driver.billingStatus...) reste
+// SUSPENDED tout le temps où une demande PENDING existe ; seule
+// l'approbation admin le fait repasser actif.
+model ShopReactivationRequest {
+  id          String   @id @default(uuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  status      ReactivationRequestStatus @default(PENDING)
+  requestedAt DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedByUserId String?
+  reviewNote  String? @db.Text
+
+  @@index([shopId, status])
+}
+
+model DriverReactivationRequest {
+  id          String   @id @default(uuid())
+  driverId    String
+  driver      Driver   @relation(fields: [driverId], references: [id])
+  status      ReactivationRequestStatus @default(PENDING)
+  requestedAt DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedByUserId String?
+  reviewNote  String? @db.Text
+
+  @@index([driverId, status])
+}
+
+// Dépôt par le client d'une preuve de paiement (reçu bancaire, capture de
+// transfert mobile money, etc.) — "en cas d'erreur/omission" (demande du
+// 16 nov. 2026). Pas de passage par la messagerie (Conversation/Message) :
+// vérifié que Message n'a aucun champ de pièce jointe aujourd'hui, un
+// modèle dédié est plus simple et s'affiche mieux, de façon compacte,
+// directement sur la ligne de facture dans l'écran admin Factures.
+model InvoicePaymentProof {
+  id                String   @id @default(uuid())
+  invoiceId         String
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id])
+  submittedByUserId String
+  fileUrl           String
+  note              String?  @db.Text
+  submittedAt       DateTime @default(now())
+  acknowledgedAt       DateTime?
+  acknowledgedByUserId String?
+
+  @@index([invoiceId])
+}
+
+model DriverInvoicePaymentProof {
+  id                String   @id @default(uuid())
+  invoiceId         String
+  invoice           DriverInvoice @relation(fields: [invoiceId], references: [id])
+  submittedByUserId String
+  fileUrl           String
+  note              String?  @db.Text
+  submittedAt       DateTime @default(now())
+  acknowledgedAt       DateTime?
+  acknowledgedByUserId String?
+
+  @@index([invoiceId])
 }
 
 // ---------------------------------------------------------------------------
@@ -1816,7 +2010,14 @@ model ComptableSubscription {
   bouquetId String?
   bouquet   ComptablePlan? @relation(fields: [bouquetId], references: [id])
 
+  // Voir le commentaire sur Shop.suspendedAt/suspensionReason — même
+  // mécanisme (16 nov. 2026, chantier relances/recouvrement), appliqué ici
+  // par ComptableBillingService.executerEscaladeFacturesComptable.
+  suspendedAt      DateTime?
+  suspensionReason String? // "IMPAYE" | "ADMIN"
+
   invoices ComptableInvoice[]
+  reactivationRequests ComptableReactivationRequest[]
 }
 
 // Bouquets tarifaires Secourable (14 oct. 2026, proposition validée par
@@ -1852,6 +2053,61 @@ model ComptableInvoice {
   status         String   @default("PENDING") // PENDING | PAID | OVERDUE | WAIVED
   kind           String   // "monthly" | "yearly"
   createdAt      DateTime @default(now())
+
+  // Voir le commentaire détaillé sur Invoice (facturation boutiques) —
+  // même mécanisme, appliqué ici aux factures Mon Comptable/Secourable
+  // (ComptableBillingService).
+  reminderStage      Int       @default(0)
+  lastReminderSentAt DateTime?
+  penaltyDays        Int?
+  penaltyAmount      Decimal?  @db.Decimal(12, 2)
+
+  reminders     ComptableInvoiceReminder[]
+  paymentProofs ComptableInvoicePaymentProof[]
+}
+
+// Voir le bloc "RELANCES, DEMANDES DE RÉACTIVATION ET PREUVES DE PAIEMENT —
+// BOUTIQUES ET LIVREURS" après DriverInvoice ci-dessus pour le contexte et
+// la justification complète — troisième et dernier domaine (comptable/
+// Secourable), même triplication.
+model ComptableInvoiceReminder {
+  id         String   @id @default(uuid())
+  invoiceId  String
+  invoice    ComptableInvoice @relation(fields: [invoiceId], references: [id])
+  stage      Int
+  message    String   @db.Text
+  canaux     String[] @default([])
+  sentAt     DateTime @default(now())
+  sentByUserId String?
+
+  @@index([invoiceId])
+}
+
+model ComptableReactivationRequest {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  subscription   ComptableSubscription @relation(fields: [subscriptionId], references: [id])
+  status         ReactivationRequestStatus @default(PENDING)
+  requestedAt    DateTime @default(now())
+  reviewedAt     DateTime?
+  reviewedByUserId String?
+  reviewNote     String? @db.Text
+
+  @@index([subscriptionId, status])
+}
+
+model ComptableInvoicePaymentProof {
+  id                String   @id @default(uuid())
+  invoiceId         String
+  invoice           ComptableInvoice @relation(fields: [invoiceId], references: [id])
+  submittedByUserId String
+  fileUrl           String
+  note              String?  @db.Text
+  submittedAt       DateTime @default(now())
+  acknowledgedAt       DateTime?
+  acknowledgedByUserId String?
+
+  @@index([invoiceId])
 }
 
 model AiCreditWallet {
@@ -2249,6 +2505,12 @@ enum InstitutionStatus {
 // plusieurs connexions se voit créer plusieurs comptes ELEGANZ par l'admin
 // pour l'instant, en attendant une vraie gestion d'équipe type ShopStaff si
 // le besoin se confirme.
+// Le besoin s'est confirmé le 16 nov. 2026 (gestion de crédit PME complète,
+// voir InstitutionStaff ci-dessous) : `userId` reste intact, jamais retiré
+// ni modifié — c'est le contact/propriétaire historique, grandfathered en
+// InstitutionStaff(role: ADMINISTRATEUR) par le script de backfill au
+// déploiement — et InstitutionStaff vient s'ajouter à côté, en extension
+// pure.
 model Institution {
   id           String             @id @default(uuid())
   userId       String             @unique
@@ -2263,11 +2525,97 @@ model Institution {
   // (jamais réécrit ni interprété) pour qu'elle comprenne pourquoi, sans
   // avoir à solliciter le support.
   rejectionNote String?           @db.Text
+  // Réglage d'affichage du portail (16 nov. 2026) — voir le commentaire sur
+  // InstitutionModeUtilisation. Défaut prudent : RECEPTION_SIMPLE, pour
+  // qu'aucun partenaire déjà actif ne voie son portail changer tant qu'il
+  // n'a pas explicitement choisi le mode complet.
+  modeUtilisation InstitutionModeUtilisation @default(RECEPTION_SIMPLE)
   createdAt    DateTime           @default(now())
 
-  shopAccess ShopInstitutionAccess[]
-  decisions  LoanDecision[]
-  loans      Loan[]
+  shopAccess     ShopInstitutionAccess[]
+  decisions      LoanDecision[]
+  loans          Loan[]
+  staff          InstitutionStaff[]
+  demandesCredit DemandeCredit[]
+}
+
+// Réglage d'affichage du portail institution (16 nov. 2026, demande du
+// propriétaire : "le portail doit donner deux options d'utilisation...
+// réception/suivi/notif d'une part, gestion de crédit PME complète
+// d'autre part"). Choix d'architecture délibéré : UN SEUL moteur et UN SEUL
+// modèle de données, toujours complets (DemandeCredit/InstitutionStaff et,
+// phases suivantes, AnalyseCredit/RendezVous existent et fonctionnent dans
+// les deux cas) — ce réglage ne change JAMAIS les données ni les routes
+// disponibles, seulement les écrans affichés par défaut (voir
+// InstitutionShell.tsx). Togglable à tout moment sans aucune perte de
+// données, exactement comme menuItemsOverride plus bas : une restriction
+// d'affichage n'est jamais une restriction de donnée.
+enum InstitutionModeUtilisation {
+  RECEPTION_SIMPLE
+  GESTION_COMPLETE
+}
+
+// Rôles d'équipe côté institution financière (16 nov. 2026, demande du
+// propriétaire, point 2 : "l'institution doit pouvoir comme dans Gestion
+// créer les users et définir les rôles et périmètre de fonction"). Calqué
+// sur StaffRole (ShopStaff) : ADMINISTRATEUR est l'équivalent OWNER,
+// GESTIONNAIRE_COMPTE l'équivalent MANAGER. ANALYSTE_CREDIT et
+// GESTIONNAIRE_COMPTE sont VOLONTAIREMENT deux rôles distincts, jamais
+// fusionnables même pour une petite institution : double contrôle
+// obligatoire validé par le propriétaire le 16 nov. 2026 — un
+// ANALYSTE_CREDIT valide le score (AnalyseCredit, phase suivante), mais ne
+// peut jamais être la personne qui rend la décision finale
+// (LoanDecision.decidedByUserId) sur la même DemandeCredit ; contrainte
+// posée au niveau du service (DemandeCreditService), pas seulement par le
+// rôle.
+enum InstitutionRole {
+  ADMINISTRATEUR
+  GESTIONNAIRE_COMPTE
+  ANALYSTE_CREDIT
+  CHARGE_CLIENTELE
+  COMPTABLE
+}
+
+// Écrans du portail Institutions, un par entrée de InstitutionShell.LIENS
+// (16 nov. 2026) — même principe que MenuGestion/ShopStaff.menuItemsOverride :
+// une couche de visibilité en plus, jamais un remplacement des barrières
+// déjà posées par rôle (voir InstitutionMembershipGuard).
+enum MenuInstitution {
+  RECEPTION
+  ANALYSE
+  DECISIONS
+  RENDEZ_VOUS
+  PRETS
+  MESSAGERIE
+  RAPPORTS
+  EQUIPE
+  PARAMETRES
+}
+
+// Équipe d'une institution financière (16 nov. 2026) — extension additive
+// pure : Institution.userId reste le contact/propriétaire historique,
+// jamais retiré ni modifié par ce modèle (voir le commentaire sur
+// Institution, qui anticipait déjà ce besoin le 14 nov. 2026 : "en
+// attendant une vraie gestion d'équipe type ShopStaff si le besoin se
+// confirme"). `userId` est UNIQUE (contrairement à ShopStaff.userId, qui
+// n'est unique que par boutique) : un compte ELEGANZ ne peut appartenir
+// qu'à UNE SEULE institution — simplification volontaire, voir le plan
+// d'implémentation du 16 nov. 2026. Les comptes Institution.userId déjà
+// existants au moment du déploiement reçoivent une ligne
+// InstitutionStaff(role: ADMINISTRATEUR) via un script de backfill, pour
+// rendre explicite une relation déjà réelle — jamais une donnée inventée.
+model InstitutionStaff {
+  id                String             @id @default(uuid())
+  institutionId     String
+  institution       Institution        @relation(fields: [institutionId], references: [id])
+  userId            String             @unique
+  user              User               @relation(fields: [userId], references: [id])
+  role              InstitutionRole
+  active            Boolean            @default(true)
+  menuItemsOverride MenuInstitution[]  @default([])
+  createdAt         DateTime           @default(now())
+
+  @@index([institutionId])
 }
 
 // Accès accordé par UNE BOUTIQUE à une institution déjà partenaire ELEGANZ
@@ -2296,6 +2644,95 @@ model ShopInstitutionAccess {
   @@index([institutionId])
 }
 
+// Compteur atomique pour générer un numéro de suivi unique par demande de
+// crédit (16 nov. 2026, demande du propriétaire, point 1 : "le partage du
+// dossier par une boutique doit à sa réception par l'institution générer
+// un numéro unique... qui servira de suivi"). Un compteur par année civile
+// plutôt qu'une séquence SQL globale : plus lisible dans le numéro affiché
+// (ex. CR-2026-000123) et incrémenté atomiquement via `update` +
+// `increment` (verrouillage de ligne Postgres standard sous Prisma — voir
+// DemandeCreditService.genererNumero).
+model CompteurDemandeCredit {
+  annee  String @id
+  valeur Int    @default(0)
+}
+
+// Cycle de vie complet d'une DemandeCredit (16 nov. 2026). RECUE dès la
+// soumission (numéro déjà généré) ; EN_ANALYSE pendant le scoring
+// automatique et sa contre-vérification par un analyste (voir
+// AnalyseCredit, phase suivante) ; RENDEZ_VOUS_PLANIFIE si un rendez-vous
+// est en cours (phase suivante) ; EN_DECISION une fois l'analyse VALIDEE,
+// prête pour le verdict final ; ACCORDEE/REFUSEE au moment de la
+// LoanDecision ; DECAISSEE/EN_REMBOURSEMENT/SOLDEE suivent le cycle de vie
+// du Loan réel obtenu, mis à jour par un hook dans LoansService, jamais une
+// resaisie manuelle. Le retard/arriéré n'est volontairement PAS un état de
+// ce cycle : c'est un indicateur dérivé séparé, porté par Loan (phase
+// suivante), affiché EN PLUS de EN_REMBOURSEMENT plutôt qu'à sa place.
+enum DemandeCreditStatut {
+  RECUE
+  EN_ANALYSE
+  RENDEZ_VOUS_PLANIFIE
+  EN_DECISION
+  ACCORDEE
+  REFUSEE
+  DECAISSEE
+  EN_REMBOURSEMENT
+  SOLDEE
+}
+
+// Candidature de crédit numérotée et figée au moment de sa soumission (16
+// nov. 2026, demande du propriétaire, point 1). Distincte de
+// ShopInstitutionAccess ci-dessus (qui reste l'autorisation permanente
+// "cette institution peut voir ma boutique") et de LoanDecision ci-dessous
+// (qui reste le verdict final, désormais rattachée à une demande via
+// LoanDecision.demandeCreditId). `shopId` est VOLONTAIREMENT nullable, avec
+// une identité de secours en champs libres : cela permet à l'institution de
+// créer un dossier pour un prospect qui n'est pas (encore) boutique ELEGANZ
+// ("possibilité d'en créer de manière libre et autonome", même demande),
+// dans le même moteur plutôt que via un système séparé.
+// `snapshotDossierCreditJson` fige les vrais chiffres financiers
+// (FinanceService.dossierCredit) au moment de la réception : corrige le
+// fait qu'avant cette fonctionnalité, l'institution ne consultait qu'un
+// texte libre (BusinessPlan) modifiable par la boutique à tout moment, y
+// compris après une décision.
+model DemandeCredit {
+  id            String       @id @default(uuid())
+  numero        String       @unique
+  institutionId String
+  institution   Institution  @relation(fields: [institutionId], references: [id])
+  shopId        String?
+  shop          Shop?        @relation(fields: [shopId], references: [id])
+
+  // Identité du demandeur — copiée depuis Shop/User au moment de la
+  // soumission quand shopId est renseigné, saisie librement sinon (dossier
+  // "libre et autonome" créé directement par l'institution).
+  nomDemandeur     String
+  contactTelephone String?
+  contactEmail     String?
+  raisonSociale    String?
+
+  statut            DemandeCreditStatut @default(RECUE)
+  // Référence libre (pas de @relation), même convention que
+  // LoanDecision.scenarioId/Loan.scenarioId — purement informatif, un
+  // scénario peut être modifié/supprimé sans jamais contraindre une
+  // demande déjà soumise.
+  scenarioId        String?
+  montantDemande    Decimal  @db.Decimal(14, 2)
+  dureeMoisDemandee Int
+  objetFinancement  String?  @db.Text
+
+  snapshotDossierCreditJson Json?
+
+  soumiseParUserId String
+  soumisePar       User     @relation("DemandeCreditSoumisePar", fields: [soumiseParUserId], references: [id])
+  createdAt        DateTime @default(now())
+
+  decision LoanDecision?
+
+  @@index([institutionId])
+  @@index([shopId])
+}
+
 enum LoanDecisionStatut {
   ACCORDE
   REFUSE
@@ -2309,12 +2746,18 @@ enum LoanDecisionStatut {
 // est créé et comptabilisé, avec la commission ELEGANZ éventuelle. Comme
 // Loan.scenarioId, `scenarioId` est une référence libre (pas de @relation)
 // au LoanScenario d'origine — purement informatif.
+// `demandeCreditId` (16 nov. 2026, additif) rattache cette décision à la
+// candidature numérotée dont elle découle — nullable : une décision créée
+// avant cette fonctionnalité, ou issue d'un flux qui n'en passerait pas par
+// DemandeCredit, garde `null` sans jamais casser l'existant.
 model LoanDecision {
   id              String             @id @default(uuid())
   shopId          String
   shop            Shop               @relation(fields: [shopId], references: [id])
   institutionId   String
   institution     Institution        @relation(fields: [institutionId], references: [id])
+  demandeCreditId String?            @unique
+  demandeCredit   DemandeCredit?     @relation(fields: [demandeCreditId], references: [id])
   scenarioId      String?
   statut          LoanDecisionStatut
   montant         Decimal            @db.Decimal(14, 2)
@@ -2594,6 +3037,16 @@ enum NotificationType {
   NOUVEAU_MESSAGE // nouveau message dans une conversation
   ECHEANCE_A_VENIR // relance avant échéance (chantier C, à venir)
   ECHEANCE_DEPASSEE // relance après échéance (chantier C, à venir)
+  // Relances/recouvrement de facturation (16 nov. 2026) — remplacent
+  // ECHEANCE_A_VENIR/ECHEANCE_DEPASSEE pour les factures boutiques/
+  // livreurs/comptable spécifiquement (celles-ci restent utilisées par
+  // EcheancierService pour les autres échéances : dettes fournisseurs,
+  // loyers, versements). Le titre/corps distingue les sous-cas (ex. 1re vs
+  // 2e relance) plutôt que de multiplier les valeurs d'enum.
+  FACTURE_RELANCE // relance numérotée 1/2/3, ou avertissement de suspension imminente
+  FACTURE_SUSPENDUE // notification de suspension (destinataire ET admins)
+  PAIEMENT_RECU // reçu de confirmation après "marquer payée"
+  REACTIVATION_DEMANDE // demande ouverte / validée / refusée
   AUTRE
 }
 
@@ -2604,6 +3057,7 @@ enum NotificationChannel {
   IN_APP
   EMAIL
   SMS
+  WHATSAPP // ajouté le 16 nov. 2026 pour les relances de facturation, voir PlatformSettings.notificationsWhatsappEnabled
 }
 
 model Notification {

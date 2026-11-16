@@ -70,13 +70,23 @@ export class ShopMembershipGuard implements CanActivate {
     // effective, pas un blocage. Seule la consultation de Facturation reste
     // ouverte en lecture pendant une suspension, pour que le propriétaire
     // puisse voir et régler ce qu'il doit.
+    //
+    // Corrigé le 16 nov. 2026 (chantier relances/recouvrement) : le dépôt
+    // de preuve de paiement (POST .../invoices/:invoiceId/proof-of-payment
+    // et son upload-url) doit rester ouvert même boutique SUSPENDED — c'est
+    // précisément le cas que cette route sert (une boutique suspendue qui a
+    // payé mais dont l'admin n'a pas encore marqué la facture) ; sans cette
+    // exception la fonctionnalité serait inutilisable par la boutique qui
+    // en a le plus besoin.
     const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { status: true } });
     if (shop?.status === ShopStatus.SUSPENDED || shop?.status === ShopStatus.CLOSED) {
       const consultationFacturationAutorisee =
         request.method === "GET" &&
         (/^\/shops\/[^/]+\/invoices(\/|$)/.test(request.path) ||
           /^\/shops\/[^/]+\/subscription(\/|$)/.test(request.path));
-      if (!consultationFacturationAutorisee) {
+      const depotPreuvePaiementAutorise =
+        request.method === "POST" && /^\/shops\/[^/]+\/invoices\/[^/]+\/proof-of-payment(\/|$)/.test(request.path);
+      if (!consultationFacturationAutorisee && !depotPreuvePaiementAutorise) {
         throw new ForbiddenException(
           shop.status === ShopStatus.CLOSED
             ? "Cette boutique est fermée."

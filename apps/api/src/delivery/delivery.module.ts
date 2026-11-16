@@ -7,9 +7,11 @@ import { ShopsModule } from "../shops/shops.module";
 import { OrdersModule } from "../orders/orders.module";
 import { AdminSettingsModule } from "../admin-settings/admin-settings.module";
 import { FinanceModule } from "../finance/finance.module";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { StorageModule } from "../storage/storage.module";
 
 @Module({
-  imports: [ShopsModule, OrdersModule, AdminSettingsModule, FinanceModule],
+  imports: [ShopsModule, OrdersModule, AdminSettingsModule, FinanceModule, NotificationsModule, StorageModule],
   providers: [DeliveryService, DriverBillingService],
   controllers: [DeliveryController, AssignDriverController, DriverBillingController],
   exports: [DeliveryService, DriverBillingService],

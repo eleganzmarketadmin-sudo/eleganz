@@ -65,10 +65,17 @@ export class CronJobsService {
       const relances = await this.echeancier.run();
       this.logger.log(`CRON_FACTURATION_RELANCES ${JSON.stringify(relances)}`);
 
+      // suspendOverdueShops/Drivers/Subscriptions ont été remplacées le
+      // 16 nov. 2026 (chantier relances/recouvrement) par les trois
+      // executerEscaladeFactures..., qui font à la fois les relances
+      // numérotées (avec mémoire du palier déjà atteint) ET la suspension —
+      // voir BillingService.executerEscaladeFacturesBoutiques pour le motif
+      // commun, répliqué à l'identique sur DriverBillingService/
+      // ComptableBillingService.
       const suspensions = await Promise.all([
-        this.billing.suspendOverdueShops(),
-        this.driverBilling.suspendOverdueDrivers(),
-        this.comptableBilling.suspendOverdueSubscriptions(),
+        this.billing.executerEscaladeFacturesBoutiques(),
+        this.driverBilling.executerEscaladeFacturesLivreurs(),
+        this.comptableBilling.executerEscaladeFacturesComptable(),
       ]);
       this.logger.log(`CRON_FACTURATION_SUSPENSIONS ${JSON.stringify(suspensions)}`);
     } catch (err) {
