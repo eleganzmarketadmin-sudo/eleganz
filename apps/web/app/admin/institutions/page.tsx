@@ -100,6 +100,31 @@ function InstitutionsAdminContenu() {
   const [noteRefus, setNoteRefus] = useState("");
   const [refusEnCours, setRefusEnCours] = useState(false);
 
+  // Rattrapage ponctuel InstitutionStaff (16 nov. 2026, voir le commentaire
+  // sur AdminInstitutionsService.backfillInstitutionStaff) — bouton ajouté
+  // le 16 nov. 2026 (constat : cette action n'avait jusqu'ici aucune UI, et
+  // n'avait jamais été appelée après le déploiement de la gestion d'équipe
+  // institution ; conséquence concrète observée : une institution créée
+  // avant cette date n'a pas de compte d'équipe et se voit refuser tout le
+  // portail avec "Vous n'avez pas accès au portail institutions", malgré un
+  // compte ELEGANZ valide). Idempotent côté API — sans risque à relancer.
+  const [rattrapageEnCours, setRattrapageEnCours] = useState(false);
+  const [resultatRattrapage, setResultatRattrapage] = useState<number | null>(null);
+
+  async function rattraperEquipes() {
+    setRattrapageEnCours(true);
+    setErreur(null);
+    setResultatRattrapage(null);
+    try {
+      const resultat = await api.post<{ creees: number }>("/admin/institutions/backfill-staff");
+      setResultatRattrapage(resultat.creees);
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admInst_erreurGenerique"));
+    } finally {
+      setRattrapageEnCours(false);
+    }
+  }
+
   function recharger() {
     setChargement(true);
     api
@@ -227,6 +252,25 @@ function InstitutionsAdminContenu() {
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
+
+      {estSuperAdmin && (
+        <div style={{ border: "2px solid var(--color-ink)", padding: "var(--espace-4)", marginBottom: "var(--espace-5)" }}>
+          <h2 style={{ marginBottom: "var(--espace-2)", fontSize: "1rem" }}>{t("admInst_equipeTitre")}</h2>
+          <p style={{ color: "var(--color-texte-muted)", fontSize: "0.875rem", marginBottom: "var(--espace-3)" }}>
+            {t("admInst_equipeDescription")}
+          </p>
+          <button className={styles.bouton} onClick={rattraperEquipes} disabled={rattrapageEnCours}>
+            {rattrapageEnCours ? t("admInst_rattrapageEnCours") : t("admInst_rattraperEquipes")}
+          </button>
+          {resultatRattrapage !== null && (
+            <p style={{ marginTop: "var(--espace-3)" }}>
+              {resultatRattrapage === 0
+                ? t("admInst_rattrapageResultatAucun")
+                : `${t("admInst_rattrapageResultatCrees")} ${resultatRattrapage}`}
+            </p>
+          )}
+        </div>
+      )}
 
       {estSuperAdmin && (
         <form onSubmit={creer} className={styles.formulaire}>
