@@ -588,6 +588,7 @@ const fr: Dictionnaire = {
   inst_demandeContact: "Contact",
   inst_demandeRaisonSociale: "Raison sociale",
   inst_snapshotTitre: "Instantané financier à la soumission",
+  inst_apercuFinancierTitre: "Aperçu financier (données en direct)",
   inst_snapshotAbsent:
     "Aucun instantané disponible — candidature créée directement par l'institution, sans boutique ELEGANZ liée.",
   inst_snapshotDernierMois: "Dernier mois connu",
@@ -2846,6 +2847,7 @@ const en: Dictionnaire = {
   inst_demandeContact: "Contact",
   inst_demandeRaisonSociale: "Legal name",
   inst_snapshotTitre: "Financial snapshot at submission",
+  inst_apercuFinancierTitre: "Financial overview (live data)",
   inst_snapshotAbsent:
     "No snapshot available — application created directly by the institution, with no linked ELEGANZ shop.",
   inst_snapshotDernierMois: "Last known month",
@@ -5073,6 +5075,7 @@ const es: Dictionnaire = {
   inst_demandeContact: "Contacto",
   inst_demandeRaisonSociale: "Razón social",
   inst_snapshotTitre: "Instantánea financiera al momento del envío",
+  inst_apercuFinancierTitre: "Resumen financiero (datos en vivo)",
   inst_snapshotAbsent:
     "No hay instantánea disponible — solicitud creada directamente por la institución, sin tienda ELEGANZ vinculada.",
   inst_snapshotDernierMois: "Último mes conocido",
@@ -7281,6 +7284,7 @@ const ar: Dictionnaire = {
   inst_demandeContact: "جهة الاتصال",
   inst_demandeRaisonSociale: "الاسم التجاري",
   inst_snapshotTitre: "اللمحة المالية عند التقديم",
+  inst_apercuFinancierTitre: "نظرة مالية عامة (بيانات مباشرة)",
   inst_snapshotAbsent: "لا تتوفر لمحة — طلب أنشأته المؤسسة مباشرة، دون ربطه بمتجر ELEGANZ.",
   inst_snapshotDernierMois: "آخر شهر معروف",
   inst_snapshotChiffreAffaires: "رقم الأعمال",
@@ -9490,6 +9494,7 @@ const pt: Dictionnaire = {
   inst_demandeContact: "Contacto",
   inst_demandeRaisonSociale: "Razão social",
   inst_snapshotTitre: "Instantâneo financeiro no momento do envio",
+  inst_apercuFinancierTitre: "Visão financeira (dados em tempo real)",
   inst_snapshotAbsent:
     "Nenhum instantâneo disponível — pedido criado diretamente pela instituição, sem loja ELEGANZ associada.",
   inst_snapshotDernierMois: "Último mês conhecido",
@@ -11699,6 +11704,7 @@ const sw: Dictionnaire = {
   inst_demandeContact: "Mawasiliano",
   inst_demandeRaisonSociale: "Jina la kibiashara",
   inst_snapshotTitre: "Hali ya kifedha wakati wa kuwasilisha",
+  inst_apercuFinancierTitre: "Muhtasari wa kifedha (data ya moja kwa moja)",
   inst_snapshotAbsent:
     "Hakuna taarifa ya hali inayopatikana — ombi lililotengenezwa moja kwa moja na taasisi, bila duka la ELEGANZ kuhusishwa.",
   inst_snapshotDernierMois: "Mwezi wa mwisho unaojulikana",
@@ -13850,6 +13856,7 @@ const ln: Dictionnaire = {
   inst_demandeContact: "Contact",
   inst_demandeRaisonSociale: "Nkombo ya commerce",
   inst_snapshotTitre: "Photo ya mbongo na ntango ya kotindama",
+  inst_apercuFinancierTitre: "Etali ya mbongo (ba données ya sika)",
   inst_snapshotAbsent:
     "Photo ya mbongo ezali te — demande esalemi na institution yango moko, kozanga magazini ya ELEGANZ ekangama.",
   inst_snapshotDernierMois: "Sanza ya suka oyo eyebani",
@@ -16051,6 +16058,7 @@ const kg: Dictionnaire = {
   inst_demandeContact: "Contact",
   inst_demandeRaisonSociale: "Zina ya kimvwama",
   inst_snapshotTitre: "Kimonisa ya mbongo na ntangu ya kutindama",
+  inst_apercuFinancierTitre: "Talukusu ya mbongo (ba données ya nowa)",
   inst_snapshotAbsent:
     "Kimonisa ya mbongo kele ve — demande me salama kuidi institution yandi mosi, kukonda boutique ya ELEGANZ ya kangama.",
   inst_snapshotDernierMois: "Ngonda ya nsuka yina me zabana",
@@ -18252,6 +18260,7 @@ const lu: Dictionnaire = {
   inst_demandeContact: "Contact",
   inst_demandeRaisonSociale: "Dîna dia mudimu",
   inst_snapshotTitre: "Tshimvuangilu tshia mbongo pa ntangu ya kutuma",
+  inst_apercuFinancierTitre: "Lumonyi lua mbongo (données ya mpindieu)",
   inst_snapshotAbsent:
     "Kakuyi tshimvuangilu too ne — dilomba diakenzibua kudi institution nkayayi, kakuyi boutique wa ELEGANZ mukangama.",
   inst_snapshotDernierMois: "Ngondo wa ndekelu udi muyibue",

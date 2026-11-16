@@ -36,6 +36,28 @@ interface DossierBoutique {
   scenarios: ScenarioPret[];
 }
 
+// Aperçu financier réel de la boutique (16 nov. 2026, voir le commentaire
+// sur InstitutionPortalService.dossier : "enrichi... jamais les vrais
+// chiffres financiers" avant cette date) — sous-ensemble de
+// FinanceService.dossierCredit, juste ce qu'il faut pour une première
+// lecture avant décision ; le détail complet (bilan ligne par ligne,
+// historique mensuel) reste réservé à Gestion > Finance > Dossier de
+// crédit côté boutique, jamais dupliqué ici.
+interface DossierFinancier {
+  bilan: { totalActif: number; totalPassif: number };
+  compteDeResultat: { resultatNetAvantImpot: number };
+  dettesFournisseurs: number;
+  creditClientAccorde: number;
+}
+
+// Réponse de GET /institution-portal/shops/:shopId/dossier (16 nov. 2026) —
+// désormais { businessPlan, financier } plutôt que le business plan à plat :
+// voir InstitutionPortalService.dossier.
+interface DossierReponse {
+  businessPlan: DossierBoutique;
+  financier: DossierFinancier;
+}
+
 interface Decision {
   id: string;
   shop: { id: string; name: string; slug: string };
@@ -82,7 +104,9 @@ const CHAMPS_CANVAS: { cle: Exclude<keyof DossierBoutique, "scenarios">; libelle
  */
 function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
   const { t } = useLocale();
-  const [dossier, setDossier] = useState<DossierBoutique | null>(null);
+  const [reponse, setReponse] = useState<DossierReponse | null>(null);
+  const dossier = reponse?.businessPlan ?? null;
+  const financier = reponse?.financier ?? null;
   const [nomBoutique, setNomBoutique] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -101,8 +125,8 @@ function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
 
   function recharger() {
     api
-      .get<DossierBoutique>(`/institution-portal/shops/${shopId}/dossier`)
-      .then(setDossier)
+      .get<DossierReponse>(`/institution-portal/shops/${shopId}/dossier`)
+      .then(setReponse)
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("inst_erreurChargement")));
     api
       .get<{ id: string; name: string }[]>("/institution-portal/shops")
@@ -218,6 +242,36 @@ function DossierBoutiqueContenu({ shopId }: { shopId: string }) {
           </table>
         )}
       </div>
+
+      {financier && (
+        <div className={styles.carte}>
+          <h2 style={{ marginBottom: "var(--espace-2)" }}>{t("inst_apercuFinancierTitre")}</h2>
+          <table className={styles.tableau}>
+            <tbody>
+              <tr>
+                <td>{t("inst_snapshotTotalActif")}</td>
+                <td className="chiffre">{financier.bilan.totalActif.toLocaleString("fr-FR")}</td>
+              </tr>
+              <tr>
+                <td>{t("inst_snapshotTotalPassif")}</td>
+                <td className="chiffre">{financier.bilan.totalPassif.toLocaleString("fr-FR")}</td>
+              </tr>
+              <tr>
+                <td>{t("inst_snapshotResultatNetAvantImpot")}</td>
+                <td className="chiffre">{financier.compteDeResultat.resultatNetAvantImpot.toLocaleString("fr-FR")}</td>
+              </tr>
+              <tr>
+                <td>{t("inst_snapshotDettesFournisseurs")}</td>
+                <td className="chiffre">{financier.dettesFournisseurs.toLocaleString("fr-FR")}</td>
+              </tr>
+              <tr>
+                <td>{t("inst_snapshotCreditClient")}</td>
+                <td className="chiffre">{financier.creditClientAccorde.toLocaleString("fr-FR")}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {decisions.length > 0 && (
         <div className={styles.carte}>
