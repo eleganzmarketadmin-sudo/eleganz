@@ -14,6 +14,14 @@ export interface SyntheseActivite {
 
 export interface SynthesePeriode {
   userId: string;
+  // Identification du client (16 nov. 2026, demande du propriétaire : "pour
+  // des raisons d'authenticité et de sécurité, porter les informations
+  // d'identification du client" sur tous les dossiers, même les exports
+  // internes) — même convention que DossierFinancement.nomUtilisateur
+  // ci-dessous, désormais complétée des contacts sur les deux dossiers.
+  nomUtilisateur: string;
+  contactTelephone: string | null;
+  contactEmail: string | null;
   from: string;
   to: string;
   activites: SyntheseActivite[];
@@ -38,6 +46,10 @@ export interface MoisDossier {
 export interface DossierFinancement {
   userId: string;
   nomUtilisateur: string;
+  // Contacts (16 nov. 2026, même demande que sur SynthesePeriode ci-dessus) —
+  // nomUtilisateur existait déjà, seuls les contacts sont nouveaux ici.
+  contactTelephone: string | null;
+  contactEmail: string | null;
   activites: { id: string; name: string; category: string; creeeLe: string }[];
   historiqueMensuel: MoisDossier[];
   dettesOuvertes: { type: string; counterpartyName: string; amount: number; currency: string; solde: number }[];
@@ -64,6 +76,14 @@ export class ComptableExportService {
 
   async synthesePeriode(userId: string, from: Date, to: Date): Promise<SynthesePeriode> {
     if (from >= to) throw new BadRequestException("La date de fin doit être postérieure à la date de début.");
+
+    // Identification du client (16 nov. 2026) — même fetch et même repli que
+    // dossierFinancement() ci-dessous, pour une convention identique sur les
+    // deux dossiers Secourable.
+    const utilisateur = await this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true, phone: true } });
+    const nomUtilisateur = utilisateur?.fullName || utilisateur?.email || "Compte ELEGANZ";
+    const contactTelephone = utilisateur?.phone ?? null;
+    const contactEmail = utilisateur?.email ?? null;
 
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId } });
     const activityIds = activites.map((a) => a.id);
@@ -105,6 +125,9 @@ export class ComptableExportService {
 
     return {
       userId,
+      nomUtilisateur,
+      contactTelephone,
+      contactEmail,
       from: from.toISOString(),
       to: to.toISOString(),
       activites: parActivite,
@@ -144,8 +167,12 @@ export class ComptableExportService {
    * bandeau d'avertissement explicite en tête de document.
    */
   async dossierFinancement(userId: string, moisHistorique = 6): Promise<DossierFinancement> {
-    const utilisateur = await this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true } });
+    // Contacts (16 nov. 2026) — `phone` ajouté au select existant, additif,
+    // sans toucher au repli nomUtilisateur déjà en place.
+    const utilisateur = await this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true, phone: true } });
     const nomUtilisateur = utilisateur?.fullName || utilisateur?.email || "Compte ELEGANZ";
+    const contactTelephone = utilisateur?.phone ?? null;
+    const contactEmail = utilisateur?.email ?? null;
     const activites = await this.prisma.comptableActivity.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
     const activityIds = activites.map((a) => a.id);
 
@@ -203,6 +230,8 @@ export class ComptableExportService {
     return {
       userId,
       nomUtilisateur,
+      contactTelephone,
+      contactEmail,
       activites: activites.map((a) => ({ id: a.id, name: a.name, category: a.category, creeeLe: a.createdAt.toISOString() })),
       historiqueMensuel,
       dettesOuvertes: dettes.map((d) => ({

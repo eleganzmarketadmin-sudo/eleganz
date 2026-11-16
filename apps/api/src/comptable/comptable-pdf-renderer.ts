@@ -32,7 +32,18 @@ export function renderSynthesePdf(synthese: SynthesePeriode): PDFKit.PDFDocument
     { align: "center" },
   );
   doc.fillColor("#000");
-  doc.moveDown(0.8);
+  doc.moveDown(0.6);
+
+  // Identification du client (16 nov. 2026, demande du propriétaire :
+  // "pour des raisons d'authenticité et de sécurité, porter les
+  // informations d'identification du client" sur tous les dossiers, même
+  // pour besoin interne) — ce document n'affichait jusqu'ici aucun nom ni
+  // contact.
+  doc.font("Helvetica-Bold").fontSize(9).text(`Client : ${synthese.nomUtilisateur}`);
+  doc.font("Helvetica").fontSize(9);
+  if (synthese.contactTelephone) doc.text(`Téléphone : ${synthese.contactTelephone}`);
+  if (synthese.contactEmail) doc.text(`Email : ${synthese.contactEmail}`);
+  doc.moveDown(0.5);
 
   const colonnes = ["Activité", "Ventes", "Dépenses", "Résultat estimé"];
   const largeurs = [largeurPage * 0.34, largeurPage * 0.22, largeurPage * 0.22, largeurPage * 0.22];
@@ -130,6 +141,11 @@ export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit
 
   doc.font("Helvetica-Bold").fontSize(11).text("Porteur du dossier");
   doc.font("Helvetica").fontSize(9).text(dossier.nomUtilisateur);
+  // Contacts (16 nov. 2026, même demande que sur renderSynthesePdf
+  // ci-dessus) — nomUtilisateur était déjà affiché, seuls les contacts
+  // manquaient.
+  if (dossier.contactTelephone) doc.text(`Téléphone : ${dossier.contactTelephone}`);
+  if (dossier.contactEmail) doc.text(`Email : ${dossier.contactEmail}`);
   doc.moveDown(0.4);
 
   doc.font("Helvetica-Bold").fontSize(11).text("Activités déclarées");
