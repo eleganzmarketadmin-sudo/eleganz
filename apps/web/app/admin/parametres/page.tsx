@@ -20,6 +20,11 @@ interface PlatformSettings {
   notificationsInAppEnabled?: boolean;
   notificationsEmailEnabled?: boolean;
   notificationsSmsEnabled?: boolean;
+  // Ajouté le 16 nov. 2026 (chantier relances/recouvrement, revu le même
+  // jour pour cohérence) — pair exact d'Email/SMS ci-dessus : les trois
+  // réglages sont lus ensemble par NotificationsService.notifierMulticanal,
+  // utilisée aujourd'hui uniquement pour les relances de facturation.
+  notificationsWhatsappEnabled?: boolean;
   chatWidgetEnabled?: boolean;
   // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, commit
   // c819cb8) — champs déjà en base et déjà consommés par le dossier crédit
@@ -60,11 +65,12 @@ type ChampTexte = Exclude<
   | "notificationsInAppEnabled"
   | "notificationsEmailEnabled"
   | "notificationsSmsEnabled"
+  | "notificationsWhatsappEnabled"
   | "chatWidgetEnabled"
 >;
 
 const CLES_CANAUX_NOTIFICATION: {
-  cle: "notificationsInAppEnabled" | "notificationsEmailEnabled" | "notificationsSmsEnabled";
+  cle: "notificationsInAppEnabled" | "notificationsEmailEnabled" | "notificationsSmsEnabled" | "notificationsWhatsappEnabled";
   labelCle: string;
   descriptionCle: string;
 }[] = [
@@ -82,6 +88,11 @@ const CLES_CANAUX_NOTIFICATION: {
     cle: "notificationsSmsEnabled",
     labelCle: "admparam_canalSmsLabel",
     descriptionCle: "admparam_canalSmsDescription",
+  },
+  {
+    cle: "notificationsWhatsappEnabled",
+    labelCle: "admparam_canalWhatsappLabel",
+    descriptionCle: "admparam_canalWhatsappDescription",
   },
 ];
 

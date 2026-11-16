@@ -971,7 +971,10 @@ interface ReglagesRelances {
   reminderDay3Offset: number;
   warningDayOffset: number;
   suspensionDayOffset: number;
-  notificationsWhatsappEnabled: boolean;
+  // notificationsWhatsappEnabled vit désormais uniquement dans Paramètres
+  // plateforme > Notifications (revu le 16 nov. 2026 pour cohérence avec
+  // Email/SMS, lus ensemble par NotificationsService.notifierMulticanal) —
+  // plus édité depuis cet écran, mais toujours renvoyé par l'API.
 }
 
 /**
@@ -992,7 +995,6 @@ function TarifsRelancesSection() {
   const [jour3, setJour3] = useState("");
   const [jourAvertissement, setJourAvertissement] = useState("");
   const [jourSuspension, setJourSuspension] = useState("");
-  const [whatsappActif, setWhatsappActif] = useState(false);
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -1009,7 +1011,6 @@ function TarifsRelancesSection() {
         setJour3(String(s.reminderDay3Offset));
         setJourAvertissement(String(s.warningDayOffset));
         setJourSuspension(String(s.suspensionDayOffset));
-        setWhatsappActif(s.notificationsWhatsappEnabled);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
@@ -1030,7 +1031,6 @@ function TarifsRelancesSection() {
         reminderDay3Offset: Number(jour3),
         warningDayOffset: Number(jourAvertissement),
         suspensionDayOffset: Number(jourSuspension),
-        notificationsWhatsappEnabled: whatsappActif,
       });
       setMessage(t("admtarifs_relances_enregistre"));
     } catch (err) {
@@ -1081,11 +1081,10 @@ function TarifsRelancesSection() {
           <span>{t("admtarifs_relances_joursFranchise")}</span>
           <input placeholder="ex. 5" value={joursFranchise} onChange={(e) => setJoursFranchise(e.target.value)} />
         </label>
-        <label className={styles.champ} style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-          <input type="checkbox" checked={whatsappActif} onChange={(e) => setWhatsappActif(e.target.checked)} />
-          <span>{t("admtarifs_relances_whatsappActif")}</span>
-        </label>
       </div>
+      <p style={{ padding: "0 16px", fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
+        {t("admtarifs_relances_voirCanalWhatsapp")}
+      </p>
       <div className={styles.planActions}>
         <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
           {t("admtarifs_enregistrerLesTarifs")}
