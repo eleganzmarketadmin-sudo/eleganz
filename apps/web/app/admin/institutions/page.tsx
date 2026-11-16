@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { formatDate } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
+
+/** Garde uniquement les chiffres (et le préfixe +) pour construire un lien wa.me. */
+function versLienWhatsapp(numero: string): string {
+  const chiffres = numero.replace(/[^\d]/g, "");
+  return `https://wa.me/${chiffres}`;
+}
 
 const TYPES_INSTITUTION = ["MICROFINANCE", "BANQUE", "COOPERATIVE", "AUTRE"] as const;
 type TypeInstitution = (typeof TYPES_INSTITUTION)[number];
@@ -53,6 +61,7 @@ const BADGE_LABELS: Record<StatutInstitution, string> = {
 function InstitutionsAdminContenu() {
   const { t } = useLocale();
   const { user } = useAuth();
+  const router = useRouter();
   const estSuperAdmin = user?.role === "ADMIN_SUPER";
 
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -282,8 +291,9 @@ function InstitutionsAdminContenu() {
             </tr>
           </thead>
           <tbody>
-            {institutions.map((inst) =>
-              institutionEnRefus === inst.id ? (
+            {institutions.map((inst) => {
+              const telephoneWhatsapp = inst.contactPhone || inst.user.phone;
+              return institutionEnRefus === inst.id ? (
                 <tr key={inst.id}>
                   <td colSpan={estSuperAdmin ? 5 : 4}>
                     <form onSubmit={confirmerRefus} className={styles.formulaire} style={{ padding: "var(--espace-2) 0" }}>
@@ -351,26 +361,44 @@ function InstitutionsAdminContenu() {
                   </td>
                 </tr>
               ) : (
-                <tr key={inst.id}>
-                  <td>{inst.name}</td>
-                  <td>{t(`inst_type_${inst.type}`)}</td>
-                  <td style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
-                    {inst.user.fullName}
-                    <br />
-                    {inst.user.email ?? inst.user.phone}
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${styles[BADGE_CLASSES[inst.status]]}`}>
-                      {t(BADGE_LABELS[inst.status])}
-                    </span>
-                  </td>
-                  {estSuperAdmin && (
-                    <td style={{ display: "flex", gap: "var(--espace-2)", flexWrap: "wrap" }}>
-                      <button className={styles.boutonPetit} onClick={() => ouvrirEdition(inst)}>
-                        {t("action_modifier")}
-                      </button>
-                      {inst.status === "PENDING" && (
-                        <>
+                <Fragment key={inst.id}>
+                  <tr>
+                    <td>{inst.name}</td>
+                    <td>{t(`inst_type_${inst.type}`)}</td>
+                    <td style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
+                      {inst.user.fullName}
+                      <br />
+                      {inst.user.email ?? inst.user.phone}
+                    </td>
+                    <td>
+                      <span className={`${styles.badge} ${styles[BADGE_CLASSES[inst.status]]}`}>
+                        {t(BADGE_LABELS[inst.status])}
+                      </span>
+                    </td>
+                    {estSuperAdmin && (
+                      <td style={{ display: "flex", gap: "var(--espace-2)", flexWrap: "wrap" }}>
+                        <button className={styles.boutonPetit} onClick={() => ouvrirEdition(inst)}>
+                          {t("action_modifier")}
+                        </button>
+                        {inst.status === "PENDING" && (
+                          <>
+                            <button
+                              className={styles.boutonPetit}
+                              style={{ background: "var(--color-vert-paiement, #198754)" }}
+                              onClick={() => approuver(inst)}
+                            >
+                              {t("admInst_approuver")}
+                            </button>
+                            <button
+                              className={styles.boutonPetit}
+                              style={{ background: "var(--color-flamme)" }}
+                              onClick={() => ouvrirRefus(inst)}
+                            >
+                              {t("admInst_refuser")}
+                            </button>
+                          </>
+                        )}
+                        {inst.status === "REJECTED" && (
                           <button
                             className={styles.boutonPetit}
                             style={{ background: "var(--color-vert-paiement, #198754)" }}
@@ -378,38 +406,79 @@ function InstitutionsAdminContenu() {
                           >
                             {t("admInst_approuver")}
                           </button>
+                        )}
+                        {(inst.status === "ACTIVE" || inst.status === "SUSPENDED") && (
                           <button
                             className={styles.boutonPetit}
-                            style={{ background: "var(--color-flamme)" }}
-                            onClick={() => ouvrirRefus(inst)}
+                            style={{ background: inst.status === "ACTIVE" ? "var(--color-flamme)" : "var(--color-vert-paiement, #198754)" }}
+                            onClick={() => basculerStatut(inst)}
                           >
-                            {t("admInst_refuser")}
+                            {t(inst.status === "ACTIVE" ? "admInst_suspendre" : "admInst_reactiver")}
                           </button>
-                        </>
-                      )}
-                      {inst.status === "REJECTED" && (
-                        <button
-                          className={styles.boutonPetit}
-                          style={{ background: "var(--color-vert-paiement, #198754)" }}
-                          onClick={() => approuver(inst)}
-                        >
-                          {t("admInst_approuver")}
-                        </button>
-                      )}
-                      {(inst.status === "ACTIVE" || inst.status === "SUSPENDED") && (
-                        <button
-                          className={styles.boutonPetit}
-                          style={{ background: inst.status === "ACTIVE" ? "var(--color-flamme)" : "var(--color-vert-paiement, #198754)" }}
-                          onClick={() => basculerStatut(inst)}
-                        >
-                          {t(inst.status === "ACTIVE" ? "admInst_suspendre" : "admInst_reactiver")}
-                        </button>
-                      )}
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                  {/* Détails de la demande (16 nov. 2026, demande : "avant
+                      validation l'admin doit être en mesure de voir toutes
+                      les informations saisies [...] et pouvoir échanger avec
+                      lui par les différents canaux") — contactEmail/
+                      contactPhone existaient déjà côté API (Institution
+                      model) et étaient saisis à l'inscription, mais
+                      n'apparaissaient nulle part ici. Toujours visible (pas
+                      seulement pour PENDING) : utile aussi pour recontacter
+                      une institution déjà active. Le numéro WhatsApp retenu
+                      est celui de l'institution si elle en a déclaré un,
+                      sinon celui du compte ELEGANZ qui la porte. */}
+                  <tr className={styles.ligneDetail}>
+                    <td colSpan={estSuperAdmin ? 5 : 4}>
+                      <div className={styles.detailGrille}>
+                        <div>
+                          <span className={styles.detailLabel}>{t("admInst_labelContactEmail")}</span>
+                          <span>{inst.contactEmail ?? t("profil_nonRenseigne")}</span>
+                        </div>
+                        <div>
+                          <span className={styles.detailLabel}>{t("admInst_labelContactTelephone")}</span>
+                          <span>
+                            {inst.contactPhone ?? t("profil_nonRenseigne")}
+                            {telephoneWhatsapp && (
+                              <>
+                                {" — "}
+                                <a
+                                  className={styles.lienWhatsapp}
+                                  href={versLienWhatsapp(telephoneWhatsapp)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {t("gcmd_whatsappPrefix")} {telephoneWhatsapp}
+                                </a>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <div>
+                          <span className={styles.detailLabel}>{t("admInst_labelDateDemande")}</span>
+                          <span>{formatDate(inst.createdAt)}</span>
+                        </div>
+                        <div>
+                          <button
+                            type="button"
+                            className={styles.boutonPetit}
+                            onClick={() =>
+                              router.push(
+                                `/admin/messagerie?destinataireId=${inst.user.id}&nom=${encodeURIComponent(inst.user.fullName)}`,
+                              )
+                            }
+                          >
+                            {t("admInst_messageInterne")}
+                          </button>
+                        </div>
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ),
-            )}
+                  </tr>
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       )}

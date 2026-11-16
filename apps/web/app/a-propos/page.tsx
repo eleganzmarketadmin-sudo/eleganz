@@ -21,6 +21,14 @@ import styles from "./page.module.css";
  * cet ancien motif de l'accueil (Cobalt/Flamme/Or/Magenta, repris de
  * COULEURS_MARQUE dans Logo.tsx) n'apparaissait plus nulle part — il vit
  * désormais ici, dans le hero de cette page.
+ *
+ * Module Institution ajouté le 16 nov. 2026 (signalement : "vous avez
+ * oublié les autres modules comme institution") — un partenaire financier
+ * (microfinance, banque, coopérative) n'a pas de portail grand public comme
+ * les trois autres (pas de lien dans SiteHeader, l'inscription se fait sur
+ * invitation), mais mérite sa place ici au même titre que les autres
+ * modules réels de la plateforme ; voir institution/inscription/page.tsx
+ * pour le texte repris pour le lien de cette carte.
  */
 export default function AProposPage() {
   const { t } = useLocale();
@@ -57,6 +65,12 @@ export default function AProposPage() {
           <h2 className="titre-vitrine">ELEGANZ {t("nom_market")}</h2>
           <p>{t("apropos_descMarket")}</p>
           <Link href="/marketplace">{t("accueil_parcourirVitrine")}</Link>
+        </div>
+
+        <div className={`${styles.carte} ${styles.institution}`}>
+          <h2>ELEGANZ {t("nav_institutions")}</h2>
+          <p>{t("apropos_descInstitution")}</p>
+          <Link href="/institution/inscription">{t("inst_inscription_titreMarque")}</Link>
         </div>
       </section>
 

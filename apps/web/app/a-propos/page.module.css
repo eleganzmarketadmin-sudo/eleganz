@@ -116,6 +116,12 @@
   border-color: var(--color-flamme-texte);
 }
 
+.institution {
+  /* Même couleur que l'en-tête du portail Institution lui-même, voir
+     InstitutionShell.module.css (16 nov. 2026). */
+  border-color: var(--color-or-texte);
+}
+
 .engagement {
   background: var(--color-surface-muted);
   border-top: 2px solid var(--color-border);

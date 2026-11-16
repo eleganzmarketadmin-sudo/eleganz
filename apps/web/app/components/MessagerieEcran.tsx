@@ -61,7 +61,10 @@ function nomAutrePartie(conv: Conversation, monId: string, conversationFallback:
  * conversations venant des notifications automatiques (nouvelle commande,
  * etc.) restent un autre point d'entrée courant.
  */
-export function MessagerieEcran({ compact = false }: { compact?: boolean } = {}) {
+export function MessagerieEcran({
+  compact = false,
+  destinataireInitial = null,
+}: { compact?: boolean; destinataireInitial?: { id: string; nom: string } | null } = {}) {
   const { user } = useAuth();
   const { t } = useLocale();
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
@@ -76,6 +79,30 @@ export function MessagerieEcran({ compact = false }: { compact?: boolean } = {})
   const [destinataireChoisi, setDestinataireChoisi] = useState<DestinataireChoisi | null>(null);
   const [nouveauMessage, setNouveauMessage] = useState("");
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+
+  // Destinataire pré-rempli (16 nov. 2026) — "Message interne" depuis
+  // admin/institutions (et potentiellement d'autres écrans à l'avenir) passe
+  // ici un compte précis plutôt que de forcer l'admin à le rechercher par
+  // nom. S'il existe déjà un fil avec ce compte, on l'ouvre directement ;
+  // sinon on pré-remplit le formulaire "nouvelle conversation" avec ce
+  // destinataire déjà choisi, prêt à recevoir le premier message. Le drapeau
+  // ci-dessous garantit que ceci ne se déclenche qu'une fois par montage,
+  // même si l'admin change ensuite de destinataire ou de conversation.
+  const [destinataireInitialTraite, setDestinataireInitialTraite] = useState(false);
+  useEffect(() => {
+    if (!destinataireInitial || destinataireInitialTraite || conversations === null) return;
+    setDestinataireInitialTraite(true);
+    const conversationExistante = conversations.find((conv) =>
+      conv.participants.some((p) => p.user.id === destinataireInitial.id),
+    );
+    if (conversationExistante) {
+      ouvrirConversation(conversationExistante.id);
+    } else {
+      setDestinataireChoisi({ type: "utilisateur", id: destinataireInitial.id, nom: destinataireInitial.nom });
+      setFormulaireOuvert(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, destinataireInitial, destinataireInitialTraite]);
 
   // Recherche de contacts (demande du 10 nov. 2026) — débouncée pour ne pas
   // interroger l'API à chaque frappe ; voir MessagingService.rechercherContacts

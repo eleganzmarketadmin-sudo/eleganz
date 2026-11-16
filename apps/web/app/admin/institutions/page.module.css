@@ -132,3 +132,31 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Détails de la demande (16 nov. 2026) — ligne toujours visible sous chaque
+   institution, voir le commentaire dans page.tsx. */
+.ligneDetail td {
+  background: var(--color-surface-muted);
+  padding-top: var(--espace-2);
+  padding-bottom: var(--espace-2);
+}
+
+.detailGrille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2) var(--espace-6);
+  font-size: 0.8125rem;
+}
+
+.detailLabel {
+  display: block;
+  color: var(--color-texte-muted);
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.lienWhatsapp {
+  color: var(--color-vert-paiement-texte);
+  font-weight: 600;
+  text-decoration: underline;
+}
