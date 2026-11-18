@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { BusinessPlanService } from "../finance/business-plan.service";
 import { LoansService } from "../finance/loans.service";
@@ -12,6 +12,7 @@ import {
   InstitutionStatus,
   LoanDecisionStatut,
   MenuInstitution,
+  StatutValidationAnalyse,
 } from "@eleganz/database";
 
 /**
@@ -161,14 +162,43 @@ export class InstitutionPortalService {
    * sur ACCORDEE/REFUSEE — jamais une resaisie manuelle, pour que le statut
    * de la demande reste toujours le reflet exact de la dernière décision
    * prise sur elle.
+   *
+   * Double contrôle RÉEL (chantier "gestion de risque autonome", 16 nov.
+   * 2026, demande verrouillée du propriétaire) — jusqu'ici seulement
+   * documentée en commentaire sur InstitutionRole.ANALYSTE_CREDIT sans être
+   * appliquée : voir le bloc ci-dessous.
    */
   async decider(institutionId: string, shopId: string, userId: string, dto: CreateLoanDecisionDto) {
     await this.verifierAcces(institutionId, shopId);
 
     if (dto.demandeCreditId) {
-      const demande = await this.prisma.demandeCredit.findUnique({ where: { id: dto.demandeCreditId } });
+      const demande = await this.prisma.demandeCredit.findUnique({
+        where: { id: dto.demandeCreditId },
+        include: { analyse: true },
+      });
       if (!demande || demande.institutionId !== institutionId || demande.shopId !== shopId) {
         throw new ForbiddenException("Cette demande de crédit n'appartient pas à cette boutique et à votre institution.");
+      }
+
+      // Une candidature avec dossier financier rattaché (shopId renseigné,
+      // donc un snapshot existe forcément — voir DemandeCreditService.soumettre)
+      // exige une AnalyseCredit VALIDEE avant toute décision, et jamais par
+      // la même personne qui l'a validée. Une candidature "libre" (shopId
+      // null, voir DemandeCreditService.creerLibre) n'a pas de snapshot,
+      // donc aucun score automatique n'est calculable (AnalyseCredit.analysable=false
+      // si une analyse y a quand même été tentée) : elle reste décidable
+      // directement, après revue manuelle du dossier.
+      if (demande.shopId) {
+        if (!demande.analyse || demande.analyse.statutValidation !== StatutValidationAnalyse.VALIDEE) {
+          throw new BadRequestException(
+            "L'analyse de crédit de cette candidature doit être calculée puis validée par un analyste avant toute décision.",
+          );
+        }
+        if (demande.analyse.valideParUserId === userId) {
+          throw new ForbiddenException(
+            "Vous avez validé l'analyse de crédit de cette candidature : la décision finale doit être prise par une autre personne (séparation analyste/décideur).",
+          );
+        }
       }
     }
 

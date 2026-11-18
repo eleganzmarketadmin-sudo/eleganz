@@ -7,6 +7,8 @@ import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution
 import { InviteInstitutionStaffDto } from "./dto/invite-institution-staff.dto";
 import { UpdateInstitutionStaffDto } from "./dto/update-institution-staff.dto";
 import { CreerDemandeCreditLibreDto } from "./dto/demande-credit.dto";
+import { ValiderAnalyseCreditDto } from "./dto/analyse-credit.dto";
+import { AnalyseCreditService } from "./analyse-credit.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -32,6 +34,7 @@ export class InstitutionPortalController {
     private readonly portal: InstitutionPortalService,
     private readonly staff: InstitutionStaffService,
     private readonly demandes: DemandeCreditService,
+    private readonly analyses: AnalyseCreditService,
   ) {}
 
   @Get("me")
@@ -156,6 +159,45 @@ export class InstitutionPortalController {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="demande-credit-${numero}.pdf"`);
     return doc.pipe(res);
+  }
+
+  // Analyse de crédit automatisée (chantier "gestion de risque autonome", 16
+  // nov. 2026) — voir AnalyseCreditService pour le calcul et le double
+  // contrôle réel appliqué dans InstitutionPortalService.decider.
+  // "Lancer/relancer l'analyse" reste réservé aux rôles qui en ont
+  // l'écran ANALYSE par défaut (ADMINISTRATEUR/GESTIONNAIRE_COMPTE/
+  // ANALYSTE_CREDIT) — CHARGE_CLIENTELE, qui reçoit les candidatures, n'a
+  // pas vocation à déclencher lui-même le calcul du score.
+  @Post("demandes/:numero/analyse")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE, InstitutionRole.ANALYSTE_CREDIT)
+  genererAnalyse(@CurrentInstitutionId() institutionId: string, @Param("numero") numero: string) {
+    return this.analyses.genererAnalyse(institutionId, numero);
+  }
+
+  @Get("demandes/:numero/analyse")
+  @UseGuards(InstitutionMembershipGuard)
+  obtenirAnalyse(@CurrentInstitutionId() institutionId: string, @Param("numero") numero: string) {
+    return this.analyses.obtenirAnalyse(institutionId, numero);
+  }
+
+  // Validation/rejet par un analyste — pas de restriction de rôle plus
+  // stricte ici que sur genererAnalyse ci-dessus : la VRAIE barrière contre
+  // un double rôle analyste+décideur est posée dans
+  // InstitutionPortalService.decider (comparaison des deux userId), jamais
+  // seulement une restriction de rôle sur cette route, qui serait
+  // contournable par une institution à équipe réduite où une même personne
+  // cumule plusieurs rôles.
+  @Post("analyses/:id/valider")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE, InstitutionRole.ANALYSTE_CREDIT)
+  validerAnalyse(
+    @CurrentInstitutionId() institutionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @Body() dto: ValiderAnalyseCreditDto,
+  ) {
+    return this.analyses.validerAnalyse(institutionId, id, user.id, dto.decision, dto.note);
   }
 
   @Post("demandes")

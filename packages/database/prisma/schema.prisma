@@ -124,6 +124,25 @@ model PlatformSettings {
   institutionLoanCommissionMinAmount Decimal? @db.Decimal(14, 2)
   institutionLoanCommissionMaxAmount Decimal? @db.Decimal(14, 2)
 
+  // Seuils de classification du risque de crédit, en jours de retard sur
+  // Loan.prochainEcheanceAttendueLe (chantier "gestion de risque autonome",
+  // 16 nov. 2026) — convention Bâle/BCEAO usuelle en valeur de départ
+  // (30/90/180 jours), entièrement paramétrable depuis le Centre de
+  // pilotage, jamais codée en dur dans RisqueCreditService. Chaque seuil
+  // marque le DÉBUT de sa bande (ex. risqueJoursDouteux=90 → DOUTEUX dès le
+  // 90e jour de retard, jusqu'à risqueJoursCompromis exclu).
+  risqueJoursSousSurveillance Int @default(30)
+  risqueJoursDouteux          Int @default(90)
+  risqueJoursCompromis        Int @default(180)
+
+  // Taux de provisionnement (%) appliqués au solde restant selon la bande
+  // ci-dessus (même chantier) — RisqueCreditService applique toujours
+  // 0% pour SAIN, jamais configurable : un prêt à jour n'a par définition
+  // aucune perte attendue à provisionner.
+  risqueTauxProvisionSousSurveillance Decimal @default(10)  @db.Decimal(5, 2)
+  risqueTauxProvisionDouteux          Decimal @default(50)  @db.Decimal(5, 2)
+  risqueTauxProvisionCompromis        Decimal @default(100) @db.Decimal(5, 2)
+
   // Services à la carte (14 oct. 2026, plan commercial) — tarification
   // configurable depuis le Centre de pilotage, sans redéploiement.
   // Crédits IA : prix USD d'un crédit, utilisé pour calculer le montant de
@@ -2463,7 +2482,42 @@ model Loan {
   institutionCommissionAmount     Decimal?     @db.Decimal(14, 2)
   suiviRemboursementParInstitution Boolean      @default(false)
 
+  // Classification du risque et provisionnement (chantier "gestion de
+  // risque autonome", 16 nov. 2026) — calculés par le cron quotidien
+  // RisqueCreditService.calculerArrieresEtProvisions, jamais resaisis
+  // manuellement. `prochainEcheanceAttendueLe` est la SEULE donnée dont
+  // dérivent joursRetardActuel/classificationRisque/provisionRequise : posée
+  // au décaissement (dateObtention + 1 mois, voir LoansService.obtenirPret/
+  // obtenirPretViaDecision), avancée de 1 mois à chaque échéance effectivement
+  // comptabilisée (LoansService.comptabiliser) — reste donc cohérente qu'un
+  // remboursement soit en retard ou anticipé, sans jamais comparer à un
+  // échéancier théorique figé. Reste null pour un prêt enregistré avant ce
+  // chantier et jamais retouché depuis (aucun recalcul rétroactif) : le cron
+  // ignore silencieusement tout prêt sans cette date plutôt que d'en inventer
+  // une.
+  prochainEcheanceAttendueLe DateTime?
+  joursRetardActuel          Int                      @default(0)
+  classificationRisque       ClassificationRisquePret @default(SAIN)
+  // Montant en devise du prêt, pas un pourcentage — calculé sur
+  // soldeRestant, jamais sur le montant initial (une provision suit
+  // l'exposition réelle restante). Null = jamais encore calculée (prêt sans
+  // prochainEcheanceAttendueLe).
+  provisionRequise           Decimal?                 @db.Decimal(14, 2)
+
   @@index([scope, shopId])
+}
+
+// Classification du risque d'un prêt selon ses jours de retard (chantier
+// "gestion de risque autonome", 16 nov. 2026) — convention à 4 bandes usuelle
+// chez les institutions de microfinance/bancaires (type Bâle/BCEAO : "en
+// souffrance" dès J+30), seuils rendus configurables sur PlatformSettings
+// plutôt que codés en dur ici, pour qu'une institution puisse les ajuster à
+// sa propre politique sans redéploiement.
+enum ClassificationRisquePret {
+  SAIN
+  SOUS_SURVEILLANCE
+  DOUTEUX
+  COMPROMIS
 }
 
 enum InstitutionType {
@@ -2728,9 +2782,83 @@ model DemandeCredit {
   createdAt        DateTime @default(now())
 
   decision LoanDecision?
+  analyse  AnalyseCredit?
 
   @@index([institutionId])
   @@index([shopId])
+}
+
+// Notation de risque en 5 bandes (chantier "gestion de risque autonome", 16
+// nov. 2026) — TRES_FAIBLE = meilleur profil, TRES_ELEVE = risque le plus
+// fort, jamais l'inverse (convention alignée sur le vocabulaire "risque"
+// plutôt que "qualité", pour rester cohérente avec ClassificationRisquePret
+// ci-dessus et éviter toute ambiguïté de sens à la lecture d'un rapport).
+enum NotationRisque {
+  TRES_FAIBLE
+  FAIBLE
+  MODERE
+  ELEVE
+  TRES_ELEVE
+}
+
+enum StatutValidationAnalyse {
+  EN_ATTENTE
+  VALIDEE
+  REJETEE
+}
+
+// Analyse de crédit automatisée (chantier "gestion de risque autonome", 16
+// nov. 2026) — anticipée depuis le 16 nov. 2026 par le commentaire sur
+// DemandeCreditStatut.EN_ANALYSE et sur InstitutionRole.ANALYSTE_CREDIT, mais
+// jamais implémentée jusqu'ici : jusqu'à ce chantier, une institution ne
+// disposait d'AUCUN score, seulement d'une lecture manuelle du dossier
+// financier.
+// Calculée UNIQUEMENT à partir de DemandeCredit.snapshotDossierCreditJson
+// (jamais une relecture live de FinanceService.dossierCredit) : le score
+// doit rester cohérent avec exactement ce que l'institution a vu au moment
+// de sa décision, même si la boutique a depuis changé de situation.
+// `analysable=false` pour une candidature "libre" (DemandeCredit.shopId
+// null, voir DemandeCreditService.creerLibre) : aucun snapshot ELEGANZ
+// n'existe pour un prospect, donc aucun score automatique n'est calculable —
+// scoreGlobal/notation restent alors null, à dessein, plutôt que d'inventer
+// une valeur par défaut qui donnerait une fausse impression de neutralité.
+// Un score transparent et explicable (pondération documentée dans
+// AnalyseCreditService.calculerComposantes), jamais un modèle boîte noire :
+// une institution financière doit pouvoir justifier chaque composante
+// devant son propre régulateur ou un auditeur externe.
+// Séparation analyste/décideur (demande du propriétaire, verrouillée le 16
+// nov. 2026, jusqu'ici seulement documentée sur InstitutionRole sans être
+// réellement appliquée) : `valideParUserId` doit différer de
+// LoanDecision.decidedByUserId sur la même DemandeCredit — contrôle RÉEL
+// posé dans InstitutionPortalService.decider, jamais seulement un rôle
+// affiché dans l'équipe.
+model AnalyseCredit {
+  id              String        @id @default(uuid())
+  demandeCreditId String        @unique
+  demandeCredit   DemandeCredit @relation(fields: [demandeCreditId], references: [id])
+
+  analysable     Boolean         @default(true)
+  scoreGlobal    Int? // 0-100, null si analysable=false
+  notation       NotationRisque?
+  // Détail des sous-scores (liquidité/endettement/rentabilité/ancienneté),
+  // voir AnalyseCreditService.calculerComposantes pour la pondération
+  // exacte — Json plutôt que des colonnes figées, pour pouvoir enrichir les
+  // composantes aux phases suivantes sans migration supplémentaire.
+  composantes    Json?
+  recommandation String          @db.Text
+
+  calculeLe         DateTime @default(now())
+  // Nombre de fois recalculée (dossier modifié, nouvelle soumission sur la
+  // même candidature) — traçabilité minimale, jamais un historique complet
+  // des anciennes valeurs à ce stade.
+  recalculeCompteur Int      @default(0)
+
+  statutValidation StatutValidationAnalyse @default(EN_ATTENTE)
+  valideParUserId  String?
+  valideLe         DateTime?
+  noteValidation   String?                 @db.Text
+
+  @@index([demandeCreditId])
 }
 
 enum LoanDecisionStatut {

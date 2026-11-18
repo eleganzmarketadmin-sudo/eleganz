@@ -4,6 +4,7 @@ import { BillingService } from "../billing/billing.service";
 import { DriverBillingService } from "../delivery/driver-billing.service";
 import { ComptableBillingService } from "../comptable/comptable-billing.service";
 import { EcheancierService } from "../echeancier/echeancier.service";
+import { RisqueCreditService } from "../institutions/risque-credit.service";
 
 /**
  * Automatisation du cycle de facturation (18 oct. 2026, point 6 de l'audit
@@ -41,6 +42,7 @@ export class CronJobsService {
     private readonly driverBilling: DriverBillingService,
     private readonly comptableBilling: ComptableBillingService,
     private readonly echeancier: EcheancierService,
+    private readonly risqueCredit: RisqueCreditService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: "cycle-facturation-quotidien" })
@@ -84,6 +86,26 @@ export class CronJobsService {
       // sans faire planter le planificateur lui-même (même principe que
       // ACCOUNTING_POSTING_FAILED ailleurs sur la plateforme).
       this.logger.error("CRON_FACTURATION_ECHEC le cycle de facturation quotidien a échoué", err);
+    }
+  }
+
+  /**
+   * Reclassement quotidien du risque de crédit des prêts décaissés via le
+   * portail Institutions (chantier "gestion de risque autonome", 16 nov.
+   * 2026) — après le cycle de facturation ci-dessus plutôt qu'avant : sans
+   * lien entre les deux (un prêt décaissé par une institution n'entre jamais
+   * dans la facturation ELEGANZ), l'ordre n'a pas d'importance fonctionnelle,
+   * seulement une convention de lisibilité (facturation d'abord, risque de
+   * crédit ensuite).
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_4AM, { name: "risque-credit-quotidien" })
+  async executerReclassementRisqueCredit() {
+    this.logger.log("CRON_RISQUE_CREDIT_DEBUT démarrage du reclassement quotidien du risque de crédit");
+    try {
+      const resultat = await this.risqueCredit.calculerArrieresEtProvisions();
+      this.logger.log(`CRON_RISQUE_CREDIT_FIN ${JSON.stringify(resultat)}`);
+    } catch (err) {
+      this.logger.error("CRON_RISQUE_CREDIT_ECHEC le reclassement quotidien du risque de crédit a échoué", err);
     }
   }
 }

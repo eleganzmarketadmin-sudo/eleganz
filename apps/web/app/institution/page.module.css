@@ -126,3 +126,14 @@
   background: var(--color-texte-muted);
   color: #fff;
 }
+
+/* Classification du risque de crédit (chantier "gestion de risque
+   autonome", 16 nov. 2026) — SOUS_SURVEILLANCE en avertissement (ambre),
+   DOUTEUX/COMPROMIS réutilisent badgeRefuse (déjà existant, même gravité
+   visuelle qu'une candidature refusée). SAIN n'a volontairement aucun badge
+   dédié : un prêt à jour ne doit pas attirer l'œil autant qu'un prêt en
+   retard. */
+.badgeAttention {
+  background: var(--color-or, #d4a017);
+  color: var(--color-encre-fixe);
+}

@@ -22,6 +22,19 @@ interface Pret {
   statut: "ACTIF" | "TERMINE";
   institutionCommissionAmount: number | null;
   suiviRemboursementParInstitution: boolean;
+  // Classification du risque et provisionnement (chantier "gestion de
+  // risque autonome", 16 nov. 2026) — calculés par le cron quotidien
+  // RisqueCreditService, jamais saisis ici. null/0/SAIN pour un prêt sans
+  // prochainEcheanceAttendueLe (jamais encore reclassé) ou à jour.
+  classificationRisque: "SAIN" | "SOUS_SURVEILLANCE" | "DOUTEUX" | "COMPROMIS";
+  joursRetardActuel: number;
+  provisionRequise: number | null;
+}
+
+function badgeClasseRisque(classification: Pret["classificationRisque"], styles: Record<string, string>): string | null {
+  if (classification === "SOUS_SURVEILLANCE") return styles.badgeAttention;
+  if (classification === "DOUTEUX" || classification === "COMPROMIS") return styles.badgeRefuse;
+  return null;
 }
 
 interface Echeance {
@@ -120,8 +133,16 @@ function PretsContenu() {
                   p.label
                 )}
               </h2>
-              <span className={`${styles.badge} ${p.statut === "TERMINE" ? styles.badgeDecaisse : styles.badgeAccorde}`}>
-                {t(p.statut === "TERMINE" ? "inst_pretTermine" : "inst_pretActif")}
+              <span style={{ display: "flex", gap: "var(--espace-2)", flexWrap: "wrap" }}>
+                <span className={`${styles.badge} ${p.statut === "TERMINE" ? styles.badgeDecaisse : styles.badgeAccorde}`}>
+                  {t(p.statut === "TERMINE" ? "inst_pretTermine" : "inst_pretActif")}
+                </span>
+                {p.statut === "ACTIF" &&
+                  badgeClasseRisque(p.classificationRisque, styles) && (
+                    <span className={`${styles.badge} ${badgeClasseRisque(p.classificationRisque, styles)}`}>
+                      {t(`inst_risqueClassification_${p.classificationRisque}`)} · {t("inst_risqueJoursRetard")} {p.joursRetardActuel}
+                    </span>
+                  )}
               </span>
             </div>
             <table className={styles.tableau} style={{ marginBottom: "var(--espace-3)" }}>
@@ -146,6 +167,12 @@ function PretsContenu() {
                   <tr>
                     <td>{t("inst_colCommissionEleganz")}</td>
                     <td className="chiffre">{formatMoney(p.institutionCommissionAmount, p.devise)}</td>
+                  </tr>
+                )}
+                {p.provisionRequise != null && p.provisionRequise > 0 && (
+                  <tr>
+                    <td>{t("inst_colProvisionRequise")}</td>
+                    <td className="chiffre">{formatMoney(p.provisionRequise, p.devise)}</td>
                   </tr>
                 )}
               </tbody>

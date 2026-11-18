@@ -25,6 +25,38 @@ interface SnapshotDossierCredit {
   codeVerification: string;
 }
 
+// Analyse de crédit automatisée (chantier "gestion de risque autonome", 16
+// nov. 2026) — voir AnalyseCredit dans schema.prisma. `composantes` reste
+// typé en souple (chaque composante peut être absente si analysable=false)
+// plutôt que de dupliquer ici la forme exacte du JSON serveur.
+interface ComposanteAnalyse {
+  label: string;
+  valeur: number | null;
+  points: number;
+  poids: number;
+  commentaire: string;
+}
+
+interface AnalyseCredit {
+  id: string;
+  analysable: boolean;
+  scoreGlobal: number | null;
+  notation: "TRES_FAIBLE" | "FAIBLE" | "MODERE" | "ELEVE" | "TRES_ELEVE" | null;
+  composantes: { liquidite: ComposanteAnalyse; endettement: ComposanteAnalyse; rentabilite: ComposanteAnalyse; anciennete: ComposanteAnalyse } | null;
+  recommandation: string;
+  calculeLe: string;
+  statutValidation: "EN_ATTENTE" | "VALIDEE" | "REJETEE";
+  valideParUserId: string | null;
+  valideLe: string | null;
+  noteValidation: string | null;
+}
+
+function badgeClasseNotation(notation: AnalyseCredit["notation"], styles: Record<string, string>): string {
+  if (notation === "TRES_FAIBLE" || notation === "FAIBLE") return styles.badgeAccorde;
+  if (notation === "MODERE") return styles.badgeAttention;
+  return styles.badgeRefuse;
+}
+
 interface DecisionLiee {
   id: string;
   statut: "ACCORDE" | "REFUSE";
@@ -72,14 +104,30 @@ function classeBadge(statut: string): string {
  * Limite connue (16 nov. 2026) : une candidature créée librement par
  * l'institution pour un prospect (`creerLibre`, `shop` null) n'a pas encore
  * de route de décision dédiée — `/institution-portal/shops/:shopId/decisions`
- * exige un shopId réel. Phase 2 (AnalyseCredit/scoring) revisite de toute
- * façon tout le parcours de décision ; en attendant, cette page l'indique
- * clairement plutôt que de proposer un formulaire qui échouerait.
+ * exige un shopId réel ; cette page l'indique clairement plutôt que de
+ * proposer un formulaire qui échouerait.
+ *
+ * Chantier "gestion de risque autonome" (16 nov. 2026) : pour une
+ * candidature avec boutique liée, le formulaire de décision n'apparaît plus
+ * qu'une fois l'analyse de crédit automatique (voir AnalyseCreditService)
+ * calculée ET validée par un analyste distinct du décideur — double
+ * contrôle réellement appliqué, revérifié côté serveur dans
+ * InstitutionPortalService.decider.
  */
 function DemandeDetailContenu({ numero }: { numero: string }) {
   const { t } = useLocale();
   const [demande, setDemande] = useState<DemandeCreditDetail | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  // Analyse de crédit automatisée (chantier "gestion de risque autonome", 16
+  // nov. 2026) — voir AnalyseCreditService. `analyse` reste `undefined`
+  // avant le premier chargement (pour ne rien afficher), puis `null` si
+  // aucune analyse n'a encore été lancée sur cette candidature.
+  const [analyse, setAnalyse] = useState<AnalyseCredit | null | undefined>(undefined);
+  const [analyseEnCours, setAnalyseEnCours] = useState(false);
+  const [erreurAnalyse, setErreurAnalyse] = useState<string | null>(null);
+  const [noteValidation, setNoteValidation] = useState("");
+  const [validationEnCours, setValidationEnCours] = useState(false);
 
   const [statut, setStatut] = useState<"ACCORDE" | "REFUSE">("ACCORDE");
   const [montant, setMontant] = useState("");
@@ -126,6 +174,47 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(recharger, [numero]);
+
+  function rechargerAnalyse() {
+    api
+      .get<AnalyseCredit | null>(`/institution-portal/demandes/${numero}/analyse`)
+      .then(setAnalyse)
+      .catch(() => setAnalyse(null));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(rechargerAnalyse, [numero]);
+
+  async function lancerAnalyse() {
+    setAnalyseEnCours(true);
+    setErreurAnalyse(null);
+    try {
+      const resultat = await api.post<AnalyseCredit>(`/institution-portal/demandes/${numero}/analyse`);
+      setAnalyse(resultat);
+      setNoteValidation("");
+    } catch (err) {
+      setErreurAnalyse(err instanceof ApiError ? err.message : t("inst_erreurGeneration"));
+    } finally {
+      setAnalyseEnCours(false);
+    }
+  }
+
+  async function validerAnalyse(decision: "VALIDEE" | "REJETEE") {
+    if (!analyse) return;
+    setValidationEnCours(true);
+    setErreurAnalyse(null);
+    try {
+      const resultat = await api.post<AnalyseCredit>(`/institution-portal/analyses/${analyse.id}/valider`, {
+        decision,
+        note: noteValidation || undefined,
+      });
+      setAnalyse(resultat);
+    } catch (err) {
+      setErreurAnalyse(err instanceof ApiError ? err.message : t("inst_erreurGeneration"));
+    } finally {
+      setValidationEnCours(false);
+    }
+  }
 
   async function soumettreDecision(e: React.FormEvent) {
     e.preventDefault();
@@ -286,6 +375,96 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
         )}
       </div>
 
+      {/* Analyse de crédit automatisée (chantier "gestion de risque autonome",
+          16 nov. 2026) — seulement pour une candidature avec boutique liée
+          (snapshot figé, voir DemandeCreditService.soumettre). Une candidature
+          "libre" (demande.shop null) n'a pas de score automatique possible,
+          voir le message AnalyseCredit.recommandation renvoyé côté serveur. */}
+      {demande.shop && (
+        <div className={styles.carte}>
+          <h2 style={{ marginBottom: "var(--espace-2)" }}>{t("inst_analyseTitre")}</h2>
+
+          {erreurAnalyse && <div className={styles.erreur}>{erreurAnalyse}</div>}
+
+          {analyse === undefined ? (
+            <p>{t("commun_chargement")}</p>
+          ) : !analyse ? (
+            <>
+              <p style={{ color: "var(--color-texte-muted)", marginBottom: "var(--espace-3)" }}>{t("inst_analyseAucune")}</p>
+              <button className={styles.bouton} onClick={lancerAnalyse} disabled={analyseEnCours}>
+                {analyseEnCours ? t("dossier_genererEnCours") : t("inst_analyseLancer")}
+              </button>
+            </>
+          ) : !analyse.analysable ? (
+            <p style={{ color: "var(--color-texte-muted)" }}>{analyse.recommandation}</p>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "var(--espace-3)", marginBottom: "var(--espace-3)", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "2rem", fontWeight: 700 }}>{analyse.scoreGlobal}/100</span>
+                <span className={`${styles.badge} ${badgeClasseNotation(analyse.notation, styles)}`}>{t(`inst_notation_${analyse.notation}`)}</span>
+                {analyse.statutValidation === "VALIDEE" && <span className={`${styles.badge} ${styles.badgeAccorde}`}>{t("inst_analyseValidee")}</span>}
+                {analyse.statutValidation === "REJETEE" && <span className={`${styles.badge} ${styles.badgeRefuse}`}>{t("inst_analyseRejetee")}</span>}
+              </div>
+
+              {analyse.composantes && (
+                <table className={styles.tableau} style={{ marginBottom: "var(--espace-3)" }}>
+                  <tbody>
+                    {Object.values(analyse.composantes).map((c) => (
+                      <tr key={c.label}>
+                        <td>{c.label}</td>
+                        <td className="chiffre">
+                          {c.points}/{c.poids}
+                        </td>
+                        <td style={{ color: "var(--color-texte-muted)", fontSize: "0.8125rem" }}>{c.commentaire}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <p style={{ marginBottom: "var(--espace-3)" }}>{analyse.recommandation}</p>
+
+              <p style={{ fontSize: "0.75rem", color: "var(--color-texte-muted)", marginBottom: "var(--espace-3)" }}>
+                {t("inst_analyseCalculeeLe")} {new Date(analyse.calculeLe).toLocaleString("fr-FR")}
+                {analyse.valideLe && (
+                  <>
+                    {" · "}
+                    {t(analyse.statutValidation === "VALIDEE" ? "inst_analyseValideeLe" : "inst_analyseRejeteeLe")}{" "}
+                    {new Date(analyse.valideLe).toLocaleString("fr-FR")}
+                  </>
+                )}
+              </p>
+              {analyse.noteValidation && (
+                <p style={{ marginBottom: "var(--espace-3)" }}>
+                  {t("inst_labelNote")} {analyse.noteValidation}
+                </p>
+              )}
+
+              {analyse.statutValidation === "EN_ATTENTE" && (
+                <>
+                  <div className={styles.champ} style={{ marginBottom: "var(--espace-3)" }}>
+                    <label>{t("inst_labelNote")}</label>
+                    <textarea rows={2} value={noteValidation} onChange={(e) => setNoteValidation(e.target.value)} />
+                  </div>
+                  <div style={{ display: "flex", gap: "var(--espace-2)", flexWrap: "wrap", marginBottom: "var(--espace-3)" }}>
+                    <button className={styles.bouton} onClick={() => validerAnalyse("VALIDEE")} disabled={validationEnCours}>
+                      {t("inst_analyseValider")}
+                    </button>
+                    <button className={styles.boutonSecondaire} onClick={() => validerAnalyse("REJETEE")} disabled={validationEnCours} type="button">
+                      {t("inst_analyseRejeter")}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <button className={styles.boutonSecondaire} onClick={lancerAnalyse} disabled={analyseEnCours} type="button">
+                {analyseEnCours ? t("dossier_genererEnCours") : t("inst_analyseRelancer")}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {demande.decision ? (
         <div className={styles.carte}>
           <h2 style={{ marginBottom: "var(--espace-3)" }}>{t("inst_decisionsPrecedentesTitre")}</h2>
@@ -327,6 +506,17 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
               )}
             </tbody>
           </table>
+        </div>
+      ) : demande.shop && !(analyse && analyse.analysable && analyse.statutValidation === "VALIDEE") ? (
+        // Double contrôle réel (chantier "gestion de risque autonome", 16
+        // nov. 2026) — même garde que InstitutionPortalService.decider côté
+        // serveur : le formulaire de décision n'est proposé qu'une fois
+        // l'analyse de crédit calculée ET validée par un analyste. Le
+        // contrôle "même personne" (valideParUserId === décideur) n'est lui
+        // vérifié que côté serveur, qui connaît l'identité du décideur au
+        // moment de l'envoi — jamais devinable ici avec certitude.
+        <div className={styles.carte}>
+          <p style={{ color: "var(--color-texte-muted)" }}>{t("inst_decisionVerrouillee")}</p>
         </div>
       ) : demande.shop ? (
         <div className={styles.carte}>

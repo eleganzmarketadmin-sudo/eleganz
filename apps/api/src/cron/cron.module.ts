@@ -4,6 +4,7 @@ import { BillingModule } from "../billing/billing.module";
 import { DeliveryModule } from "../delivery/delivery.module";
 import { ComptableModule } from "../comptable/comptable.module";
 import { EcheancierModule } from "../echeancier/echeancier.module";
+import { InstitutionsModule } from "../institutions/institutions.module";
 
 // ScheduleModule.forRoot() est enregistré une seule fois, au niveau
 // AppModule (voir app.module.ts) — c'est lui qui active globalement le
@@ -11,7 +12,7 @@ import { EcheancierModule } from "../echeancier/echeancier.module";
 // CronJobsService a besoin pour appeler les services de facturation déjà
 // existants.
 @Module({
-  imports: [BillingModule, DeliveryModule, ComptableModule, EcheancierModule],
+  imports: [BillingModule, DeliveryModule, ComptableModule, EcheancierModule, InstitutionsModule],
   providers: [CronJobsService],
 })
 export class CronModule {}

@@ -8,6 +8,8 @@ import { InstitutionPortalController } from "./institution-portal.controller";
 import { InstitutionStaffService } from "./institution-staff.service";
 import { InstitutionMembershipGuard } from "./institution-membership.guard";
 import { DemandeCreditService } from "./demande-credit.service";
+import { AnalyseCreditService } from "./analyse-credit.service";
+import { RisqueCreditService } from "./risque-credit.service";
 
 // Portail institutions financières partenaires (14 nov. 2026 — microfinances,
 // banques, coopératives). Importe ShopsModule (JwtAuthGuard/ShopMembershipGuard,
@@ -24,7 +26,14 @@ import { DemandeCreditService } from "./demande-credit.service";
     InstitutionStaffService,
     InstitutionMembershipGuard,
     DemandeCreditService,
+    AnalyseCreditService,
+    RisqueCreditService,
   ],
   controllers: [ShopInstitutionsController, InstitutionsCatalogueController, InstitutionPortalController],
+  // RisqueCreditService est exporté pour CronModule (voir cron.module.ts) —
+  // c'est lui qui appelle calculerArrieresEtProvisions() une fois par jour,
+  // jamais une dépendance en sens inverse (InstitutionsModule n'importe
+  // jamais CronModule).
+  exports: [RisqueCreditService],
 })
 export class InstitutionsModule {}

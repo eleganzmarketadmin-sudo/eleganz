@@ -10,6 +10,14 @@ function debutDuMois(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1));
 }
 
+// Chantier "gestion de risque autonome" (16 nov. 2026) — voir le commentaire
+// sur Loan.prochainEcheanceAttendueLe dans schema.prisma : seule base dont
+// RisqueCreditService dérive joursRetardActuel/classificationRisque/
+// provisionRequise, jamais un échéancier théorique recalculé à chaque fois.
+function ajouterUnMois(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()));
+}
+
 export type StatutEcheance = "comptabilisee" | "deja_comptabilisee" | "termine";
 
 /**
@@ -96,6 +104,7 @@ export class LoansService {
       }
     }
 
+    const dateObtentionPret = dto.dateObtention ? new Date(dto.dateObtention) : new Date();
     const loan = await this.prisma.loan.create({
       data: {
         scope: FiscalRuleScope.SHOP,
@@ -107,11 +116,14 @@ export class LoansService {
         dureeMois: decision.dureeMois,
         devise: dto.devise ?? "USD",
         compteAccountCode: dto.compteAccountCode,
-        dateObtention: dto.dateObtention ? new Date(dto.dateObtention) : new Date(),
+        dateObtention: dateObtentionPret,
         soldeRestant: decision.montant,
         institutionId: decision.institutionId,
         institutionCommissionAmount,
         suiviRemboursementParInstitution: decision.autoriserSuiviRemboursement,
+        // Première échéance attendue dans 1 mois (chantier "gestion de
+        // risque autonome", 16 nov. 2026) — voir ajouterUnMois ci-dessus.
+        prochainEcheanceAttendueLe: ajouterUnMois(dateObtentionPret),
       },
     });
 
@@ -344,6 +356,15 @@ export class LoansService {
       data: {
         soldeRestant: nouveauSolde,
         statut: nouveauSolde <= 0 ? LoanStatut.TERMINE : LoanStatut.ACTIF,
+        // Avance la prochaine échéance attendue d'exactement 1 mois pour
+        // CHAQUE échéance comptabilisée (chantier "gestion de risque
+        // autonome", 16 nov. 2026) — jamais remise à "aujourd'hui + 1 mois",
+        // pour qu'un rattrapage mois par mois sur un arriéré reste visible
+        // tant que tous les mois dus n'ont pas été comptabilisés. Ne
+        // s'applique qu'aux prêts qui en ont déjà une (décaissés via une
+        // institution, voir obtenirPretViaDecision) — reste null sinon,
+        // ignoré par RisqueCreditService.
+        ...(loan.prochainEcheanceAttendueLe ? { prochainEcheanceAttendueLe: ajouterUnMois(periodDate) } : {}),
       },
     });
 
