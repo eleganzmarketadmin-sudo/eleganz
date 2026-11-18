@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { DossierCreditBoutique } from "../finance/finance.service";
-import { DemandeCreditStatut, NotationRisque, StatutValidationAnalyse } from "@eleganz/database";
+import { DemandeCreditStatut, NotationRisque, Prisma, StatutValidationAnalyse } from "@eleganz/database";
 
 interface Composante {
   label: string;
@@ -179,7 +179,10 @@ export class AnalyseCreditService {
       analysable: boolean;
       scoreGlobal: number | null;
       notation: NotationRisque | null;
-      composantes: object | null;
+      // Prisma.JsonNull (jamais `null` nu) pour écrire explicitement un NULL
+      // SQL sur une colonne Json — `null` seul n'est pas assignable à un
+      // champ Json? côté types générés (TS2322 à la compilation sinon).
+      composantes: object | typeof Prisma.JsonNull;
       recommandation: string;
       recalculeCompteur: number;
       statutValidation: StatutValidationAnalyse;
@@ -196,7 +199,7 @@ export class AnalyseCreditService {
         analysable: false,
         scoreGlobal: null,
         notation: null,
-        composantes: null,
+        composantes: Prisma.JsonNull,
         recommandation:
           "Aucun dossier financier ELEGANZ rattaché à cette candidature (demande libre, prospect sans boutique ELEGANZ) : l'analyse automatique n'est pas calculable. Une revue manuelle complète est nécessaire avant toute décision.",
         recalculeCompteur: (existante?.recalculeCompteur ?? 0) + 1,
