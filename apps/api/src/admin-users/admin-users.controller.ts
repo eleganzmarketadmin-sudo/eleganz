@@ -56,12 +56,12 @@ export class AdminUsersController {
   @Post(":userId/suspend")
   suspend(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string) {
     requireAdmin(user);
-    return this.adminUsersService.setSuspended(userId, true);
+    return this.adminUsersService.setSuspended(userId, true, user.id);
   }
 
   @Post(":userId/reactivate")
   reactivate(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string) {
     requireAdmin(user);
-    return this.adminUsersService.setSuspended(userId, false);
+    return this.adminUsersService.setSuspended(userId, false, user.id);
   }
 }

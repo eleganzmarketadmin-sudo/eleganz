@@ -11,6 +11,7 @@ import { CreerUploadDocumentIdentiteDto, SoumettreDocumentIdentiteDto } from "./
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 function slugify(name: string): string {
   return name
@@ -523,9 +524,17 @@ export class ShopsService {
    * les boutiques en retard de paiement). Ne touche jamais aux commandes,
    * produits ou historiques — seulement au statut d'accès.
    */
-  async adminSetStatus(shopId: string, status: ShopStatus) {
+  async adminSetStatus(shopId: string, status: ShopStatus, adminUserId: string) {
     await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
-    return this.prisma.shop.update({ where: { id: shopId }, data: { status } });
+    const shop = await this.prisma.shop.update({ where: { id: shopId }, data: { status } });
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      shopId,
+      action: "BOUTIQUE_STATUT_CHANGE",
+      details: { status },
+    });
+    return shop;
   }
 
   /**

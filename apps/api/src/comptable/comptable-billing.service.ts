@@ -7,6 +7,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 import { calculerPenaliteRetard, joursEntiersEntre, palierCible, SeuilsFacturation, TITRE_PALIER } from "../billing/dunning.util";
 import { StorageService } from "../storage/storage.service";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 /**
  * Facturation d'ELEGANZ Secourable (prompt du 13 oct. 2026, §14) — même
@@ -321,6 +322,21 @@ export class ComptableBillingService {
       }
     }
 
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts. Pas de
+    // shopId ici (facturation Secourable, jamais une boutique) :
+    // l'identifiant de l'abonnement est porté par `details`.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: markedByUserId,
+      action: "FACTURE_MARQUEE_PAYEE",
+      details: {
+        invoiceId,
+        subscriptionId: invoice.subscriptionId,
+        penaltyDays,
+        penaltyAmount,
+        reactivee: nouveauStatut === ComptableBillingStatus.ACTIVE,
+      },
+    });
+
     return {
       ...factureMaj,
       facturesRestantes: autresFacturesImpayees,
@@ -379,6 +395,13 @@ export class ComptableBillingService {
           ? "Votre abonnement Mon Comptable a été réactivé."
           : `Votre demande de réactivation a été refusée.${note ? ` Motif : ${note}` : ""}`,
       link: "/comptable",
+    });
+
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: "REACTIVATION_DECISION",
+      details: { requestId, subscriptionId: demande.subscriptionId, decision, note: note?.trim() || null },
     });
 
     return demandeMaj;

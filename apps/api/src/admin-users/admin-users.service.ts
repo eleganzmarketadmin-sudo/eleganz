@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 const SELECTION_PUBLIQUE = {
   id: true,
@@ -87,12 +88,19 @@ export class AdminUsersService {
     };
   }
 
-  async setSuspended(userId: string, isSuspended: boolean) {
+  async setSuspended(userId: string, isSuspended: boolean, adminUserId: string) {
     await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    return this.prisma.user.update({
+    const utilisateur = await this.prisma.user.update({
       where: { id: userId },
       data: { isSuspended },
       select: SELECTION_PUBLIQUE,
     });
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: isSuspended ? "UTILISATEUR_SUSPENDU" : "UTILISATEUR_REACTIVE",
+      details: { userId },
+    });
+    return utilisateur;
   }
 }

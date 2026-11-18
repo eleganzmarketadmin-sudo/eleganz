@@ -63,7 +63,10 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_AUDITOR:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.RELEVES, MenuAdmin.CENTRE_AIDE];
+      // AUDIT (journal d'audit interne, 18 nov. 2026) : ce rôle existe
+      // précisément pour ce type de consultation — voir le commentaire sur
+      // MenuAdmin.AUDIT dans schema.prisma.
+      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.RELEVES, MenuAdmin.AUDIT, MenuAdmin.CENTRE_AIDE];
     default:
       return [];
   }

@@ -38,6 +38,7 @@ import { CronModule } from "./cron/cron.module";
 import { GuidesModule } from "./guides/guides.module";
 import { InstitutionsModule } from "./institutions/institutions.module";
 import { AdminInstitutionsModule } from "./admin-institutions/admin-institutions.module";
+import { AdminAuditModule } from "./admin-audit/admin-audit.module";
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { AdminInstitutionsModule } from "./admin-institutions/admin-institutions
     AdminCockpitModule,
     AdminTeamModule,
     AdminUsersModule,
+    AdminAuditModule,
     PasswordResetModule,
     AdminSettingsModule,
     ImportExportModule,

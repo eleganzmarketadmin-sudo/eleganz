@@ -7,6 +7,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 import { calculerPenaliteRetard, joursEntiersEntre, palierCible, SeuilsFacturation, TITRE_PALIER } from "../billing/dunning.util";
 import { StorageService } from "../storage/storage.service";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 /**
  * Facturation de l'espace livreur (prompt du 13 oct. 2026, point 1) —
@@ -317,6 +318,16 @@ export class DriverBillingService {
       }
     }
 
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts. Pas de
+    // shopId ici (facturation livreur, jamais une boutique) : l'identifiant
+    // du livreur est porté par `details` plutôt que forcé dans un champ
+    // conçu pour les boutiques.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: markedByUserId,
+      action: "FACTURE_MARQUEE_PAYEE",
+      details: { invoiceId, driverId: invoice.driverId, penaltyDays, penaltyAmount, reactivee: nouveauStatut === DriverBillingStatus.ACTIVE },
+    });
+
     return {
       ...factureMaj,
       facturesRestantes: autresFacturesImpayees,
@@ -373,6 +384,13 @@ export class DriverBillingService {
           ? "Votre compte livreur a été réactivé."
           : `Votre demande de réactivation a été refusée.${note ? ` Motif : ${note}` : ""}`,
       link: "/livreur/profil",
+    });
+
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: "REACTIVATION_DECISION",
+      details: { requestId, driverId: demande.driverId, decision, note: note?.trim() || null },
     });
 
     return demandeMaj;

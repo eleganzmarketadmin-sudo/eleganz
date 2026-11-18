@@ -40,13 +40,13 @@ export class AdminInstitutionsController {
   @Post(":institutionId/suspend")
   suspend(@CurrentUser() user: AuthenticatedUser, @Param("institutionId") institutionId: string) {
     requireSuperAdmin(user);
-    return this.adminInstitutions.setStatus(institutionId, "SUSPENDED");
+    return this.adminInstitutions.setStatus(institutionId, "SUSPENDED", user.id);
   }
 
   @Post(":institutionId/reactivate")
   reactivate(@CurrentUser() user: AuthenticatedUser, @Param("institutionId") institutionId: string) {
     requireSuperAdmin(user);
-    return this.adminInstitutions.setStatus(institutionId, "ACTIVE");
+    return this.adminInstitutions.setStatus(institutionId, "ACTIVE", user.id);
   }
 
   // Refus d'une auto-inscription (14 nov. 2026) — distinct de /suspend, voir
@@ -58,7 +58,7 @@ export class AdminInstitutionsController {
     @Body() dto: RejectInstitutionDto,
   ) {
     requireSuperAdmin(user);
-    return this.adminInstitutions.reject(institutionId, dto.note);
+    return this.adminInstitutions.reject(institutionId, user.id, dto.note);
   }
 
   // Rattrapage ponctuel (16 nov. 2026) — voir le commentaire sur

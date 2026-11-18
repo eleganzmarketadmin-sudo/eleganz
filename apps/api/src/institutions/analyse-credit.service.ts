@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PrismaService } from "../prisma/prisma.service";
 import type { DossierCreditBoutique } from "../finance/finance.service";
 import { DemandeCreditStatut, NotationRisque, Prisma, StatutValidationAnalyse } from "@eleganz/database";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 interface Composante {
   label: string;
@@ -276,6 +277,13 @@ export class AnalyseCreditService {
     if (decision === "VALIDEE") {
       await this.prisma.demandeCredit.update({ where: { id: analyse.demandeCreditId }, data: { statut: DemandeCreditStatut.EN_DECISION } });
     }
+
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: userId,
+      action: "ANALYSE_CREDIT_VALIDATION",
+      details: { analyseId, institutionId, decision, note: note?.trim() || null },
+    });
 
     return misAJour;
   }

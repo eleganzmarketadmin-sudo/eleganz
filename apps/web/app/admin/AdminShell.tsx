@@ -29,14 +29,16 @@ import styles from "./AdminShell.module.css";
 // admin) fait foi. Équipe admin et Paramètres plateforme restent réservés
 // à ADMIN_SUPER par défaut.
 const MENUS_PAR_ROLE_ADMIN: Record<string, string[]> = {
-  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "CENTRE_AIDE"],
+  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "AUDIT", "CENTRE_AIDE"],
   ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES", "CENTRE_AIDE"],
   ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES", "CENTRE_AIDE"],
   ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES", "CENTRE_AIDE"],
   ADMIN_LOGISTICS: ["PILOTAGE", "LIVREURS", "SUIVI_COMMANDES", "CENTRE_AIDE"],
   ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE", "CENTRE_AIDE"],
   ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS", "CENTRE_AIDE"],
-  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES", "CENTRE_AIDE"],
+  // AUDIT (journal d'audit interne, 18 nov. 2026) : ce rôle existe
+  // précisément pour ce type de consultation — voir menu-admin.util.ts.
+  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES", "AUDIT", "CENTRE_AIDE"],
 };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -73,6 +75,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     // éviter une migration seulement pour un filtre de menu.
     { href: "/admin/institutions", label: t("nav_institutions"), menu: "EQUIPE_ADMIN" },
     { href: "/admin/parametres", label: t("nav_parametresPlateforme"), menu: "PARAMETRES_PLATEFORME" },
+    { href: "/admin/audit", label: t("nav_audit"), menu: "AUDIT" },
     { href: "/admin/centre-aide", label: t("nav_centreAide"), menu: "CENTRE_AIDE" },
     // Guide développeur/architecture (demande du 11 nov. 2026) — pas de clé
     // i18n (page volontairement non traduite, voir son commentaire d'en-tête)

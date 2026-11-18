@@ -335,6 +335,16 @@ enum MenuAdmin {
   // rôles ADMIN_* dans menuAdminParDefaut (menu-admin.util.ts) — c'est de
   // la documentation interne, pas une donnée sensible par boutique/compte.
   CENTRE_AIDE
+  // 18 nov. 2026 — Journal d'audit interne (piste d'audit, chantier
+  // "gestion de risque autonome" Phase 4) : consultation en lecture des
+  // AuditLog écrits par enregistrerAuditLog (audit-log.util.ts). Volontairement
+  // PAS accordé à TOUS les rôles admin par défaut (contrairement à
+  // CENTRE_AIDE) : ce journal trace des actions sensibles (suspensions,
+  // décisions de crédit, paiements) sur l'ensemble des domaines, pas
+  // seulement ce que montre déjà le menu propre à chaque rôle — voir
+  // menuAdminParDefaut, où seuls ADMIN_SUPER (accès total) et ADMIN_AUDITOR
+  // (rôle dédié à ce type de consultation) le reçoivent.
+  AUDIT
 }
 
 model User {

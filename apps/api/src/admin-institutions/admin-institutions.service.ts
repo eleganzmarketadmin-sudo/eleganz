@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { PrismaService } from "../prisma/prisma.service";
 import { InstitutionRole, InstitutionStatus, UserRole } from "@eleganz/database";
 import { CreateInstitutionDto, UpdateInstitutionDto } from "./dto/admin-institutions.dto";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 /**
  * Gestion des institutions partenaires (14 nov. 2026 — microfinances,
@@ -87,9 +88,9 @@ export class AdminInstitutionsService {
   // qu'à APPROUVER une auto-inscription PENDING (même action côté base :
   // passer status à ACTIVE) — voir /admin/institutions/page.tsx, qui
   // affiche "Approuver" plutôt que "Réactiver" selon le statut courant.
-  async setStatus(institutionId: string, status: "ACTIVE" | "SUSPENDED") {
+  async setStatus(institutionId: string, status: "ACTIVE" | "SUSPENDED", adminUserId: string) {
     await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
-    return this.prisma.institution.update({
+    const institution = await this.prisma.institution.update({
       where: { id: institutionId },
       data: {
         status,
@@ -99,6 +100,13 @@ export class AdminInstitutionsService {
         ...(status === InstitutionStatus.ACTIVE && { rejectionNote: null }),
       },
     });
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: status === InstitutionStatus.ACTIVE ? "INSTITUTION_REACTIVEE" : "INSTITUTION_SUSPENDUE",
+      details: { institutionId },
+    });
+    return institution;
   }
 
   // Refus explicite d'une auto-inscription (14 nov. 2026) — distinct de
@@ -106,12 +114,19 @@ export class AdminInstitutionsService {
   // approuvée, alors que SUSPENDED suppose qu'elle l'a été puis mise en
   // pause. Le motif, s'il est donné, est affiché tel quel à l'institution
   // sur son propre portail (voir Institution.rejectionNote).
-  async reject(institutionId: string, note?: string) {
+  async reject(institutionId: string, adminUserId: string, note?: string) {
     await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
-    return this.prisma.institution.update({
+    const institution = await this.prisma.institution.update({
       where: { id: institutionId },
       data: { status: InstitutionStatus.REJECTED, rejectionNote: note?.trim() || null },
     });
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: "INSTITUTION_REJETEE",
+      details: { institutionId, note: note?.trim() || null },
+    });
+    return institution;
   }
 
   /**

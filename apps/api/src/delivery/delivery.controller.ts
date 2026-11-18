@@ -75,7 +75,7 @@ export class DeliveryController {
     @Body("verified") verified: boolean,
   ) {
     requireAdminMenu(user, MenuAdmin.LIVREURS);
-    return this.deliveryService.adminSetVerified(driverId, verified);
+    return this.deliveryService.adminSetVerified(driverId, verified, user.id);
   }
 
   @Post("drivers/:driverId/note")

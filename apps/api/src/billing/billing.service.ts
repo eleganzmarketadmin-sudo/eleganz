@@ -6,6 +6,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 import { calculerPenaliteRetard, joursEntiersEntre, palierCible, SeuilsFacturation, TITRE_PALIER } from "./dunning.util";
 import { StorageService } from "../storage/storage.service";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 // Durée d'un cycle d'abonnement Gestion quand aucun cycle n'est encore
 // suivi pour la boutique (ShopSubscription jamais encore créée pour elle) —
@@ -400,6 +401,14 @@ export class BillingService {
       }
     }
 
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: markedByUserId,
+      shopId: invoice.shopId,
+      action: "FACTURE_MARQUEE_PAYEE",
+      details: { invoiceId, penaltyDays, penaltyAmount, reactivee: nouveauStatutBoutique === ShopStatus.ACTIVE },
+    });
+
     return {
       ...factureMaj,
       facturesRestantes: autresFacturesImpayees,
@@ -464,6 +473,14 @@ export class BillingService {
           ? "Votre boutique a été réactivée."
           : `Votre demande de réactivation a été refusée.${note ? ` Motif : ${note}` : ""}`,
       link: "/parametres",
+    });
+
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      shopId: demande.shopId,
+      action: "REACTIVATION_DECISION",
+      details: { requestId, decision, note: note?.trim() || null },
     });
 
     return demandeMaj;

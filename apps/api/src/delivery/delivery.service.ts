@@ -4,6 +4,7 @@ import { OrdersService } from "../orders/orders.service";
 import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
 import { OrderStatus, DriverBillingStatus, PaymentMethod } from "@eleganz/database";
 import { DriverBillingService } from "./driver-billing.service";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 @Injectable()
 export class DeliveryService {
@@ -125,13 +126,19 @@ export class DeliveryService {
     });
   }
 
-  async adminSetVerified(driverId: string, verified: boolean) {
+  async adminSetVerified(driverId: string, verified: boolean, adminUserId: string) {
     const driver = await this.prisma.driver.update({ where: { id: driverId }, data: { verified } });
     // La gratuité démarre précisément à la validation du dossier par
     // l'admin (prompt du 13 oct. 2026, point 1), jamais à l'inscription.
     if (verified) {
       await this.driverBillingService.startFreeTrialIfNeeded(driverId);
     }
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: adminUserId,
+      action: verified ? "LIVREUR_VERIFIE" : "LIVREUR_VERIFICATION_RETIREE",
+      details: { driverId },
+    });
     return driver;
   }
 

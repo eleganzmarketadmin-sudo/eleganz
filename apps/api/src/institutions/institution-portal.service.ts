@@ -5,6 +5,7 @@ import { LoansService } from "../finance/loans.service";
 import { FinanceService } from "../finance/finance.service";
 import { ecransInstitutionEffectifs } from "./institution-staff.service";
 import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 import {
   DemandeCreditStatut,
   FiscalRuleScope,
@@ -224,6 +225,19 @@ export class InstitutionPortalService {
         data: { statut: dto.statut === "ACCORDE" ? DemandeCreditStatut.ACCORDEE : DemandeCreditStatut.REFUSEE },
       });
     }
+
+    // Piste d'audit interne (18 nov. 2026) — voir audit-log.util.ts.
+    await enregistrerAuditLog(this.prisma, {
+      actorId: userId,
+      shopId,
+      action: "DECISION_CREDIT",
+      details: {
+        institutionId,
+        demandeCreditId: dto.demandeCreditId ?? null,
+        statut: dto.statut,
+        montant: dto.montant,
+      },
+    });
 
     return { ...decision, montant: Number(decision.montant), tauxAnnuel: Number(decision.tauxAnnuel) };
   }

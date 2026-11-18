@@ -1,0 +1,98 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.sousTitre {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-4);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.filtreLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+}
+
+.filtreLabel select {
+  min-height: 40px;
+  padding: 0 var(--espace-2);
+  border: 1px solid var(--color-border);
+}
+
+/* Même convention que /admin/releves et /admin/pilotage (tableau
+   scrollable horizontalement). */
+.tableauScroll {
+  overflow-x: auto;
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableau th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tableau td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.colonneDetails {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  color: var(--color-texte-muted);
+  max-width: 480px;
+  overflow-wrap: anywhere;
+}
+
+.boutonChargerPlus {
+  margin-top: var(--espace-4);
+  background: var(--color-surface);
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonChargerPlus:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonChargerPlus:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}

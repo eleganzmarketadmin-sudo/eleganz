@@ -35,13 +35,13 @@ export class AdminShopsController {
   @Post("admin/shops/:shopId/suspend")
   suspend(@CurrentUser() user: AuthenticatedUser, @Param("shopId") shopId: string) {
     requireAdmin(user, MenuAdmin.BOUTIQUES);
-    return this.shopsService.adminSetStatus(shopId, ShopStatus.SUSPENDED);
+    return this.shopsService.adminSetStatus(shopId, ShopStatus.SUSPENDED, user.id);
   }
 
   @Post("admin/shops/:shopId/reactivate")
   reactivate(@CurrentUser() user: AuthenticatedUser, @Param("shopId") shopId: string) {
     requireAdmin(user, MenuAdmin.BOUTIQUES);
-    return this.shopsService.adminSetStatus(shopId, ShopStatus.ACTIVE);
+    return this.shopsService.adminSetStatus(shopId, ShopStatus.ACTIVE, user.id);
   }
 
   @Patch("admin/shops/:shopId/plan")
