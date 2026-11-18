@@ -2866,6 +2866,24 @@ enum StatutValidationAnalyse {
 // LoanDecision.decidedByUserId sur la même DemandeCredit — contrôle RÉEL
 // posé dans InstitutionPortalService.decider, jamais seulement un rôle
 // affiché dans l'équipe.
+//
+// Préparation d'architecture pour un bureau de crédit externe (18 nov.
+// 2026, Phase 5 "gestion de risque autonome", décision du propriétaire :
+// préparer l'architecture sans connexion réelle, aucun fournisseur n'étant
+// identifié à ce stade) — `source` distingue déjà le score 100% interne
+// (seul cas existant aujourd'hui) d'un futur score enrichi par un
+// fournisseur externe. Un futur connecteur devra implémenter une interface
+// du type `FournisseurScoringExterne { recupererScore(dossier):
+// { scoreExterne, notationExterne, donneesBrutes } }` côté
+// apps/api/src/institutions/, puis AnalyseCreditService combinera ce
+// résultat avec le score interne — aucune implémentation de ce connecteur
+// n'existe encore, ce champ ne fait qu'anticiper sa venue sans migration
+// supplémentaire le jour où un fournisseur réel sera choisi.
+enum SourceAnalyseCredit {
+  INTERNE // seule valeur utilisée aujourd'hui — score 100% calculé par ELEGANZ
+  BUREAU_CREDIT_EXTERNE // réservée à une intégration future, jamais produite actuellement
+}
+
 model AnalyseCredit {
   id              String        @id @default(uuid())
   demandeCreditId String        @unique
@@ -2880,6 +2898,10 @@ model AnalyseCredit {
   // composantes aux phases suivantes sans migration supplémentaire.
   composantes    Json?
   recommandation String          @db.Text
+  // Toujours INTERNE aujourd'hui (voir commentaire au-dessus du modèle) —
+  // champ ajouté par anticipation, jamais encore produit avec une autre
+  // valeur.
+  source         SourceAnalyseCredit @default(INTERNE)
 
   calculeLe         DateTime @default(now())
   // Nombre de fois recalculée (dossier modifié, nouvelle soumission sur la
