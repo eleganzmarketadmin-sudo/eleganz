@@ -4,8 +4,19 @@ import { FinanceService } from "../finance/finance.service";
 import { SoumettreDemandeCreditDto, CreerDemandeCreditLibreDto } from "./dto/demande-credit.dto";
 import { InstitutionStatus } from "@eleganz/database";
 
-function versNombre(d: { montantDemande: unknown }) {
-  return { ...d, montantDemande: Number(d.montantDemande as number) };
+function versNombre(d: { montantDemande: unknown; garantieValeurEstimee?: unknown }) {
+  return {
+    ...d,
+    montantDemande: Number(d.montantDemande as number),
+    // garantieValeurEstimee est un Decimal? Prisma — même piège que
+    // montantDemande (sérialisé en chaîne côté JSON sans cette conversion),
+    // mais ici optionnel : `null`/`undefined` doit rester tel quel plutôt
+    // que devenir 0, pour ne pas laisser croire qu'une valeur a été saisie.
+    garantieValeurEstimee:
+      d.garantieValeurEstimee === null || d.garantieValeurEstimee === undefined
+        ? d.garantieValeurEstimee
+        : Number(d.garantieValeurEstimee as number),
+  };
 }
 
 // `detail`/`detailPourBoutique` incluent la LoanDecision complète (contrairement
@@ -96,6 +107,9 @@ export class DemandeCreditService {
         montantDemande: dto.montantDemande,
         dureeMoisDemandee: dto.dureeMoisDemandee,
         objetFinancement: dto.objetFinancement,
+        garantieType: dto.garantieType,
+        garantieDescription: dto.garantieDescription,
+        garantieValeurEstimee: dto.garantieValeurEstimee,
         snapshotDossierCreditJson: dossierCredit as unknown as object,
         soumiseParUserId: userId,
       },

@@ -43,6 +43,12 @@ export interface DossierCreditBoutique {
   // pour quoi que ce soit ; destinée à l'institution qui étudie ce dossier.
   // null = la boutique n'a jamais renseigné ce champ.
   secteurActivite: SecteurActiviteBoutique | null;
+  // Documents d'identité (18 nov. 2026, chantier "gestion de risque
+  // autonome" Phase 4, volet KYC) — purement déclaratif, voir le
+  // commentaire sur ShopIdentityDocument dans schema.prisma. ELEGANZ ne
+  // vérifie, n'authentifie ni ne valide jamais ces documents elle-même ;
+  // destinés à l'institution pour SA PROPRE vérification réglementaire.
+  documentsIdentite: { type: string; fileUrl: string; uploadedAt: string }[];
   identiteFiscale: {
     fiscalLegalName: string | null;
     fiscalIdNumber: string | null;
@@ -276,7 +282,7 @@ export class FinanceService {
     const debutPeriode = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() - (moisBornes - 1), 1));
     const finPeriode = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth() + 1, 1));
 
-    const [shop, identite, historiqueMensuel, bilan, bilanNormalise, compteDeResultatNormalise, supplier, customers, planAffaires] =
+    const [shop, identite, historiqueMensuel, bilan, bilanNormalise, compteDeResultatNormalise, supplier, customers, planAffaires, documents] =
       await Promise.all([
         this.prisma.shop.findUniqueOrThrow({
           where: { id: shopId },
@@ -290,6 +296,11 @@ export class FinanceService {
         this.prisma.supplier.aggregate({ where: { shopId }, _sum: { balanceOwed: true } }),
         this.prisma.shopCustomer.aggregate({ where: { shopId }, _sum: { creditBalance: true } }),
         this.businessPlan.obtenir(FiscalRuleScope.SHOP, shopId),
+        this.prisma.shopIdentityDocument.findMany({
+          where: { shopId },
+          orderBy: { uploadedAt: "desc" },
+          select: { type: true, fileUrl: true, uploadedAt: true },
+        }),
       ]);
 
     const genereLe = new Date().toISOString();
@@ -304,6 +315,7 @@ export class FinanceService {
       shopName: shop.name,
       boutiqueDepuis: shop.createdAt.toISOString(),
       secteurActivite: shop.secteurActivite,
+      documentsIdentite: documents.map((d) => ({ type: d.type, fileUrl: d.fileUrl, uploadedAt: d.uploadedAt.toISOString() })),
       identiteFiscale: {
         fiscalLegalName: identite.fiscalLegalName,
         fiscalIdNumber: identite.fiscalIdNumber,

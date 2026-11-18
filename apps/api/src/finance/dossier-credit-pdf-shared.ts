@@ -1,7 +1,7 @@
 // Import CommonJS correct même sans `esModuleInterop` (voir
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
-import type { SecteurActiviteBoutique } from "@eleganz/database";
+import type { SecteurActiviteBoutique, TypeGarantieCredit, TypeDocumentIdentite } from "@eleganz/database";
 import type { DossierCreditBoutique, DossierCreditBoutiqueBusinessPlan } from "./finance.service";
 
 // Libellés français du secteur d'activité (18 nov. 2026) — mêmes valeurs
@@ -22,6 +22,28 @@ export const LIBELLES_SECTEUR_ACTIVITE: Record<SecteurActiviteBoutique, string> 
   ARTISANAT_LOISIRS: "Artisanat, loisirs",
   SERVICES: "Services",
   AUTRE: "Autre",
+};
+
+// Libellés français du type de garantie proposée (18 nov. 2026, chantier
+// "gestion de risque autonome" Phase 3) — même convention que
+// LIBELLES_SECTEUR_ACTIVITE ci-dessus.
+export const LIBELLES_TYPE_GARANTIE: Record<TypeGarantieCredit, string> = {
+  STOCK_MARCHANDISE: "Stock de marchandises",
+  EQUIPEMENT_MATERIEL: "Équipement, matériel professionnel",
+  VEHICULE: "Véhicule",
+  BIEN_IMMOBILIER: "Bien immobilier",
+  CAUTION_PERSONNELLE: "Caution personnelle",
+  DEPOT_GARANTIE: "Dépôt de garantie",
+  AUTRE: "Autre",
+};
+
+// Libellés français du type de document d'identité (18 nov. 2026, chantier
+// "gestion de risque autonome" Phase 4, volet KYC) — même convention que
+// LIBELLES_SECTEUR_ACTIVITE ci-dessus.
+export const LIBELLES_TYPE_DOCUMENT_IDENTITE: Record<TypeDocumentIdentite, string> = {
+  PIECE_IDENTITE_DIRIGEANT: "Pièce d'identité du dirigeant",
+  REGISTRE_COMMERCE: "Registre de commerce",
+  AUTRE: "Autre document",
 };
 
 /**

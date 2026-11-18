@@ -7,6 +7,7 @@ import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
 import { UpdateShopSecteurActiviteDto } from "./dto/update-shop-secteur.dto";
+import { CreerUploadDocumentIdentiteDto, SoumettreDocumentIdentiteDto } from "./dto/identity-document.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
@@ -267,6 +268,40 @@ export class ShopsService {
       data: {
         ...(dto.secteurActivite !== undefined && { secteurActivite: dto.secteurActivite }),
       },
+    });
+  }
+
+  /**
+   * Documents d'identité (18 nov. 2026, chantier "gestion de risque
+   * autonome" Phase 4, volet KYC retenu par le propriétaire : identification
+   * + piste d'audit, sans détection automatisée AML) — même pattern en deux
+   * temps que BillingService.creerUrlUploadPreuvePaiement/soumettrePreuvePaiement
+   * (upload-url signée, puis enregistrement une fois le fichier réellement
+   * envoyé). Purement déclaratif et consultable par une institution
+   * partenaire ayant accès à la boutique, pour SA PROPRE vérification
+   * d'identité réglementaire — ELEGANZ ne vérifie, n'authentifie ni ne
+   * valide jamais ces documents elle-même. Historique conservé en liste
+   * (jamais remplacé), voir le commentaire sur ShopIdentityDocument dans
+   * schema.prisma.
+   */
+  creerUrlUploadDocumentIdentite(shopId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`shops/${shopId}/identity-documents`, contentType);
+  }
+
+  async soumettreDocumentIdentite(shopId: string, userId: string, dto: SoumettreDocumentIdentiteDto) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    if (!this.storage.urlEstDansLeBucket(dto.fileUrl)) {
+      throw new BadRequestException("Fichier introuvable sur le stockage ELEGANZ.");
+    }
+    return this.prisma.shopIdentityDocument.create({
+      data: { shopId, type: dto.type, fileUrl: dto.fileUrl, uploadedByUserId: userId, note: dto.note },
+    });
+  }
+
+  listerDocumentsIdentite(shopId: string) {
+    return this.prisma.shopIdentityDocument.findMany({
+      where: { shopId },
+      orderBy: { uploadedAt: "desc" },
     });
   }
 

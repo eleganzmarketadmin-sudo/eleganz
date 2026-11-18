@@ -67,10 +67,26 @@ interface DemandeCreditBoutique {
   montantDemande: number;
   dureeMoisDemandee: number;
   objetFinancement: string | null;
+  // Garantie proposée (18 nov. 2026) — purement déclaratif, voir
+  // DemandeCreditService.soumettre et le commentaire sur DemandeCredit
+  // dans schema.prisma. `garantieType` null = aucune garantie proposée.
+  garantieType: string | null;
+  garantieDescription: string | null;
+  garantieValeurEstimee: number | null;
   createdAt: string;
   institution: { id: string; name: string };
   decision: { statut: "ACCORDE" | "REFUSE"; loanId: string | null } | null;
 }
+
+const TYPES_GARANTIE = [
+  "STOCK_MARCHANDISE",
+  "EQUIPEMENT_MATERIEL",
+  "VEHICULE",
+  "BIEN_IMMOBILIER",
+  "CAUTION_PERSONNELLE",
+  "DEPOT_GARANTIE",
+  "AUTRE",
+] as const;
 
 /**
  * Côté boutique du portail institutions (14 nov. 2026) : choisir à quelles
@@ -109,6 +125,9 @@ function InstitutionsContenu() {
   const [demandeMontant, setDemandeMontant] = useState("");
   const [demandeDuree, setDemandeDuree] = useState("");
   const [demandeObjet, setDemandeObjet] = useState("");
+  const [demandeGarantieType, setDemandeGarantieType] = useState("");
+  const [demandeGarantieDescription, setDemandeGarantieDescription] = useState("");
+  const [demandeGarantieValeur, setDemandeGarantieValeur] = useState("");
   const [demandeEnCours, setDemandeEnCours] = useState(false);
   const [demandeErreur, setDemandeErreur] = useState<string | null>(null);
   const [demandeNumeroGenere, setDemandeNumeroGenere] = useState<string | null>(null);
@@ -203,12 +222,18 @@ function InstitutionsContenu() {
         montantDemande: montantN,
         dureeMoisDemandee: dureeN,
         objetFinancement: demandeObjet || undefined,
+        garantieType: demandeGarantieType || undefined,
+        garantieDescription: demandeGarantieDescription || undefined,
+        garantieValeurEstimee: demandeGarantieValeur ? Number(demandeGarantieValeur) : undefined,
       });
       setDemandeNumeroGenere(demande.numero);
       setDemandeScenarioId("");
       setDemandeMontant("");
       setDemandeDuree("");
       setDemandeObjet("");
+      setDemandeGarantieType("");
+      setDemandeGarantieDescription("");
+      setDemandeGarantieValeur("");
       recharger();
     } catch (err) {
       setDemandeErreur(err instanceof ApiError ? err.message : t("inst_erreurGeneration"));
@@ -374,6 +399,29 @@ function InstitutionsContenu() {
               <label>{t("credit_bpColObjet")}</label>
               <input value={demandeObjet} onChange={(e) => setDemandeObjet(e.target.value)} />
             </div>
+            <div className={styles.champ} style={{ minWidth: "200px" }}>
+              <label>{t("inst_garantieTypeLabel")}</label>
+              <select value={demandeGarantieType} onChange={(e) => setDemandeGarantieType(e.target.value)}>
+                <option value="">{t("inst_garantieAucune")}</option>
+                {TYPES_GARANTIE.map((g) => (
+                  <option key={g} value={g}>
+                    {t(`inst_garantieType_${g}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {demandeGarantieType && (
+              <>
+                <div className={styles.champ} style={{ flex: 1, minWidth: "180px" }}>
+                  <label>{t("inst_garantieDescriptionLabel")}</label>
+                  <input value={demandeGarantieDescription} onChange={(e) => setDemandeGarantieDescription(e.target.value)} />
+                </div>
+                <div className={styles.champ}>
+                  <label>{t("inst_garantieValeurLabel")}</label>
+                  <input type="number" min="0" value={demandeGarantieValeur} onChange={(e) => setDemandeGarantieValeur(e.target.value)} />
+                </div>
+              </>
+            )}
             <button
               className={styles.bouton}
               onClick={soumettreDemande}
@@ -382,6 +430,9 @@ function InstitutionsContenu() {
               {demandeEnCours ? t("inst_demandeSoumissionEnCours") : t("inst_demandeSoumettre")}
             </button>
           </div>
+          <p style={{ color: "var(--color-texte-muted)", fontSize: "0.75rem", marginTop: "var(--espace-2)" }}>
+            {t("inst_garantieNote")}
+          </p>
         </div>
       )}
 

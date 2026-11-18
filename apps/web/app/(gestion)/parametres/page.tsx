@@ -228,6 +228,122 @@ function FacturationElegansSection({ shopId, shopStatus }: { shopId: string; sho
   );
 }
 
+interface DocumentIdentite {
+  id: string;
+  type: "PIECE_IDENTITE_DIRIGEANT" | "REGISTRE_COMMERCE" | "AUTRE";
+  fileUrl: string;
+  note: string | null;
+  uploadedAt: string;
+}
+
+const TYPES_DOCUMENT_IDENTITE = ["PIECE_IDENTITE_DIRIGEANT", "REGISTRE_COMMERCE", "AUTRE"] as const;
+
+/**
+ * Documents d'identité (18 nov. 2026, chantier "gestion de risque autonome"
+ * Phase 4, volet KYC retenu par le propriétaire : identification + piste
+ * d'audit interne, sans détection automatisée AML) — même pattern d'upload
+ * en deux temps que FacturationElegansSection.deposerPreuve ci-dessus
+ * (upload-url signée, PUT direct sur le stockage, puis confirmation).
+ * Purement déclaratif et consultable par une institution partenaire ayant
+ * accès à la boutique, pour SA PROPRE vérification réglementaire — ELEGANZ
+ * ne vérifie, n'authentifie ni ne valide jamais ces documents elle-même.
+ */
+function DocumentsIdentiteSection({ shopId }: { shopId: string }) {
+  const { t } = useLocale();
+  const [documents, setDocuments] = useState<DocumentIdentite[] | null>(null);
+  const [type, setType] = useState<string>("PIECE_IDENTITE_DIRIGEANT");
+  const [note, setNote] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<DocumentIdentite[]>(`/shops/${shopId}/identity-documents`)
+      .then(setDocuments)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("kyc_erreurChargement")));
+  }
+
+  useEffect(recharger, [shopId]);
+
+  async function televerser(fichier: File) {
+    setEnCours(true);
+    setErreur(null);
+    setConfirmation(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        `/shops/${shopId}/identity-documents/upload-url`,
+        { contentType: fichier.type },
+      );
+      const envoi = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": fichier.type }, body: fichier });
+      if (!envoi.ok) throw new Error(t("kyc_erreurEnvoiStockage"));
+      await api.post(`/shops/${shopId}/identity-documents`, { type, fileUrl: publicUrl, note: note || undefined });
+      setConfirmation(t("kyc_documentDepose"));
+      setNote("");
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("kyc_erreurEnvoiDocument"));
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <section className={styles.section}>
+      <h2 className={styles.sousTitre}>{t("kyc_titre")}</h2>
+      <p className={styles.note}>{t("kyc_description")}</p>
+      {erreur && <div className={styles.erreur}>{erreur}</div>}
+      {confirmation && <div className={styles.confirmation}>{confirmation}</div>}
+
+      <div className={styles.formulaire}>
+        <div className={styles.champ}>
+          <label htmlFor="kycType">{t("kyc_typeLabel")}</label>
+          <select id="kycType" value={type} onChange={(e) => setType(e.target.value)}>
+            {TYPES_DOCUMENT_IDENTITE.map((v) => (
+              <option key={v} value={v}>
+                {t(`kyc_docType_${v}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="kycNote">{t("kyc_noteLabel")}</label>
+          <input id="kycNote" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          disabled={enCours}
+          onChange={(e) => {
+            const fichier = e.target.files?.[0];
+            if (fichier) televerser(fichier);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {documents === null ? (
+        <p className={styles.note}>{t("kyc_chargement")}</p>
+      ) : documents.length === 0 ? (
+        <p className={styles.note}>{t("kyc_aucunDocument")}</p>
+      ) : (
+        <ul>
+          {documents.map((d) => (
+            <li key={d.id}>
+              <a href={d.fileUrl} target="_blank" rel="noreferrer">
+                {t(`kyc_docType_${d.type}`)}
+              </a>
+              {" — "}
+              {new Date(d.uploadedAt).toLocaleDateString("fr-FR")}
+              {d.note ? ` — ${d.note}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function ParametresContent() {
   const { currentShop, reload } = useShop();
   const { t } = useLocale();
@@ -1088,6 +1204,8 @@ function ParametresContent() {
           )}
         </section>
       )}
+
+      {currentShop && <DocumentsIdentiteSection shopId={currentShop.id} />}
 
       {currentShop && (
         <section className={styles.section}>

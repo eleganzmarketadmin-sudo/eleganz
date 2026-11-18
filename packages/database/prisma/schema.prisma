@@ -644,6 +644,7 @@ model Shop {
   reactivationRequests ShopReactivationRequest[]
   creditWallet   AiCreditWallet?
   auditLogs      AuditLog[]
+  identityDocuments ShopIdentityDocument[]
   reviews        Review[]
   variantOptions VariantOption[]
   shopDrivers    ShopDriver[]
@@ -2222,6 +2223,39 @@ model AuditLog {
   action    String
   details   Json?
   createdAt DateTime @default(now())
+
+  @@index([shopId])
+  @@index([actorId])
+}
+
+// Documents d'identité (18 nov. 2026, chantier "gestion de risque autonome"
+// Phase 4, volet KYC retenu par le propriétaire : identification +
+// traçabilité interne, sans détection automatisée AML) — pièce d'identité
+// du dirigeant, registre de commerce, etc. Consultables par une institution
+// partenaire ayant accès à la boutique (ShopInstitutionAccess), pour l'aider
+// dans SA PROPRE vérification d'identité réglementaire : ELEGANZ ne
+// vérifie, n'authentifie ni ne valide jamais ces documents elle-même — un
+// simple dépôt déclaratif par la boutique, transmis tel quel. Historique
+// conservé en liste (jamais remplacé) : une boutique peut déposer un
+// nouveau document (ex. pièce d'identité renouvelée) sans perdre la trace
+// de l'ancien.
+enum TypeDocumentIdentite {
+  PIECE_IDENTITE_DIRIGEANT
+  REGISTRE_COMMERCE
+  AUTRE
+}
+
+model ShopIdentityDocument {
+  id                String               @id @default(uuid())
+  shopId            String
+  shop              Shop                 @relation(fields: [shopId], references: [id])
+  type              TypeDocumentIdentite
+  fileUrl           String
+  note              String?              @db.Text
+  uploadedByUserId  String
+  uploadedAt        DateTime             @default(now())
+
+  @@index([shopId])
 }
 
 // ---------------------------------------------------------------------------
@@ -2783,6 +2817,25 @@ enum DemandeCreditStatut {
 // fait qu'avant cette fonctionnalité, l'institution ne consultait qu'un
 // texte libre (BusinessPlan) modifiable par la boutique à tout moment, y
 // compris après une décision.
+//
+// Garantie proposée (18 nov. 2026, chantier "gestion de risque autonome"
+// Phase 3, périmètre redéfini par le propriétaire : fournir de
+// l'information à l'institution pour sa propre analyse, jamais une
+// évaluation ou une validation de la garantie par ELEGANZ) — la boutique
+// peut proposer une garantie dès la soumission de sa demande
+// (DemandeCreditService.soumettre) ; ELEGANZ se limite à transmettre
+// l'information telle que déclarée, sans jamais en vérifier la valeur
+// réelle ni en conditionner quoi que ce soit côté boutique ou institution.
+enum TypeGarantieCredit {
+  STOCK_MARCHANDISE // stock de marchandises de la boutique
+  EQUIPEMENT_MATERIEL // matériel, outillage, équipement professionnel
+  VEHICULE
+  BIEN_IMMOBILIER
+  CAUTION_PERSONNELLE
+  DEPOT_GARANTIE // somme déposée à titre de garantie
+  AUTRE
+}
+
 model DemandeCredit {
   id            String       @id @default(uuid())
   numero        String       @unique
@@ -2810,6 +2863,13 @@ model DemandeCredit {
   objetFinancement  String?  @db.Text
 
   snapshotDossierCreditJson Json?
+
+  // Garantie proposée par la boutique — purement déclaratif, voir
+  // commentaire au-dessus du modèle. `garantieType` null = aucune garantie
+  // proposée (cas normal, jamais requis pour soumettre une demande).
+  garantieType          TypeGarantieCredit?
+  garantieDescription   String?             @db.Text
+  garantieValeurEstimee Decimal?            @db.Decimal(14, 2)
 
   soumiseParUserId String
   soumisePar       User     @relation("DemandeCreditSoumisePar", fields: [soumiseParUserId], references: [id])

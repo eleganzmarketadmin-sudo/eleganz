@@ -6,6 +6,7 @@ import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
 import { UpdateShopSecteurActiviteDto } from "./dto/update-shop-secteur.dto";
+import { CreerUploadDocumentIdentiteDto, SoumettreDocumentIdentiteDto } from "./dto/identity-document.dto";
 import { RequestLogoUploadDto } from "./dto/request-logo-upload.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
@@ -87,6 +88,33 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   updateSecteurActivite(@Param("shopId") shopId: string, @Body() dto: UpdateShopSecteurActiviteDto) {
     return this.shopsService.updateSecteurActivite(shopId, dto);
+  }
+
+  // Documents d'identité (18 nov. 2026, chantier "gestion de risque
+  // autonome" Phase 4, volet KYC) — même pattern en deux temps que les
+  // preuves de paiement de facturation (BillingController).
+  @Post(":shopId/identity-documents/upload-url")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  creerUploadDocumentIdentite(@Param("shopId") shopId: string, @Body() dto: CreerUploadDocumentIdentiteDto) {
+    return this.shopsService.creerUrlUploadDocumentIdentite(shopId, dto.contentType);
+  }
+
+  @Post(":shopId/identity-documents")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  soumettreDocumentIdentite(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Body() dto: SoumettreDocumentIdentiteDto,
+  ) {
+    return this.shopsService.soumettreDocumentIdentite(shopId, user.id, dto);
+  }
+
+  @Get(":shopId/identity-documents")
+  @UseGuards(ShopMembershipGuard)
+  listerDocumentsIdentite(@Param("shopId") shopId: string) {
+    return this.shopsService.listerDocumentsIdentite(shopId);
   }
 
   /**

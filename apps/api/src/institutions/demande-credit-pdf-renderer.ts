@@ -3,7 +3,8 @@
 import PDFDocument = require("pdfkit");
 import { createHash } from "crypto";
 import type { DossierCreditBoutique } from "../finance/finance.service";
-import { formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE } from "../finance/dossier-credit-pdf-shared";
+import { formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE, LIBELLES_TYPE_GARANTIE, LIBELLES_TYPE_DOCUMENT_IDENTITE } from "../finance/dossier-credit-pdf-shared";
+import type { TypeGarantieCredit } from "@eleganz/database";
 
 export interface DemandeCreditPourPdf {
   numero: string;
@@ -15,6 +16,12 @@ export interface DemandeCreditPourPdf {
   montantDemande: number;
   dureeMoisDemandee: number;
   objetFinancement: string | null;
+  // Garantie proposée (18 nov. 2026) — purement déclaratif par la
+  // boutique, jamais vérifié ni validé par ELEGANZ ; voir le commentaire
+  // sur DemandeCredit dans schema.prisma.
+  garantieType: TypeGarantieCredit | null;
+  garantieDescription: string | null;
+  garantieValeurEstimee: number | null;
   createdAt: Date | string;
   institution: { name: string };
   shop: { id: string; name: string; slug: string } | null;
@@ -113,6 +120,12 @@ export function renderDemandeCreditPdf(demande: DemandeCreditPourPdf): PDFKit.PD
   if (demande.snapshotDossierCreditJson?.secteurActivite) {
     doc.text(`Secteur d'activité : ${LIBELLES_SECTEUR_ACTIVITE[demande.snapshotDossierCreditJson.secteurActivite]}`);
   }
+  if (demande.snapshotDossierCreditJson?.documentsIdentite?.length) {
+    const libelles = demande.snapshotDossierCreditJson.documentsIdentite
+      .map((d) => LIBELLES_TYPE_DOCUMENT_IDENTITE[d.type as keyof typeof LIBELLES_TYPE_DOCUMENT_IDENTITE] ?? d.type)
+      .join(", ");
+    doc.text(`Documents d'identité joints (déclaratifs, non vérifiés par ELEGANZ) : ${libelles}`);
+  }
   doc.moveDown(0.6);
 
   doc.font("Helvetica-Bold").fontSize(11).text("Détails de la candidature");
@@ -124,6 +137,12 @@ export function renderDemandeCreditPdf(demande: DemandeCreditPourPdf): PDFKit.PD
   doc.text(`Durée demandée : ${demande.dureeMoisDemandee} mois`);
   if (demande.objetFinancement) {
     doc.text(`Objet du financement : ${demande.objetFinancement}`);
+  }
+  if (demande.garantieType) {
+    const detail = [demande.garantieDescription, demande.garantieValeurEstimee != null ? `valeur estimée ${Math.round(demande.garantieValeurEstimee).toLocaleString("fr-FR")}` : null]
+      .filter(Boolean)
+      .join(" — ");
+    doc.text(`Garantie proposée (déclarative, non vérifiée par ELEGANZ) : ${LIBELLES_TYPE_GARANTIE[demande.garantieType]}${detail ? ` — ${detail}` : ""}`);
   }
   doc.moveDown(0.6);
 

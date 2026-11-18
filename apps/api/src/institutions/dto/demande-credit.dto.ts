@@ -1,4 +1,5 @@
-import { IsEmail, IsOptional, IsNumber, IsString, Min, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsOptional, IsNumber, IsString, Min, MinLength } from "class-validator";
+import { TypeGarantieCredit } from "@eleganz/database";
 
 // Soumission d'une demande de crédit par une boutique à une institution qui
 // lui a déjà accordé l'accès (16 nov. 2026, demande du propriétaire, point
@@ -30,6 +31,21 @@ export class SoumettreDemandeCreditDto {
   @IsOptional()
   @IsString()
   objetFinancement?: string;
+
+  // Garantie proposée — purement déclaratif par la boutique, voir
+  // commentaire sur DemandeCredit dans schema.prisma. Jamais requis.
+  @IsOptional()
+  @IsEnum(TypeGarantieCredit)
+  garantieType?: TypeGarantieCredit;
+
+  @IsOptional()
+  @IsString()
+  garantieDescription?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  garantieValeurEstimee?: number;
 }
 
 // Création libre et autonome d'une demande par l'institution elle-même

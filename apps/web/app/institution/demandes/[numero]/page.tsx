@@ -21,6 +21,12 @@ interface SnapshotDossierCredit {
   // utilisée par ELEGANZ pour quoi que ce soit ; affichée ici pour aider
   // l'institution dans sa propre analyse du dossier.
   secteurActivite: string | null;
+  // Documents d'identité (18 nov. 2026, chantier "gestion de risque
+  // autonome" Phase 4, volet KYC) — purement déclaratif, jamais vérifié ni
+  // authentifié par ELEGANZ ; fourni pour la propre vérification
+  // réglementaire de l'institution. Figé au moment de la soumission, comme
+  // le reste du snapshot.
+  documentsIdentite: { type: string; fileUrl: string; uploadedAt: string }[];
   historiqueMensuel: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[];
   bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
   compteDeResultat: { resultatNetAvantImpot: number };
@@ -85,6 +91,12 @@ interface DemandeCreditDetail {
   montantDemande: number;
   dureeMoisDemandee: number;
   objetFinancement: string | null;
+  // Garantie proposée (18 nov. 2026) — purement déclaratif par la
+  // boutique, jamais vérifié ni validé par ELEGANZ ; voir le commentaire
+  // sur DemandeCredit dans schema.prisma.
+  garantieType: string | null;
+  garantieDescription: string | null;
+  garantieValeurEstimee: number | null;
   snapshotDossierCreditJson: SnapshotDossierCredit | null;
   createdAt: string;
   shop: { id: string; name: string; slug: string } | null;
@@ -292,6 +304,22 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
                 <td>{t(`secteur_${snapshot.secteurActivite}`)}</td>
               </tr>
             )}
+            {snapshot && snapshot.documentsIdentite.length > 0 && (
+              <tr>
+                <td>{t("kyc_documentsLabel")}</td>
+                <td>
+                  {snapshot.documentsIdentite.map((doc, i) => (
+                    <div key={i}>
+                      <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{ textDecoration: "underline" }}>
+                        {t(`kyc_docType_${doc.type}`)}
+                      </a>
+                      {" — "}
+                      {new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}
+                    </div>
+                  ))}
+                </td>
+              </tr>
+            )}
             {(demande.contactTelephone || demande.contactEmail) && (
               <tr>
                 <td>{t("inst_demandeContact")}</td>
@@ -312,8 +340,29 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
                 <td>{demande.objetFinancement}</td>
               </tr>
             )}
+            {demande.garantieType && (
+              <tr>
+                <td>{t("inst_garantieTypeLabel")}</td>
+                <td>
+                  {t(`inst_garantieType_${demande.garantieType}`)}
+                  {demande.garantieDescription && ` — ${demande.garantieDescription}`}
+                  {demande.garantieValeurEstimee != null &&
+                    ` (${demande.garantieValeurEstimee.toLocaleString("fr-FR")})`}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+        {demande.garantieType && (
+          <p style={{ color: "var(--color-texte-muted)", fontSize: "0.75rem", marginTop: "var(--espace-2)" }}>
+            {t("inst_garantieNoteInstitution")}
+          </p>
+        )}
+        {snapshot && snapshot.documentsIdentite.length > 0 && (
+          <p style={{ color: "var(--color-texte-muted)", fontSize: "0.75rem", marginTop: "var(--espace-2)" }}>
+            {t("kyc_documentsNoteInstitution")}
+          </p>
+        )}
         {demande.shop && (
           <p style={{ marginTop: "var(--espace-3)" }}>
             <Link href={`/institution/boutiques/${demande.shop.id}`} style={{ textDecoration: "underline" }}>
