@@ -53,8 +53,32 @@ interface Dashboard {
     modules: ModuleRevenu[];
   };
   operations: { openDisputes: number };
+  // Vue consolidée du risque institutions (18 nov. 2026) — purement
+  // informatif, voir AdminCockpitService.executiveDashboard. ELEGANZ
+  // n'agit jamais sur ces chiffres, chaque institution reste seule
+  // décisionnaire de sa propre politique de risque.
+  institutionsRisque: {
+    soldeRestantTotal: number;
+    provisionRequiseTotal: number;
+    ventilationRisque: Record<string, { nombre: number; soldeRestant: number }>;
+    parInstitution: Array<{
+      institutionId: string;
+      nom: string;
+      soldeRestant: number;
+      provisionRequise: number;
+      ventilationRisque: Record<string, number>;
+    }>;
+  };
   aiUsage: { note?: string };
 }
+
+const CLASSIFICATIONS_RISQUE = ["SAIN", "SOUS_SURVEILLANCE", "DOUTEUX", "COMPROMIS"] as const;
+const HUMEUR_CLASSIFICATION: Record<string, "paye" | "attente" | "alerte"> = {
+  SAIN: "paye",
+  SOUS_SURVEILLANCE: "attente",
+  DOUTEUX: "alerte",
+  COMPROMIS: "alerte",
+};
 
 interface Evolution {
   jours: string[];
@@ -296,6 +320,62 @@ function PilotageContent() {
           />
         </div>
       )}
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitre}>{t("admpilot_risqueInstitutionsTitre")}</h2>
+        <p className={styles.noteRevenu}>{t("admpilot_risqueInstitutionsNote")}</p>
+        <div className={styles.grille}>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("admpilot_soldeRestantTotal")}</span>
+            <span className={styles.carteValeur}>{formatMoney(dashboard.institutionsRisque.soldeRestantTotal)}</span>
+          </div>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("inst_colProvisionRequise")}</span>
+            <span className={styles.carteValeur}>{formatMoney(dashboard.institutionsRisque.provisionRequiseTotal)}</span>
+          </div>
+          {CLASSIFICATIONS_RISQUE.map((cle) => {
+            const v = dashboard.institutionsRisque.ventilationRisque[cle] ?? { nombre: 0, soldeRestant: 0 };
+            return (
+              <div className={styles.carte} key={cle}>
+                <span className={styles.carteLabel}>
+                  <StatusTag label={t(`inst_risqueClassification_${cle}`)} humeur={HUMEUR_CLASSIFICATION[cle]} />
+                </span>
+                <span className={styles.carteValeur}><CompteurAnime valeur={v.nombre} /></span>
+                <span className={styles.carteModuleNote}>{formatMoney(v.soldeRestant)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {dashboard.institutionsRisque.parInstitution.length > 0 && (
+          <div className={styles.tableauScroll}>
+            <table className={styles.tableau}>
+              <thead>
+                <tr>
+                  <th>{t("admpilot_colInstitution")}</th>
+                  <th>{t("admpilot_soldeRestantTotal")}</th>
+                  <th>{t("inst_colProvisionRequise")}</th>
+                  {CLASSIFICATIONS_RISQUE.map((cle) => (
+                    <th key={cle}>{t(`inst_risqueClassification_${cle}`)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {dashboard.institutionsRisque.parInstitution.map((inst) => (
+                  <tr key={inst.institutionId}>
+                    <td>{inst.nom}</td>
+                    <td>{formatMoney(inst.soldeRestant)}</td>
+                    <td>{formatMoney(inst.provisionRequise)}</td>
+                    {CLASSIFICATIONS_RISQUE.map((cle) => (
+                      <td key={cle}>{inst.ventilationRisque[cle] ?? 0}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <div className={styles.section}>
         <h2 className={styles.sectionTitre}>{t("nav_litiges")}</h2>

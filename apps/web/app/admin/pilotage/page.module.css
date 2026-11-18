@@ -166,3 +166,31 @@
   font-size: 0.75rem;
   color: var(--color-texte-muted);
 }
+
+/* Détail par institution, vue consolidée du risque (18 nov. 2026) — même
+   convention que /admin/releves (tableau scrollable horizontalement). */
+.tableauScroll {
+  overflow-x: auto;
+  margin-top: var(--espace-4);
+}
+
+.tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableau th {
+  text-align: left;
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 2px solid var(--color-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tableau td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}

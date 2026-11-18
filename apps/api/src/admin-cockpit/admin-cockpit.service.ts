@@ -32,6 +32,10 @@ export class AdminCockpitService {
       comptableInvoiceLines,
       posSalesTotal,
       institutionsCommissionTotal,
+      institutionsRisqueTotal,
+      institutionsRisqueParClassification,
+      institutionsRisqueParInstitution,
+      institutionsNoms,
     ] = await Promise.all([
       this.prisma.shop.groupBy({ by: ["status"], _count: { _all: true } }),
       this.prisma.shop.count(),
@@ -60,6 +64,31 @@ export class AdminCockpitService {
         where: { institutionId: { not: null } },
         _sum: { institutionCommissionAmount: true },
       }),
+      // Vue consolidée du risque à l'échelle ELEGANZ (18 nov. 2026, chantier
+      // "gestion de risque autonome" Phase 2, volet retenu par le
+      // propriétaire après abandon des limites d'exposition) — purement
+      // informatif : solde restant dû + provision requise, agrégés sur tous
+      // les prêts décaissés via une institution partenaire. ELEGANZ ne
+      // bloque et ne limite rien ici ; chaque institution reste seule
+      // maîtresse de sa propre politique de risque, cette vue l'aide
+      // seulement à situer son exposition réelle sur la plateforme.
+      this.prisma.loan.aggregate({
+        where: { institutionId: { not: null } },
+        _sum: { soldeRestant: true, provisionRequise: true },
+      }),
+      this.prisma.loan.groupBy({
+        by: ["classificationRisque"],
+        where: { institutionId: { not: null } },
+        _count: { _all: true },
+        _sum: { soldeRestant: true },
+      }),
+      this.prisma.loan.groupBy({
+        by: ["institutionId", "classificationRisque"],
+        where: { institutionId: { not: null } },
+        _count: { _all: true },
+        _sum: { soldeRestant: true, provisionRequise: true },
+      }),
+      this.prisma.institution.findMany({ select: { id: true, name: true } }),
     ]);
 
     // Revenu ELEGANZ par nature (frais d'ouverture, abonnements, crédits
@@ -135,6 +164,53 @@ export class AdminCockpitService {
       },
     ];
 
+    // Ventilation globale par classification de risque (SAIN/SOUS_SURVEILLANCE/
+    // DOUTEUX/COMPROMIS) — initialisée à zéro pour que les 4 classifications
+    // apparaissent toujours, même sans aucun prêt dans cette classification.
+    const ventilationRisqueGlobale: Record<string, { nombre: number; soldeRestant: number }> = {
+      SAIN: { nombre: 0, soldeRestant: 0 },
+      SOUS_SURVEILLANCE: { nombre: 0, soldeRestant: 0 },
+      DOUTEUX: { nombre: 0, soldeRestant: 0 },
+      COMPROMIS: { nombre: 0, soldeRestant: 0 },
+    };
+    for (const ligne of institutionsRisqueParClassification) {
+      ventilationRisqueGlobale[ligne.classificationRisque] = {
+        nombre: ligne._count._all,
+        soldeRestant: Number(ligne._sum.soldeRestant ?? 0),
+      };
+    }
+
+    // Détail par institution — même ventilation, par institution plutôt que
+    // globale, pour repérer une concentration de risque chez un partenaire
+    // précis sans jamais agir dessus depuis ELEGANZ.
+    const nomsInstitutions = new Map(institutionsNoms.map((i) => [i.id, i.name]));
+    const parInstitutionMap = new Map<
+      string,
+      {
+        institutionId: string;
+        nom: string;
+        soldeRestant: number;
+        provisionRequise: number;
+        ventilationRisque: Record<string, number>;
+      }
+    >();
+    for (const ligne of institutionsRisqueParInstitution) {
+      if (!ligne.institutionId) continue;
+      if (!parInstitutionMap.has(ligne.institutionId)) {
+        parInstitutionMap.set(ligne.institutionId, {
+          institutionId: ligne.institutionId,
+          nom: nomsInstitutions.get(ligne.institutionId) ?? ligne.institutionId,
+          soldeRestant: 0,
+          provisionRequise: 0,
+          ventilationRisque: { SAIN: 0, SOUS_SURVEILLANCE: 0, DOUTEUX: 0, COMPROMIS: 0 },
+        });
+      }
+      const entree = parInstitutionMap.get(ligne.institutionId)!;
+      entree.soldeRestant += Number(ligne._sum.soldeRestant ?? 0);
+      entree.provisionRequise += Number(ligne._sum.provisionRequise ?? 0);
+      entree.ventilationRisque[ligne.classificationRisque] = ligne._count._all;
+    }
+
     return {
       activity: {
         totalShops,
@@ -164,6 +240,16 @@ export class AdminCockpitService {
       },
       operations: {
         openDisputes,
+      },
+      // Vue consolidée du risque institutions (18 nov. 2026) — voir
+      // commentaire sur la requête ci-dessus. Purement informatif.
+      institutionsRisque: {
+        soldeRestantTotal: Number(institutionsRisqueTotal._sum.soldeRestant ?? 0),
+        provisionRequiseTotal: Number(institutionsRisqueTotal._sum.provisionRequise ?? 0),
+        ventilationRisque: ventilationRisqueGlobale,
+        parInstitution: Array.from(parInstitutionMap.values()).sort(
+          (a, b) => b.soldeRestant - a.soldeRestant,
+        ),
       },
       // Pas encore de données réelles : les modules IA (recherche visuelle,
       // studio publicitaire) ne sont pas encore implémentés (voir
