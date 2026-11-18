@@ -11,6 +11,7 @@ import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
+import { ModulesMenu } from "../components/ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
@@ -50,12 +51,17 @@ const TOUS_LES_ECRANS_INSTITUTION = [
 
 /**
  * Coquille du portail institutions (14 nov. 2026 — microfinances, banques,
- * coopératives). Pas de ModulesMenu ici volontairement : contrairement à
- * Gestion/Marketplace/Secourable/Experts (modules self-service, voir
- * ModulesMenu.tsx), ce portail a son propre lien dédié dans le volet
- * vertical (voir ModulesMenu.tsx — carte "institution"), pas une inscription
- * mêlée aux autres modules.
+ * coopératives).
  *
+ * ModulesMenu (18 nov. 2026, correction d'incohérence signalée par le
+ * propriétaire) : le volet vertical "3 barres" avait été généralisé à tous
+ * les modules le 13 nov. 2026 (voir le commentaire dans AdminShell.tsx),
+ * mais ce portail — créé le lendemain — ne l'avait jamais reçu. Même
+ * emplacement que les autres coquilles (GestionShell, ComptableShell,
+ * LivreurShell, AdminShell, MarketplaceHeader) : juste avant le logo, dans
+ * `.groupeMarque`.
+ *
+
  * Pas de garde de rôle dédiée côté front : si le compte connecté n'a pas de
  * profil Institution, GET /institution-portal/me renvoie 404 et l'écran
  * l'affiche tel quel plutôt que de deviner — la vraie barrière reste
@@ -123,6 +129,7 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
       <div className={styles.enveloppeFixe}>
         <header className={styles.entete}>
           <div className={styles.groupeMarque}>
+            <ModulesMenu />
             <span className={styles.marque}>
               <LogoMark size={28} />
               ELEGANZ <span>{t("inst_titreMarque")}</span>
