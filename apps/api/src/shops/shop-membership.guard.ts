@@ -78,15 +78,26 @@ export class ShopMembershipGuard implements CanActivate {
     // payé mais dont l'admin n'a pas encore marqué la facture) ; sans cette
     // exception la fonctionnalité serait inutilisable par la boutique qui
     // en a le plus besoin.
+    //
+    // Corrigé le 18 nov. 2026 (signalement du propriétaire) : même principe
+    // pour les documents d'identité (KYC, .../identity-documents et son
+    // upload-url) — une boutique peut justement en avoir besoin pour lever
+    // une suspension ou débloquer un litige ; jusqu'ici c'était bloqué sans
+    // raison, contrairement à la preuve de paiement ci-dessus. La
+    // consultation (GET, pour revoir ce qu'on a déjà déposé) est ouverte au
+    // même titre que le dépôt.
     const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { status: true } });
     if (shop?.status === ShopStatus.SUSPENDED || shop?.status === ShopStatus.CLOSED) {
       const consultationFacturationAutorisee =
         request.method === "GET" &&
         (/^\/shops\/[^/]+\/invoices(\/|$)/.test(request.path) ||
-          /^\/shops\/[^/]+\/subscription(\/|$)/.test(request.path));
+          /^\/shops\/[^/]+\/subscription(\/|$)/.test(request.path) ||
+          /^\/shops\/[^/]+\/identity-documents(\/|$)/.test(request.path));
       const depotPreuvePaiementAutorise =
         request.method === "POST" && /^\/shops\/[^/]+\/invoices\/[^/]+\/proof-of-payment(\/|$)/.test(request.path);
-      if (!consultationFacturationAutorisee && !depotPreuvePaiementAutorise) {
+      const depotDocumentIdentiteAutorise =
+        request.method === "POST" && /^\/shops\/[^/]+\/identity-documents(\/|$)/.test(request.path);
+      if (!consultationFacturationAutorisee && !depotPreuvePaiementAutorise && !depotDocumentIdentiteAutorise) {
         throw new ForbiddenException(
           shop.status === ShopStatus.CLOSED
             ? "Cette boutique est fermée."
