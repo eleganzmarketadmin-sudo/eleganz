@@ -2,7 +2,7 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { DossierCreditBoutique } from "./finance.service";
-import { formaterDate, formaterDateHeure, dessinerCorpsFinancier } from "./dossier-credit-pdf-shared";
+import { formaterDate, formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE } from "./dossier-credit-pdf-shared";
 
 /**
  * Dossier de crédit boutique (demande du 16 oct. 2026, point 1) — pendant
@@ -39,6 +39,9 @@ export function renderDossierCreditPdf(dossier: DossierCreditBoutique): PDFKit.P
   doc.font("Helvetica-Bold").fontSize(11).text("Identité de la boutique");
   doc.font("Helvetica").fontSize(9);
   doc.text(`Boutique ELEGANZ depuis le ${formaterDate(dossier.boutiqueDepuis)}`);
+  if (dossier.secteurActivite) {
+    doc.text(`Secteur d'activité : ${LIBELLES_SECTEUR_ACTIVITE[dossier.secteurActivite]}`);
+  }
   if (dossier.identiteFiscale.fiscalLegalName) {
     doc.text(`Raison sociale : ${dossier.identiteFiscale.fiscalLegalName}`);
   }

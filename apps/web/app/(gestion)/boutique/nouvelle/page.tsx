@@ -7,6 +7,7 @@ import { useShop } from "../../../lib/shop-context";
 import { api, ApiError, getToken } from "../../../lib/api";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { formatMoney } from "../../../lib/money";
+import { SECTEURS_ACTIVITE } from "../../../lib/secteurs-activite";
 import styles from "./page.module.css";
 
 const MODES = [
@@ -73,6 +74,10 @@ export default function NouvelleBoutiquePage() {
 
   const [nom, setNom] = useState("");
   const [mode, setMode] = useState<"PRIVATE" | "HYBRID">("PRIVATE");
+  // Secteur d'activité (18 nov. 2026) — facultatif à la création, purement
+  // informatif pour les institutions financières partenaires (voir
+  // ShopsService.create) : "" = pas de choix, jamais envoyé à l'API.
+  const [secteurActivite, setSecteurActivite] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -103,7 +108,12 @@ export default function NouvelleBoutiquePage() {
     setErreur(null);
     setEnCours(true);
     try {
-      await api.post("/shops", { name: nom, mode, gestionBouquetId: bouquetChoisiId ?? undefined });
+      await api.post("/shops", {
+        name: nom,
+        mode,
+        gestionBouquetId: bouquetChoisiId ?? undefined,
+        secteurActivite: secteurActivite || undefined,
+      });
       reload();
       router.push("/caisse");
     } catch (err) {
@@ -216,6 +226,19 @@ export default function NouvelleBoutiquePage() {
               <span>{t(m.cleDescription)}</span>
             </button>
           ))}
+        </div>
+
+        <div className={styles.champ}>
+          <label htmlFor="secteurActivite">{t("secteurActiviteLabel")}</label>
+          <select id="secteurActivite" value={secteurActivite} onChange={(e) => setSecteurActivite(e.target.value)}>
+            <option value="">{t("secteurActivitePlaceholder")}</option>
+            {SECTEURS_ACTIVITE.map((s) => (
+              <option key={s} value={s}>
+                {t(`secteur_${s}`)}
+              </option>
+            ))}
+          </select>
+          <p className={styles.note}>{t("boutique_secteurActiviteNote")}</p>
         </div>
 
         <div style={{ display: "flex", gap: "var(--espace-3)" }}>

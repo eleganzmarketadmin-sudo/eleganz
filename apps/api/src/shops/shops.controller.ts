@@ -5,6 +5,7 @@ import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
+import { UpdateShopSecteurActiviteDto } from "./dto/update-shop-secteur.dto";
 import { RequestLogoUploadDto } from "./dto/request-logo-upload.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
@@ -76,6 +77,16 @@ export class ShopsController {
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
   updateDescription(@Param("shopId") shopId: string, @Body() dto: UpdateShopDescriptionDto) {
     return this.shopsService.updateDescription(shopId, dto);
+  }
+
+  // Secteur d'activité (18 nov. 2026) — purement informatif pour les
+  // institutions financières partenaires, distinct de updateDescription
+  // (visibilité Marketplace) et updateInvoiceSettings (documents imprimés).
+  @Patch(":shopId/secteur-activite")
+  @UseGuards(ShopMembershipGuard)
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
+  updateSecteurActivite(@Param("shopId") shopId: string, @Body() dto: UpdateShopSecteurActiviteDto) {
+    return this.shopsService.updateSecteurActivite(shopId, dto);
   }
 
   /**

@@ -6,6 +6,7 @@ import { InviteStaffDto } from "./dto/invite-staff.dto";
 import { UpdateStaffDto } from "./dto/update-staff.dto";
 import { UpdateInvoiceSettingsDto } from "./dto/update-invoice-settings.dto";
 import { UpdateShopDescriptionDto } from "./dto/update-shop-description.dto";
+import { UpdateShopSecteurActiviteDto } from "./dto/update-shop-secteur.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
 import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
@@ -134,6 +135,7 @@ export class ShopsService {
         freeTrialDurationDays: 90,
         openingFeeWaived: true,
         gestionBouquetId: bouquetDeDepart?.id,
+        secteurActivite: dto.secteurActivite,
         staff: {
           create: {
             userId: ownerId,
@@ -247,6 +249,23 @@ export class ShopsService {
       where: { id: shopId },
       data: {
         ...(dto.description !== undefined && { description: dto.description || null }),
+      },
+    });
+  }
+
+  /**
+   * Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+   * Phase 2) — purement informatif pour les institutions financières
+   * partenaires (voir FinanceService.dossierCredit), jamais lu par
+   * ELEGANZ elle-même pour conditionner quoi que ce soit. `secteurActivite:
+   * null` efface explicitement le choix, comme updateDescription ci-dessus.
+   */
+  async updateSecteurActivite(shopId: string, dto: UpdateShopSecteurActiviteDto) {
+    await this.prisma.shop.findUniqueOrThrow({ where: { id: shopId } });
+    return this.prisma.shop.update({
+      where: { id: shopId },
+      data: {
+        ...(dto.secteurActivite !== undefined && { secteurActivite: dto.secteurActivite }),
       },
     });
   }

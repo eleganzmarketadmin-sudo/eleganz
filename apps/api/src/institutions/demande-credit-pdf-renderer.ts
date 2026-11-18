@@ -3,7 +3,7 @@
 import PDFDocument = require("pdfkit");
 import { createHash } from "crypto";
 import type { DossierCreditBoutique } from "../finance/finance.service";
-import { formaterDateHeure, dessinerCorpsFinancier } from "../finance/dossier-credit-pdf-shared";
+import { formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE } from "../finance/dossier-credit-pdf-shared";
 
 export interface DemandeCreditPourPdf {
   numero: string;
@@ -110,6 +110,9 @@ export function renderDemandeCreditPdf(demande: DemandeCreditPourPdf): PDFKit.PD
       ? `Boutique ELEGANZ rattachée : ${demande.shop.name}`
       : "Dossier libre — prospect sans boutique ELEGANZ rattachée au moment de la candidature.",
   );
+  if (demande.snapshotDossierCreditJson?.secteurActivite) {
+    doc.text(`Secteur d'activité : ${LIBELLES_SECTEUR_ACTIVITE[demande.snapshotDossierCreditJson.secteurActivite]}`);
+  }
   doc.moveDown(0.6);
 
   doc.font("Helvetica-Bold").fontSize(11).text("Détails de la candidature");

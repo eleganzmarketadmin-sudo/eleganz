@@ -14,6 +14,7 @@ interface Boutique {
   status: string;
   isPubliclyListed: boolean;
   fiscalHomologationConfirmed: boolean;
+  secteurActivite: string | null;
   createdAt: string;
   owner: { fullName: string; email: string | null; phone: string | null };
   marketplaceBouquet: { id: string; name: string } | null;
@@ -128,6 +129,10 @@ function BoutiquesContent() {
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>{t("admbout_mode")}</span>
                   <span>{b.mode}{b.isPubliclyListed ? ` · ${t("admbout_publieeMarketplace")}` : ""}</span>
+                </div>
+                <div className={styles.champInfo}>
+                  <span className={styles.champLabel}>{t("secteurActiviteLabel")}</span>
+                  <span>{b.secteurActivite ? t(`secteur_${b.secteurActivite}`) : t("admbout_secteurNonRenseigne")}</span>
                 </div>
                 <div className={styles.champInfo}>
                   <span className={styles.champLabel}>{t("admbout_bouquetGestion")}</span>

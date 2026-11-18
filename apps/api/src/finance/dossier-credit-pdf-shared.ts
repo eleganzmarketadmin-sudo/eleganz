@@ -1,7 +1,28 @@
 // Import CommonJS correct même sans `esModuleInterop` (voir
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
+import type { SecteurActiviteBoutique } from "@eleganz/database";
 import type { DossierCreditBoutique, DossierCreditBoutiqueBusinessPlan } from "./finance.service";
+
+// Libellés français du secteur d'activité (18 nov. 2026) — mêmes valeurs
+// que les clés de traduction secteur_<VALEUR> de translations.ts, dupliquées
+// ici en dur : les PDF générés côté serveur ne passent jamais par le
+// dictionnaire i18n du front (voir les autres libellés de ce fichier/des
+// renderers, tous codés en français en dur de la même façon).
+export const LIBELLES_SECTEUR_ACTIVITE: Record<SecteurActiviteBoutique, string> = {
+  MODE_HABILLEMENT: "Mode, habillement, chaussures",
+  ALIMENTATION_AGROALIMENTAIRE: "Alimentation, agroalimentaire",
+  ELECTRONIQUE_TELEPHONIE: "Électronique, téléphonie, informatique",
+  BEAUTE_COSMETIQUE: "Beauté, cosmétique, hygiène",
+  MAISON_DECORATION: "Maison, décoration, ameublement",
+  SANTE_PHARMACIE: "Santé, pharmacie, parapharmacie",
+  AUTOMOBILE_PIECES: "Automobile, moto, pièces détachées",
+  QUINCAILLERIE_BRICOLAGE: "Quincaillerie, bricolage, matériaux de construction",
+  AGRICULTURE_ELEVAGE: "Agriculture, élevage",
+  ARTISANAT_LOISIRS: "Artisanat, loisirs",
+  SERVICES: "Services",
+  AUTRE: "Autre",
+};
 
 /**
  * Helpers partagés entre le dossier crédit boutique

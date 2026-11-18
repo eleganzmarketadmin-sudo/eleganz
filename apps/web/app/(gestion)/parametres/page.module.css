@@ -32,6 +32,7 @@
 }
 
 .champ input,
+.champ select,
 .champ textarea {
   padding: var(--espace-2) var(--espace-3);
   border: 1px solid var(--color-border);

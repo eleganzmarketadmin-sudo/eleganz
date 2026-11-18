@@ -436,6 +436,28 @@ enum ShopStatus {
   CLOSED
 }
 
+// Secteur d'activité d'une boutique (18 nov. 2026, chantier "gestion de
+// risque autonome" Phase 2) — liste fermée volontairement large plutôt que
+// fine comme ProductCategory (secteur de la boutique dans son ensemble, pas
+// catégorie d'un article vendu) : destinée à aider une institution
+// financière partenaire à analyser une candidature de crédit (voir
+// Shop.secteurActivite et DossierCreditBoutique.secteurActivite), jamais à
+// servir de filtre ou de restriction imposée par ELEGANZ elle-même.
+enum SecteurActiviteBoutique {
+  MODE_HABILLEMENT // Mode, habillement, chaussures, accessoires
+  ALIMENTATION_AGROALIMENTAIRE // Alimentation, boissons, agroalimentaire
+  ELECTRONIQUE_TELEPHONIE // Électronique, téléphonie, informatique
+  BEAUTE_COSMETIQUE // Beauté, cosmétique, hygiène
+  MAISON_DECORATION // Maison, décoration, ameublement, électroménager
+  SANTE_PHARMACIE // Santé, pharmacie, parapharmacie
+  AUTOMOBILE_PIECES // Automobile, moto, pièces détachées
+  QUINCAILLERIE_BRICOLAGE // Quincaillerie, bricolage, matériaux de construction
+  AGRICULTURE_ELEVAGE // Agriculture, élevage, intrants agricoles
+  ARTISANAT_LOISIRS // Artisanat, loisirs, fournitures culturelles/scolaires
+  SERVICES // Prestations de services (hors vente de marchandises)
+  AUTRE
+}
+
 // ---------------------------------------------------------------------------
 // GÉOGRAPHIE — pays/villes de référence pour les zones de livraison des
 // boutiques Marketplace (demande du 15 oct. 2026 : "faciliter les acheteurs
@@ -520,6 +542,18 @@ model Shop {
   // Marketplace, modifiable depuis les paramètres de la boutique).
   // Facultative, vide par défaut — aucune valeur inventée à sa place.
   description String?
+
+  // Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+  // Phase 2, périmètre redéfini par le propriétaire) — ELEGANZ ne bloque ni
+  // ne limite rien côté institution, elle se contente de FOURNIR une
+  // information utile. Visible par l'institution dans le dossier de
+  // candidature (voir DossierCreditBoutique.secteurActivite) pour l'aider
+  // à analyser/sécuriser sa propre décision de financement — jamais lu ni
+  // utilisé par ELEGANZ elle-même pour restreindre quoi que ce soit.
+  // Nullable = pas encore renseigné (saisie facultative à l'inscription et
+  // modifiable ensuite depuis les paramètres de la boutique), jamais une
+  // valeur inventée à sa place.
+  secteurActivite SecteurActiviteBoutique?
 
   // Identité affichée sur les documents imprimés (factures, bons de
   // livraison, tickets...) — personnalisable par chaque boutique (prompt

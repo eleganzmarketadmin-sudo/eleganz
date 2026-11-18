@@ -6,6 +6,7 @@ import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { ZonesLivraison } from "../../components/ZonesLivraison";
+import { SECTEURS_ACTIVITE } from "../../lib/secteurs-activite";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import { formatMoney, formatDate } from "../../lib/money";
 import styles from "./page.module.css";
@@ -16,6 +17,7 @@ interface ShopDetails {
   slug: string;
   isPubliclyListed: boolean;
   description?: string | null;
+  secteurActivite?: string | null;
   invoiceAddress?: string | null;
   invoicePhone?: string | null;
   invoiceLogoUrl?: string | null;
@@ -429,6 +431,15 @@ function ParametresContent() {
   const [confirmationDescription, setConfirmationDescription] = useState<string | null>(null);
   const [erreurDescription, setErreurDescription] = useState<string | null>(null);
 
+  // Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+  // Phase 2) — formulaire indépendant, même principe que la description
+  // ci-dessus : purement informatif pour les institutions financières
+  // partenaires, jamais utilisé par ELEGANZ elle-même.
+  const [secteurActivite, setSecteurActivite] = useState("");
+  const [enregistrementSecteur, setEnregistrementSecteur] = useState(false);
+  const [confirmationSecteur, setConfirmationSecteur] = useState<string | null>(null);
+  const [erreurSecteur, setErreurSecteur] = useState<string | null>(null);
+
   // Fermeture de boutique en libre-service (18 oct. 2026) — confirmation
   // par saisie exacte du nom de la boutique, même geste que les autres
   // actions irréversibles de la plateforme, pour éviter un clic accidentel
@@ -469,6 +480,7 @@ function ParametresContent() {
         setSlug(shop.slug);
         setPubliee(shop.isPubliclyListed);
         setDescription(shop.description ?? "");
+        setSecteurActivite(shop.secteurActivite ?? "");
       })
       .catch((err) =>
         setErreur(
@@ -564,6 +576,22 @@ function ParametresContent() {
       setErreurDescription(err instanceof ApiError ? err.message : t("param_descriptionBoutiqueErreur"));
     } finally {
       setEnregistrementDescription(false);
+    }
+  }
+
+  async function enregistrerSecteur(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentShop) return;
+    setEnregistrementSecteur(true);
+    setErreurSecteur(null);
+    setConfirmationSecteur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/secteur-activite`, { secteurActivite: secteurActivite || null });
+      setConfirmationSecteur(t("param_secteurActiviteConfirmation"));
+    } catch (err) {
+      setErreurSecteur(err instanceof ApiError ? err.message : t("param_secteurActiviteErreur"));
+    } finally {
+      setEnregistrementSecteur(false);
     }
   }
 
@@ -1000,6 +1028,30 @@ function ParametresContent() {
             {confirmationDescription && <div className={styles.confirmation}>{confirmationDescription}</div>}
             <button className={styles.bouton} type="submit" disabled={enregistrementDescription}>
               {enregistrementDescription ? t("param_enregistrementEnCours") : t("action_enregistrer")}
+            </button>
+          </form>
+
+          <form className={styles.formulaire} onSubmit={enregistrerSecteur}>
+            <div className={styles.champ}>
+              <label htmlFor="secteurActivite">{t("secteurActiviteLabel")}</label>
+              <select
+                id="secteurActivite"
+                value={secteurActivite}
+                onChange={(e) => setSecteurActivite(e.target.value)}
+              >
+                <option value="">{t("secteurActivitePlaceholder")}</option>
+                {SECTEURS_ACTIVITE.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`secteur_${s}`)}
+                  </option>
+                ))}
+              </select>
+              <p className={styles.note}>{t("param_secteurActiviteNote")}</p>
+            </div>
+            {erreurSecteur && <div className={styles.erreur}>{erreurSecteur}</div>}
+            {confirmationSecteur && <div className={styles.confirmation}>{confirmationSecteur}</div>}
+            <button className={styles.bouton} type="submit" disabled={enregistrementSecteur}>
+              {enregistrementSecteur ? t("param_enregistrementEnCours") : t("action_enregistrer")}
             </button>
           </form>
 

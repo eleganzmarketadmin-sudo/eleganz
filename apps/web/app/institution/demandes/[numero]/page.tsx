@@ -16,6 +16,11 @@ import styles from "../../page.module.css";
 // reste consultable via /institution/boutiques/:shopId quand une boutique est
 // liée).
 interface SnapshotDossierCredit {
+  // Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+  // Phase 2) — info purement déclarative fournie par la boutique, jamais
+  // utilisée par ELEGANZ pour quoi que ce soit ; affichée ici pour aider
+  // l'institution dans sa propre analyse du dossier.
+  secteurActivite: string | null;
   historiqueMensuel: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[];
   bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
   compteDeResultat: { resultatNetAvantImpot: number };
@@ -279,6 +284,12 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
               <tr>
                 <td>{t("inst_demandeRaisonSociale")}</td>
                 <td>{demande.raisonSociale}</td>
+              </tr>
+            )}
+            {snapshot?.secteurActivite && (
+              <tr>
+                <td>{t("secteurActiviteLabel")}</td>
+                <td>{t(`secteur_${snapshot.secteurActivite}`)}</td>
               </tr>
             )}
             {(demande.contactTelephone || demande.contactEmail) && (

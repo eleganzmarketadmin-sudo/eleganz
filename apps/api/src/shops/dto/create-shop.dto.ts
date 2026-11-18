@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, MinLength } from "class-validator";
-import { ShopMode } from "@eleganz/database";
+import { SecteurActiviteBoutique, ShopMode } from "@eleganz/database";
 
 export class CreateShopDto {
   @IsString()
@@ -18,4 +18,13 @@ export class CreateShopDto {
   @IsOptional()
   @IsString()
   gestionBouquetId?: string;
+
+  // Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+  // Phase 2) — purement informatif pour les institutions financières
+  // partenaires, jamais utilisé par ELEGANZ pour accepter/refuser une
+  // création de boutique. Facultatif à l'inscription, modifiable ensuite
+  // depuis les paramètres (voir UpdateShopSecteurActiviteDto).
+  @IsOptional()
+  @IsEnum(SecteurActiviteBoutique)
+  secteurActivite?: SecteurActiviteBoutique;
 }

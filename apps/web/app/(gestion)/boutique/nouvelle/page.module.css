@@ -92,11 +92,14 @@
   font-weight: 500;
 }
 
-.champ input {
+.champ input,
+.champ select {
   width: 100%;
   padding: var(--espace-3);
   border: 2px solid var(--color-ink);
   min-height: var(--touche-min);
+  background: var(--color-surface, #fff);
+  font: inherit;
 }
 
 .modes {

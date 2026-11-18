@@ -4,7 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UpdateFiscalIdentityDto } from "./dto/update-fiscal-identity.dto";
 import { AccountingQueryService } from "./accounting-query.service";
 import { BusinessPlanService } from "./business-plan.service";
-import { FiscalRuleScope, StockMovementType } from "@eleganz/database";
+import { FiscalRuleScope, SecteurActiviteBoutique, StockMovementType } from "@eleganz/database";
 
 export interface DossierCreditBoutiqueBusinessPlan {
   resumeExecutif: string | null;
@@ -37,6 +37,12 @@ export interface DossierCreditBoutique {
   shopId: string;
   shopName: string;
   boutiqueDepuis: string;
+  // Secteur d'activité (18 nov. 2026, chantier "gestion de risque autonome"
+  // Phase 2) — info purement déclarative fournie par la boutique elle-même
+  // (voir Shop.secteurActivite), jamais vérifiée ni utilisée par ELEGANZ
+  // pour quoi que ce soit ; destinée à l'institution qui étudie ce dossier.
+  // null = la boutique n'a jamais renseigné ce champ.
+  secteurActivite: SecteurActiviteBoutique | null;
   identiteFiscale: {
     fiscalLegalName: string | null;
     fiscalIdNumber: string | null;
@@ -272,7 +278,10 @@ export class FinanceService {
 
     const [shop, identite, historiqueMensuel, bilan, bilanNormalise, compteDeResultatNormalise, supplier, customers, planAffaires] =
       await Promise.all([
-        this.prisma.shop.findUniqueOrThrow({ where: { id: shopId }, select: { name: true, createdAt: true } }),
+        this.prisma.shop.findUniqueOrThrow({
+          where: { id: shopId },
+          select: { name: true, createdAt: true, secteurActivite: true },
+        }),
         this.fiscalIdentity(shopId),
         this.accountingQuery.evolutionMensuelle(FiscalRuleScope.SHOP, shopId, moisBornes),
         this.accountingQuery.bilan(FiscalRuleScope.SHOP, shopId, maintenant),
@@ -294,6 +303,7 @@ export class FinanceService {
       shopId,
       shopName: shop.name,
       boutiqueDepuis: shop.createdAt.toISOString(),
+      secteurActivite: shop.secteurActivite,
       identiteFiscale: {
         fiscalLegalName: identite.fiscalLegalName,
         fiscalIdNumber: identite.fiscalIdNumber,
