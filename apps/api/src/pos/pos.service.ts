@@ -33,6 +33,17 @@ export class PosService {
     dto: CreateSaleDto & { cashierId: string; clientOperationId?: string },
     options: { allowNegativeStock?: boolean } = {},
   ) {
+    // Résolution du client encaissé (19 nov. 2026, demande : "ajouter à la
+    // facture... identité du client et son numéro phone whatsapp") — la
+    // caisse n'avait jusqu'ici aucune saisie client. `customerId` reste
+    // prioritaire s'il est fourni (comportement inchangé) ; sinon, une
+    // saisie libre nom/téléphone retrouve ou crée la fiche ShopCustomer
+    // correspondante, pour que l'historique d'achats du client (créances,
+    // relances) profite aussi de cette saisie, et pas seulement le document
+    // imprimé. Fait hors transaction : une fiche client n'a pas besoin des
+    // mêmes garanties d'atomicité que le décompte de stock ci-dessous.
+    const customerId = dto.customerId ?? (await this.resoudreClientLibre(shopId, dto));
+
     let cmvTotal = 0;
     const sale = await this.prisma.$transaction(async (tx) => {
       let total = 0;
@@ -111,7 +122,7 @@ export class PosService {
       const creditAmount = dto.payments
         .filter((p) => p.method === PaymentMethod.STORE_CREDIT)
         .reduce((sum, p) => sum + p.amount, 0);
-      if (creditAmount > 0 && !dto.customerId) {
+      if (creditAmount > 0 && !customerId) {
         throw new BadRequestException("Un client est requis pour une vente à crédit.");
       }
 
@@ -119,7 +130,7 @@ export class PosService {
         data: {
           shopId,
           cashierId: dto.cashierId,
-          customerId: dto.customerId,
+          customerId,
           totalAmount: total,
           currency: dto.currency ?? "USD",
           clientOperationId: dto.clientOperationId,
@@ -146,9 +157,9 @@ export class PosService {
       // Vente à crédit : la part STORE_CREDIT augmente la créance du client
       // (complément stratégique §9), toujours dans la même transaction pour
       // qu'une vente et sa créance ne puissent jamais être incohérentes.
-      if (creditAmount > 0 && dto.customerId) {
+      if (creditAmount > 0 && customerId) {
         await tx.shopCustomer.update({
-          where: { id: dto.customerId },
+          where: { id: customerId },
           data: { creditBalance: { increment: creditAmount } },
         });
       }
@@ -182,6 +193,33 @@ export class PosService {
     }
 
     return sale;
+  }
+
+  /**
+   * Retrouve ou crée la fiche `ShopCustomer` correspondant à une saisie libre
+   * nom/téléphone à l'encaissement (19 nov. 2026). Recherche par téléphone
+   * uniquement (un nom seul ne permet pas d'éviter les doublons de façon
+   * fiable) ; une fiche trouvée n'est jamais modifiée ici (on ne réécrit
+   * jamais silencieusement un nom déjà enregistré sur la foi d'une nouvelle
+   * saisie, qui peut être une coquille). Sans téléphone, une nouvelle fiche
+   * est créée à chaque vente plutôt que de tenter un rapprochement par nom
+   * seul. Retourne `undefined` si ni nom ni téléphone n'ont été saisis — la
+   * vente reste alors sans client, comme avant cette fonctionnalité.
+   */
+  private async resoudreClientLibre(shopId: string, dto: CreateSaleDto): Promise<string | undefined> {
+    const nom = dto.customerName?.trim();
+    const telephone = dto.customerPhone?.trim();
+    if (!nom && !telephone) return undefined;
+
+    if (telephone) {
+      const existant = await this.prisma.shopCustomer.findFirst({ where: { shopId, phone: telephone } });
+      if (existant) return existant.id;
+    }
+
+    const cree = await this.prisma.shopCustomer.create({
+      data: { shopId, fullName: nom || "Client comptoir", phone: telephone || null },
+    });
+    return cree.id;
   }
 
   /**

@@ -81,6 +81,26 @@ export interface DonneesDocumentPdf {
    */
   normalisationAutoDeclaree?: boolean;
   identiteFiscale?: IdentiteFiscaleDocumentPdf | null;
+  /**
+   * Identité du client final (19 nov. 2026, demande : "ajouter à la facture
+   * les champs optionnels... identité du client et son numéro phone
+   * whatsapp") — toujours facultatif, jamais de valeur inventée : vide pour
+   * une vente caisse sans client saisi, rempli depuis `ShopCustomer` (caisse)
+   * ou `Order.buyer`/`buyerWhatsapp` (commande Marketplace) sinon. Voir
+   * documents.service.ts::rendrerDocumentCharge.
+   */
+  customerName?: string | null;
+  customerPhone?: string | null;
+  /**
+   * Code-barres (Code128, encode `number` ci-dessus) et QR code (encode le
+   * lien public de vérification du document) — même mécanisme non-bloquant
+   * que `shopLogo` : générés au préalable par l'appelant
+   * (documents.service.ts), jamais ici ; `null` si la génération a échoué ou
+   * si le QR ne peut pas être calculé (hôte de la requête inconnu). Le rendu
+   * PDF lui-même ne fait toujours aucun accès réseau.
+   */
+  barcode?: Buffer | null;
+  qrCode?: Buffer | null;
 }
 
 const LARGEUR_TICKET = 226; // ~80mm, format imprimante de caisse courant (prompt §6)
@@ -159,6 +179,18 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     ),
     { align: "center" },
   );
+
+  // Bloc client — uniquement si une identité a été saisie/connue (19 nov.
+  // 2026). Jamais de placeholder du type "Client inconnu" : simplement
+  // absent quand rien n'a été renseigné, comme les autres blocs facultatifs
+  // de ce document.
+  if (donnees.customerName || donnees.customerPhone) {
+    doc.moveDown(0.2);
+    doc.font("Helvetica").fontSize(7.5);
+    const ligneClient = [donnees.customerName, donnees.customerPhone].filter(Boolean).join(" — ");
+    doc.text(`Client : ${ligneClient}`, { align: "center" });
+  }
+
   doc.moveDown(0.5);
   doc
     .moveTo(MARGE, doc.y)
@@ -258,6 +290,38 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     doc.fontSize(6.5).fillColor("#555").text(contactsPlateforme, { align: "center" });
   }
   doc.fillColor("#000");
+
+  // Code-barres + QR code (19 nov. 2026, demande : "voir la possibilité d'un
+  // qr code/code barre"). `{ x }` sans 3e argument positionnel laisse
+  // pdfkit en mode "flux" : il centre l'image à l'abscisse donnée ET avance
+  // `doc.y` de la hauteur réellement dessinée — contrairement au logo
+  // ci-dessus, positionné en absolu (voir son commentaire), on ne veut
+  // jamais ici qu'un bloc suivant chevauche visuellement ces images.
+  if (donnees.barcode) {
+    try {
+      doc.moveDown(0.5);
+      const largeurCode = LARGEUR_TICKET - MARGE * 2;
+      doc.image(donnees.barcode, { x: MARGE, width: largeurCode });
+    } catch {
+      // Code-barres illisible (buffer corrompu...) — jamais bloquant.
+    }
+  }
+  if (donnees.qrCode) {
+    try {
+      doc.moveDown(0.3);
+      const largeurQr = 72;
+      doc.image(donnees.qrCode, { x: (LARGEUR_TICKET - largeurQr) / 2, width: largeurQr });
+      doc.moveDown(0.15);
+      doc
+        .font("Helvetica")
+        .fontSize(6)
+        .fillColor("#555")
+        .text("Scannez pour retrouver ce document en ligne", { align: "center" });
+      doc.fillColor("#000");
+    } catch {
+      // QR illisible — jamais bloquant.
+    }
+  }
 
   doc.end();
   return doc;

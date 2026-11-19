@@ -55,6 +55,21 @@ export class CreateSaleDto {
   @IsString()
   customerId?: string;
 
+  // Saisie libre à l'encaissement (19 nov. 2026, demande : "ajouter à la
+  // facture les champs optionnels... identité du client et son numéro
+  // phone whatsapp") — la caisse n'avait jusqu'ici aucune saisie client.
+  // Ignorés si `customerId` est fourni ; sinon, PosService.createSale
+  // retrouve ou crée la fiche ShopCustomer correspondante (recherche par
+  // téléphone) plutôt que de se contenter d'imprimer un texte libre sans
+  // historique.
+  @IsOptional()
+  @IsString()
+  customerName?: string;
+
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })

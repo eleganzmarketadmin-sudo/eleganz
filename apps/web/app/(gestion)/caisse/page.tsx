@@ -76,6 +76,13 @@ function CaisseContent() {
   const [recherche, setRecherche] = useState("");
   const [lignes, setLignes] = useState<LigneTicket[]>([]);
   const [moyen, setMoyen] = useState<(typeof MOYENS)[number]["valeur"]>("CASH");
+  // Saisie libre client à l'encaissement (19 nov. 2026, demande : "ajouter à
+  // la facture les champs optionnels... identité du client et son numéro
+  // phone whatsapp"). Entièrement optionnel — PosService associe ou crée
+  // automatiquement la fiche ShopCustomer correspondante côté serveur ; la
+  // caisse n'a jamais besoin de connaître cette fiche.
+  const [clientNom, setClientNom] = useState("");
+  const [clientTelephone, setClientTelephone] = useState("");
   const [typeDocument, setTypeDocument] = useState<string>("TICKET");
   const [homologationConfirmee, setHomologationConfirmee] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -223,12 +230,16 @@ function CaisseContent() {
       })),
       payments: [{ method: moyen, amount: total }],
       currency: devise,
+      customerName: clientNom.trim() || undefined,
+      customerPhone: clientTelephone.trim() || undefined,
     };
 
     try {
       const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, payload);
       setConfirmation(`${t("caisse_venteEnregistree")} ${formatMoney(total, devise)} ${t("caisse_encaisse")}`);
       setLignes([]);
+      setClientNom("");
+      setClientTelephone("");
       try {
         const document = await api.post<{ id: string }>(
           `/shops/${currentShop.id}/documents/pos-sale/${vente.id}`,
@@ -263,6 +274,8 @@ function CaisseContent() {
             `${t("caisse_venteEnregistreeHorsLigne")} ${formatMoney(total, devise)}. ${t("caisse_synchroAutomatique")}`,
           );
           setLignes([]);
+          setClientNom("");
+          setClientTelephone("");
           synchroniser();
         } catch {
           setErreurVente(t("caisse_erreurHorsLigne"));
@@ -417,6 +430,26 @@ function CaisseContent() {
             </div>
 
             <div className={styles.paiements}>
+              <div className={styles.clientFacultatif}>
+                <span className={styles.clientFacultatifTitre}>{t("caisse_clientFacultatif")}</span>
+                <div className={styles.clientFacultatifChamps}>
+                  <input
+                    className={styles.clientChamp}
+                    type="text"
+                    placeholder={t("caisse_placeholderNomClient")}
+                    value={clientNom}
+                    onChange={(e) => setClientNom(e.target.value)}
+                  />
+                  <input
+                    className={styles.clientChamp}
+                    type="tel"
+                    placeholder={t("caisse_placeholderTelephoneClient")}
+                    value={clientTelephone}
+                    onChange={(e) => setClientTelephone(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className={styles.moyensPaiement}>
                 {MOYENS.map((m) => (
                   <button

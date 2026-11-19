@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Res, UseGuards } from "@nestjs/common";
-import type { Response } from "express";
+import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { DocumentsService } from "./documents.service";
 import { DocumentType } from "@eleganz/database";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -45,9 +45,15 @@ export class DocumentsController {
   async pdf(
     @Param("shopId") shopId: string,
     @Param("documentId") documentId: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
-    const doc = await this.documentsService.renderPdf(shopId, documentId);
+    // Hôte de la requête (19 nov. 2026) — sert à construire le lien public
+    // encodé dans le QR code imprimé sur le document (voir
+    // DocumentsService.rendrerDocumentCharge) : jamais de domaine codé en
+    // dur, pour fonctionner identiquement derrière Railway ou un domaine
+    // personnalisé.
+    const doc = await this.documentsService.renderPdf(shopId, documentId, req.get("host"));
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="document-${documentId}.pdf"`);
     doc.pipe(res);
