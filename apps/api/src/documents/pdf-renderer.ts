@@ -304,8 +304,15 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
   if (donnees.barcode) {
     try {
       doc.moveDown(0.5);
-      const largeurCode = LARGEUR_TICKET - MARGE * 2;
-      doc.image(donnees.barcode, MARGE, undefined, { width: largeurCode });
+      // Largeur réduite à 55 % de la largeur disponible, centrée (19 nov.
+      // 2026, demande : "réduire la taille des codes barres question
+      // d'espace") — auparavant toute la largeur du ticket ; pdfkit
+      // conserve le ratio largeur/hauteur de l'image source, donc réduire
+      // `width` ici réduit aussi sa hauteur imprimée.
+      const largeurDisponible = LARGEUR_TICKET - MARGE * 2;
+      const largeurCode = Math.round(largeurDisponible * 0.55);
+      const xCode = MARGE + (largeurDisponible - largeurCode) / 2;
+      doc.image(donnees.barcode, xCode, undefined, { width: largeurCode });
     } catch {
       // Code-barres illisible (buffer corrompu...) — jamais bloquant.
     }

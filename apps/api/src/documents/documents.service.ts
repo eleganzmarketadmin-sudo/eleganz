@@ -401,8 +401,13 @@ export class DocumentsService {
       return await bwipjs.toBuffer({
         bcid: "code128",
         text: numero,
-        scale: 3,
-        height: 10,
+        // Hauteur réduite de 10 à 6mm (19 nov. 2026, demande : "réduire la
+        // taille... question d'espace") — la taille finale imprimée est
+        // surtout pilotée par la largeur demandée dans pdf-renderer.ts, mais
+        // un code natif moins haut évite qu'il paraisse disproportionné une
+        // fois rétréci (pdfkit conserve toujours le ratio largeur/hauteur).
+        scale: 2,
+        height: 6,
         includetext: true,
         textxalign: "center",
       });
