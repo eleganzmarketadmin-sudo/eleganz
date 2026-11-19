@@ -14,10 +14,26 @@ import { NotificationBell } from "../components/NotificationBell";
 import { ChatWidget } from "../components/ChatWidget";
 import { AccueilLien } from "../components/AccueilLien";
 import { ModulesMenu } from "../components/ModulesMenu";
+import { DropdownNavGroup } from "../components/DropdownNavGroup";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
 import styles from "./AdminShell.module.css";
+
+interface LienSimple {
+  href: string;
+  label: string;
+  menu: string;
+}
+
+interface GroupeNav {
+  groupeLabel: string;
+  liens: LienSimple[];
+}
+
+function estGroupe(e: LienSimple | GroupeNav): e is GroupeNav {
+  return "liens" in e;
+}
 
 // Menus accordés par rôle admin, par défaut (16 oct. 2026 — "le menu équipe
 // ne donne pas toujours les menus pour une sélection d'attribution") :
@@ -53,20 +69,31 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   // `menu` = la clé MenuAdmin (API) correspondant à chaque lien — sert au
   // filtrage ci-dessous.
-  const LIENS = [
-    { href: "/admin/pilotage", label: t("nav_tableauDeBord"), menu: "PILOTAGE" },
+  //
+  // Regroupement en menus déroulants (19 nov. 2026, demande du
+  // propriétaire : "créer des options navigables au sein de ses menus ...
+  // au lieu de défiler sur une longue page interminable des listes
+  // d'options" — cette barre comptait jusqu'ici 19 onglets à plat qui
+  // débordaient horizontalement). Chaque groupe ne filtre que ses propres
+  // enfants par `ecransAutorises` (ci-dessous) ; un groupe sans aucun enfant
+  // visible disparaît entièrement, un groupe réduit à un seul enfant visible
+  // se replie en lien simple (voir le rendu de <nav> plus bas) — jamais un
+  // menu déroulant vide ou à un seul choix.
+  const GROUPE_FINANCE: LienSimple[] = [
+    { href: "/admin/finance", label: t("nav_finance"), menu: "FINANCE" },
+    { href: "/admin/factures", label: t("nav_factures"), menu: "FACTURES" },
+    { href: "/admin/tarifs", label: t("nav_tarifs"), menu: "TARIFS" },
+    { href: "/admin/releves", label: t("nav_releves"), menu: "RELEVES" },
+  ];
+  const GROUPE_OPERATIONS: LienSimple[] = [
     { href: "/admin/boutiques", label: t("nav_boutiques"), menu: "BOUTIQUES" },
     { href: "/admin/livreurs", label: t("nav_livreurs"), menu: "LIVREURS" },
-    { href: "/admin/comptable", label: t("titre_accueil"), menu: "COMPTABLE" },
-    { href: "/admin/finance", label: t("nav_finance"), menu: "FINANCE" },
     { href: "/admin/suivi-commandes", label: t("nav_suiviCommandes"), menu: "SUIVI_COMMANDES" },
-    { href: "/admin/utilisateurs", label: t("nav_utilisateurs"), menu: "UTILISATEURS" },
-    { href: "/admin/tarifs", label: t("nav_tarifs"), menu: "TARIFS" },
-    { href: "/admin/factures", label: t("nav_factures"), menu: "FACTURES" },
-    { href: "/admin/releves", label: t("nav_releves"), menu: "RELEVES" },
     { href: "/admin/litiges", label: t("nav_litiges"), menu: "LITIGES" },
     { href: "/admin/experts", label: t("nav_experts"), menu: "EXPERTS" },
-    { href: "/admin/messagerie", label: t("nav_messagerie"), menu: "MESSAGERIE" },
+  ];
+  const GROUPE_COMPTES: LienSimple[] = [
+    { href: "/admin/utilisateurs", label: t("nav_utilisateurs"), menu: "UTILISATEURS" },
     { href: "/admin/equipe", label: t("nav_equipeAdmin"), menu: "EQUIPE_ADMIN" },
     // Institutions financières partenaires (14 nov. 2026) — rattaché au même
     // écran "EQUIPE_ADMIN" (réservé à ADMIN_SUPER par défaut, voir
@@ -76,6 +103,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     // (requireSuperAdmin). Pas de nouvelle valeur MenuAdmin dédiée pour
     // éviter une migration seulement pour un filtre de menu.
     { href: "/admin/institutions", label: t("nav_institutions"), menu: "EQUIPE_ADMIN" },
+  ];
+  const GROUPE_SYSTEME: LienSimple[] = [
     { href: "/admin/parametres", label: t("nav_parametresPlateforme"), menu: "PARAMETRES_PLATEFORME" },
     { href: "/admin/audit", label: t("nav_audit"), menu: "AUDIT" },
     { href: "/admin/centre-aide", label: t("nav_centreAide"), menu: "CENTRE_AIDE" },
@@ -87,6 +116,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     // guide reste visible à toute l'équipe admin sans migration de schéma.
     { href: "/admin/guide-developpeur", label: "Guide développeur", menu: "CENTRE_AIDE" },
   ];
+
+  const ENTREES: (LienSimple | GroupeNav)[] = [
+    { href: "/admin/pilotage", label: t("nav_tableauDeBord"), menu: "PILOTAGE" },
+    { groupeLabel: t("nav_finance"), liens: GROUPE_FINANCE },
+    { groupeLabel: t("admshell_groupeOperations"), liens: GROUPE_OPERATIONS },
+    { groupeLabel: t("admshell_groupeComptes"), liens: GROUPE_COMPTES },
+    { href: "/admin/comptable", label: t("titre_accueil"), menu: "COMPTABLE" },
+    { href: "/admin/messagerie", label: t("nav_messagerie"), menu: "MESSAGERIE" },
+    { groupeLabel: t("admshell_groupeSysteme"), liens: GROUPE_SYSTEME },
+  ];
+
+  // Mise à plat pour le repli par défaut ci-dessous (ecransAutorises) —
+  // même liste qu'avant ce regroupement, juste reconstituée depuis les
+  // groupes plutôt qu'un unique tableau LIENS.
+  const LIENS: LienSimple[] = ENTREES.flatMap((e) => (estGroupe(e) ? e.liens : [e]));
 
   // `adminMenuItems` (GET /auth/me, calculé côté API — voir
   // AdminTeamService/menu-admin.util.ts) prime dès qu'il est disponible sur
@@ -101,7 +145,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
 
   const ecransAutorises = menuItems ?? (user?.role ? MENUS_PAR_ROLE_ADMIN[user.role] : undefined) ?? LIENS.map((l) => l.menu);
-  const liens = LIENS.filter((l) => ecransAutorises.includes(l.menu));
 
   // (13 nov. 2026, signalement "connexion réussie mais revient à la page de
   // connexion") — se fier uniquement à `user` (contexte React) pour décider
@@ -166,17 +209,48 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </header>
         <BandeMarque />
         <nav className={styles.nav} ref={navRef}>
-          {liens.map((lien) => {
-            const actif = pathname === lien.href || pathname?.startsWith(`${lien.href}/`);
+          {ENTREES.map((entree, index) => {
+            if (!estGroupe(entree)) {
+              if (!ecransAutorises.includes(entree.menu)) return null;
+              const actif = pathname === entree.href || pathname?.startsWith(`${entree.href}/`);
+              return (
+                <Link
+                  key={entree.href}
+                  href={entree.href}
+                  className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                  data-nav-actif={actif ? "true" : undefined}
+                >
+                  {entree.label}
+                </Link>
+              );
+            }
+
+            const liensVisibles = entree.liens.filter((l) => ecransAutorises.includes(l.menu));
+            if (liensVisibles.length === 0) return null;
+            if (liensVisibles.length === 1) {
+              const seul = liensVisibles[0];
+              const actif = pathname === seul.href || pathname?.startsWith(`${seul.href}/`);
+              return (
+                <Link
+                  key={seul.href}
+                  href={seul.href}
+                  className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                  data-nav-actif={actif ? "true" : undefined}
+                >
+                  {seul.label}
+                </Link>
+              );
+            }
+            const actifGroupe = liensVisibles.some((l) => pathname === l.href || pathname?.startsWith(`${l.href}/`));
             return (
-              <Link
-                key={lien.href}
-                href={lien.href}
-                className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
-                data-nav-actif={actif ? "true" : undefined}
-              >
-                {lien.label}
-              </Link>
+              <DropdownNavGroup
+                key={`groupe-${index}`}
+                label={entree.groupeLabel}
+                enfants={liensVisibles}
+                actif={actifGroupe}
+                triggerClassName={styles.navLien}
+                activeClassName={styles.navLienActif}
+              />
             );
           })}
         </nav>
