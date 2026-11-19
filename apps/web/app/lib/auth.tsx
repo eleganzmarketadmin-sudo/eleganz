@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { api, ApiError, espaceAuth, getToken, setToken } from "./api";
-import { useDeconnexionInactivite } from "./useDeconnexionInactivite";
+import { marquerActiviteEspace, useDeconnexionInactivite } from "./useDeconnexionInactivite";
 
 export interface AuthUser {
   id: string;
@@ -119,6 +119,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         false,
       );
       setToken(accessToken);
+      // Voir le commentaire détaillé dans useDeconnexionInactivite.ts (19 nov.
+      // 2026) — rafraîchit l'horodatage d'activité de CET espace avant que
+      // l'effet d'inactivité n'ait la moindre chance de lire un éventuel
+      // horodatage périmé d'une session précédente et de déclencher un
+      // logout() silencieux juste après cette connexion.
+      marquerActiviteEspace(espaceAuth());
       verifierSessionPersistee(accessToken);
       setUser(decodeJwtPayload(accessToken));
     },
@@ -139,6 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         false,
       );
       setToken(accessToken);
+      // Même correctif que dans login() ci-dessus — voir
+      // useDeconnexionInactivite.ts (19 nov. 2026).
+      marquerActiviteEspace(espaceAuth());
       verifierSessionPersistee(accessToken);
       setUser(decodeJwtPayload(accessToken));
     },

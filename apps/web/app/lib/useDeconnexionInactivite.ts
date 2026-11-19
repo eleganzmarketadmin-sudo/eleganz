@@ -22,6 +22,45 @@ function cleActivite(espace: string): string {
   return `eleganz_derniere_activite_${espace}`;
 }
 
+/**
+ * Signalement du 19 nov. 2026 ("connexion réussie mais revient à la
+ * connexion, sans erreur, sur tous les navigateurs et tous les écrans") —
+ * cause réelle, distincte des trois correctifs précédents du 12-14 nov.
+ * (hydratation, redirection RSC, cache du service worker) : l'effet
+ * ci-dessous se déclenche dès que `connecte` passe à `true`, donc dès
+ * l'INSTANT où une connexion vient de réussir — pas seulement au retour sur
+ * un onglet resté ouvert, cas qu'il visait à l'origine (11 nov. 2026). S'il
+ * restait en localStorage un horodatage `eleganz_derniere_activite_<espace>`
+ * vieux de plus de deux heures — une session précédente dans ce même espace,
+ * parfois ancienne de plusieurs jours —, `verifierExpiration()` le lisait
+ * AVANT que `marquerActivite()` n'ait eu la moindre chance de le rafraîchir,
+ * et appelait `logout()` : le jeton tout juste émis était effacé en silence,
+ * quelques instants après son écriture, et la garde d'authentification de la
+ * page suivante renvoyait alors vers la connexion — sans la moindre erreur
+ * (ce n'est pas un échec, `logout()` fonctionne exactement comme prévu), avec
+ * les champs vides (nouveau montage du formulaire après la navigation de
+ * retour) : exactement le symptôme rapporté. Reproductible sur n'importe quel
+ * navigateur dès que ce délai de deux heures est dépassé dans l'espace visé —
+ * d'où "vider l'historique et les cookies" comme contournement : cela efface
+ * aussi cet horodatage périmé (`derniere` retombe à 0, donc ignoré par
+ * `if (derniere && ...)` ci-dessous).
+ *
+ * `marquerActiviteEspace()` est appelée directement dans auth.tsx (login/
+ * register), immédiatement après l'écriture du jeton — avant que cet effet
+ * n'ait pu s'exécuter, sur l'ancienne page comme sur la nouvelle après une
+ * navigation complète — pour qu'un horodatage jamais périmé existe déjà
+ * lorsque `verifierExpiration()` s'exécute, quel que soit l'ordre réel
+ * d'exécution entre React et la navigation du navigateur.
+ */
+export function marquerActiviteEspace(espace: string): void {
+  try {
+    window.localStorage.setItem(cleActivite(espace), String(Date.now()));
+  } catch {
+    // stockage indisponible (navigation privée) — rien à dégrader de plus,
+    // voir le même garde-fou dans setToken() (api.ts).
+  }
+}
+
 export function useDeconnexionInactivite(espace: string, connecte: boolean, logout: () => void) {
   useEffect(() => {
     if (!connecte || typeof window === "undefined") return;
