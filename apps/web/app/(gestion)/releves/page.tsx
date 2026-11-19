@@ -45,6 +45,12 @@ const REGROUPEMENTS = [
   { valeur: "PRODUIT", cle: "rel_regroupementProduit" },
   { valeur: "CATEGORIE", cle: "rel_regroupementCategorie" },
   { valeur: "MOYEN_PAIEMENT", cle: "rel_regroupementMoyenPaiement" },
+  // Ajout du 19 nov. 2026 (demande : "rapport par agent — ventes par agent,
+  // question de performance") — regroupe par caissier ayant encaissé la
+  // vente (PosSale.cashierId) ; les commandes Marketplace (sans agent) sont
+  // regroupées côté API sous un libellé "Marketplace" fixe plutôt
+  // qu'exclues (voir reports.service.ts, LABEL_AGENT_MARKETPLACE).
+  { valeur: "AGENT", cle: "rel_regroupementAgent" },
 ];
 
 function formaterCellule(c: CelluleReleve): string {

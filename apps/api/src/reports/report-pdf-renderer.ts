@@ -9,6 +9,7 @@ const LABELS_REGROUPEMENT: Record<string, string> = {
   CATEGORIE: "Catégorie",
   MOYEN_PAIEMENT: "Moyen de paiement",
   BOUTIQUE: "Boutique",
+  AGENT: "Agent",
 };
 
 function formaterDate(iso: string): string {

@@ -8,10 +8,11 @@ const LABELS_REGROUPEMENT: Record<string, string> = {
   CATEGORIE: "Catégorie",
   MOYEN_PAIEMENT: "Moyen de paiement",
   BOUTIQUE: "Boutique",
+  AGENT: "Agent",
 };
 
 export type Granularite = "JOUR" | "SEMAINE" | "MOIS" | "ANNEE";
-export type Regroupement = "PRODUIT" | "CATEGORIE" | "MOYEN_PAIEMENT" | "BOUTIQUE";
+export type Regroupement = "PRODUIT" | "CATEGORIE" | "MOYEN_PAIEMENT" | "BOUTIQUE" | "AGENT";
 
 export interface ParametresReleve {
   /** Absent = relevé plateforme entière (toutes boutiques) — réservé à l'admin. */
@@ -58,8 +59,19 @@ const LABELS_PAIEMENT: Record<string, string> = {
 
 const LABEL_PAIEMENT_LIVRAISON_MARKETPLACE = "Paiement à la livraison (Marketplace)";
 
+// Regroupement par agent (19 nov. 2026, demande : "rapport par agent — ventes
+// par agent, question de performance") — seules les ventes en caisse
+// (PosSale.cashierId) sont rattachées à un membre d'équipe précis ; une
+// commande Marketplace n'a pas d'agent (l'acheteur final passe directement
+// commande, aucun caissier ne l'encaisse). Décision explicite du
+// propriétaire (19 nov. 2026) plutôt que de les exclure du relevé : elles
+// sont toutes regroupées sous ce libellé pseudo-agent fixe, à l'image de
+// LABEL_PAIEMENT_LIVRAISON_MARKETPLACE ci-dessus pour le regroupement par
+// moyen de paiement.
+const LABEL_AGENT_MARKETPLACE = "Marketplace";
+
 const GRANULARITES: Granularite[] = ["JOUR", "SEMAINE", "MOIS", "ANNEE"];
-const REGROUPEMENTS: Regroupement[] = ["PRODUIT", "CATEGORIE", "MOYEN_PAIEMENT", "BOUTIQUE"];
+const REGROUPEMENTS: Regroupement[] = ["PRODUIT", "CATEGORIE", "MOYEN_PAIEMENT", "BOUTIQUE", "AGENT"];
 
 /**
  * Relevés d'activité périodiques "certifiés" par la plateforme (demande du
@@ -86,6 +98,7 @@ export class ReportsService {
           shop: { select: { name: true } },
           lines: { include: { variant: { include: { product: true } } } },
           payments: true,
+          cashier: { select: { fullName: true } },
         },
       }),
       this.prisma.shopOrder.findMany({
@@ -145,7 +158,7 @@ export class ReportsService {
         );
       }
     } else {
-      const determinerGroupe = (ctx: { shopName: string; produitNom: string; categorie: string }) => {
+      const determinerGroupe = (ctx: { shopName: string; produitNom: string; categorie: string; agentNom: string }) => {
         switch (params.regroupement) {
           case "PRODUIT":
             return ctx.produitNom;
@@ -153,6 +166,8 @@ export class ReportsService {
             return ctx.categorie;
           case "BOUTIQUE":
             return ctx.shopName;
+          case "AGENT":
+            return ctx.agentNom;
           default:
             return "Total";
         }
@@ -164,6 +179,7 @@ export class ReportsService {
             shopName: vente.shop.name,
             produitNom: ligne.variant?.product?.name ?? ligne.label,
             categorie: ligne.variant?.product?.category ?? "Sans catégorie",
+            agentNom: vente.cashier.fullName,
           });
           ajouter(groupe, vente.createdAt, ligne.quantity * Number(ligne.unitPrice), vente.currency, ligne.quantity, vente.id);
         }
@@ -174,6 +190,7 @@ export class ReportsService {
             shopName: commande.shop.name,
             produitNom: ligne.variant.product.name,
             categorie: ligne.variant.product.category ?? "Sans catégorie",
+            agentNom: LABEL_AGENT_MARKETPLACE,
           });
           ajouter(
             groupe,
