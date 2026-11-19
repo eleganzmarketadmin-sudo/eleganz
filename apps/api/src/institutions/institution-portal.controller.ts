@@ -9,6 +9,7 @@ import { UpdateInstitutionStaffDto } from "./dto/update-institution-staff.dto";
 import { CreerDemandeCreditLibreDto } from "./dto/demande-credit.dto";
 import { ValiderAnalyseCreditDto } from "./dto/analyse-credit.dto";
 import { AnalyseCreditService } from "./analyse-credit.service";
+import { RapportPortefeuilleService } from "./rapport-portefeuille.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -18,6 +19,8 @@ import { InstitutionRoles } from "./institution-roles.decorator";
 import { InstitutionRole } from "@eleganz/database";
 import { renderDossierCreditPdf } from "../finance/dossier-credit-pdf-renderer";
 import { renderDemandeCreditPdf, type DemandeCreditPourPdf } from "./demande-credit-pdf-renderer";
+import { renderRapportPortefeuillePdf } from "./rapport-portefeuille-pdf-renderer";
+import { construireClasseurExcel } from "../common/xlsx.util";
 
 // /me et /inscription restent volontairement hors InstitutionMembershipGuard
 // (14 nov. 2026, inchangé) : une institution doit pouvoir consulter son
@@ -35,6 +38,7 @@ export class InstitutionPortalController {
     private readonly staff: InstitutionStaffService,
     private readonly demandes: DemandeCreditService,
     private readonly analyses: AnalyseCreditService,
+    private readonly rapports: RapportPortefeuilleService,
   ) {}
 
   @Get("me")
@@ -125,6 +129,56 @@ export class InstitutionPortalController {
     return this.portal.listerEcheances(institutionId, shopId, loanId);
   }
 
+  // Rapport de portefeuille (écran RAPPORTS, 19 nov. 2026, demande du
+  // propriétaire : "un menu dédié aux reports [...] utiles aux institutions
+  // financières et capitales dans l'analyse crédit") — voir
+  // RapportPortefeuilleService. Pas de restriction de rôle supplémentaire,
+  // comme mesPrets/mesDecisions/mesBoutiques ci-dessus : un écran de
+  // consultation, ouvert à tout membre actif de l'institution (le menu
+  // RAPPORTS lui-même reste filtré côté profil/monMenu).
+  @Get("rapports/portefeuille")
+  @UseGuards(InstitutionMembershipGuard)
+  rapportPortefeuille(@CurrentInstitutionId() institutionId: string) {
+    return this.rapports.rapport(institutionId);
+  }
+
+  @Get("rapports/portefeuille/export")
+  @UseGuards(InstitutionMembershipGuard)
+  async rapportPortefeuilleExportPdf(@CurrentInstitutionId() institutionId: string, @CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
+    const [rapport, profil] = await Promise.all([this.rapports.rapport(institutionId), this.portal.monProfil(user.id)]);
+    const doc = renderRapportPortefeuillePdf(rapport, profil.name);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="rapport-portefeuille-${institutionId}.pdf"`);
+    return doc.pipe(res);
+  }
+
+  // Export Excel (16 nov. 2026, option retenue par le propriétaire :
+  // "tableau de bord + export PDF/Excel") — réutilise le même utilitaire
+  // partagé que les autres exports .xlsx de la plateforme
+  // (common/xlsx.util.ts), jamais une librairie dédiée réinventée ici.
+  @Get("rapports/portefeuille/export-excel")
+  @UseGuards(InstitutionMembershipGuard)
+  async rapportPortefeuilleExportExcel(@CurrentInstitutionId() institutionId: string, @Res() res: Response) {
+    const rapport = await this.rapports.rapport(institutionId);
+    const entetes = ["Classification", "Nombre de prêts", "Solde restant", "Provision requise"];
+    const lignes = (["SAIN", "SOUS_SURVEILLANCE", "DOUTEUX", "COMPROMIS"] as const).map((cle) => {
+      const ligne = rapport.ventilationRisque[cle];
+      return [cle, ligne.nombre, ligne.soldeRestant, ligne.provisionRequise];
+    });
+    lignes.push([]);
+    lignes.push(["Capital total en cours", rapport.capitalTotalEnCours]);
+    lignes.push(["Provision requise totale", rapport.provisionRequiseTotal]);
+    lignes.push(["Prêts actifs", rapport.nombrePretsActifs]);
+    lignes.push(["Prêts clôturés", rapport.nombrePretsTermines]);
+    lignes.push(["Taux de défaut (capital)", rapport.tauxDefautCapital]);
+    lignes.push(["Taux de défaut (nombre de prêts)", rapport.tauxDefautNombre]);
+
+    const buffer = await construireClasseurExcel("Rapport de portefeuille", entetes, lignes);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="rapport-portefeuille.xlsx"');
+    res.send(buffer);
+  }
+
   // Candidatures de crédit numérotées (16 nov. 2026, demande du
   // propriétaire, point 1) — GET/:numero restent ouverts à tout membre actif
   // (consultation), la création libre est réservée aux rôles en contact
@@ -159,6 +213,17 @@ export class InstitutionPortalController {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="demande-credit-${numero}.pdf"`);
     return doc.pipe(res);
+  }
+
+  // Exposition de l'institution liée à cette candidature (chantier "menu
+  // Rapports", 19 nov. 2026, volet "capitales dans l'analyse crédit") —
+  // voir RapportPortefeuilleService.expositionPourDemande : vient en
+  // complément de l'analyse de crédit automatisée ci-dessous (score propre
+  // à la boutique), jamais à l'intérieur de son calcul.
+  @Get("demandes/:numero/exposition")
+  @UseGuards(InstitutionMembershipGuard)
+  exposition(@CurrentInstitutionId() institutionId: string, @Param("numero") numero: string) {
+    return this.rapports.expositionPourDemande(institutionId, numero);
   }
 
   // Analyse de crédit automatisée (chantier "gestion de risque autonome", 16

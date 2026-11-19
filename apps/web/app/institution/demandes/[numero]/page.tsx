@@ -103,6 +103,19 @@ interface DemandeCreditDetail {
   decision: DecisionLiee | null;
 }
 
+// Exposition de l'institution (chantier "menu Rapports", 19 nov. 2026, volet
+// "capitales dans l'analyse crédit") — voir
+// RapportPortefeuilleService.expositionPourDemande côté API. Donnée VIVANTE,
+// recalculée à chaque chargement de l'écran, à la différence du score
+// d'AnalyseCredit (figé au calcul) : jamais mélangée à ses composantes.
+interface ExpositionInstitution {
+  encoursExistantShop: number | null;
+  nombrePretsExistantsShop: number | null;
+  encoursTotalPortefeuille: number;
+  montantDemande: number;
+  partPortefeuilleSiAccorde: number | null;
+}
+
 const STATUTS_TERMINAUX_POSITIFS = ["ACCORDEE", "DECAISSEE", "EN_REMBOURSEMENT", "SOLDEE"];
 
 function classeBadge(statut: string): string {
@@ -143,6 +156,13 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
   const [analyse, setAnalyse] = useState<AnalyseCredit | null | undefined>(undefined);
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [erreurAnalyse, setErreurAnalyse] = useState<string | null>(null);
+
+  // Exposition de l'institution (19 nov. 2026) — voir ExpositionInstitution
+  // ci-dessus. `undefined` tant que non chargée, pour ne rien afficher
+  // plutôt qu'un panneau vide pendant le premier chargement ; silencieuse en
+  // cas d'échec (purement informatif, ne doit jamais bloquer le reste de
+  // l'écran, comme l'analyse de crédit ci-dessus).
+  const [exposition, setExposition] = useState<ExpositionInstitution | null | undefined>(undefined);
   const [noteValidation, setNoteValidation] = useState("");
   const [validationEnCours, setValidationEnCours] = useState(false);
 
@@ -201,6 +221,16 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(rechargerAnalyse, [numero]);
+
+  function rechargerExposition() {
+    api
+      .get<ExpositionInstitution>(`/institution-portal/demandes/${numero}/exposition`)
+      .then(setExposition)
+      .catch(() => setExposition(null));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(rechargerExposition, [numero]);
 
   async function lancerAnalyse() {
     setAnalyseEnCours(true);
@@ -434,6 +464,41 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
           </>
         )}
       </div>
+
+      {/* Exposition de l'institution (chantier "menu Rapports", 19 nov. 2026,
+          volet "capitales dans l'analyse crédit") — toujours affichée, même
+          pour une candidature "libre" sans boutique rattachée (seul
+          encoursExistantShop devient alors non applicable). Donnée vivante,
+          jamais mêlée au score d'AnalyseCredit (figé, voir plus bas). */}
+      {exposition && (
+        <div className={styles.carte}>
+          <h2 style={{ marginBottom: "var(--espace-2)" }}>{t("inst_rapportsExpositionTitre")}</h2>
+          <table className={styles.tableau}>
+            <tbody>
+              <tr>
+                <td>{t("inst_rapportsExpositionEncoursShop")}</td>
+                <td className="chiffre">
+                  {exposition.encoursExistantShop !== null
+                    ? exposition.encoursExistantShop.toLocaleString("fr-FR")
+                    : t("inst_rapportsExpositionLibre")}
+                </td>
+              </tr>
+              <tr>
+                <td>{t("inst_rapportsExpositionPortefeuille")}</td>
+                <td className="chiffre">{exposition.encoursTotalPortefeuille.toLocaleString("fr-FR")}</td>
+              </tr>
+              <tr>
+                <td>{t("inst_rapportsExpositionPartSiAccorde")}</td>
+                <td className="chiffre">
+                  {exposition.partPortefeuilleSiAccorde !== null
+                    ? `${(exposition.partPortefeuilleSiAccorde * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`
+                    : "—"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Analyse de crédit automatisée (chantier "gestion de risque autonome",
           16 nov. 2026) — seulement pour une candidature avec boutique liée

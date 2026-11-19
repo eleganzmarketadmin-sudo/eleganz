@@ -10,6 +10,7 @@ import { InstitutionMembershipGuard } from "./institution-membership.guard";
 import { DemandeCreditService } from "./demande-credit.service";
 import { AnalyseCreditService } from "./analyse-credit.service";
 import { RisqueCreditService } from "./risque-credit.service";
+import { RapportPortefeuilleService } from "./rapport-portefeuille.service";
 
 // Portail institutions financières partenaires (14 nov. 2026 — microfinances,
 // banques, coopératives). Importe ShopsModule (JwtAuthGuard/ShopMembershipGuard,
@@ -28,6 +29,7 @@ import { RisqueCreditService } from "./risque-credit.service";
     DemandeCreditService,
     AnalyseCreditService,
     RisqueCreditService,
+    RapportPortefeuilleService,
   ],
   controllers: [ShopInstitutionsController, InstitutionsCatalogueController, InstitutionPortalController],
   // RisqueCreditService est exporté pour CronModule (voir cron.module.ts) —

@@ -113,14 +113,16 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
 
   // "Demandes" partage l'écran RECEPTION avec "Boutiques" (les deux sont des
   // vues de réception de dossiers/candidatures, voir le commentaire sur
-  // ECRANS_MENU dans institution/equipe/page.tsx) ; ANALYSE/RENDEZ_VOUS/
-  // MESSAGERIE/RAPPORTS/PARAMETRES n'ont pas encore d'écran dédié (Phase 2/3)
-  // donc aucun lien ici ne leur correspond encore.
+  // ECRANS_MENU dans institution/equipe/page.tsx) ; RAPPORTS a reçu son
+  // écran dédié le 19 nov. 2026 (voir institution/rapports/page.tsx) ;
+  // ANALYSE/RENDEZ_VOUS/MESSAGERIE/PARAMETRES n'ont pas encore d'écran
+  // dédié (Phase 2/3) donc aucun lien ici ne leur correspond encore.
   const LIENS = [
     { href: "/institution", label: t("inst_nav_boutiques"), icone: "🏬", ecran: "RECEPTION" },
     { href: "/institution/demandes", label: t("inst_nav_demandes"), icone: "🧾", ecran: "RECEPTION" },
     { href: "/institution/decisions", label: t("inst_nav_decisions"), icone: "📝", ecran: "DECISIONS" },
     { href: "/institution/prets", label: t("inst_nav_prets"), icone: "💰", ecran: "PRETS" },
+    { href: "/institution/rapports", label: t("inst_nav_rapports"), icone: "📊", ecran: "RAPPORTS" },
     { href: "/institution/equipe", label: t("inst_nav_equipe"), icone: "👥", ecran: "EQUIPE" },
   ].filter((lien) => monMenu.includes(lien.ecran));
 
