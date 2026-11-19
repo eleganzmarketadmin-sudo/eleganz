@@ -2,7 +2,8 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { PrismaService } from "../prisma/prisma.service";
 import { InviteInstitutionStaffDto } from "./dto/invite-institution-staff.dto";
 import { UpdateInstitutionStaffDto } from "./dto/update-institution-staff.dto";
-import { InstitutionRole, MenuInstitution } from "@eleganz/database";
+import { InstitutionRole, MenuInstitution, UserRole } from "@eleganz/database";
+import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 const TOUS_LES_ECRANS_INSTITUTION: MenuInstitution[] = Object.values(MenuInstitution);
 
@@ -65,7 +66,7 @@ export function ecransInstitutionEffectifs(staff: { role: InstitutionRole; menuI
 export class InstitutionStaffService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async inviteStaff(institutionId: string, dto: InviteInstitutionStaffDto) {
+  async inviteStaff(institutionId: string, dto: InviteInstitutionStaffDto, actorId: string) {
     const estEmail = dto.identifier.includes("@");
     const utilisateur = await this.prisma.user.findFirst({
       where: estEmail ? { email: dto.identifier } : { phone: dto.identifier },
@@ -77,26 +78,43 @@ export class InstitutionStaffService {
     }
 
     const existing = await this.prisma.institutionStaff.findUnique({ where: { userId: utilisateur.id } });
+    let staff;
     if (existing) {
       if (existing.institutionId === institutionId) {
         if (existing.active) {
           throw new ConflictException("Cette personne fait déjà partie de votre équipe.");
         }
         // Déjà membre mais désactivé : on réactive plutôt que de dupliquer la ligne.
-        return this.prisma.institutionStaff.update({
+        staff = await this.prisma.institutionStaff.update({
           where: { id: existing.id },
           data: { active: true, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
         });
+      } else {
+        // Un compte ELEGANZ n'appartient qu'à une seule institution
+        // (InstitutionStaff.userId @unique) — contrairement à ShopStaff, qui
+        // autorise un même compte dans plusieurs équipes boutique.
+        throw new ConflictException("Ce compte fait déjà partie de l'équipe d'une autre institution.");
       }
-      // Un compte ELEGANZ n'appartient qu'à une seule institution
-      // (InstitutionStaff.userId @unique) — contrairement à ShopStaff, qui
-      // autorise un même compte dans plusieurs équipes boutique.
-      throw new ConflictException("Ce compte fait déjà partie de l'équipe d'une autre institution.");
+    } else {
+      staff = await this.prisma.institutionStaff.create({
+        data: { institutionId, userId: utilisateur.id, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
+      });
     }
 
-    return this.prisma.institutionStaff.create({
-      data: { institutionId, userId: utilisateur.id, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
-    });
+    // Même correctif que ShopsService.inviteStaff (19 nov. 2026) : sans
+    // cette promotion, la connexion à l'espace "institution" restait
+    // refusée (AuthService.login exige user.role === INSTITUTION_STAFF)
+    // malgré une ligne InstitutionStaff valide.
+    if (utilisateur.role !== UserRole.INSTITUTION_STAFF) {
+      await this.prisma.user.update({ where: { id: utilisateur.id }, data: { role: UserRole.INSTITUTION_STAFF } });
+      await enregistrerAuditLog(this.prisma, {
+        actorId,
+        action: "UTILISATEUR_PROMU_ACCES_INSTITUTION",
+        details: { userId: utilisateur.id, institutionId, ancienRole: utilisateur.role },
+      });
+    }
+
+    return staff;
   }
 
   async listStaff(institutionId: string) {
@@ -127,7 +145,7 @@ export class InstitutionStaffService {
     return { ...misAJour, menuItems: ecransInstitutionEffectifs(misAJour) };
   }
 
-  async deactivateStaff(institutionId: string, staffId: string) {
+  async deactivateStaff(institutionId: string, staffId: string, actorId: string) {
     const staff = await this.prisma.institutionStaff.findUniqueOrThrow({ where: { id: staffId } });
     if (staff.institutionId !== institutionId) {
       throw new NotFoundException("Ce membre ne fait pas partie de votre institution.");
@@ -135,6 +153,26 @@ export class InstitutionStaffService {
     if (staff.role === InstitutionRole.ADMINISTRATEUR) {
       throw new ConflictException("L'administrateur de l'institution ne peut pas être retiré.");
     }
-    return this.prisma.institutionStaff.update({ where: { id: staffId }, data: { active: false } });
+    const misAJour = await this.prisma.institutionStaff.update({
+      where: { id: staffId },
+      data: { active: false },
+    });
+
+    // Symétrique de la promotion ci-dessus (19 nov. 2026) — contrairement à
+    // ShopStaff, InstitutionStaff.userId est unique : un compte n'appartient
+    // jamais qu'à une seule institution, donc ce retrait signifie toujours
+    // qu'il n'en reste plus aucune (pas de comptage à faire, à la différence
+    // de retrograderSiPlusAucunRattachement côté boutique).
+    const utilisateur = await this.prisma.user.findUniqueOrThrow({ where: { id: staff.userId } });
+    if (utilisateur.role === UserRole.INSTITUTION_STAFF) {
+      await this.prisma.user.update({ where: { id: staff.userId }, data: { role: UserRole.BUYER } });
+      await enregistrerAuditLog(this.prisma, {
+        actorId,
+        action: "UTILISATEUR_RETROGRADE_ACHETEUR",
+        details: { userId: staff.userId, module: "institution", institutionId },
+      });
+    }
+
+    return misAJour;
   }
 }

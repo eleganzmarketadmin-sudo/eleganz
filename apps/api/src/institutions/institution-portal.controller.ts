@@ -225,8 +225,12 @@ export class InstitutionPortalController {
   @Post("staff")
   @UseGuards(InstitutionMembershipGuard)
   @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
-  inviteStaff(@CurrentInstitutionId() institutionId: string, @Body() dto: InviteInstitutionStaffDto) {
-    return this.staff.inviteStaff(institutionId, dto);
+  inviteStaff(
+    @CurrentInstitutionId() institutionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: InviteInstitutionStaffDto,
+  ) {
+    return this.staff.inviteStaff(institutionId, dto, user.id);
   }
 
   @Patch("staff/:staffId")
@@ -243,7 +247,11 @@ export class InstitutionPortalController {
   @Delete("staff/:staffId")
   @UseGuards(InstitutionMembershipGuard)
   @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
-  removeStaff(@CurrentInstitutionId() institutionId: string, @Param("staffId") staffId: string) {
-    return this.staff.deactivateStaff(institutionId, staffId);
+  removeStaff(
+    @CurrentInstitutionId() institutionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("staffId") staffId: string,
+  ) {
+    return this.staff.deactivateStaff(institutionId, staffId, user.id);
   }
 }

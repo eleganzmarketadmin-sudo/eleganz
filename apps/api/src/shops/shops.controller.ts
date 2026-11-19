@@ -145,8 +145,12 @@ export class ShopsController {
   @Post(":shopId/staff")
   @UseGuards(ShopMembershipGuard)
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
-  inviteStaff(@Param("shopId") shopId: string, @Body() dto: InviteStaffDto) {
-    return this.shopsService.inviteStaff(shopId, dto);
+  inviteStaff(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Body() dto: InviteStaffDto,
+  ) {
+    return this.shopsService.inviteStaff(shopId, dto, user.id);
   }
 
   // Modification d'un profil d'équipe déjà actif (16 oct. 2026, point 2 des
@@ -168,8 +172,12 @@ export class ShopsController {
   @Delete(":shopId/staff/:staffId")
   @UseGuards(ShopMembershipGuard)
   @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER)
-  removeStaff(@Param("shopId") shopId: string, @Param("staffId") staffId: string) {
-    return this.shopsService.deactivateStaff(shopId, staffId);
+  removeStaff(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Param("staffId") staffId: string,
+  ) {
+    return this.shopsService.deactivateStaff(shopId, staffId, user.id);
   }
 
   // Livreurs propres à la boutique (13 oct. 2026, 1ʳᵉ demande du jour) —

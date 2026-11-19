@@ -10,7 +10,7 @@ import { UpdateShopSecteurActiviteDto } from "./dto/update-shop-secteur.dto";
 import { CreerUploadDocumentIdentiteDto, SoumettreDocumentIdentiteDto } from "./dto/identity-document.dto";
 import { CreateShopDriverDto, UpdateShopDriverDto } from "./dto/shop-driver.dto";
 import { AddDeliveryZoneDto } from "./dto/add-delivery-zone.dto";
-import { MenuGestion, PlanCategory, ShopStatus, StaffRole } from "@eleganz/database";
+import { MenuGestion, PlanCategory, ShopStatus, StaffRole, UserRole } from "@eleganz/database";
 import { enregistrerAuditLog } from "../audit/audit-log.util";
 
 function slugify(name: string): string {
@@ -333,7 +333,7 @@ export class ShopsService {
    * de l'équipe (`maxEquipe`, `null` = illimité) et l'accès au rôle
    * Comptable externe (`comptableExterne`, réservé au bouquet Premium).
    */
-  async inviteStaff(shopId: string, dto: InviteStaffDto) {
+  async inviteStaff(shopId: string, dto: InviteStaffDto, actorId: string) {
     const boutique = await this.prisma.shop.findUniqueOrThrow({
       where: { id: shopId },
       select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
@@ -371,19 +371,48 @@ export class ShopsService {
     const existing = await this.prisma.shopStaff.findUnique({
       where: { shopId_userId: { shopId, userId: utilisateur.id } },
     });
+    let staff;
     if (existing) {
       if (existing.active) {
         throw new ConflictException("Cette personne fait déjà partie de l'équipe de cette boutique.");
       }
       // Déjà membre mais désactivé : on réactive plutôt que de dupliquer la ligne.
-      return this.prisma.shopStaff.update({
+      staff = await this.prisma.shopStaff.update({
         where: { id: existing.id },
         data: { active: true, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
       });
+    } else {
+      staff = await this.prisma.shopStaff.create({
+        data: { shopId, userId: utilisateur.id, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
+      });
     }
 
-    return this.prisma.shopStaff.create({
-      data: { shopId, userId: utilisateur.id, role: dto.role, menuItemsOverride: dto.menuItems ?? [] },
+    // Signalement du 19 nov. 2026 : un compte ajouté ici (même "gérant")
+    // restait bloqué DÈS LA CONNEXION à Gestion ("Ce compte n'a pas accès à
+    // ELEGANZ Gestion", voir AuthService.login) tant que son rôle GLOBAL
+    // (User.role) n'était pas aussi SHOP_OWNER/SHOP_STAFF — la ligne
+    // ShopStaff ci-dessus, seule, n'a jamais suffi. Même principe que
+    // AdminTeamService.grantAdminRole (seul chemin de promotion qui
+    // fonctionnait déjà de bout en bout) : on promeut ici explicitement,
+    // jamais automatiquement ailleurs.
+    await this.promouvoirAccesGestionSiNecessaire(utilisateur.id, utilisateur.role, actorId, shopId);
+
+    return staff;
+  }
+
+  private async promouvoirAccesGestionSiNecessaire(
+    userId: string,
+    roleActuel: UserRole,
+    actorId: string,
+    shopId: string,
+  ) {
+    if (roleActuel === UserRole.SHOP_OWNER || roleActuel === UserRole.SHOP_STAFF) return;
+    await this.prisma.user.update({ where: { id: userId }, data: { role: UserRole.SHOP_STAFF } });
+    await enregistrerAuditLog(this.prisma, {
+      actorId,
+      shopId,
+      action: "UTILISATEUR_PROMU_ACCES_GESTION",
+      details: { userId, ancienRole: roleActuel },
     });
   }
 
@@ -425,12 +454,37 @@ export class ShopsService {
     return { ...mis_a_jour, menuItems: ecransEffectifs(mis_a_jour) };
   }
 
-  async deactivateStaff(shopId: string, staffId: string) {
+  async deactivateStaff(shopId: string, staffId: string, actorId: string) {
     const staff = await this.prisma.shopStaff.findUniqueOrThrow({ where: { id: staffId } });
     if (staff.role === StaffRole.OWNER) {
       throw new ConflictException("Le propriétaire de la boutique ne peut pas être retiré.");
     }
-    return this.prisma.shopStaff.update({ where: { id: staffId }, data: { active: false } });
+    const misAJour = await this.prisma.shopStaff.update({ where: { id: staffId }, data: { active: false } });
+
+    // Symétrique de promouvoirAccesGestionSiNecessaire (19 nov. 2026) : un
+    // compte promu SHOP_STAFF uniquement par cette voie redevient BUYER dès
+    // qu'il ne reste membre actif d'AUCUNE boutique — mais jamais s'il est
+    // lui-même propriétaire d'une boutique (son rôle global serait alors
+    // SHOP_OWNER, jamais touché ici), et jamais s'il reste encore membre
+    // actif d'une AUTRE boutique (demande explicite du 19 nov. 2026 : un
+    // compte peut cumuler plusieurs équipes, ne le rétrograder que si plus
+    // aucune ne le reconnaît).
+    await this.retrograderSiPlusAucunRattachement(staff.userId, actorId);
+
+    return misAJour;
+  }
+
+  private async retrograderSiPlusAucunRattachement(userId: string, actorId: string) {
+    const utilisateur = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (utilisateur.role !== UserRole.SHOP_STAFF) return;
+    const rattachementsRestants = await this.prisma.shopStaff.count({ where: { userId, active: true } });
+    if (rattachementsRestants > 0) return;
+    await this.prisma.user.update({ where: { id: userId }, data: { role: UserRole.BUYER } });
+    await enregistrerAuditLog(this.prisma, {
+      actorId,
+      action: "UTILISATEUR_RETROGRADE_ACHETEUR",
+      details: { userId, module: "boutique" },
+    });
   }
 
   /**
