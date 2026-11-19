@@ -6,6 +6,7 @@ import { BusinessPlanService } from "./business-plan.service";
 import { FiscalRuleScope } from "@eleganz/database";
 import type { DossierCreditBoutiqueBusinessPlan } from "./finance.service";
 import { repartirFacturation } from "../billing/revenue-breakdown.util";
+import { construireClasseurExcel } from "../common/xlsx.util";
 
 export interface DossierCreditPlateforme {
   entiteNom: string;
@@ -94,6 +95,105 @@ export class AdminFinanceService {
       statut:
         "estimation à partir des opérations enregistrées — non certifié, ne remplace pas une comptabilité réglementaire",
     };
+  }
+
+  /**
+   * Rapport détaillé "Ventes Caisse" (19 nov. 2026, demande du propriétaire :
+   * "rendre ces champs également de bouton ... ça nous amène ou ouvre le
+   * rapport détaillé") — liste, pour la période demandée, les ventes Caisse
+   * (POS) qui alimentent la carte "Ventes Caisse" du Centre de pilotage
+   * (AdminCockpitService.executiveDashboard). Même filtre que cette carte
+   * (`status !== "CANCELLED"`) pour que le total affiché ici corresponde
+   * exactement à celui du tableau de bord sur la même période. Valeur des
+   * ventes des boutiques, jamais un revenu ELEGANZ (voir `dashboard`
+   * ci-dessus) — affiché ici pour la même raison que sur le tableau de bord :
+   * donner de la visibilité sur l'activité, pas prétendre que c'est un
+   * encaissement ELEGANZ.
+   */
+  async listerVentesCaisse(from: Date, to: Date) {
+    const ventes = await this.prisma.posSale.findMany({
+      where: { createdAt: { gte: from, lt: to }, status: { not: "CANCELLED" } },
+      orderBy: { createdAt: "desc" },
+      include: { shop: { select: { name: true } } },
+    });
+    const total = ventes.reduce((s, v) => s + Number(v.totalAmount), 0);
+    return {
+      periode: { from: from.toISOString(), to: to.toISOString() },
+      total,
+      lignes: ventes.map((v) => ({
+        id: v.id,
+        boutique: v.shop.name,
+        montant: Number(v.totalAmount),
+        devise: v.currency,
+        statut: v.status,
+        date: v.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  async exporterVentesCaisse(from: Date, to: Date): Promise<Buffer> {
+    const { lignes } = await this.listerVentesCaisse(from, to);
+    return construireClasseurExcel(
+      "Ventes Caisse",
+      ["Boutique", "Montant", "Devise", "Statut", "Date"],
+      lignes.map((l) => [
+        l.boutique,
+        l.montant,
+        l.devise,
+        l.statut,
+        new Intl.DateTimeFormat("fr-FR").format(new Date(l.date)),
+      ]),
+    );
+  }
+
+  /**
+   * Rapport détaillé "Commission Institutions" (19 nov. 2026, même demande
+   * que ci-dessus) — liste les prêts décaissés via le portail institutions
+   * (Loan.institutionId non nul) sur la période, avec la commission ELEGANZ
+   * figée au décaissement (Loan.institutionCommissionAmount — jamais un
+   * cycle attente/retard, voir le commentaire sur ce champ dans
+   * schema.prisma). Même filtre et même date de référence
+   * (Loan.dateObtention) que la carte "Commission Institutions" du Centre de
+   * pilotage, pour que le total corresponde.
+   */
+  async listerCommissionInstitutions(from: Date, to: Date) {
+    const prets = await this.prisma.loan.findMany({
+      where: { institutionId: { not: null }, dateObtention: { gte: from, lt: to } },
+      orderBy: { dateObtention: "desc" },
+      include: { institution: { select: { name: true } }, shop: { select: { name: true } } },
+    });
+    const total = prets.reduce((s, p) => s + Number(p.institutionCommissionAmount ?? 0), 0);
+    return {
+      periode: { from: from.toISOString(), to: to.toISOString() },
+      total,
+      lignes: prets.map((p) => ({
+        id: p.id,
+        institution: p.institution?.name ?? "",
+        boutique: p.shop?.name ?? "",
+        pret: p.label,
+        montantPret: Number(p.montant),
+        commission: Number(p.institutionCommissionAmount ?? 0),
+        devise: p.devise,
+        date: p.dateObtention.toISOString(),
+      })),
+    };
+  }
+
+  async exporterCommissionInstitutions(from: Date, to: Date): Promise<Buffer> {
+    const { lignes } = await this.listerCommissionInstitutions(from, to);
+    return construireClasseurExcel(
+      "Commission Institutions",
+      ["Institution", "Boutique emprunteuse", "Prêt", "Montant du prêt", "Commission ELEGANZ", "Devise", "Date d'obtention"],
+      lignes.map((l) => [
+        l.institution,
+        l.boutique,
+        l.pret,
+        l.montantPret,
+        l.commission,
+        l.devise,
+        new Intl.DateTimeFormat("fr-FR").format(new Date(l.date)),
+      ]),
+    );
   }
 
   /**

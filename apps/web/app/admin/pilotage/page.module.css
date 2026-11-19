@@ -123,8 +123,24 @@
 }
 
 .carteModule {
+  display: block;
   border: 2px solid var(--color-ink);
   padding: var(--espace-4);
+  /* 19 nov. 2026 : la carte devient un lien vers le rapport détaillé du
+     module (demande du propriétaire, avec capture d'écran du Centre de
+     pilotage — voir pilotage/page.tsx) — reset des styles de lien par
+     défaut + affordance visuelle au survol/focus pour signaler qu'elle est
+     cliquable. */
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.carteModule:hover,
+.carteModule:focus-visible {
+  border-color: var(--color-cobalt-texte);
+  background: var(--color-surface-muted);
 }
 
 .carteModuleEntete {

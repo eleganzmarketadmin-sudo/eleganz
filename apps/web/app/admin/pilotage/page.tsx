@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AdminShell } from "../AdminShell";
 import { StatusTag } from "../../components/StatusTag";
 import { api, ApiError } from "../../lib/api";
@@ -32,6 +33,25 @@ const CLES_MODULE: Record<ModuleRevenu["cle"], string> = {
   secourable: "admpilot_mod_secourable",
   caisse: "admpilot_mod_caisse",
   institutions: "admpilot_mod_institutions",
+};
+
+// Destination du rapport détaillé de chaque carte (demande du 19 nov. 2026,
+// avec capture d'écran de cette même section : "rendre ces [cartes]
+// également de bouton ... ça nous amène ou ouvre le rapport détaillé").
+// gestion/livreur/secourable/marketplace pointent vers les sections déjà
+// existantes de l'écran Factures (ancres + filtre ?kind= pour isoler la
+// commission Marketplace, qui partage sa table avec les abonnements
+// boutiques — voir factures/page.tsx) ; caisse/institutions n'avaient
+// aucun écran de détail, d'où les deux nouvelles pages sous
+// /admin/finance (voir ventes-caisse/page.tsx et
+// commission-institutions/page.tsx).
+const DESTINATION_MODULE: Record<ModuleRevenu["cle"], string> = {
+  gestion: "/admin/factures#section-boutiques",
+  marketplace: "/admin/factures?kind=commission#section-boutiques",
+  livreur: "/admin/factures#section-livreurs",
+  secourable: "/admin/factures#section-comptable",
+  caisse: "/admin/finance/ventes-caisse",
+  institutions: "/admin/finance/commission-institutions",
 };
 
 interface Dashboard {
@@ -277,7 +297,7 @@ function PilotageContent() {
                   : t("admfact_statutPayee")
               : t("admpilot_colEncaisse");
             return (
-              <div className={styles.carteModule} key={m.cle}>
+              <Link className={styles.carteModule} href={DESTINATION_MODULE[m.cle]} key={m.cle}>
                 <div className={styles.carteModuleEntete}>
                   <span className={styles.carteModuleTitre}>{t(CLES_MODULE[m.cle])}</span>
                   <StatusTag label={label} humeur={humeur} />
@@ -303,7 +323,7 @@ function PilotageContent() {
                   </>
                 )}
                 {m.typeRevenu === "valeur_vendeur" && <p className={styles.carteModuleNote}>{t("admpilot_noteValeurVendeur")}</p>}
-              </div>
+              </Link>
             );
           })}
         </div>

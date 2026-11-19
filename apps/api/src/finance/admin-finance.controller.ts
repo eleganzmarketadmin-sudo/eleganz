@@ -390,6 +390,56 @@ export class AdminFinanceController {
     return this.adminFinanceService.dashboard(fromDate, toDate);
   }
 
+  // Rapports détaillés "Ventes Caisse" / "Commission Institutions" (19 nov.
+  // 2026, demande du propriétaire : rendre cliquables les cartes de revenu
+  // du Centre de pilotage pour ouvrir leur rapport détaillé). Mêmes filtres
+  // que les cartes correspondantes (AdminCockpitService.executiveDashboard),
+  // avec filtre de période ici (absent sur la carte, qui montre un total
+  // depuis toujours).
+  @Get("ventes-caisse")
+  ventesCaisse(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.adminFinanceService.listerVentesCaisse(fromDate, toDate);
+  }
+
+  @Get("export/ventes-caisse")
+  async exportVentesCaisse(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    const buffer = await this.adminFinanceService.exporterVentesCaisse(fromDate, toDate);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="ventes-caisse-eleganz.xlsx"`);
+    return res.send(buffer);
+  }
+
+  @Get("commission-institutions")
+  commissionInstitutions(@CurrentUser() user: AuthenticatedUser, @Query("from") from?: string, @Query("to") to?: string) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    return this.adminFinanceService.listerCommissionInstitutions(fromDate, toDate);
+  }
+
+  @Get("export/commission-institutions")
+  async exportCommissionInstitutions(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    requireAdmin(user);
+    const { fromDate, toDate } = this.periode(from, to);
+    const buffer = await this.adminFinanceService.exporterCommissionInstitutions(fromDate, toDate);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="commission-institutions-eleganz.xlsx"`);
+    return res.send(buffer);
+  }
+
   // Dossier de crédit d'ELEGANZ elle-même (demande du 16 oct. 2026, point 2)
   // — pendant plateforme du dossier crédit boutique. Jamais persisté,
   // toujours recalculé depuis les écritures réelles (scope PLATFORM).

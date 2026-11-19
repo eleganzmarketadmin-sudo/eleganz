@@ -35,6 +35,12 @@ const ONGLETS = [
   { href: "/admin/finance/charges", cle: "admfinnav_charges" },
   // Ajout du 19 oct. 2026 — prêts réellement obtenus par ELEGANZ.
   { href: "/admin/finance/prets", cle: "admfinnav_prets" },
+  // Ajouts du 19 nov. 2026 (demande : rendre cliquables les cartes "Ventes
+  // Caisse" et "Commission Institutions" du Centre de pilotage vers un
+  // rapport détaillé) — onglets pour y revenir sans repasser par le
+  // pilotage.
+  { href: "/admin/finance/ventes-caisse", cle: "admfinnav_ventesCaisse" },
+  { href: "/admin/finance/commission-institutions", cle: "admfinnav_commissionInstitutions" },
 ];
 
 export function AdminFinanceSubNav() {

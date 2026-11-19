@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney, formatDate } from "../../lib/money";
@@ -369,6 +371,14 @@ function DemandesReactivation({
 
 function FacturesContent() {
   const { t } = useLocale();
+  // Filtre optionnel "?kind=commission" (19 nov. 2026, demande du
+  // propriétaire : la carte "Commission Marketplace" du Centre de pilotage
+  // doit amener directement à SES factures, pas au mélange complet des
+  // factures boutiques). Absent = comportement inchangé (tout affiché),
+  // comme avant cette demande — seul un lien qui porte explicitement ce
+  // paramètre restreint la liste.
+  const searchParams = useSearchParams();
+  const filtreKind = searchParams.get("kind");
   const [factures, setFactures] = useState<Facture[]>([]);
   const [facturesLivreurs, setFacturesLivreurs] = useState<FactureLivreur[]>([]);
   const [facturesComptable, setFacturesComptable] = useState<FactureComptable[]>([]);
@@ -449,8 +459,9 @@ function FacturesContent() {
 
   if (chargement) return <p>{t("admfact_chargementFactures")}</p>;
 
-  const enAttente = factures.filter((f) => f.status === "PENDING");
-  const autres = factures.filter((f) => f.status !== "PENDING");
+  const facturesBoutiquesFiltrees = filtreKind ? factures.filter((f) => f.kind === filtreKind) : factures;
+  const enAttente = facturesBoutiquesFiltrees.filter((f) => f.status === "PENDING");
+  const autres = facturesBoutiquesFiltrees.filter((f) => f.status !== "PENDING");
   const livreursEnAttente = facturesLivreurs.filter((f) => f.status === "PENDING");
   const livreursHistorique = facturesLivreurs.filter((f) => f.status !== "PENDING");
   const comptableEnAttente = facturesComptable.filter((f) => f.status === "PENDING");
@@ -517,7 +528,15 @@ function FacturesContent() {
         onChange={toutRecharger}
       />
 
-      <h2 className={styles.sectionTitre}>{t("admfact_enAttentePaiement")}</h2>
+      <h2 id="section-boutiques" className={styles.sectionTitre}>
+        {t("admfact_enAttentePaiement")}
+      </h2>
+      {filtreKind && (
+        <p className={styles.messageVide}>
+          {t("admfact_filtreKindActif")} « {filtreKind} » —{" "}
+          <Link href="/admin/factures#section-boutiques">{t("admfact_filtreKindRetirer")}</Link>
+        </p>
+      )}
       <ListeFactures
         basePath="/admin/billing"
         enAttente={enAttente}
@@ -529,7 +548,9 @@ function FacturesContent() {
         onChange={toutRecharger}
       />
 
-      <h2 className={styles.sectionTitre}>{t("admfact_facturesLivreurs")}</h2>
+      <h2 id="section-livreurs" className={styles.sectionTitre}>
+        {t("admfact_facturesLivreurs")}
+      </h2>
       <ListeFactures
         basePath="/admin/driver-billing"
         enAttente={livreursEnAttente}
@@ -541,7 +562,9 @@ function FacturesContent() {
         onChange={toutRecharger}
       />
 
-      <h2 className={styles.sectionTitre}>{t("admfact_facturesSecourable")}</h2>
+      <h2 id="section-comptable" className={styles.sectionTitre}>
+        {t("admfact_facturesSecourable")}
+      </h2>
       <ListeFactures
         basePath="/admin/comptable"
         enAttente={comptableEnAttente}
@@ -558,8 +581,10 @@ function FacturesContent() {
 
 export default function AdminFacturesPage() {
   return (
-    <AdminShell>
-      <FacturesContent />
-    </AdminShell>
+    <Suspense fallback={null}>
+      <AdminShell>
+        <FacturesContent />
+      </AdminShell>
+    </Suspense>
   );
 }
