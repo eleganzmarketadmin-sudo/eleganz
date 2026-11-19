@@ -22,6 +22,10 @@ const GESTION_COURANTE = [
   { href: "/finance", label: "Tableau de bord" },
   { href: "/finance/charges", label: "Charges" },
   { href: "/finance/creances-dettes", label: "Créances & dettes" },
+  // Rapport clients (19 nov. 2026, demande : "ajouter un report de
+  // shopcustomer... dans la boutique") — vue complémentaire à Créances &
+  // dettes : total des achats, nombre de ventes, dernier achat, par client.
+  { href: "/finance/clients", label: "Rapport clients" },
   { href: "/finance/tresorerie", label: "Trésorerie" },
   { href: "/finance/stock", label: "Stock & CMV" },
   // Dossier de crédit (demande du 16 oct. 2026, point 1) — états financiers,

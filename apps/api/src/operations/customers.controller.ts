@@ -14,6 +14,14 @@ export class CustomersController {
     return this.customersService.list(shopId);
   }
 
+  // Route statique déclarée avant toute route avec paramètre dynamique du
+  // même préfixe (ici aucune actuellement, mais ordre gardé par prudence) —
+  // voir CustomersService.rapport pour le détail de l'agrégat.
+  @Get("rapport")
+  rapport(@Param("shopId") shopId: string) {
+    return this.customersService.rapport(shopId);
+  }
+
   @Post()
   create(@Param("shopId") shopId: string, @Body() dto: CreateCustomerDto) {
     return this.customersService.create(shopId, dto);

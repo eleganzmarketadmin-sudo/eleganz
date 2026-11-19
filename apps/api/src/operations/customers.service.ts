@@ -17,6 +17,69 @@ export class CustomersService {
   }
 
   /**
+   * Rapport clients (19 nov. 2026, demande : "ajouter un report de
+   * shopcustomer... dans la boutique") — contrairement à `list()` ci-dessus
+   * (utilisé par Créances & dettes, qui n'a besoin que du solde), cette
+   * méthode enrichit chaque fiche avec le total des achats, le nombre de
+   * ventes et la date du dernier achat, calculés depuis `PosSale` plutôt que
+   * stockés sur `ShopCustomer` (pas de duplication de données qui pourrait
+   * se désynchroniser).
+   *
+   * Groupé par devise en plus du client : une boutique facture en USD et/ou
+   * en CDF (`PosSale.currency`), et additionner les deux donnerait un total
+   * sans signification. Seules les ventes `COMPLETED` comptent — une vente
+   * annulée ou retournée n'est pas un achat réel du client.
+   */
+  async rapport(shopId: string) {
+    const clients = await this.prisma.shopCustomer.findMany({
+      where: { shopId },
+      orderBy: { fullName: "asc" },
+    });
+    if (clients.length === 0) return [];
+
+    const agregats = await this.prisma.posSale.groupBy({
+      by: ["customerId", "currency"],
+      where: { shopId, customerId: { not: null }, status: "COMPLETED" },
+      _sum: { totalAmount: true },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+
+    const parClient = new Map<
+      string,
+      { nombreVentes: number; dernierAchatAt: Date | null; totalAchats: { currency: string; montant: number }[] }
+    >();
+    for (const a of agregats) {
+      if (!a.customerId) continue;
+      const entree = parClient.get(a.customerId) ?? {
+        nombreVentes: 0,
+        dernierAchatAt: null as Date | null,
+        totalAchats: [] as { currency: string; montant: number }[],
+      };
+      entree.nombreVentes += a._count._all;
+      const dernier = a._max.createdAt;
+      if (dernier && (!entree.dernierAchatAt || dernier > entree.dernierAchatAt)) {
+        entree.dernierAchatAt = dernier;
+      }
+      entree.totalAchats.push({ currency: a.currency, montant: Number(a._sum.totalAmount ?? 0) });
+      parClient.set(a.customerId, entree);
+    }
+
+    return clients.map((c) => {
+      const agg = parClient.get(c.id);
+      return {
+        id: c.id,
+        fullName: c.fullName,
+        phone: c.phone,
+        creditBalance: Number(c.creditBalance),
+        nombreVentes: agg?.nombreVentes ?? 0,
+        dernierAchatAt: agg?.dernierAchatAt ?? null,
+        totalAchats: agg?.totalAchats ?? [],
+      };
+    });
+  }
+
+  /**
    * Vente à crédit : augmente la créance du client plutôt que d'être
    * comptée comme un encaissement (complément stratégique §9 — « les
    * créances doivent rester séparées des encaissements effectivement reçus »).
