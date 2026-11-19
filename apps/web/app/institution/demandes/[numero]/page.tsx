@@ -25,8 +25,13 @@ interface SnapshotDossierCredit {
   // autonome" Phase 4, volet KYC) — purement déclaratif, jamais vérifié ni
   // authentifié par ELEGANZ ; fourni pour la propre vérification
   // réglementaire de l'institution. Figé au moment de la soumission, comme
-  // le reste du snapshot.
-  documentsIdentite: { type: string; fileUrl: string; uploadedAt: string }[];
+  // le reste du snapshot. Optionnel : un snapshot figé AVANT l'ajout de ce
+  // champ (candidatures soumises avant le 18 nov. 2026, ex. CR-2026-000001)
+  // n'a tout simplement pas cette clé dans son JSON — jamais un tableau
+  // vide, absent. Un accès direct à `.length` plante donc dessus (bug
+  // signalé le 19 nov. 2026) ; toujours vérifier la présence avant la
+  // longueur, comme demande-credit-pdf-renderer.ts le fait déjà.
+  documentsIdentite?: { type: string; fileUrl: string; uploadedAt: string }[];
   historiqueMensuel: { mois: string; chiffreAffaires: number; charges: number; resultatNet: number }[];
   bilan: { totalActif: number; totalPassif: number; equilibre: boolean };
   compteDeResultat: { resultatNetAvantImpot: number };
@@ -334,7 +339,7 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
                 <td>{t(`secteur_${snapshot.secteurActivite}`)}</td>
               </tr>
             )}
-            {snapshot && snapshot.documentsIdentite.length > 0 && (
+            {snapshot && snapshot.documentsIdentite && snapshot.documentsIdentite.length > 0 && (
               <tr>
                 <td>{t("kyc_documentsLabel")}</td>
                 <td>
@@ -388,7 +393,7 @@ function DemandeDetailContenu({ numero }: { numero: string }) {
             {t("inst_garantieNoteInstitution")}
           </p>
         )}
-        {snapshot && snapshot.documentsIdentite.length > 0 && (
+        {snapshot && snapshot.documentsIdentite && snapshot.documentsIdentite.length > 0 && (
           <p style={{ color: "var(--color-texte-muted)", fontSize: "0.75rem", marginTop: "var(--espace-2)" }}>
             {t("kyc_documentsNoteInstitution")}
           </p>
