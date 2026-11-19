@@ -9,7 +9,7 @@ import { PrixPromo, RubanPromo, RubanNouveau } from "../../../components/PrixPro
 import { ChampQuantite } from "../../../components/ChampQuantite";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
-import { formatMoney } from "../../../lib/money";
+import { useDisplayCurrency } from "../../../lib/display-currency";
 import { prixUnitaireEffectif } from "../../../lib/price-tiers";
 import styles from "./page.module.css";
 
@@ -55,6 +55,7 @@ interface Produit {
 export default function ProduitClient({ id }: { id: string }) {
   const { ajouter } = useCart();
   const { t } = useLocale();
+  const { formaterDansDeviseAffichage } = useDisplayCurrency();
   const [produit, setProduit] = useState<Produit | null>(null);
   const [varianteId, setVarianteId] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -174,7 +175,8 @@ export default function ProduitClient({ id }: { id: string }) {
             <li style={{ fontWeight: 600, color: "inherit", marginBottom: "4px" }}>{t("market_prixDeGrosTitre")}</li>
             {variante.priceTiers.map((palier) => (
               <li key={palier.minQuantity}>
-                {t("cat_aPartirDe")} {palier.minQuantity} {t("cat_pieces")} : {formatMoney(Number(palier.unitPrice), variante.currency)} {t("cat_parUnite")}
+                {t("cat_aPartirDe")} {palier.minQuantity} {t("cat_pieces")} :{" "}
+                {formaterDansDeviseAffichage(Number(palier.unitPrice), variante.currency)} {t("cat_parUnite")}
               </li>
             ))}
           </ul>

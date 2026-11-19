@@ -1,6 +1,7 @@
 "use client";
 
-import { formatMoney, pourcentageRemise } from "../lib/money";
+import { pourcentageRemise } from "../lib/money";
+import { useDisplayCurrency } from "../lib/display-currency";
 import { useLocale } from "../lib/i18n/LocaleContext";
 
 /**
@@ -28,19 +29,26 @@ export function PrixPromo({
   taille?: "normale" | "petite";
 }) {
   const { t } = useLocale();
+  // Devise d'affichage (19 nov. 2026, demande du propriétaire, point 3) —
+  // ces prix de catalogue sont le premier écran converti dans la devise
+  // choisie par la personne (ou le défaut plateforme) ; voir
+  // lib/display-currency.tsx. `currency` reste la devise RÉELLE de la
+  // variante (celle réellement facturée) — formaterDansDeviseAffichage ne
+  // fait que convertir l'AFFICHAGE, jamais la vente elle-même.
+  const { formaterDansDeviseAffichage } = useDisplayCurrency();
   const remise = pourcentageRemise(sellPrice, compareAtPrice);
   const tailleBadge = taille === "petite" ? "0.7rem" : "0.8rem";
   const tailleBarre = taille === "petite" ? "0.85rem" : "1rem";
 
   if (remise == null) {
-    return <>{formatMoney(sellPrice, currency)}</>;
+    return <>{formaterDansDeviseAffichage(sellPrice, currency)}</>;
   }
 
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-      <span>{formatMoney(sellPrice, currency)}</span>
+      <span>{formaterDansDeviseAffichage(sellPrice, currency)}</span>
       <span style={{ textDecoration: "line-through", opacity: 0.6, fontSize: tailleBarre }}>
-        {formatMoney(Number(compareAtPrice), currency)}
+        {formaterDansDeviseAffichage(Number(compareAtPrice), currency)}
       </span>
       <span
         style={{

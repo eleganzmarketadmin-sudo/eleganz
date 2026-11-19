@@ -122,6 +122,7 @@ export class AdminSettingsService {
         ...(dto.notificationsWhatsappEnabled !== undefined && {
           notificationsWhatsappEnabled: dto.notificationsWhatsappEnabled,
         }),
+        ...(dto.defaultDisplayCurrency !== undefined && { defaultDisplayCurrency: dto.defaultDisplayCurrency }),
       },
     });
   }
@@ -251,6 +252,10 @@ export class AdminSettingsService {
     return {
       cdfPerUsd: settings.cdfPerUsd,
       updatedAt: settings.exchangeRateUpdatedAt,
+      // Devise d'affichage par défaut (19 nov. 2026) — regroupée ici plutôt
+      // que sur une route publique séparée : c'est déjà l'endpoint que tout
+      // écran lit pour afficher un montant, voir display-currency.tsx.
+      defaultDisplayCurrency: settings.defaultDisplayCurrency,
     };
   }
 

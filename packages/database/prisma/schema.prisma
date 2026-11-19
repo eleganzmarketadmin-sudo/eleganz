@@ -75,6 +75,14 @@ model PlatformSettings {
   cdfPerUsd             Decimal?  @db.Decimal(14, 4)
   exchangeRateUpdatedAt DateTime?
 
+  // Devise d'affichage par défaut de toute la plateforme (19 nov. 2026,
+  // demande du propriétaire) — le repli quand un utilisateur (acheteur,
+  // boutique, admin...) n'a pas encore choisi sa propre préférence
+  // (stockée côté navigateur, voir apps/web/app/lib/display-currency.tsx).
+  // Affichage uniquement : ne convertit ni ne modifie jamais un montant
+  // déjà enregistré, même principe que cdfPerUsd ci-dessus.
+  defaultDisplayCurrency String @default("USD")
+
   // Taux de commission (%) par défaut sur les transactions ELEGANZ Market,
   // utilisé quand le bouquet Marketplace de la boutique n'en définit pas un
   // lui-même (14 oct. 2026, plan commercial). Nullable : tant qu'il est

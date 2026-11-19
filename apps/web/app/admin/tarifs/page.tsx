@@ -1215,9 +1215,21 @@ function TauxChangeSection() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  // Devise d'affichage par défaut (19 nov. 2026, demande du propriétaire,
+  // point 3) — repli utilisé par tout navigateur n'ayant pas enregistré sa
+  // propre préférence (voir apps/web/app/lib/display-currency.tsx). Section
+  // distincte du taux lui-même (états/actions séparés), mais regroupée dans
+  // le même écran puisque les deux réglages concernent la même thématique
+  // "devise" du Centre de pilotage.
+  const [deviseDefaut, setDeviseDefaut] = useState<"USD" | "CDF">("USD");
+  const [enCoursDevise, setEnCoursDevise] = useState(false);
+  const [messageDevise, setMessageDevise] = useState<string | null>(null);
+
   function recharger() {
     Promise.all([
-      api.get<{ cdfPerUsd: string | null; exchangeRateUpdatedAt: string | null }>("/admin/platform-settings"),
+      api.get<{ cdfPerUsd: string | null; exchangeRateUpdatedAt: string | null; defaultDisplayCurrency?: string }>(
+        "/admin/platform-settings",
+      ),
       api.get<TauxChangeHistorique[]>("/admin/platform-settings/exchange-rate-history"),
     ])
       .then(([s, h]) => {
@@ -1225,6 +1237,9 @@ function TauxChangeSection() {
         setMisAJourLe(s.exchangeRateUpdatedAt);
         setSaisie(s.cdfPerUsd ?? "");
         setHistorique(h);
+        if (s.defaultDisplayCurrency === "USD" || s.defaultDisplayCurrency === "CDF") {
+          setDeviseDefaut(s.defaultDisplayCurrency);
+        }
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
@@ -1248,6 +1263,20 @@ function TauxChangeSection() {
       setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
     } finally {
       setEnCours(false);
+    }
+  }
+
+  async function enregistrerDeviseDefaut() {
+    setEnCoursDevise(true);
+    setErreur(null);
+    setMessageDevise(null);
+    try {
+      await api.patch("/admin/platform-settings", { defaultDisplayCurrency: deviseDefaut });
+      setMessageDevise(t("admtarifs_taux_deviseEnregistree"));
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
+    } finally {
+      setEnCoursDevise(false);
     }
   }
 
@@ -1302,6 +1331,28 @@ function TauxChangeSection() {
           </ul>
         </details>
       )}
+      <hr style={{ margin: "16px", border: 0, borderTop: "1px solid var(--color-border)" }} />
+      <div className={styles.planEntete}>
+        <span className={styles.planNom}>{t("admtarifs_taux_deviseParDefaut")}</span>
+      </div>
+      <p style={{ padding: "0 16px", fontSize: "0.875rem", color: "var(--color-texte-muted)" }}>
+        {t("admtarifs_taux_deviseNote")}
+      </p>
+      {messageDevise && <p style={{ padding: "0 16px", color: "var(--color-vert-paiement)" }}>{messageDevise}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.champ}>
+          <span>{t("admtarifs_taux_deviseParDefaut")}</span>
+          <select value={deviseDefaut} onChange={(e) => setDeviseDefaut(e.target.value as "USD" | "CDF")}>
+            <option value="USD">USD ($)</option>
+            <option value="CDF">CDF (FC)</option>
+          </select>
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCoursDevise} onClick={enregistrerDeviseDefaut}>
+          {t("admtarifs_taux_enregistrerDevise")}
+        </button>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { api, getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { CurrencySwitcher } from "../components/CurrencySwitcher";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
@@ -141,6 +142,7 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
             <AccueilLien />
             <NotificationBell />
             <LanguageSwitcher />
+            <CurrencySwitcher />
             <ThemeToggle clair />
             <button
               className={styles.deconnexion}

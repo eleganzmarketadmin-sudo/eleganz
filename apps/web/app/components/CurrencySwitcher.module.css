@@ -1,0 +1,13 @@
+/* Même gabarit que LanguageSwitcher.module.css (lib/i18n/) : `color: inherit`
+   + `border: 1px solid currentColor` pour que ce sélecteur s'intègre, sans
+   prop "clair" à gérer, dans chaque en-tête où il apparaît (fond clair ou
+   bandeau sombre). */
+.select {
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  padding: var(--espace-1) var(--espace-2);
+  min-height: 36px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}

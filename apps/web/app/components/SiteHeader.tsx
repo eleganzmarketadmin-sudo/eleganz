@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoMark, BandeMarque } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 import { ModulesMenu } from "./ModulesMenu";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useLocale } from "../lib/i18n/LocaleContext";
@@ -48,6 +49,7 @@ export function SiteHeader() {
         </Link>
         <div className={styles.actions}>
           <LanguageSwitcher />
+          <CurrencySwitcher />
           <ThemeToggle />
           {/* Signalement du 11 nov. 2026 : ce bouton menait tout droit à la
               connexion Gestion (/connexion), le seul des quatre modules —

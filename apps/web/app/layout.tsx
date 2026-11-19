@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { fraunces, plexMono, plexSans } from "./fonts";
 import { AuthProvider } from "./lib/auth";
 import { ExchangeRateProvider } from "./lib/exchange-rate";
+import { DisplayCurrencyProvider } from "./lib/display-currency";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import { ChunkErrorRecovery } from "./components/ChunkErrorRecovery";
 import { SCRIPT_INIT_THEME } from "./components/ThemeToggle";
@@ -63,7 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ChunkErrorRecovery />
         <LocaleProvider>
           <AuthProvider>
-            <ExchangeRateProvider>{children}</ExchangeRateProvider>
+            <ExchangeRateProvider>
+              <DisplayCurrencyProvider>{children}</DisplayCurrencyProvider>
+            </ExchangeRateProvider>
           </AuthProvider>
         </LocaleProvider>
       </body>

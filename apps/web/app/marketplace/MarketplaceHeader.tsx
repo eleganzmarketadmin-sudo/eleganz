@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart-context";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { CurrencySwitcher } from "../components/CurrencySwitcher";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { NotificationBell } from "../components/NotificationBell";
 import { AccueilLien } from "../components/AccueilLien";
@@ -122,6 +123,7 @@ export function MarketplaceHeader() {
           <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>
           <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
           <LanguageSwitcher />
+          <CurrencySwitcher />
           <ThemeToggle clair />
           <Link href="/marketplace/panier" className={styles.panier} aria-label={t("nav_panier")}>
             <span aria-hidden="true">🛒</span>

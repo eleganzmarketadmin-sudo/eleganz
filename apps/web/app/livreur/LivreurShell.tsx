@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { CurrencySwitcher } from "../components/CurrencySwitcher";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
@@ -76,6 +77,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
             <AccueilLien />
             <NotificationBell />
             <LanguageSwitcher />
+            <CurrencySwitcher />
             <ThemeToggle clair />
             <button
               className={styles.deconnexion}

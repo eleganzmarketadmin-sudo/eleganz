@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MaxLength } from "class-validator";
 
 /**
  * Coordonnées officielles de la plateforme ELEGANZ, modifiables depuis le
@@ -249,4 +249,15 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsBoolean()
   notificationsWhatsappEnabled?: boolean;
+
+  // Devise d'affichage par défaut (19 nov. 2026, demande du propriétaire :
+  // "donner la possibilité de choisir [...] le choix de la devise à
+  // afficher par défaut au niveau du centre de pilotage") — n'affecte
+  // jamais un montant déjà enregistré, seulement comment il est PRÉSENTÉ ;
+  // chaque utilisateur peut la remplacer par sa propre préférence (voir
+  // apps/web/app/lib/display-currency.tsx), ceci n'est que le repli quand
+  // aucune préférence personnelle n'est enregistrée.
+  @IsOptional()
+  @IsIn(["USD", "CDF"])
+  defaultDisplayCurrency?: string;
 }

@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
 import { useOfflineSync } from "../lib/offline-sync";
 import { ThemeToggle } from "./ThemeToggle";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 import { LogoMark, BandeMarque } from "./Logo";
 import { Footer } from "./Footer";
 import { NotificationBell } from "./NotificationBell";
@@ -112,6 +113,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
             )}
             <NotificationBell />
             <LanguageSwitcher />
+            <CurrencySwitcher />
             <ThemeToggle clair />
             <button
               className={styles.deconnexion}
