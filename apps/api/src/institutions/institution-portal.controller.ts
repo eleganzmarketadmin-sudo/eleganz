@@ -161,7 +161,12 @@ export class InstitutionPortalController {
   async rapportPortefeuilleExportExcel(@CurrentInstitutionId() institutionId: string, @Res() res: Response) {
     const rapport = await this.rapports.rapport(institutionId);
     const entetes = ["Classification", "Nombre de prêts", "Solde restant", "Provision requise"];
-    const lignes = (["SAIN", "SOUS_SURVEILLANCE", "DOUTEUX", "COMPROMIS"] as const).map((cle) => {
+    // Typé explicitement comme attendu par construireClasseurExcel — sans
+    // ça, TypeScript infère le type des lignes depuis le seul .map()
+    // ci-dessous (uniquement string|number, jamais null), et refuse ensuite
+    // les lignes de synthèse poussées plus bas (tauxDefautCapital/Nombre
+    // sont number|null, voir RapportPortefeuilleService).
+    const lignes: (string | number | null | undefined)[][] = (["SAIN", "SOUS_SURVEILLANCE", "DOUTEUX", "COMPROMIS"] as const).map((cle) => {
       const ligne = rapport.ventilationRisque[cle];
       return [cle, ligne.nombre, ligne.soldeRestant, ligne.provisionRequise];
     });
