@@ -292,16 +292,20 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
   doc.fillColor("#000");
 
   // Code-barres + QR code (19 nov. 2026, demande : "voir la possibilité d'un
-  // qr code/code barre"). `{ x }` sans 3e argument positionnel laisse
-  // pdfkit en mode "flux" : il centre l'image à l'abscisse donnée ET avance
-  // `doc.y` de la hauteur réellement dessinée — contrairement au logo
-  // ci-dessus, positionné en absolu (voir son commentaire), on ne veut
-  // jamais ici qu'un bloc suivant chevauche visuellement ces images.
+  // qr code/code barre"). `y` explicitement `undefined` (3e argument
+  // positionnel) plutôt qu'omis : `@types/pdfkit` ne déclare `x`/`y` que sur
+  // cette surcharge positionnelle, pas dans `ImageOption` (qui existe
+  // pourtant bel et bien à l'exécution — voir pdfkit.js, fonction `image`) ;
+  // passer `undefined` satisfait le typage ET laisse pdfkit en mode "flux"
+  // (`inDocumentFlow = typeof y !== "number"`), qui avance `doc.y` de la
+  // hauteur réellement dessinée — contrairement au logo ci-dessus, positionné
+  // en absolu (voir son commentaire), on ne veut jamais ici qu'un bloc
+  // suivant chevauche visuellement ces images.
   if (donnees.barcode) {
     try {
       doc.moveDown(0.5);
       const largeurCode = LARGEUR_TICKET - MARGE * 2;
-      doc.image(donnees.barcode, { x: MARGE, width: largeurCode });
+      doc.image(donnees.barcode, MARGE, undefined, { width: largeurCode });
     } catch {
       // Code-barres illisible (buffer corrompu...) — jamais bloquant.
     }
@@ -310,7 +314,7 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
     try {
       doc.moveDown(0.3);
       const largeurQr = 72;
-      doc.image(donnees.qrCode, { x: (LARGEUR_TICKET - largeurQr) / 2, width: largeurQr });
+      doc.image(donnees.qrCode, (LARGEUR_TICKET - largeurQr) / 2, undefined, { width: largeurQr });
       doc.moveDown(0.15);
       doc
         .font("Helvetica")
