@@ -74,13 +74,20 @@
      du cobalt brut en luminosité) ; --color-cobalt-texte reste lisible
      dans les deux modes. */
   border-bottom: 2px solid var(--color-cobalt-texte);
-  overflow-x: auto;
-  /* 20 oct. 2026 (menu qui déborde sur petit écran) : avec 12 onglets, la
-     barre dépasse toujours la largeur d'un téléphone — on ne peut pas tous
-     les faire rentrer, donc on rend le défilement horizontal évident
-     (scrollbar fine mais visible, inertie tactile) plutôt que silencieux. */
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  /* 19 nov. 2026 (signalement : "les menus regroupés ne déroulent pas au
+     clic") — cette règle était `overflow-x: auto` (+ défilement tactile,
+     ajoutée le 20 oct. 2026 pour les 12 onglets qui débordaient toujours
+     sur téléphone). Piège CSS : `overflow-x` à une valeur autre que
+     `visible` force le navigateur à calculer `overflow-y` à la même valeur
+     (ici implicitement `auto`), donc ce conteneur rognait tout panneau de
+     DropdownNavGroup qui dépasse sous la ligne d'onglets — le menu s'ouvrait
+     bien (aria-expanded bascule) mais le panneau restait invisible, caché
+     par le contenu de la page (voir AdminShell.module.css, même correctif,
+     même cause). Les 12 onglets sont désormais regroupés en 7 entrées max,
+     donc le débordement d'origine ne se produit plus dans la pratique ;
+     `flex-wrap` prend le relais pour les cas résiduels sans jamais créer de
+     boîte `overflow` qui romprait les panneaux déroulants. */
+  flex-wrap: wrap;
 }
 
 .navLien {

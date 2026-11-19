@@ -55,10 +55,20 @@
   display: flex;
   background: var(--color-surface);
   border-bottom: 2px solid var(--color-or);
-  /* 13 liens ne tiennent pas toujours sur une largeur d'écran réduite —
-     sans ceci, ils débordaient du conteneur flex sans barre de défilement
-     visible, laissant une zone vide (bug remonté le 15 oct. 2026). */
-  overflow-x: auto;
+  /* 19 nov. 2026 (signalement : "les menus regroupés ne déroulent pas au
+     clic") — cette règle était `overflow-x: auto` (ajoutée le 15 oct. 2026
+     pour les 19 onglets à plat qui débordaient du conteneur flex). Piège
+     CSS : `overflow-x` à une valeur autre que `visible` force le navigateur
+     à calculer `overflow-y` à la même valeur (ici implicitement `auto`),
+     donc CE conteneur rognait tout panneau de DropdownNavGroup qui dépasse
+     sous la ligne d'onglets — le menu s'ouvrait bien (aria-expanded
+     bascule) mais le panneau restait invisible, caché par le contenu de la
+     page. Les 19 onglets sont désormais regroupés en 7 entrées max, donc le
+     débordement horizontal d'origine ne se produit plus dans la pratique ;
+     `flex-wrap` prend le relais pour les cas résiduels (petit écran, rôle
+     avec libellés longs) sans jamais créer de boîte `overflow` qui romprait
+     les panneaux déroulants. */
+  flex-wrap: wrap;
 }
 
 .navLien {
