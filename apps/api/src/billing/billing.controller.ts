@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { BillingService } from "./billing.service";
+import { LoansService } from "../finance/loans.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -20,7 +21,10 @@ function requireAdmin(user: AuthenticatedUser, menu: MenuAdmin) {
 
 @Controller()
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(
+    private readonly billingService: BillingService,
+    private readonly loansService: LoansService,
+  ) {}
 
   @Get("shops/:shopId/invoices")
   @UseGuards(JwtAuthGuard, ShopMembershipGuard)
@@ -125,6 +129,28 @@ export class BillingController {
   ) {
     requireAdmin(user, MenuAdmin.FACTURES);
     return this.billingService.validerReactivation(requestId, dto.decision, user.id, dto.note);
+  }
+
+  // --- Factures de commission institution (19 nov. 2026, demande du
+  // propriétaire : "les commissions facturées aux institutions doivent
+  // figurer dans les factures du module admin et non dans finances") — même
+  // garde FACTURES que le reste de cet écran, mais SANS relances/preuves/
+  // réactivation : décision explicite du propriétaire, une institution
+  // partenaire n'est pas une boutique sous contrat de facturation. Voir
+  // LoansService.listInstitutionInvoices/markInstitutionInvoicePaid.
+
+  @Get("admin/billing/institution-invoices")
+  @UseGuards(JwtAuthGuard)
+  listInstitutionInvoices(@CurrentUser() user: AuthenticatedUser) {
+    requireAdmin(user, MenuAdmin.FACTURES);
+    return this.loansService.listInstitutionInvoices();
+  }
+
+  @Post("admin/billing/institution-invoices/:invoiceId/mark-paid")
+  @UseGuards(JwtAuthGuard)
+  markInstitutionInvoicePaid(@CurrentUser() user: AuthenticatedUser, @Param("invoiceId") invoiceId: string) {
+    requireAdmin(user, MenuAdmin.FACTURES);
+    return this.loansService.markInstitutionInvoicePaid(invoiceId, user.id);
   }
 
   // Dépôt de preuve de paiement par la boutique elle-même — accessible

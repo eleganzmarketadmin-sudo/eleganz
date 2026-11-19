@@ -2590,7 +2590,44 @@ model Loan {
   // prochainEcheanceAttendueLe).
   provisionRequise           Decimal?                 @db.Decimal(14, 2)
 
+  institutionInvoice InstitutionInvoice?
+
   @@index([scope, shopId])
+}
+
+// Facture de commission ELEGANZ envoyée à l'institution (19 nov. 2026,
+// demande du propriétaire : "les commissions facturées aux institutions
+// doivent figurer dans les factures du module admin et non dans finances").
+// Créée automatiquement au décaissement d'un prêt facilité par une
+// institution (LoansService.obtenirPretViaDecision), dès que
+// Loan.institutionCommissionAmount est renseigné — une seule par prêt
+// (`loanId` unique). Réglée aujourd'hui par virement bancaire suivi
+// manuellement par un admin (bouton "marquer payée" sur l'écran Factures,
+// comme pour les boutiques/livreurs/comptable), PAS par une déduction
+// automatique sur le prêt décaissé. À la différence de ces trois autres
+// domaines, décision explicite du propriétaire : AUCUN moteur de
+// relances/pénalité/suspension ne s'applique ici — une institution est un
+// partenaire financier, pas une boutique sous contrat de facturation, et
+// ELEGANZ ne peut pas la "suspendre" de la même façon. `status` reste donc
+// une String simple comme Invoice/DriverInvoice/ComptableInvoice (jamais un
+// enum fermé) mais sans reminderStage/penaltyAmount : seuls PENDING et PAID
+// existent, "en retard" n'est qu'un affichage dérivé côté frontend
+// (dueAt dépassée), jamais un statut réellement écrit.
+model InstitutionInvoice {
+  id            String    @id @default(uuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id])
+  loanId        String    @unique
+  loan          Loan      @relation(fields: [loanId], references: [id])
+  amount        Decimal   @db.Decimal(14, 2)
+  devise        String    @default("USD")
+  dueAt         DateTime
+  paidAt        DateTime?
+  paidByUserId  String?
+  status        String    @default("PENDING") // PENDING | PAID
+  createdAt     DateTime  @default(now())
+
+  @@index([institutionId, status])
 }
 
 // Classification du risque d'un prêt selon ses jours de retard (chantier
@@ -2677,6 +2714,8 @@ model Institution {
   loans          Loan[]
   staff          InstitutionStaff[]
   demandesCredit DemandeCredit[]
+  // Factures de commission (19 nov. 2026) — voir InstitutionInvoice.
+  invoices       InstitutionInvoice[]
 }
 
 // Réglage d'affichage du portail institution (16 nov. 2026, demande du

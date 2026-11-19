@@ -38,6 +38,23 @@ interface FactureComptable extends FactureBase {
   subscription: { id: string; user: { fullName: string } };
 }
 
+// Factures de commission institution (19 nov. 2026, demande du propriétaire :
+// "les commissions facturées aux institutions doivent figurer dans les
+// factures du module admin et non dans finances") — pas de `kind`/
+// `reminderStage`/`penaltyAmount` : décision explicite du propriétaire,
+// aucun moteur de relances/pénalité/suspension ne s'applique ici (voir
+// ListeFacturesInstitutions ci-dessous).
+interface FactureInstitution {
+  id: string;
+  amount: string;
+  devise: string;
+  dueAt: string;
+  paidAt: string | null;
+  status: string;
+  institution: { id: string; name: string };
+  loan: { id: string; label: string; shop: { id: string; name: string } | null };
+}
+
 interface PaymentProof {
   id: string;
   fileUrl: string;
@@ -292,6 +309,93 @@ function ListeFactures<F extends FactureBase>({
 }
 
 /**
+ * Factures de commission institution (19 nov. 2026) — volontairement un
+ * composant à part plutôt qu'une réutilisation de ListeFactures ci-dessus :
+ * pas de sélection/relance groupée, pas de badge de palier, pas de panneau
+ * de preuve de paiement, pas de bloc réactivation — décision explicite du
+ * propriétaire (voir le commentaire sur InstitutionInvoice dans
+ * schema.prisma). Seul "marquer payée" est commun aux deux.
+ */
+function ListeFacturesInstitutions({
+  enAttente,
+  historique,
+  onChange,
+}: {
+  enAttente: FactureInstitution[];
+  historique: FactureInstitution[];
+  onChange: () => void;
+}) {
+  const { t } = useLocale();
+  const [enCours, setEnCours] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function marquerPayee(invoiceId: string) {
+    setEnCours(invoiceId);
+    setErreur(null);
+    setMessage(null);
+    try {
+      await api.post(`/admin/billing/institution-invoices/${invoiceId}/mark-paid`);
+      setMessage(t("admfact_statutPayee"));
+      onChange();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("admutil_actionImpossible"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  return (
+    <div>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {message && <p className={styles.message}>{message}</p>}
+
+      {enAttente.length === 0 ? (
+        <p className={styles.messageVide}>{t("admfact_aucuneFactureInstitutionEnAttente")}</p>
+      ) : (
+        enAttente.map((f) => {
+          const enRetard = new Date(f.dueAt) < new Date();
+          return (
+            <div className={styles.facture} key={f.id}>
+              <div className={styles.factureInfo}>
+                <span className={styles.boutiqueNom}>{f.institution.name}</span>
+                <span>{f.loan.label}</span>
+                {f.loan.shop && <span>{f.loan.shop.name}</span>}
+                <span>{formatMoney(Number(f.amount), f.devise)}</span>
+                <span>
+                  {t("crd_colEcheance")} : {formatDate(f.dueAt)}
+                </span>
+                {enRetard && <StatusTag label={t("admfact_statutEnRetard")} humeur="alerte" />}
+              </div>
+              <button className={styles.boutonPayer} disabled={enCours === f.id} onClick={() => marquerPayee(f.id)}>
+                {t("admfact_marquerPayee")}
+              </button>
+            </div>
+          );
+        })
+      )}
+
+      <h3 className={styles.sousTitre}>{t("admfact_historique")}</h3>
+      {historique.length === 0 ? (
+        <p className={styles.messageVide}>{t("admfact_aucuneAutreFactureInstitution")}</p>
+      ) : (
+        historique.map((f) => (
+          <div className={styles.facture} key={f.id}>
+            <div className={styles.factureInfo}>
+              <span className={styles.boutiqueNom}>{f.institution.name}</span>
+              <span>{f.loan.label}</span>
+              {f.loan.shop && <span>{f.loan.shop.name}</span>}
+              <span>{formatMoney(Number(f.amount), f.devise)}</span>
+              <span className={styles.statutHistorique}>{CLES_STATUT[f.status] ? t(CLES_STATUT[f.status]) : f.status}</span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/**
  * Demandes de réactivation ouvertes automatiquement dès solde à zéro pour
  * une entité suspendue (16 nov. 2026, décision du propriétaire : ouverture
  * automatique côté demande, mais toujours soumise à validation admin
@@ -382,6 +486,7 @@ function FacturesContent() {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [facturesLivreurs, setFacturesLivreurs] = useState<FactureLivreur[]>([]);
   const [facturesComptable, setFacturesComptable] = useState<FactureComptable[]>([]);
+  const [facturesInstitutions, setFacturesInstitutions] = useState<FactureInstitution[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -393,11 +498,13 @@ function FacturesContent() {
       api.get<Facture[]>("/admin/billing/invoices"),
       api.get<FactureLivreur[]>("/admin/driver-billing/invoices"),
       api.get<FactureComptable[]>("/admin/comptable/invoices"),
+      api.get<FactureInstitution[]>("/admin/billing/institution-invoices"),
     ])
-      .then(([listeFactures, listeFacturesLivreurs, listeFacturesComptable]) => {
+      .then(([listeFactures, listeFacturesLivreurs, listeFacturesComptable, listeFacturesInstitutions]) => {
         setFactures(listeFactures);
         setFacturesLivreurs(listeFacturesLivreurs);
         setFacturesComptable(listeFacturesComptable);
+        setFacturesInstitutions(listeFacturesInstitutions);
       })
       .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")))
       .finally(() => setChargement(false));
@@ -466,6 +573,8 @@ function FacturesContent() {
   const livreursHistorique = facturesLivreurs.filter((f) => f.status !== "PENDING");
   const comptableEnAttente = facturesComptable.filter((f) => f.status === "PENDING");
   const comptableHistorique = facturesComptable.filter((f) => f.status !== "PENDING");
+  const institutionsEnAttente = facturesInstitutions.filter((f) => f.status === "PENDING");
+  const institutionsHistorique = facturesInstitutions.filter((f) => f.status !== "PENDING");
 
   return (
     <div>
@@ -573,6 +682,15 @@ function FacturesContent() {
         kindLabelGetter={(f) => (f.kind === "yearly" ? t("admfact_abonnementAnnuel") : t("admfact_abonnementMensuel"))}
         labelVideEnAttente={t("admfact_aucuneFactureSecourableEnAttente")}
         labelVideHistorique={t("admfact_aucuneAutreFactureSecourable")}
+        onChange={toutRecharger}
+      />
+
+      <h2 id="section-institutions" className={styles.sectionTitre}>
+        {t("admfact_facturesInstitutions")}
+      </h2>
+      <ListeFacturesInstitutions
+        enAttente={institutionsEnAttente}
+        historique={institutionsHistorique}
         onChange={toutRecharger}
       />
     </div>

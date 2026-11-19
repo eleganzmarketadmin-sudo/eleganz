@@ -279,7 +279,10 @@ export class AccountingService {
   }
 
   /** Revenu ELEGANZ reconnu au règlement effectif (status=PAID), jamais à la facturation. */
-  async postPlatformInvoicePaid(invoice: { id: string; amount: unknown }, source: "invoice" | "driverInvoice" | "comptableInvoice") {
+  async postPlatformInvoicePaid(
+    invoice: { id: string; amount: unknown },
+    source: "invoice" | "driverInvoice" | "comptableInvoice" | "institutionInvoice",
+  ) {
     await this.seed.ensurePlatformChartOfAccounts();
     const montant = Number(invoice.amount);
     await this.enregistrer({

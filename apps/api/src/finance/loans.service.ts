@@ -1,10 +1,15 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { AccountingService } from "./accounting.service";
 import { BusinessPlanService } from "./business-plan.service";
 import { CreateLoanDto } from "./dto/loan.dto";
 import { DemandeCreditStatut, FiscalRuleScope, LoanDecisionStatut, LoanStatut } from "@eleganz/database";
+
+// Délai de paiement par défaut de la facture de commission institution
+// (19 nov. 2026, décision du propriétaire : 15 jours à compter du
+// décaissement du prêt — voir InstitutionInvoice dans schema.prisma).
+const DELAI_PAIEMENT_FACTURE_INSTITUTION_JOURS = 15;
 
 function debutDuMois(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1));
@@ -36,6 +41,8 @@ export type StatutEcheance = "comptabilisee" | "deja_comptabilisee" | "termine";
  */
 @Injectable()
 export class LoansService {
+  private readonly logger = new Logger(LoansService.name);
+
   // BusinessPlanService n'est jamais injecté : seule sa méthode statique
   // `mensualite` est réutilisée ci-dessous (même formule que l'échéancier
   // affiché dans le dossier crédit), sans dépendance d'instance.
@@ -135,6 +142,26 @@ export class LoansService {
       compteAccountCode: loan.compteAccountCode,
       label: loan.label,
     });
+
+    // Facture de commission à l'institution (19 nov. 2026, demande du
+    // propriétaire : ces commissions doivent figurer dans l'écran Factures,
+    // pas dans Finance) — une seule par prêt, créée ici au décaissement,
+    // jamais comptabilisée tout de suite (le revenu n'est reconnu qu'au
+    // règlement effectif, voir markInstitutionInvoicePaid ci-dessous, même
+    // principe que BillingService.markInvoicePaidAndReactivate).
+    if (institutionCommissionAmount !== null && institutionCommissionAmount > 0 && decision.institutionId) {
+      const dueAt = new Date(dateObtentionPret);
+      dueAt.setDate(dueAt.getDate() + DELAI_PAIEMENT_FACTURE_INSTITUTION_JOURS);
+      await this.prisma.institutionInvoice.create({
+        data: {
+          institutionId: decision.institutionId,
+          loanId: loan.id,
+          amount: institutionCommissionAmount,
+          devise: dto.devise ?? "USD",
+          dueAt,
+        },
+      });
+    }
 
     await this.prisma.loanDecision.update({ where: { id: decisionId }, data: { loanId: loan.id } });
 
@@ -384,6 +411,52 @@ export class LoansService {
     if (decision?.demandeCreditId) {
       await this.prisma.demandeCredit.update({ where: { id: decision.demandeCreditId }, data: { statut } });
     }
+  }
+
+  // --- Factures de commission institution (19 nov. 2026) — voir
+  // InstitutionInvoice dans schema.prisma et obtenirPretViaDecision
+  // ci-dessus pour leur création. Consultées/réglées depuis l'écran admin
+  // Factures (MenuAdmin.FACTURES, voir BillingController), jamais depuis
+  // Finance : seule la vue PLATEFORME (toutes institutions confondues) a un
+  // sens ici, pas de variante "ForShop"/"ForInstitution" comme le reste de
+  // ce service. -------------------------------------------------------------
+
+  listInstitutionInvoices() {
+    return this.prisma.institutionInvoice.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        institution: { select: { id: true, name: true } },
+        loan: { select: { id: true, label: true, shop: { select: { id: true, name: true } } } },
+      },
+    });
+  }
+
+  /**
+   * Marque une facture de commission institution payée (virement reçu,
+   * constaté manuellement par un admin — aucun moteur de relances/pénalité/
+   * suspension ici, décision explicite du propriétaire : une institution
+   * est un partenaire financier, pas une boutique sous contrat de
+   * facturation). Revenu ELEGANZ reconnu au règlement effectif, jamais à la
+   * facturation (même principe que BillingService.markInvoicePaidAndReactivate).
+   */
+  async markInstitutionInvoicePaid(invoiceId: string, adminUserId: string) {
+    const invoice = await this.prisma.institutionInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    if (invoice.status === "PAID") {
+      throw new BadRequestException("Cette facture est déjà marquée payée.");
+    }
+    const paidAt = new Date();
+    const factureMaj = await this.prisma.institutionInvoice.update({
+      where: { id: invoiceId },
+      data: { status: "PAID", paidAt, paidByUserId: adminUserId },
+    });
+
+    await this.accounting
+      .postPlatformInvoicePaid({ id: factureMaj.id, amount: Number(invoice.amount) }, "institutionInvoice")
+      .catch((err) => {
+        this.logger.error(`ACCOUNTING_POSTING_FAILED comptabilisation de la facture institution ${invoiceId} échouée`, err);
+      });
+
+    return factureMaj;
   }
 
   private async echeances(scope: FiscalRuleScope, shopId: string | null, loanId: string) {

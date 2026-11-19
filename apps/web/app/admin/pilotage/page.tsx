@@ -51,7 +51,14 @@ const DESTINATION_MODULE: Record<ModuleRevenu["cle"], string> = {
   livreur: "/admin/factures#section-livreurs",
   secourable: "/admin/factures#section-comptable",
   caisse: "/admin/finance/ventes-caisse",
-  institutions: "/admin/finance/commission-institutions",
+  // Commission Institutions (19 nov. 2026, demande du propriétaire : "les
+  // commissions facturées aux institutions doivent figurer dans les
+  // factures du module admin et non dans finances") — pointait auparavant
+  // vers /admin/finance/commission-institutions (qui reste disponible
+  // depuis l'onglet Finance, comme relevé historique exportable par
+  // période ; voir admin/finance/commission-institutions/page.tsx), mais la
+  // vraie facture actionnable (marquer payée) vit désormais sur Factures.
+  institutions: "/admin/factures#section-institutions",
 };
 
 interface Dashboard {
