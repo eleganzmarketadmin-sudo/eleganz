@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { api, getToken } from "../lib/api";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { CurrencySwitcher } from "../components/CurrencySwitcher";
+import { TauxDuJourBanner } from "./TauxDuJourBanner";
 import { LogoMark, BandeMarque } from "../components/Logo";
 import { Footer } from "../components/Footer";
 import { NotificationBell } from "../components/NotificationBell";
@@ -179,6 +180,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        <TauxDuJourBanner peutModifierTaux={ecransAutorises.includes("TARIFS")} />
       </div>
       <main className={styles.contenu} key={pathname}>
         <div className="entree-page">{children}</div>

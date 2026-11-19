@@ -1,0 +1,58 @@
+.bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2, 8px);
+  background: var(--color-flamme, #b45309);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+}
+
+.texte {
+  font-weight: 600;
+}
+
+.formulaire {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prefixe,
+.suffixe {
+  opacity: 0.9;
+}
+
+.champ {
+  width: 90px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.champ::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.bouton {
+  background: #fff;
+  color: var(--color-flamme, #b45309);
+  border: none;
+  padding: 4px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bouton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.erreur {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 8px;
+  font-size: 0.8125rem;
+}

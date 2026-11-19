@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { formatMoney } from "./money";
 
@@ -29,6 +29,16 @@ interface ExchangeRateContextValue {
   // DisplayCurrencyProvider (lib/display-currency.tsx) comme repli quand
   // l'utilisateur n'a pas encore choisi sa propre préférence.
   defaultDisplayCurrency: "USD" | "CDF";
+  // true tant que le premier chargement n'a pas encore répondu (succès ou
+  // échec) — permet à un consommateur (ex. TauxDuJourBanner) de ne rien
+  // afficher pendant ce court instant plutôt que de montrer à tort "aucun
+  // taux" avant que la vraie réponse n'arrive.
+  chargement: boolean;
+  // Relance l'appel public /platform-settings/exchange-rate — utilisé après
+  // qu'un admin a enregistré le taux du jour (TauxDuJourBanner,
+  // admin/tarifs) pour que `updatedAt`/`cdfPerUsd` se mettent à jour pour
+  // TOUTE la plateforme sans recharger la page.
+  recharger: () => void;
 }
 
 const ExchangeRateContext = createContext<ExchangeRateContextValue | null>(null);
@@ -37,16 +47,15 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
   const [cdfPerUsd, setCdfPerUsd] = useState<number | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [defaultDisplayCurrency, setDefaultDisplayCurrency] = useState<"USD" | "CDF">("USD");
+  const [chargement, setChargement] = useState(true);
 
-  useEffect(() => {
-    let annule = false;
+  const recharger = useCallback(() => {
     api
       .get<{ cdfPerUsd: string | null; updatedAt: string | null; defaultDisplayCurrency?: string }>(
         "/platform-settings/exchange-rate",
         false,
       )
       .then((d) => {
-        if (annule) return;
         setCdfPerUsd(d.cdfPerUsd != null ? Number(d.cdfPerUsd) : null);
         setUpdatedAt(d.updatedAt);
         if (d.defaultDisplayCurrency === "USD" || d.defaultDisplayCurrency === "CDF") {
@@ -56,10 +65,13 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
       .catch(() => {
         // Non bloquant : sans taux disponible, on affiche simplement les
         // montants sans équivalent, nulle part sur la plateforme.
-      });
-    return () => {
-      annule = true;
-    };
+      })
+      .finally(() => setChargement(false));
+  }, []);
+
+  useEffect(() => {
+    recharger();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<ExchangeRateContextValue>(() => {
@@ -77,8 +89,8 @@ export function ExchangeRateProvider({ children }: { children: React.ReactNode }
       if (converti == null) return "";
       return `≈ ${formatMoney(converti, vers)}`;
     }
-    return { cdfPerUsd, updatedAt, convertir, equivalent, defaultDisplayCurrency };
-  }, [cdfPerUsd, updatedAt, defaultDisplayCurrency]);
+    return { cdfPerUsd, updatedAt, convertir, equivalent, defaultDisplayCurrency, chargement, recharger };
+  }, [cdfPerUsd, updatedAt, defaultDisplayCurrency, chargement, recharger]);
 
   return <ExchangeRateContext.Provider value={value}>{children}</ExchangeRateContext.Provider>;
 }
