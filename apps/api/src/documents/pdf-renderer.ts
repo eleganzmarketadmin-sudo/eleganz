@@ -130,10 +130,21 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
   // Logo de la boutique, si elle en a fourni un et qu'il a pu être récupéré
   // (voir documents.service.ts) — jamais bloquant : une image invalide ou
   // trop grande ne doit jamais faire échouer tout le document.
+  //
+  // Correctif du 19 nov. 2026 (signalé : "le logo chargé se chevauche avec
+  // les autres écrits sur la facture") : `doc.y` était passé explicitement
+  // comme 3e argument (position absolue), ce qui met pdfkit en mode
+  // "absolu" (`inDocumentFlow = typeof y !== "number"` → faux ici) — `doc.y`
+  // n'avançait alors JAMAIS de la hauteur réelle du logo, et le
+  // `moveDown(0.3)` suivant ne compensait qu'une fraction fixe, insuffisante
+  // dès que le logo rendu était plus haut que large. `undefined` explicite
+  // à la place garde le mode "flux" (même technique que pour le
+  // code-barres/QR plus bas) : `doc.y` avance alors de la hauteur réellement
+  // dessinée, quelle que soit la forme du logo.
   if (donnees.shopLogo) {
     try {
       const largeurLogo = 60;
-      doc.image(donnees.shopLogo, (LARGEUR_TICKET - largeurLogo) / 2, doc.y, { width: largeurLogo });
+      doc.image(donnees.shopLogo, (LARGEUR_TICKET - largeurLogo) / 2, undefined, { width: largeurLogo });
       doc.moveDown(0.3);
     } catch {
       // Logo illisible (format non supporté, fichier corrompu...) — on
@@ -298,9 +309,9 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
   // pourtant bel et bien à l'exécution — voir pdfkit.js, fonction `image`) ;
   // passer `undefined` satisfait le typage ET laisse pdfkit en mode "flux"
   // (`inDocumentFlow = typeof y !== "number"`), qui avance `doc.y` de la
-  // hauteur réellement dessinée — contrairement au logo ci-dessus, positionné
-  // en absolu (voir son commentaire), on ne veut jamais ici qu'un bloc
-  // suivant chevauche visuellement ces images.
+  // hauteur réellement dessinée — même technique que pour le logo ci-dessus
+  // (voir son commentaire) : on ne veut jamais qu'un bloc suivant chevauche
+  // visuellement ces images.
   if (donnees.barcode) {
     try {
       doc.moveDown(0.5);
