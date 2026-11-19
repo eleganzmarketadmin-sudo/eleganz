@@ -93,15 +93,24 @@ export class ComptableBillingService {
       where: { id: facture.id },
       data: { reminderStage: palier, lastReminderSentAt: new Date() },
     });
-    await this.prisma.comptableInvoiceReminder.create({
-      data: { invoiceId: facture.id, stage: palier, message, sentByUserId: opts.manuel ? opts.adminUserId ?? null : null },
-    });
 
-    await this.notifications.notifierMulticanal([facture.subscription.userId], {
+    // Correctif du 19 nov. 2026 (audit de bout en bout) — voir
+    // BillingService.appliquerEtapeRelance pour la justification complète :
+    // `canaux` restait vide jusqu'ici.
+    const canaux = await this.notifications.notifierMulticanal([facture.subscription.userId], {
       type: palier === 5 ? NotificationType.FACTURE_SUSPENDUE : NotificationType.FACTURE_RELANCE,
       title: TITRE_PALIER[palier] ?? "Relance de facturation",
       body: message,
       link: "/comptable",
+    });
+    await this.prisma.comptableInvoiceReminder.create({
+      data: {
+        invoiceId: facture.id,
+        stage: palier,
+        message,
+        canaux,
+        sentByUserId: opts.manuel ? opts.adminUserId ?? null : null,
+      },
     });
   }
 

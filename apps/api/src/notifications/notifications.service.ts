@@ -34,7 +34,7 @@ export class NotificationsService {
   async notifierUtilisateurs(
     userIds: string[],
     params: { type: NotificationType; title: string; body: string; link?: string },
-  ) {
+  ): Promise<{ inApp: boolean; push: boolean }> {
     // Correctif audit du 18 oct. 2026 : un tableau vide (ex. zéro compte
     // ADMIN_* trouvé pour une escalade — voir
     // PasswordResetService.demanderReinitialisation) faisait disparaître la
@@ -46,7 +46,7 @@ export class NotificationsService {
     // douzaine d'appelants).
     if (userIds.length === 0) {
       this.logger.warn(`NOTIFICATION_DESTINATAIRES_VIDE aucun destinataire pour la notification "${params.title}"`);
-      return;
+      return { inApp: false, push: false };
     }
     const uniques = [...new Set(userIds)];
 
@@ -58,7 +58,7 @@ export class NotificationsService {
     // PlatformSettings — on considère l'in-app actif par défaut (valeur de
     // repli de la colonne elle-même), jamais l'inverse : un utilisateur ne
     // doit pas perdre silencieusement ses notifications faute de réglage.
-    if (settings && !settings.notificationsInAppEnabled) return;
+    if (settings && !settings.notificationsInAppEnabled) return { inApp: false, push: false };
 
     await this.prisma.notification.createMany({
       data: uniques.map((userId) => ({
@@ -77,11 +77,13 @@ export class NotificationsService {
     // Ne bloque jamais la création de la notification in-app ci-dessus :
     // lancé après, sans attendre la fin de l'envoi (l'appelant a déjà ce
     // qu'il attend de cette méthode une fois la ligne en base écrite).
-    if ((!settings || settings.notificationsPushEnabled) && this.pushSender.estConfigure()) {
+    const pushActif = (!settings || settings.notificationsPushEnabled) && this.pushSender.estConfigure();
+    if (pushActif) {
       this.envoyerPushEnArrierePlan(uniques, params).catch((err) => {
         this.logger.error(`Échec du relais push: ${err instanceof Error ? err.message : err}`);
       });
     }
+    return { inApp: true, push: pushActif };
   }
 
   private async envoyerPushEnArrierePlan(
@@ -122,13 +124,26 @@ export class NotificationsService {
    * PlatformSettings correspondant ET `estConfigure()` (clé d'API présente
    * côté serveur) — jamais l'un sans l'autre, pour ne jamais prétendre
    * avoir envoyé un message qui ne partira nulle part.
+   *
+   * Renvoie la liste des canaux actifs pour cet envoi (ex.
+   * `["IN_APP","PUSH","EMAIL"]`) — correctif du 19 nov. 2026 (audit de
+   * bout en bout) : seul appelant qui en a besoin aujourd'hui,
+   * `BillingService.appliquerEtapeRelance` (et ses miroirs
+   * Driver/Comptable), pour renseigner enfin `InvoiceReminder.canaux`,
+   * resté vide depuis l'implémentation initiale malgré le besoin de
+   * diagnostic documenté dans le plan ("pourquoi une relance n'est jamais
+   * arrivée par SMS/WhatsApp"). Les autres appelants ignorent la valeur de
+   * retour sans risque (void implicite jusqu'ici).
    */
   async notifierMulticanal(
     userIds: string[],
     params: { type: NotificationType; title: string; body: string; link?: string },
-  ) {
-    await this.notifierUtilisateurs(userIds, params);
-    if (userIds.length === 0) return;
+  ): Promise<string[]> {
+    const { inApp, push } = await this.notifierUtilisateurs(userIds, params);
+    const canaux: string[] = [];
+    if (inApp) canaux.push("IN_APP");
+    if (push) canaux.push("PUSH");
+    if (userIds.length === 0) return canaux;
 
     const settings = await this.prisma.platformSettings.findUnique({
       where: { id: "platform" },
@@ -137,7 +152,10 @@ export class NotificationsService {
     const emailActif = Boolean(settings?.notificationsEmailEnabled) && this.email.estConfigure();
     const smsActif = Boolean(settings?.notificationsSmsEnabled) && this.sms.estConfigure();
     const whatsappActif = Boolean(settings?.notificationsWhatsappEnabled) && this.whatsapp.estConfigure();
-    if (!emailActif && !smsActif && !whatsappActif) return;
+    if (emailActif) canaux.push("EMAIL");
+    if (smsActif) canaux.push("SMS");
+    if (whatsappActif) canaux.push("WHATSAPP");
+    if (!emailActif && !smsActif && !whatsappActif) return canaux;
 
     const uniques = [...new Set(userIds)];
     const utilisateurs = await this.prisma.user.findMany({
@@ -173,13 +191,22 @@ export class NotificationsService {
     if (echecs > 0) {
       this.logger.warn(`${echecs}/${envois.length} envoi(s) multicanal en échec pour "${params.title}"`);
     }
+    return canaux;
   }
 
-  // N'écrit une ligne Notification pour ce canal que si l'envoi a
-  // effectivement réussi — sinon on logue l'échec sans laisser croire
-  // (channel: EMAIL/SMS/WHATSAPP en base) qu'un message est parti alors
-  // qu'il n'est jamais arrivé.
-  private async tracerEnvoiCanal(
+  // Correctif du 19 nov. 2026 (audit de bout en bout) : cette méthode
+  // écrivait jusqu'ici une ligne Notification (channel: EMAIL/SMS/WHATSAPP)
+  // supplémentaire PAR CANAL réussi, en plus de la ligne in-app déjà créée
+  // par notifierUtilisateurs — alors que `Notification` est la table que
+  // lit directement NotificationBell.tsx (liste + compteur non lues) sans
+  // jamais filtrer ni dédupliquer par `channel`. Résultat concret pour
+  // l'utilisateur : le même événement de relance apparaissait 2 à 4 fois
+  // dans sa cloche de notifications (une fois par canal actif), et le
+  // badge de non-lues était inflé d'autant — alors qu'aucun écran admin ne
+  // lit jamais `Notification.channel` (seul `InvoiceReminder.canaux`, voir
+  // ci-dessus, sert ce besoin de diagnostic). On se contente donc
+  // désormais de journaliser l'échec, sans ligne Notification dupliquée.
+  private tracerEnvoiCanal(
     userId: string,
     params: { type: NotificationType; title: string; body: string; link?: string },
     canal: NotificationChannel,
@@ -187,11 +214,7 @@ export class NotificationsService {
   ) {
     if (!envoye) {
       this.logger.warn(`Échec d'envoi ${canal} pour l'utilisateur ${userId} ("${params.title}")`);
-      return;
     }
-    await this.prisma.notification.create({
-      data: { userId, type: params.type, title: params.title, body: params.body, link: params.link, channel: canal },
-    });
   }
 
   list(userId: string, options: { nonLuesSeulement?: boolean } = {}) {

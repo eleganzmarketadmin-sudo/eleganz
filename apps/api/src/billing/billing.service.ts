@@ -91,16 +91,27 @@ export class BillingService {
       where: { id: facture.id },
       data: { reminderStage: palier, lastReminderSentAt: new Date() },
     });
-    await this.prisma.invoiceReminder.create({
-      data: { invoiceId: facture.id, stage: palier, message, sentByUserId: opts.manuel ? opts.adminUserId ?? null : null },
-    });
 
     const destinataires = [facture.shop.ownerId, ...facture.shop.staff.map((s) => s.userId)];
-    await this.notifications.notifierMulticanal(destinataires, {
+    // Correctif du 19 nov. 2026 (audit de bout en bout) : `canaux` restait
+    // vide jusqu'ici (jamais renseigné à la création), alors que le plan le
+    // prévoyait explicitement pour diagnostiquer après coup un échec
+    // d'envoi SMS/WhatsApp — notifierMulticanal renvoie maintenant la liste
+    // des canaux réellement actifs pour cet envoi.
+    const canaux = await this.notifications.notifierMulticanal(destinataires, {
       type: palier === 5 ? NotificationType.FACTURE_SUSPENDUE : NotificationType.FACTURE_RELANCE,
       title: TITRE_PALIER[palier] ?? "Relance de facturation",
       body: message,
       link: "/parametres",
+    });
+    await this.prisma.invoiceReminder.create({
+      data: {
+        invoiceId: facture.id,
+        stage: palier,
+        message,
+        canaux,
+        sentByUserId: opts.manuel ? opts.adminUserId ?? null : null,
+      },
     });
   }
 
@@ -354,11 +365,23 @@ export class BillingService {
     });
     const toutSolde = autresFacturesImpayees === 0;
     const dejaSuspendue = invoice.shop.status === ShopStatus.SUSPENDED;
+    // Correctif du 19 nov. 2026 : une boutique déjà CLOSED (fermeture en
+    // libre-service, ShopsService.fermerBoutique) peut tout de même recevoir
+    // une facture de commission a posteriori (runCommissionBilling ne filtre
+    // pas par statut boutique — des ShopOrder déjà closes avant la fermeture
+    // peuvent rester à facturer). Sans ce garde, solder cette seule facture
+    // repassait silencieusement la boutique à ACTIVE (toutSolde vrai,
+    // dejaSuspendue faux) — une boutique fermée par son propriétaire ne doit
+    // jamais rouvrir d'elle-même. Même principe que dejaSuspendue ci-dessus :
+    // on préserve l'état « non actif » existant plutôt que de le recalculer.
+    const dejaFermee = invoice.shop.status === ShopStatus.CLOSED;
     const nouveauStatutBoutique = dejaSuspendue
       ? ShopStatus.SUSPENDED
-      : toutSolde
-        ? ShopStatus.ACTIVE
-        : ShopStatus.PAYMENT_DUE;
+      : dejaFermee
+        ? ShopStatus.CLOSED
+        : toutSolde
+          ? ShopStatus.ACTIVE
+          : ShopStatus.PAYMENT_DUE;
 
     const [factureMaj] = await this.prisma.$transaction([
       this.prisma.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt, penaltyDays, penaltyAmount } }),
