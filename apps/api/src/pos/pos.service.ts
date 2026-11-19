@@ -388,4 +388,182 @@ export class PosService {
         : "Marge non calculable de façon fiable : coût moyen pondéré (CUMP) inconnu pour au moins un article vendu, ou vente rapide sans article catalogué.",
     };
   }
+
+  /**
+   * Clé + libellé de bucket temporel pour une date donnée. Même convention
+   * que `ReportsService.cleBucket` (lundi UTC pour le début de semaine, clé
+   * ISO), reproduite ici plutôt qu'importée : le tableau de bord POS n'a pas
+   * besoin du moteur de regroupement multi-groupes de `ReportsService`
+   * (boutique/agent/catégorie), juste d'un seul total par période. Libellés
+   * volontairement courts (axe de graphique, pas un rapport imprimé).
+   */
+  private cleDePeriode(date: Date, granularite: "JOUR" | "SEMAINE" | "MOIS"): { cle: string; label: string } {
+    const d = new Date(date);
+    if (granularite === "JOUR") {
+      const cle = d.toISOString().slice(0, 10);
+      return { cle, label: new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(d) };
+    }
+    if (granularite === "SEMAINE") {
+      const lundi = new Date(d);
+      const jourSemaine = (lundi.getUTCDay() + 6) % 7; // 0 = lundi ... 6 = dimanche
+      lundi.setUTCDate(lundi.getUTCDate() - jourSemaine);
+      lundi.setUTCHours(0, 0, 0, 0);
+      const cle = lundi.toISOString().slice(0, 10);
+      return { cle, label: new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(lundi) };
+    }
+    // MOIS
+    const cle = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const libelle = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "2-digit" }).format(d);
+    return { cle, label: libelle.charAt(0).toUpperCase() + libelle.slice(1) };
+  }
+
+  /**
+   * Séquence complète des buckets entre `debut` (inclus) et `fin` (exclue),
+   * y compris les périodes sans aucune vente — indispensable pour un
+   * graphique d'évolution : un jour à zéro vente doit apparaître comme un
+   * point à zéro, pas disparaître (un trou invisible fausserait la lecture
+   * de l'espacement et de la tendance).
+   */
+  private genererSequencePeriodes(
+    debut: Date,
+    fin: Date,
+    granularite: "JOUR" | "SEMAINE" | "MOIS",
+  ): { cle: string; label: string }[] {
+    const sequence: { cle: string; label: string }[] = [];
+    const curseur = new Date(debut);
+    if (granularite === "SEMAINE") {
+      const jourSemaine = (curseur.getUTCDay() + 6) % 7;
+      curseur.setUTCDate(curseur.getUTCDate() - jourSemaine);
+    }
+    if (granularite === "MOIS") {
+      curseur.setUTCDate(1);
+    }
+    curseur.setUTCHours(0, 0, 0, 0);
+
+    while (curseur < fin) {
+      sequence.push(this.cleDePeriode(curseur, granularite));
+      if (granularite === "JOUR") curseur.setUTCDate(curseur.getUTCDate() + 1);
+      else if (granularite === "SEMAINE") curseur.setUTCDate(curseur.getUTCDate() + 7);
+      else curseur.setUTCMonth(curseur.getUTCMonth() + 1);
+    }
+    return sequence;
+  }
+
+  /**
+   * Tableau de bord de gestion — évolution sur une période (demande du 19
+   * nov. 2026 : "rajouter... des rapports de gestion d'activité et
+   * périodique et des graphiques des évolutions"). Même formule de marge que
+   * `dailyDashboard` ci-dessus (CUMP via StockMovement POS_SALE_OUT),
+   * agrégée par bucket plutôt que sur une seule journée, pour que le
+   * graphique affiche exactement les mêmes chiffres que les cartes du jour
+   * quand on zoome sur un seul jour.
+   *
+   * Pas de répartition par devise ici (contrairement à
+   * `CustomersService.rapport`) : `dailyDashboard` ci-dessus ne le fait déjà
+   * pas, et faire autrement ici créerait une incohérence entre le "CA
+   * aujourd'hui" affiché en haut de la page et le même jour affiché dans le
+   * graphique d'évolution juste en dessous.
+   */
+  async evolutionDashboard(shopId: string, from?: Date, to?: Date, granulariteBrute?: string) {
+    const granularite: "JOUR" | "SEMAINE" | "MOIS" =
+      granulariteBrute === "SEMAINE" || granulariteBrute === "MOIS" ? granulariteBrute : "JOUR";
+
+    const fin = to ? new Date(to) : new Date();
+    fin.setHours(0, 0, 0, 0);
+    fin.setDate(fin.getDate() + 1); // borne exclusive : lendemain du jour "to" inclus
+
+    const debut = from ? new Date(from) : new Date(fin);
+    if (!from) {
+      debut.setDate(debut.getDate() - 30);
+    }
+    debut.setHours(0, 0, 0, 0);
+
+    if (debut >= fin) {
+      throw new BadRequestException("La date de début doit précéder la date de fin.");
+    }
+
+    const periodes = this.genererSequencePeriodes(debut, fin, granularite);
+    if (periodes.length > 400) {
+      throw new BadRequestException("Plage trop longue pour cette granularité — réduisez l'intervalle.");
+    }
+
+    const [sales, mouvementsCmv] = await Promise.all([
+      this.prisma.posSale.findMany({
+        where: { shopId, createdAt: { gte: debut, lt: fin }, status: { not: "CANCELLED" } },
+        include: { lines: true, payments: true },
+      }),
+      this.prisma.stockMovement.findMany({
+        where: { shopId, type: StockMovementType.POS_SALE_OUT, createdAt: { gte: debut, lt: fin } },
+        select: { createdAt: true, valeur: true },
+      }),
+    ]);
+
+    interface Accumulateur {
+      revenue: number;
+      salesCount: number;
+      confirmedCollections: number;
+      cmv: number;
+      cmvInconnuCount: number;
+      venteSansVariante: boolean;
+    }
+    const parCle = new Map<string, Accumulateur>();
+    const bucketVide = (): Accumulateur => ({
+      revenue: 0,
+      salesCount: 0,
+      confirmedCollections: 0,
+      cmv: 0,
+      cmvInconnuCount: 0,
+      venteSansVariante: false,
+    });
+
+    for (const s of sales) {
+      const { cle } = this.cleDePeriode(s.createdAt, granularite);
+      const acc = parCle.get(cle) ?? bucketVide();
+      acc.revenue += Number(s.totalAmount);
+      acc.salesCount += 1;
+      acc.confirmedCollections += s.payments.filter((p) => p.confirmed).reduce((a, p) => a + Number(p.amount), 0);
+      if (s.lines.some((l) => !l.variantId)) acc.venteSansVariante = true;
+      parCle.set(cle, acc);
+    }
+
+    for (const m of mouvementsCmv) {
+      const { cle } = this.cleDePeriode(m.createdAt, granularite);
+      const acc = parCle.get(cle) ?? bucketVide();
+      if (m.valeur === null) acc.cmvInconnuCount += 1;
+      else acc.cmv += -Number(m.valeur);
+      parCle.set(cle, acc);
+    }
+
+    const points = periodes.map((p) => {
+      const acc = parCle.get(p.cle) ?? bucketVide();
+      const margeFiable = acc.cmvInconnuCount === 0 && !acc.venteSansVariante;
+      return {
+        periode: p.cle,
+        label: p.label,
+        salesCount: acc.salesCount,
+        revenue: acc.revenue,
+        confirmedCollections: acc.confirmedCollections,
+        panierMoyen: acc.salesCount > 0 ? acc.revenue / acc.salesCount : 0,
+        grossMargin: margeFiable ? acc.revenue - acc.cmv : null,
+        marginReliable: margeFiable,
+      };
+    });
+
+    const totalRevenue = points.reduce((s, p) => s + p.revenue, 0);
+    const totalSalesCount = points.reduce((s, p) => s + p.salesCount, 0);
+    const margeToujoursFiable = points.every((p) => p.marginReliable);
+
+    return {
+      granularite,
+      from: debut.toISOString().slice(0, 10),
+      to: new Date(fin.getTime() - 1).toISOString().slice(0, 10),
+      points,
+      totaux: {
+        revenue: totalRevenue,
+        salesCount: totalSalesCount,
+        panierMoyen: totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0,
+        grossMargin: margeToujoursFiable ? points.reduce((s, p) => s + (p.grossMargin ?? 0), 0) : null,
+      },
+    };
+  }
 }

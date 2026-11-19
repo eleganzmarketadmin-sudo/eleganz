@@ -59,4 +59,23 @@ export class PosController {
   dailyDashboard(@Param("shopId") shopId: string, @Query("date") date?: string) {
     return this.posService.dailyDashboard(shopId, date ? new Date(date) : undefined);
   }
+
+  @Get("dashboard/evolution")
+  // Même garde que dashboard/daily : révèle aussi la marge (19 nov. 2026,
+  // demande "rapports de gestion d'activité et périodique... graphiques des
+  // évolutions").
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  evolutionDashboard(
+    @Param("shopId") shopId: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("granularite") granularite?: string,
+  ) {
+    return this.posService.evolutionDashboard(
+      shopId,
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined,
+      granularite,
+    );
+  }
 }

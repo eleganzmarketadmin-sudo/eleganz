@@ -55,3 +55,168 @@
   color: var(--color-ink);
   margin-bottom: var(--espace-4);
 }
+
+/* Section évolution (19 nov. 2026) — graphiques de gestion. */
+
+.sectionEvolution {
+  margin-top: var(--espace-7);
+}
+
+.evolutionEntete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.selecteurPeriode {
+  display: flex;
+  gap: var(--espace-1);
+  flex-wrap: wrap;
+}
+
+.boutonPeriode {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.boutonPeriode:hover {
+  background: var(--color-surface-muted);
+}
+
+.boutonPeriodeActif {
+  background: var(--color-encre-fixe);
+  color: #fff;
+  border-color: var(--color-encre-fixe);
+}
+
+.boutonBascule {
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.boutonBascule:hover {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+
+.resume {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-5);
+}
+
+.resumeCarte {
+  padding: var(--espace-3) var(--espace-4);
+  border: 2px solid var(--color-border);
+}
+
+.resumeLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-1);
+}
+
+.resumeValeur {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.sousGraphe {
+  margin-bottom: var(--espace-6);
+}
+
+.sousGrapheTitre {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: var(--espace-2);
+}
+
+.grapheWrapper {
+  position: relative;
+}
+
+.grapheLegende {
+  display: flex;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-2);
+  font-size: 0.8125rem;
+}
+
+.legendeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-1);
+}
+
+.legendePuce {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+.graphe {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+}
+
+.infobulle {
+  position: absolute;
+  top: var(--espace-1);
+  transform: translateX(-50%);
+  background: var(--color-encre-fixe);
+  color: #fff;
+  padding: var(--espace-2) var(--espace-3);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.infobulleLabel {
+  font-weight: 600;
+  margin-bottom: var(--espace-1);
+}
+
+.tableauEvolution {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tableauEvolution th,
+.tableauEvolution td {
+  padding: var(--espace-2) var(--espace-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.tableauEvolution th {
+  font-weight: 600;
+  color: var(--color-texte-muted);
+  font-size: 0.75rem;
+}
+
+.margeNote {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-top: var(--espace-2);
+}

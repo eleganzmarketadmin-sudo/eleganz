@@ -47,6 +47,24 @@
      lisible (~7.5:1), donc cette variante n'y change rien. */
   --color-or-texte: #8f6a0a;
 
+  /* Couleurs de graphique (19 nov. 2026, tableau de bord de gestion de la
+     boutique — évolution du CA/marge/ventes). Teintes dérivées du cobalt et
+     de l'or de marque, mais PAS les variables brutes : passées au
+     validateur de palette de la compétence "dataviz" (bande de luminosité
+     + plancher de chroma + séparation daltonisme), le cobalt brut échoue la
+     bande de luminosité (trop sombre, L≈0.39) et l'or brut échoue la bande
+     en mode sombre (trop clair, L≈0.75) — des défauts de lisibilité pour un
+     TRAIT de graphique sur une surface, différents des usages texte/bandeau
+     déjà couverts par --color-cobalt-sur-fonce etc. ci-dessus. Les deux
+     teintes ci-dessous sont calibrées (même script) pour rester dans la
+     bande de luminosité et au-dessus du plancher de chroma dans les DEUX
+     modes, avec une séparation daltonisme très large (ΔE > 24 dans les deux
+     modes) : --graphique-ca (bleu, chiffre d'affaires), --graphique-marge
+     (or, marge brute). Le troisième graphique (nombre de ventes) réutilise
+     directement --color-flamme / --color-flamme-texte, déjà validés seuls. */
+  --graphique-ca: #3f6bc4;
+  --graphique-marge: #c99a1f;
+
   --color-surface: #ffffff;
   --color-surface-muted: var(--color-toile);
   /* 10 nov. 2026 (signalement : filets de champs/cartes trop flous, en
@@ -107,6 +125,13 @@
   --color-magenta-texte: #cb7fa7;
   --color-vert-paiement-texte: #79a084;
 
+  /* --graphique-ca reste identique aux deux modes (déjà validé dans les
+     deux bandes de luminosité) ; --graphique-marge doit en revanche
+     s'assombrir en mode sombre, sous peine de sortir de la bande (l'or
+     clair ci-dessus, validé pour le mode clair, est trop clair une fois la
+     surface retournée). */
+  --graphique-marge: #9c7622;
+
   color-scheme: dark;
 }
 
@@ -124,6 +149,7 @@
     --color-flamme-texte: #d7745d;
     --color-magenta-texte: #cb7fa7;
     --color-vert-paiement-texte: #79a084;
+    --graphique-marge: #9c7622;
 
     color-scheme: dark;
   }
