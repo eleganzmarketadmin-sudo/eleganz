@@ -53,6 +53,7 @@ const DOCUMENT_INCLUDE_POUR_PDF = {
       invoiceAddress: true,
       invoicePhone: true,
       invoiceLogoUrl: true,
+      invoiceHeaderNote: true,
       invoiceFooterNote: true,
       // Présentation de facture normalisée auto-déclarée (14 nov. 2026) —
       // voir le commentaire de Shop.normalisationAutoDeclaree : seulement
