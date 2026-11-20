@@ -147,6 +147,15 @@
   border-left-color: var(--color-flamme);
 }
 
+/* Portail livreur (20 nov. 2026) — la palette d'accents est épuisée
+   (cobalt/magenta/vert-paiement/or/ink/flamme déjà prises ci-dessus) ;
+   réutilise vert-paiement comme Comptable, les deux étant des portails de
+   prestataires de service de l'écosystème (comptable, livreur) plutôt que
+   des portails boutique/acheteur/administration. */
+.livreur {
+  border-left-color: var(--color-vert-paiement-texte);
+}
+
 .question {
   font-size: 0.9375rem;
   line-height: 1.4;

@@ -144,6 +144,24 @@ export function ModulesMenu() {
             </Link>
           </div>
 
+          {/* Portail livreur (20 nov. 2026, réouverture du réseau de
+              livreurs ELEGANZ) — jusqu'ici seulement atteignable en tapant
+              l'URL à la main, ce qui le rendait invisible pour un livreur
+              potentiel venant du site public. Lien primaire vers
+              l'inscription (acquisition de nouveaux livreurs, l'objectif de
+              la réouverture), secondaire vers la connexion pour un livreur
+              déjà inscrit — même construction que la carte Experts
+              ci-dessus (chercher/devenir). */}
+          <div className={`${styles.carteModule} ${styles.livreur}`}>
+            <p className={styles.question}>{t("accueil_questionLivreur")}</p>
+            <Link href="/livreur/inscription" className={styles.lienModule} onClick={fermer}>
+              {t("accueil_devenirLivreur")}
+            </Link>
+            <Link href="/livreur/connexion" className={styles.lienModuleSecondaire} onClick={fermer}>
+              {t("accueil_connexionLivreur")}
+            </Link>
+          </div>
+
           <div className={styles.separateur} />
 
           <Link href="/aide" className={styles.lienBas} onClick={fermer}>
