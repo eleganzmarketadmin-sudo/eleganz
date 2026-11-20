@@ -76,15 +76,19 @@ export function formaterDateHeure(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
 }
 
-// Identité d'une institution partenaire sur les documents qu'elle exporte
-// depuis son portail (20 nov. 2026, demande : "menu paramètre pour le
-// portail institution afin de libérer les infos... avec entête personnalisé
-// et/ou pied de page") — voir Institution.address/logoUrl/headerNote/
-// footerNote dans le schéma. `logo` est déjà le buffer récupéré (jamais
-// l'URL brute ici : voir recupererLogoDepuisUrl dans common/logo-fetch.util.ts),
-// pour que ces fonctions de dessin restent synchrones comme le reste des
-// renderers pdfkit de ce fichier.
-export interface IdentiteInstitutionPourPdf {
+// Identité de l'émetteur d'un document PDF exporté depuis son propre portail
+// (20 nov. 2026, demande initiale : "menu paramètre pour le portail
+// institution afin de libérer les infos... avec entête personnalisé et/ou
+// pied de page" — étendue le même jour à Boutique/Comptable/Plateforme).
+// Générique à dessein : un nom, un logo, une adresse, deux notes — valable
+// pour l'identité Institution (Institution.address/logoUrl/headerNote/
+// footerNote), Comptable (ComptableSubscription, mêmes 4 champs) ou
+// Plateforme (PlatformSettings) sans dupliquer ce dessin pdfkit. `logo` est
+// déjà le buffer récupéré (jamais l'URL brute ici : voir
+// recupererLogoDepuisUrl dans common/logo-fetch.util.ts), pour que ces
+// fonctions de dessin restent synchrones comme le reste des renderers pdfkit
+// de ce fichier.
+export interface IdentitePourPdf {
   name: string;
   logo: Buffer | null;
   address: string | null;
@@ -93,18 +97,18 @@ export interface IdentiteInstitutionPourPdf {
 }
 
 /**
- * En-tête personnalisé de l'institution qui exporte ce document — dessiné
- * tout en haut, en flux normal (jamais en position absolue : un logo
- * positionné avec un `y` explicite bloquerait l'avancement de `doc.y`,
- * exactement le bug corrigé le 19 nov. 2026 sur le logo boutique — voir
+ * En-tête personnalisé de l'émetteur qui exporte ce document — dessiné tout
+ * en haut, en flux normal (jamais en position absolue : un logo positionné
+ * avec un `y` explicite bloquerait l'avancement de `doc.y`, exactement le
+ * bug corrigé le 19 nov. 2026 sur le logo boutique — voir
  * documents/pdf-renderer.ts), avant le titre propre à chaque document.
  * Entièrement facultatif, champ par champ : un champ non renseigné ne
  * dessine simplement rien, jamais un espace vide ni une valeur inventée.
  * Volontairement distincte du titre du document (boutique ou demandeur
- * selon le renderer appelant) : l'institution n'est que celle qui imprime
- * ce document depuis son portail, jamais le sujet du document lui-même.
+ * selon le renderer appelant) : l'émetteur n'est que celui qui imprime ce
+ * document depuis son portail, jamais le sujet du document lui-même.
  */
-export function dessinerEnTeteInstitution(doc: PDFKit.PDFDocument, identite: IdentiteInstitutionPourPdf): void {
+export function dessinerEnTeteIdentite(doc: PDFKit.PDFDocument, identite: IdentitePourPdf): void {
   if (identite.logo) {
     try {
       doc.image(identite.logo, doc.page.margins.left, undefined, { width: 70 });
@@ -131,12 +135,12 @@ export function dessinerEnTeteInstitution(doc: PDFKit.PDFDocument, identite: Ide
 }
 
 /**
- * Pied de page personnalisé — ne dessine rien si l'institution n'a pas
+ * Pied de page personnalisé — ne dessine rien si l'émetteur n'a pas
  * renseigné `footerNote` (jamais un filet vide). Toujours appelé en tout
  * dernier, après le pied de page existant du document (date de génération,
  * code de vérification), jamais à sa place.
  */
-export function dessinerPiedPageInstitution(doc: PDFKit.PDFDocument, identite: IdentiteInstitutionPourPdf): void {
+export function dessinerPiedPageIdentite(doc: PDFKit.PDFDocument, identite: IdentitePourPdf): void {
   if (!identite.footerNote) return;
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminShell } from "../AdminShell";
 import { api, ApiError } from "../../lib/api";
 import { useLocale } from "../../lib/i18n/LocaleContext";
@@ -15,6 +15,13 @@ interface PlatformSettings {
   telegramLink?: string | null;
   tiktokUrl?: string | null;
   instagramUrl?: string | null;
+  // Identité d'ELEGANZ elle-même sur les documents PDF qu'elle exporte
+  // (20 nov. 2026, étalage du en-tête/pied de page personnalisés déjà
+  // livré pour le portail Institution) — `address` ci-dessus existe déjà ;
+  // formulaire séparé plus bas, même principe que le bloc fiscal.
+  logoUrl?: string | null;
+  headerNote?: string | null;
+  footerNote?: string | null;
   photoSearchEnabled?: boolean;
   adStudioEnabled?: boolean;
   notificationsInAppEnabled?: boolean;
@@ -286,6 +293,68 @@ function ParametresContent() {
     }
   }
 
+  // Identité ELEGANZ sur les documents PDF (20 nov. 2026) — formulaire et
+  // PATCH séparés du bloc "Coordonnées & réseaux sociaux" et du bloc
+  // fiscal ci-dessus, même principe (ne jamais mélanger plusieurs
+  // soumissions dans un même état).
+  const [enregistrementIdentite, setEnregistrementIdentite] = useState(false);
+  const [erreurIdentite, setErreurIdentite] = useState<string | null>(null);
+  const [confirmationIdentite, setConfirmationIdentite] = useState<string | null>(null);
+  const [televersementLogoEnCours, setTeleversementLogoEnCours] = useState(false);
+  const inputLogoRef = useRef<HTMLInputElement>(null);
+
+  async function televerserLogo(fichier: File) {
+    setTeleversementLogoEnCours(true);
+    setErreurIdentite(null);
+    try {
+      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string }>(
+        "/admin/platform-settings/logo-upload-url",
+        { contentType: fichier.type },
+      );
+      const envoi = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": fichier.type },
+        body: fichier,
+      });
+      if (!envoi.ok) {
+        throw new Error(t("admparam_erreurEnvoiLogoReseau"));
+      }
+      setValeurs((v) => ({ ...v, logoUrl: publicUrl }));
+    } catch (err) {
+      // Même distinction que (gestion)/parametres et institution/parametres
+      // (televerserLogo) : fetch vers le stockage objet échoue en
+      // TypeError dès que la requête n'atteint jamais le serveur (CORS,
+      // réseau, URL expirée).
+      if (err instanceof TypeError) {
+        setErreurIdentite(t("admparam_erreurEnvoiLogoReseau"));
+      } else {
+        setErreurIdentite(err instanceof ApiError || err instanceof Error ? err.message : t("admparam_erreurEnvoiLogo"));
+      }
+    } finally {
+      setTeleversementLogoEnCours(false);
+    }
+  }
+
+  async function enregistrerIdentite(e: React.FormEvent) {
+    e.preventDefault();
+    setEnregistrementIdentite(true);
+    setErreurIdentite(null);
+    setConfirmationIdentite(null);
+    try {
+      const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+        logoUrl: valeurs.logoUrl,
+        headerNote: valeurs.headerNote,
+        footerNote: valeurs.footerNote,
+      });
+      setValeurs(resultat);
+      setConfirmationIdentite(t("admparam_confirmationEnregistrement"));
+    } catch (err) {
+      setErreurIdentite(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
+    } finally {
+      setEnregistrementIdentite(false);
+    }
+  }
+
   if (chargement) return <p>{t("commun_chargement")}</p>;
 
   return (
@@ -435,6 +504,73 @@ function ParametresContent() {
         </div>
         <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrementFiscal}>
           {enregistrementFiscal ? t("admparam_enregistrementEnCours") : t("action_enregistrer")}
+        </button>
+      </form>
+
+      <h2 className={styles.titreSection}>{t("admparam_titreIdentiteDocuments")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_identiteDocumentsSousTitre")}</p>
+      {erreurIdentite && <p className={styles.erreur}>{erreurIdentite}</p>}
+      {confirmationIdentite && <p className={styles.confirmation}>{confirmationIdentite}</p>}
+      <form className={styles.formulaire} onSubmit={enregistrerIdentite}>
+        <div className={styles.champ}>
+          <label htmlFor="logoUrl">{t("admparam_labelLogo")}</label>
+          <input
+            id="logoUrl"
+            value={valeurs.logoUrl ?? ""}
+            onChange={(e) => setValeurs((v) => ({ ...v, logoUrl: e.target.value }))}
+            placeholder="https://…/logo.png"
+            maxLength={500}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--espace-3)", marginTop: "var(--espace-1)" }}>
+            <button
+              type="button"
+              className={styles.boutonSecondaire}
+              disabled={televersementLogoEnCours}
+              onClick={() => inputLogoRef.current?.click()}
+            >
+              {televersementLogoEnCours ? t("admparam_televersementLogoEnCours") : t("admparam_televerserLogo")}
+            </button>
+            <input
+              ref={inputLogoRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: "none" }}
+              disabled={televersementLogoEnCours}
+              onChange={(e) => {
+                const fichier = e.target.files?.[0];
+                e.target.value = "";
+                if (fichier) televerserLogo(fichier);
+              }}
+            />
+            {valeurs.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={valeurs.logoUrl} alt="" className={styles.logoApercu} />
+            )}
+          </div>
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="headerNote">{t("admparam_labelEnTete")}</label>
+          <input
+            id="headerNote"
+            value={valeurs.headerNote ?? ""}
+            onChange={(e) => setValeurs((v) => ({ ...v, headerNote: e.target.value }))}
+            placeholder={t("admparam_placeholderEnTete")}
+            maxLength={300}
+          />
+        </div>
+        <div className={styles.champ}>
+          <label htmlFor="footerNote">{t("admparam_labelPiedPage")}</label>
+          <textarea
+            id="footerNote"
+            value={valeurs.footerNote ?? ""}
+            onChange={(e) => setValeurs((v) => ({ ...v, footerNote: e.target.value }))}
+            rows={2}
+            placeholder={t("admparam_placeholderPiedPage")}
+            maxLength={300}
+          />
+        </div>
+        <button className={styles.boutonEnregistrer} type="submit" disabled={enregistrementIdentite}>
+          {enregistrementIdentite ? t("admparam_enregistrementEnCours") : t("action_enregistrer")}
         </button>
       </form>
 

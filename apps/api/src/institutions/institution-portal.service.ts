@@ -5,7 +5,7 @@ import { LoansService } from "../finance/loans.service";
 import { FinanceService } from "../finance/finance.service";
 import { StorageService } from "../storage/storage.service";
 import { recupererLogoDepuisUrl } from "../common/logo-fetch.util";
-import type { IdentiteInstitutionPourPdf } from "../finance/dossier-credit-pdf-shared";
+import type { IdentitePourPdf } from "../finance/dossier-credit-pdf-shared";
 import { ecransInstitutionEffectifs } from "./institution-staff.service";
 import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
 import { UpdateInstitutionSettingsDto } from "./dto/update-institution-settings.dto";
@@ -134,7 +134,7 @@ export class InstitutionPortalService {
    * taille/délai) pour que chaque route d'export n'ait qu'à appeler cette
    * seule méthode plutôt que de redupliquer la logique de fetch.
    */
-  async identitePourPdf(institutionId: string): Promise<IdentiteInstitutionPourPdf> {
+  async identitePourPdf(institutionId: string): Promise<IdentitePourPdf> {
     const institution = await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
     const logo = await recupererLogoDepuisUrl(institution.logoUrl);
     return {

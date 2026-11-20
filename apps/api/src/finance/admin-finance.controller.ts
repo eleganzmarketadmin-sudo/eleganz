@@ -34,6 +34,7 @@ import { ExpensesService } from "../operations/expenses.service";
 import { CreateExpenseDto } from "../operations/dto/expense.dto";
 import { LoansService } from "./loans.service";
 import { CreateLoanDto } from "./dto/loan.dto";
+import { AdminSettingsService } from "../admin-settings/admin-settings.service";
 import { renderDossierCreditPlateformePdf } from "./dossier-credit-plateforme-pdf-renderer";
 import { renderRapportAnnuelPdf } from "./rapport-annuel-pdf-renderer";
 import { renderRapportAnnuelDocx } from "./rapport-annuel-docx-renderer";
@@ -76,6 +77,7 @@ export class AdminFinanceController {
     private readonly tresorerieComptesService: TresorerieComptesService,
     private readonly expensesService: ExpensesService,
     private readonly loansService: LoansService,
+    private readonly adminSettingsService: AdminSettingsService,
   ) {}
 
   private periode(from?: string, to?: string) {
@@ -453,7 +455,8 @@ export class AdminFinanceController {
   async exportDossierCredit(@CurrentUser() user: AuthenticatedUser, @Res() res: Response, @Query("mois") mois?: string) {
     requireAdmin(user);
     const dossier = await this.adminFinanceService.dossierCredit(mois ? Number(mois) : undefined);
-    const doc = renderDossierCreditPlateformePdf(dossier);
+    const identite = await this.adminSettingsService.identitePourPdf();
+    const doc = renderDossierCreditPlateformePdf(dossier, identite);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="dossier-credit-eleganz.pdf"`);
     return doc.pipe(res);

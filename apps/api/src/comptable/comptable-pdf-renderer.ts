@@ -2,6 +2,7 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { SynthesePeriode, DossierFinancement } from "./comptable-export.service";
+import { dessinerEnTeteIdentite, dessinerPiedPageIdentite, type IdentitePourPdf } from "../finance/dossier-credit-pdf-shared";
 
 function formaterMontants(cdf: number, usd: number): string {
   const parts: string[] = [];
@@ -20,10 +21,12 @@ function formaterDateHeure(iso: string): string {
  * un repère de cohérence calculé côté serveur, pas une certification
  * comptable/fiscale au sens légal.
  */
-export function renderSynthesePdf(synthese: SynthesePeriode): PDFKit.PDFDocument {
+export function renderSynthesePdf(synthese: SynthesePeriode, identite: IdentitePourPdf): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+
+  dessinerEnTeteIdentite(doc, identite);
 
   doc.font("Helvetica-Bold").fontSize(14).text("Synthèse ELEGANZ Mon assistant", { align: "center" });
   doc.font("Helvetica").fontSize(9).fillColor("#333");
@@ -97,6 +100,8 @@ export function renderSynthesePdf(synthese: SynthesePeriode): PDFKit.PDFDocument
   );
   doc.fillColor("#000");
 
+  dessinerPiedPageIdentite(doc, identite);
+
   doc.end();
   return doc;
 }
@@ -114,10 +119,12 @@ const LABELS_TYPE_DETTE: Record<string, string> = {
  * dossier n'est PAS un état financier certifié (prompt §15, décision
  * explicite).
  */
-export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit.PDFDocument {
+export function renderDossierFinancementPdf(dossier: DossierFinancement, identite: IdentitePourPdf): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+
+  dessinerEnTeteIdentite(doc, identite);
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier préparatoire — demande de financement", { align: "center" });
   doc.font("Helvetica").fontSize(10).fillColor("#333").text("ELEGANZ Mon assistant", { align: "center" });
@@ -229,6 +236,8 @@ export function renderDossierFinancementPdf(dossier: DossierFinancement): PDFKit
     "Rappel : ce dossier ne remplace pas un état financier certifié, un audit comptable ou une attestation fiscale.",
   );
   doc.fillColor("#000");
+
+  dessinerPiedPageIdentite(doc, identite);
 
   doc.end();
   return doc;

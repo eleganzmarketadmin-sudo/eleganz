@@ -48,6 +48,25 @@ export class UpdatePlatformSettingsDto {
   @MaxLength(300)
   instagramUrl?: string;
 
+  // Identité d'ELEGANZ elle-même sur les documents PDF qu'elle exporte
+  // (20 nov. 2026, étalage du en-tête/pied de page personnalisés déjà
+  // livré pour le portail Institution) — `address` ci-dessus existe déjà ;
+  // seuls le logo et les deux notes manquaient. Vide = efface le champ.
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  headerNote?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  footerNote?: string;
+
   // Fonctionnalités IA prévues mais coupées par défaut (voir schema.prisma) —
   // l'admin les active lui-même une fois un fournisseur choisi et payé.
   @IsOptional()

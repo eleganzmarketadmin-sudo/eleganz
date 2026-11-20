@@ -27,6 +27,14 @@ export class UpdateInvoiceSettingsDto {
   @IsUrl({}, { message: "Le logo doit être une URL valide (https://...)." })
   invoiceLogoUrl?: string;
 
+  // En-tête personnalisé (20 nov. 2026, étalage du champ déjà livré pour le
+  // portail Institution) — affiché juste après le nom/libellé du document,
+  // avant l'adresse, dans le même style compact que le reste du ticket.
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  invoiceHeaderNote?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(300)

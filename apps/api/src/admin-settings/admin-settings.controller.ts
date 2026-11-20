@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, UseGuards } from "@nestjs/common";
 import { MenuAdmin } from "@eleganz/database";
 import { AdminSettingsService } from "./admin-settings.service";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
 import { UpdateExchangeRateDto } from "./dto/update-exchange-rate.dto";
+import { RequestPlatformLogoUploadDto } from "./dto/request-platform-logo-upload.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
@@ -37,6 +38,16 @@ export class AdminSettingsController {
   update(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdatePlatformSettingsDto) {
     requireAdmin(user);
     return this.adminSettingsService.update(dto);
+  }
+
+  // URL signée d'upload direct du logo plateforme vers R2 (20 nov. 2026,
+  // même principe que les autres écrans Paramètres) — le navigateur PUT
+  // ensuite le fichier directement sur R2, puis PATCH ci-dessus avec l'URL
+  // publique obtenue.
+  @Post("logo-upload-url")
+  creerUrlUploadLogo(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestPlatformLogoUploadDto) {
+    requireAdmin(user);
+    return this.adminSettingsService.creerUrlUploadLogo(dto.contentType);
   }
 
   // Taux de change système CDF/USD (prompt du 13 oct. 2026, point 5) — un

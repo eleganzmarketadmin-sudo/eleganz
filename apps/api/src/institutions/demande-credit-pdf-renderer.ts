@@ -6,12 +6,12 @@ import type { DossierCreditBoutique } from "../finance/finance.service";
 import {
   formaterDateHeure,
   dessinerCorpsFinancier,
-  dessinerEnTeteInstitution,
-  dessinerPiedPageInstitution,
+  dessinerEnTeteIdentite,
+  dessinerPiedPageIdentite,
   LIBELLES_SECTEUR_ACTIVITE,
   LIBELLES_TYPE_GARANTIE,
   LIBELLES_TYPE_DOCUMENT_IDENTITE,
-  type IdentiteInstitutionPourPdf,
+  type IdentitePourPdf,
 } from "../finance/dossier-credit-pdf-shared";
 import type { TypeGarantieCredit } from "@eleganz/database";
 
@@ -91,13 +91,13 @@ const LIBELLES_STATUT: Record<string, string> = {
  */
 export function renderDemandeCreditPdf(
   demande: DemandeCreditPourPdf,
-  identiteInstitution: IdentiteInstitutionPourPdf,
+  identiteInstitution: IdentitePourPdf,
 ): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
-  dessinerEnTeteInstitution(doc, identiteInstitution);
+  dessinerEnTeteIdentite(doc, identiteInstitution);
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier de candidature de crédit", { align: "center" });
   doc.font("Helvetica").fontSize(10).fillColor("#333").text(`${demande.numero} — ${demande.institution.name}`, { align: "center" });
@@ -219,7 +219,7 @@ export function renderDemandeCreditPdf(
   doc.text(`Code de vérification de ce document : ${codeVerification}`);
   doc.fillColor("#000");
 
-  dessinerPiedPageInstitution(doc, identiteInstitution);
+  dessinerPiedPageIdentite(doc, identiteInstitution);
 
   doc.end();
   return doc;

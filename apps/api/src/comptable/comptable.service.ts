@@ -1,5 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
+import { recupererLogoDepuisUrl } from "../common/logo-fetch.util";
+import type { IdentitePourPdf } from "../finance/dossier-credit-pdf-shared";
 import {
   ComptableFlowCategory,
   ComptableFlowDirection,
@@ -17,6 +20,7 @@ import {
   RecordRentPaymentDto,
   SyncQuickEntryDto,
 } from "./dto/comptable.dto";
+import { UpdateComptableSettingsDto } from "./dto/update-comptable-settings.dto";
 
 /**
  * ELEGANZ Secourable — carnet de gestion quotidienne (prompt du
@@ -28,7 +32,10 @@ import {
  */
 @Injectable()
 export class ComptableService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   // --- Activités -----------------------------------------------------
 
@@ -757,6 +764,55 @@ export class ComptableService {
       data: { userId, bouquetId: bouquetDeDepart?.id },
       include: { bouquet: true },
     });
+  }
+
+  /**
+   * Identité du Comptable sur les documents imprimés (20 nov. 2026, étalage
+   * du en-tête/pied de page personnalisés déjà livré pour le portail
+   * Institution — voir UpdateInstitutionSettingsDto/mettreAJourParametres).
+   * Pas de modèle "profil" séparé pour ce module : ces 4 champs rejoignent
+   * directement ComptableSubscription, l'entité 1:1-par-utilisateur la plus
+   * proche. Un champ envoyé comme chaîne vide efface l'information plutôt
+   * que de la laisser inchangée.
+   */
+  async mettreAJourParametres(userId: string, dto: UpdateComptableSettingsDto) {
+    await this.getOrCreateSubscription(userId);
+    return this.prisma.comptableSubscription.update({
+      where: { userId },
+      data: {
+        ...(dto.address !== undefined && { address: dto.address || null }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl || null }),
+        ...(dto.headerNote !== undefined && { headerNote: dto.headerNote || null }),
+        ...(dto.footerNote !== undefined && { footerNote: dto.footerNote || null }),
+      },
+    });
+  }
+
+  creerUrlUploadLogo(userId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`comptable/${userId}/logo`, contentType);
+  }
+
+  /**
+   * Identité prête à être passée aux renderers PDF du module Comptable
+   * (renderSynthesePdf, renderDossierFinancementPdf) — centralise la
+   * récupération du logo (recupererLogoDepuisUrl, avec son garde-fou de
+   * taille/délai), même principe que
+   * InstitutionPortalService.identitePourPdf. Le nom affiché reste
+   * `User.fullName`, jamais dupliqué sur ComptableSubscription.
+   */
+  async identitePourPdf(userId: string): Promise<IdentitePourPdf> {
+    const [subscription, user] = await Promise.all([
+      this.getOrCreateSubscription(userId),
+      this.prisma.user.findUniqueOrThrow({ where: { id: userId } }),
+    ]);
+    const logo = await recupererLogoDepuisUrl(subscription.logoUrl);
+    return {
+      name: user.fullName,
+      logo,
+      address: subscription.address,
+      headerNote: subscription.headerNote,
+      footerNote: subscription.footerNote,
+    };
   }
 
   async choosePlan(userId: string, plan: "MONTHLY" | "YEARLY") {

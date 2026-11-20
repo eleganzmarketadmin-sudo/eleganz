@@ -60,6 +60,13 @@ export interface DonneesDocumentPdf {
   shopAddress?: string | null;
   shopPhone?: string | null;
   shopLogo?: Buffer | null;
+  /**
+   * En-tête personnalisé (20 nov. 2026, étalage du champ déjà livré pour le
+   * portail Institution) — affiché juste après le nom/libellé du document,
+   * avant l'adresse. Même principe que `shopFooterNote` : facultatif, jamais
+   * de valeur inventée si absent.
+   */
+  shopHeaderNote?: string | null;
   shopFooterNote?: string | null;
   /**
    * Coordonnées officielles ELEGANZ (Centre de pilotage, section "Paramètres
@@ -154,6 +161,10 @@ export function renderDocumentPdf(donnees: DonneesDocumentPdf): PDFKit.PDFDocume
 
   doc.font("Helvetica-Bold").fontSize(12).text(donnees.shopName, { align: "center" });
   doc.font("Helvetica").fontSize(9).text(donnees.documentTypeLabel, { align: "center" });
+  if (donnees.shopHeaderNote) {
+    doc.font("Helvetica-Oblique").fontSize(7.5).text(donnees.shopHeaderNote, { align: "center" });
+    doc.font("Helvetica");
+  }
   if (donnees.shopAddress) {
     doc.fontSize(7.5).text(donnees.shopAddress, { align: "center" });
   }

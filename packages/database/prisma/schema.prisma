@@ -28,6 +28,16 @@ model PlatformSettings {
   tiktokUrl     String?
   instagramUrl  String?
 
+  // Identité d'ELEGANZ elle-même sur les documents PDF qu'elle exporte
+  // (20 nov. 2026, étalage du en-tête/pied de page personnalisés déjà
+  // livré pour le portail Institution) — `address` ci-dessus existe déjà ;
+  // seuls le logo et les deux notes manquaient. Facultatifs, jamais de
+  // valeur inventée si absents — même convention que Shop.invoiceHeaderNote
+  // et Institution.headerNote/footerNote.
+  logoUrl    String?
+  headerNote String? @db.Text
+  footerNote String? @db.Text
+
   // Fonctionnalités IA "prévues mais inactives" (demande du 12 oct. 2026) :
   // le code et les points d'entrée existent déjà dans l'écran (bouton
   // visible mais désactivé, "Bientôt disponible"), mais restent coupés tant
@@ -581,6 +591,7 @@ model Shop {
   invoiceAddress    String?
   invoicePhone      String?
   invoiceLogoUrl    String?
+  invoiceHeaderNote String? // 20 nov. 2026, étalage du en-tête personnalisé déjà livré pour Institution.
   invoiceFooterNote String? // ex. "Merci pour votre achat !", conditions de retour, etc.
 
   // Décision #9 (docs/COMPLIANCE_FACTURE_NORMALISEE.md) : les deux formats
@@ -2087,6 +2098,18 @@ model ComptableSubscription {
   // par ComptableBillingService.executerEscaladeFacturesComptable.
   suspendedAt      DateTime?
   suspensionReason String? // "IMPAYE" | "ADMIN"
+
+  // Identité du Comptable (assistant ELEGANZ) sur les documents PDF qu'il
+  // exporte (20 nov. 2026, étalage du en-tête/pied de page personnalisés
+  // déjà livré pour le portail Institution) — pas de modèle "profil"
+  // séparé pour ce module : ces 4 champs rejoignent directement l'entité
+  // 1:1-par-utilisateur la plus proche. Tous facultatifs, jamais de valeur
+  // inventée si absents — même convention que Shop.invoiceHeaderNote et
+  // Institution.headerNote.
+  address    String?
+  logoUrl    String?
+  headerNote String? @db.Text
+  footerNote String? @db.Text
 
   invoices ComptableInvoice[]
   reactivationRequests ComptableReactivationRequest[]

@@ -217,6 +217,9 @@ export class ShopsService {
         ...(dto.invoiceAddress !== undefined && { invoiceAddress: dto.invoiceAddress || null }),
         ...(dto.invoicePhone !== undefined && { invoicePhone: dto.invoicePhone || null }),
         ...(dto.invoiceLogoUrl !== undefined && { invoiceLogoUrl: dto.invoiceLogoUrl || null }),
+        ...(dto.invoiceHeaderNote !== undefined && {
+          invoiceHeaderNote: dto.invoiceHeaderNote || null,
+        }),
         ...(dto.invoiceFooterNote !== undefined && {
           invoiceFooterNote: dto.invoiceFooterNote || null,
         }),

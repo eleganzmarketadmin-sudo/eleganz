@@ -20,6 +20,8 @@ import {
   RecordRentPaymentDto,
   ChoosePlanDto,
 } from "./dto/comptable.dto";
+import { UpdateComptableSettingsDto } from "./dto/update-comptable-settings.dto";
+import { RequestComptableLogoUploadDto } from "./dto/request-comptable-logo-upload.dto";
 
 /**
  * ELEGANZ Secourable (prompt du 13 oct. 2026) — toutes les routes
@@ -210,6 +212,26 @@ export class ComptableController {
   }
 
   /**
+   * Identité sur les documents imprimés du module (20 nov. 2026, étalage du
+   * en-tête/pied de page personnalisés déjà livré pour le portail
+   * Institution) — adresse/logo/en-tête/pied de page, voir
+   * ComptableService.mettreAJourParametres.
+   */
+  @Patch("me/parametres")
+  mettreAJourParametres(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateComptableSettingsDto) {
+    return this.comptableService.mettreAJourParametres(user.id, dto);
+  }
+
+  // URL signée d'upload direct du logo vers R2 (même principe que
+  // InstitutionPortalController.creerUrlUploadLogo) — le navigateur PUT
+  // ensuite le fichier directement sur R2, puis PATCH me/parametres avec
+  // l'URL publique obtenue.
+  @Post("me/parametres/logo-upload-url")
+  creerUrlUploadLogo(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestComptableLogoUploadDto) {
+    return this.comptableService.creerUrlUploadLogo(user.id, dto.contentType);
+  }
+
+  /**
    * Synthèse périodique exportable (prompt §10.5) — JSON par défaut, ou
    * PDF/Excel via ?format=. Jamais présentée comme un état financier
    * certifié (voir le disclaimer dans le renderer PDF).
@@ -237,7 +259,8 @@ export class ComptableController {
       return res.send(buffer);
     }
     if (format === "pdf") {
-      const doc = renderSynthesePdf(synthese);
+      const identite = await this.comptableService.identitePourPdf(user.id);
+      const doc = renderSynthesePdf(synthese, identite);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", 'inline; filename="synthese-mon-comptable.pdf"');
       return doc.pipe(res);
@@ -258,7 +281,8 @@ export class ComptableController {
       );
     }
     const dossier = await this.comptableExportService.dossierFinancement(user.id);
-    const doc = renderDossierFinancementPdf(dossier);
+    const identite = await this.comptableService.identitePourPdf(user.id);
+    const doc = renderDossierFinancementPdf(dossier, identite);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'inline; filename="dossier-financement-eleganz.pdf"');
     return doc.pipe(res);

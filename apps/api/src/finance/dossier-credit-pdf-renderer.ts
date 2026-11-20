@@ -6,10 +6,10 @@ import {
   formaterDate,
   formaterDateHeure,
   dessinerCorpsFinancier,
-  dessinerEnTeteInstitution,
-  dessinerPiedPageInstitution,
+  dessinerEnTeteIdentite,
+  dessinerPiedPageIdentite,
   LIBELLES_SECTEUR_ACTIVITE,
-  type IdentiteInstitutionPourPdf,
+  type IdentitePourPdf,
 } from "./dossier-credit-pdf-shared";
 
 /**
@@ -29,14 +29,14 @@ import {
  */
 export function renderDossierCreditPdf(
   dossier: DossierCreditBoutique,
-  identiteInstitution?: IdentiteInstitutionPourPdf,
+  identiteInstitution?: IdentitePourPdf,
 ): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
   if (identiteInstitution) {
-    dessinerEnTeteInstitution(doc, identiteInstitution);
+    dessinerEnTeteIdentite(doc, identiteInstitution);
   }
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier de crédit — demande de financement", { align: "center" });
@@ -93,7 +93,7 @@ export function renderDossierCreditPdf(
   doc.fillColor("#000");
 
   if (identiteInstitution) {
-    dessinerPiedPageInstitution(doc, identiteInstitution);
+    dessinerPiedPageIdentite(doc, identiteInstitution);
   }
 
   doc.end();

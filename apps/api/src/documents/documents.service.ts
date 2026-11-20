@@ -303,6 +303,7 @@ export class DocumentsService {
       shopAddress: document.shop.invoiceAddress,
       shopPhone: document.shop.invoicePhone,
       shopLogo: logo,
+      shopHeaderNote: document.shop.invoiceHeaderNote,
       shopFooterNote: document.shop.invoiceFooterNote,
       platformWebsite: parametresPlateforme.website,
       platformSupportEmail: parametresPlateforme.supportEmail,

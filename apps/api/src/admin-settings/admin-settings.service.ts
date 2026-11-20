@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
+import { recupererLogoDepuisUrl } from "../common/logo-fetch.util";
+import type { IdentitePourPdf } from "../finance/dossier-credit-pdf-shared";
 import { UpdatePlatformSettingsDto } from "./dto/update-platform-settings.dto";
 import { validerSeuilsCroissants } from "../billing/dunning.util";
 
@@ -14,7 +17,10 @@ const ID_SINGLETON = "platform";
  */
 @Injectable()
 export class AdminSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async get() {
     const existant = await this.prisma.platformSettings.findUnique({ where: { id: ID_SINGLETON } });
@@ -61,6 +67,9 @@ export class AdminSettingsService {
         ...(dto.telegramLink !== undefined && { telegramLink: dto.telegramLink || null }),
         ...(dto.tiktokUrl !== undefined && { tiktokUrl: dto.tiktokUrl || null }),
         ...(dto.instagramUrl !== undefined && { instagramUrl: dto.instagramUrl || null }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl || null }),
+        ...(dto.headerNote !== undefined && { headerNote: dto.headerNote || null }),
+        ...(dto.footerNote !== undefined && { footerNote: dto.footerNote || null }),
         ...(dto.photoSearchEnabled !== undefined && { photoSearchEnabled: dto.photoSearchEnabled }),
         ...(dto.adStudioEnabled !== undefined && { adStudioEnabled: dto.adStudioEnabled }),
         ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
@@ -183,6 +192,34 @@ export class AdminSettingsService {
       telegramLink: settings.telegramLink,
       tiktokUrl: settings.tiktokUrl,
       instagramUrl: settings.instagramUrl,
+    };
+  }
+
+  // URL signée d'upload direct du logo plateforme vers R2 (20 nov. 2026,
+  // même principe que InstitutionPortalService.creerUrlUploadLogo /
+  // ComptableService.creerUrlUploadLogo) — le navigateur PUT ensuite le
+  // fichier directement sur R2, puis PATCH admin/platform-settings avec
+  // l'URL publique obtenue.
+  creerUrlUploadLogo(contentType: string) {
+    return this.storage.creerUrlUpload("platform/logo", contentType);
+  }
+
+  /**
+   * Identité d'ELEGANZ elle-même, prête à être passée au renderer PDF
+   * exclusivement admin (dossier-credit-plateforme-pdf-renderer.ts) — même
+   * principe que InstitutionPortalService.identitePourPdf /
+   * ComptableService.identitePourPdf : centralise la récupération du logo
+   * (recupererLogoDepuisUrl, avec son garde-fou de taille/délai).
+   */
+  async identitePourPdf(): Promise<IdentitePourPdf> {
+    const settings = await this.get();
+    const logo = await recupererLogoDepuisUrl(settings.logoUrl);
+    return {
+      name: "ELEGANZ",
+      logo,
+      address: settings.address,
+      headerNote: settings.headerNote,
+      footerNote: settings.footerNote,
     };
   }
 

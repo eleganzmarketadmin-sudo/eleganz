@@ -21,6 +21,7 @@ interface ShopDetails {
   invoiceAddress?: string | null;
   invoicePhone?: string | null;
   invoiceLogoUrl?: string | null;
+  invoiceHeaderNote?: string | null;
   invoiceFooterNote?: string | null;
   fiscalHomologationConfirmed: boolean;
   defaultInvoiceType?: "INVOICE_INTERNAL" | "INVOICE_FISCAL" | null;
@@ -511,6 +512,9 @@ function ParametresContent() {
   // en parallèle pour qui héberge déjà son logo ailleurs.
   const [televersementLogoEnCours, setTeleversementLogoEnCours] = useState(false);
   const inputLogoRef = useRef<HTMLInputElement>(null);
+  // En-tête personnalisé (20 nov. 2026, étalage du champ déjà livré pour le
+  // portail Institution) — même soumission que noteBasPage ci-dessous.
+  const [enTete, setEnTete] = useState("");
   const [noteBasPage, setNoteBasPage] = useState("");
   // Choix du type de facture par défaut à la caisse (demande du 11 nov. 2026)
   // — "" = aucune préférence (comportement historique de la caisse,
@@ -589,6 +593,7 @@ function ParametresContent() {
         setAdresse(shop.invoiceAddress ?? "");
         setTelephone(shop.invoicePhone ?? "");
         setLogoUrl(shop.invoiceLogoUrl ?? "");
+        setEnTete(shop.invoiceHeaderNote ?? "");
         setNoteBasPage(shop.invoiceFooterNote ?? "");
         setTypeFactureDefaut(shop.defaultInvoiceType ?? "");
         setHomologationConfirmee(Boolean(shop.fiscalHomologationConfirmed));
@@ -629,6 +634,7 @@ function ParametresContent() {
         invoiceAddress: adresse,
         invoicePhone: telephone,
         invoiceLogoUrl: logoUrl,
+        invoiceHeaderNote: enTete,
         invoiceFooterNote: noteBasPage,
         defaultInvoiceType: typeFactureDefaut || null,
         normalisationAutoDeclaree,
@@ -912,6 +918,16 @@ function ParametresContent() {
                 <img src={logoUrl} alt="" className={styles.logoApercu} />
               )}
             </div>
+          </div>
+          <div className={styles.champ}>
+            <label htmlFor="enTete">{t("param_labelEnTete")}</label>
+            <input
+              id="enTete"
+              value={enTete}
+              onChange={(e) => setEnTete(e.target.value)}
+              placeholder={t("param_placeholderEnTete")}
+              maxLength={300}
+            />
           </div>
           <div className={styles.champ}>
             <label htmlFor="noteBasPage">{t("param_labelNoteBasPage")}</label>

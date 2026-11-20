@@ -2,7 +2,15 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { DossierCreditPlateforme } from "./admin-finance.service";
-import { formaterMontant, formaterDate, formaterDateHeure, dessinerSectionBusinessPlan } from "./dossier-credit-pdf-shared";
+import {
+  formaterMontant,
+  formaterDate,
+  formaterDateHeure,
+  dessinerSectionBusinessPlan,
+  dessinerEnTeteIdentite,
+  dessinerPiedPageIdentite,
+  type IdentitePourPdf,
+} from "./dossier-credit-pdf-shared";
 
 /**
  * Dossier de crédit d'ELEGANZ elle-même (demande du 16 oct. 2026, point 2)
@@ -11,11 +19,26 @@ import { formaterMontant, formaterDate, formaterDateHeure, dessinerSectionBusine
  * est remplacée par la répartition des revenus propres à ELEGANZ (jamais le
  * volume des transactions vendeurs, qui n'est pas un revenu de la
  * plateforme — voir AdminFinanceService.dashboard).
+ *
+ * `identite` (20 nov. 2026) — en-tête/pied de page personnalisés d'ELEGANZ
+ * elle-même, voir AdminSettingsService.identitePourPdf. Toujours fourni ici
+ * (contrairement à renderDossierCreditPdf, partagé boutique/institution) :
+ * cette fonction n'est appelée que depuis admin-finance.controller.ts, donc
+ * exclusivement sur l'identité plateforme. Distinct de la section "Identité
+ * de la société" ci-dessous, qui reste `dossier.identiteFiscale` (raison
+ * sociale, NIF, RCCM...) — jamais remplacée par ce nouvel en-tête, qui
+ * n'ajoute qu'un logo et des notes libres au tout début/à la toute fin du
+ * document.
  */
-export function renderDossierCreditPlateformePdf(dossier: DossierCreditPlateforme): PDFKit.PDFDocument {
+export function renderDossierCreditPlateformePdf(
+  dossier: DossierCreditPlateforme,
+  identite: IdentitePourPdf,
+): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+
+  dessinerEnTeteIdentite(doc, identite);
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier de crédit — demande de financement", { align: "center" });
   doc.font("Helvetica").fontSize(10).fillColor("#333").text(dossier.entiteNom, { align: "center" });
@@ -121,6 +144,8 @@ export function renderDossierCreditPlateformePdf(dossier: DossierCreditPlateform
     "Rappel : ce dossier ne remplace pas un état financier certifié, un audit comptable ou une attestation fiscale.",
   );
   doc.fillColor("#000");
+
+  dessinerPiedPageIdentite(doc, identite);
 
   doc.end();
   return doc;

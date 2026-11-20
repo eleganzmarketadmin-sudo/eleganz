@@ -4,9 +4,9 @@ import PDFDocument = require("pdfkit");
 import {
   formaterDateHeure,
   formaterMontant,
-  dessinerEnTeteInstitution,
-  dessinerPiedPageInstitution,
-  type IdentiteInstitutionPourPdf,
+  dessinerEnTeteIdentite,
+  dessinerPiedPageIdentite,
+  type IdentitePourPdf,
 } from "../finance/dossier-credit-pdf-shared";
 import type { RapportPortefeuille } from "./rapport-portefeuille.service";
 
@@ -36,13 +36,13 @@ function formaterPourcentage(valeur: number | null): string {
  */
 export function renderRapportPortefeuillePdf(
   rapport: RapportPortefeuille,
-  identiteInstitution: IdentiteInstitutionPourPdf,
+  identiteInstitution: IdentitePourPdf,
 ): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
-  dessinerEnTeteInstitution(doc, identiteInstitution);
+  dessinerEnTeteIdentite(doc, identiteInstitution);
 
   doc.font("Helvetica-Bold").fontSize(16).text("Rapport de portefeuille", { align: "center" });
   doc.fillColor("#000");
@@ -109,7 +109,7 @@ export function renderRapportPortefeuillePdf(
   doc.text(`Rapport généré le ${formaterDateHeure(rapport.genereLe)}.`);
   doc.fillColor("#000");
 
-  dessinerPiedPageInstitution(doc, identiteInstitution);
+  dessinerPiedPageIdentite(doc, identiteInstitution);
 
   doc.end();
   return doc;

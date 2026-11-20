@@ -23,6 +23,7 @@ import { RapportAnnuelService } from "./rapport-annuel.service";
 import { ExpensesService } from "../operations/expenses.service";
 import { ExpensesController } from "../operations/expenses.controller";
 import { LoansService } from "./loans.service";
+import { AdminSettingsModule } from "../admin-settings/admin-settings.module";
 
 // Module "FINANCE & COMPTABILITÉ" (prompt du 13 oct. 2026) — voir
 // docs/ARCHITECTURE_FINANCE.md. Importe ShopsModule pour obtenir
@@ -39,7 +40,11 @@ import { LoansService } from "./loans.service";
 // module circulaire. Même règle déjà appliquée à Assets/TresorerieComptes,
 // qui vivaient ici dès le départ malgré leurs routes shop-scoped.
 @Module({
-  imports: [ShopsModule],
+  // AdminSettingsModule (20 nov. 2026) : AdminFinanceController a besoin
+  // d'injecter AdminSettingsService pour l'identité plateforme (logo/
+  // en-tête/pied de page) du dossier de crédit ELEGANZ — AdminSettingsModule
+  // n'importe ni FinanceModule ni ComptableModule, aucun cycle créé.
+  imports: [ShopsModule, AdminSettingsModule],
   providers: [
     FinanceService,
     FiscalRulesService,
