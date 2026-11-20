@@ -34,6 +34,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
 
   const LIENS = [
     { href: "/livreur/missions", label: t("livr_mesMissions") },
+    { href: "/livreur/demandes", label: t("livDem_titreNav") },
     { href: "/livreur/messagerie", label: t("nav_messagerie") },
     { href: "/livreur/profil", label: t("livr_monProfil") },
   ];

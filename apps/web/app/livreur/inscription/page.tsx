@@ -39,32 +39,22 @@ const VEHICULES: { valeur: string; label: string; documentsRequis: boolean }[] =
 ];
 
 /**
- * Inscription livreur FERMÉE au grand public (décision du 13 oct. 2026) :
- * risque de malhonnêteté trop élevé pour un réseau de livreurs ouvert dès le
- * lancement (vol, perte de marchandise sans garantie de sérieux du livreur).
- * Chaque boutique gère maintenant ses propres livreurs, sous sa propre
- * responsabilité (voir (gestion)/livreurs/page.tsx). Le formulaire complet
- * ci-dessous est conservé tel quel (fonction renommée, plus exportée par
- * défaut) pour une réouverture future du réseau de livreurs plateforme,
- * sans avoir à le réécrire — l'API refuse de toute façon déjà l'inscription
- * côté serveur (voir DeliveryService.registerDriver).
+ * Inscription livreur RÉOUVERTE au grand public (20 nov. 2026, demande du
+ * propriétaire) — fermée depuis le 13 oct. 2026 pour limiter le risque de
+ * malhonnêteté au lancement ; le formulaire complet avait été conservé tel
+ * quel (fonction non exportée) pour cette réouverture, sans avoir à le
+ * réécrire. S'inscrire ici est désormais une offre de service du livreur en
+ * son nom propre (personne physique ou morale) — pas une garantie ELEGANZ :
+ * la case à cocher ci-dessous le rend explicite. `ShopDriver` (fiche gérée
+ * par une boutique, sans compte) reste un mécanisme parallèle inchangé pour
+ * les boutiques qui préfèrent gérer leurs propres livreurs.
  */
 export default function InscriptionLivreurPage() {
-  const { t } = useLocale();
-  return (
-    <div style={{ maxWidth: 560, margin: "80px auto", padding: "0 24px", textAlign: "center" }}>
-      <h1 style={{ marginBottom: 16 }}>{t("linscription_fermeeTitre")}</h1>
-      <p style={{ color: "var(--color-texte-muted)", lineHeight: 1.6 }}>
-        {t("linscription_fermeeTexte")}
-      </p>
-      <p style={{ marginTop: 24 }}>
-        <Link href="/">{t("linscription_retourAccueil")}</Link>
-      </p>
-    </div>
-  );
+  return <FormulaireInscriptionLivreur />;
 }
 
-function _FormulaireInscriptionLivreurReserve() {
+function FormulaireInscriptionLivreur() {
+  const { t } = useLocale();
   const { register } = useAuth();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
@@ -78,6 +68,8 @@ function _FormulaireInscriptionLivreurReserve() {
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [idDocumentNumber, setIdDocumentNumber] = useState("");
+  const [conditions, setConditions] = useState("");
+  const [accepteConditions, setAccepteConditions] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [tarification, setTarification] = useState<TarificationLivreur | null>(null);
@@ -103,6 +95,10 @@ function _FormulaireInscriptionLivreurReserve() {
       setErreur("La plaque d'immatriculation et le numéro de permis sont obligatoires pour ce véhicule.");
       return;
     }
+    if (!accepteConditions) {
+      setErreur(t("livInsc_erreurConditionsNonAcceptees"));
+      return;
+    }
     setEnCours(true);
     try {
       await register({ fullName, identifiant, motDePasse, role: "DRIVER" });
@@ -115,6 +111,8 @@ function _FormulaireInscriptionLivreurReserve() {
         vehiclePlate: documentsVehiculeRequis ? vehiclePlate.trim() : undefined,
         licenseNumber: documentsVehiculeRequis ? licenseNumber.trim() : undefined,
         idDocumentNumber,
+        conditions: conditions.trim() || undefined,
+        accepteConditions,
       });
       router.push("/livreur/profil");
     } catch (err) {
@@ -262,6 +260,29 @@ function _FormulaireInscriptionLivreurReserve() {
               onChange={(e) => setMotDePasse(e.target.value)}
               required
             />
+          </div>
+          <div className={styles.champ}>
+            <label htmlFor="conditions">{t("livInsc_labelConditions")}</label>
+            <textarea
+              id="conditions"
+              rows={3}
+              maxLength={1000}
+              placeholder={t("livInsc_placeholderConditions")}
+              value={conditions}
+              onChange={(e) => setConditions(e.target.value)}
+            />
+          </div>
+          <div className={styles.champCase}>
+            <label htmlFor="accepteConditions">
+              <input
+                id="accepteConditions"
+                type="checkbox"
+                checked={accepteConditions}
+                onChange={(e) => setAccepteConditions(e.target.checked)}
+                required
+              />
+              {t("livInsc_caseResponsabilite")}
+            </label>
           </div>
           <button className={styles.bouton} type="submit" disabled={enCours}>
             {enCours ? "Création du compte…" : "Créer mon compte"}

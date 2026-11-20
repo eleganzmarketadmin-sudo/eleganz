@@ -1,8 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { OrdersService } from "../orders/orders.service";
-import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
-import { OrderStatus, DriverBillingStatus, PaymentMethod } from "@eleganz/database";
+import { NotificationsService } from "../notifications/notifications.service";
+import { CreateDeliveryZoneDto, RechercherLivreursDto, RegisterDriverDto } from "./dto/delivery.dto";
+import { OrderStatus, DriverBillingStatus, DriverVehicleType, NotificationType, PaymentMethod, ShopDriverAccessStatus } from "@eleganz/database";
 import { DriverBillingService } from "./driver-billing.service";
 import { enregistrerAuditLog } from "../audit/audit-log.util";
 
@@ -12,6 +13,7 @@ export class DeliveryService {
     private readonly prisma: PrismaService,
     private readonly ordersService: OrdersService,
     private readonly driverBillingService: DriverBillingService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   createZone(dto: CreateDeliveryZoneDto) {
@@ -23,20 +25,40 @@ export class DeliveryService {
   }
 
   /**
-   * Inscription livreur FERMÉE au grand public (décision du 13 oct. 2026,
-   * 3ᵉ demande du jour) : un réseau de livreurs ouvert à tout le monde dès
-   * le lancement présente un risque de malhonnêteté trop élevé (vol, perte
-   * de marchandise, sans garantie de sérieux du livreur). Chaque boutique
-   * gère maintenant ses propres livreurs sous sa propre responsabilité —
-   * voir ShopDriversService. Le code ci-dessous est conservé intact pour
-   * une réouverture future du réseau plateforme, juste rendu inatteignable
-   * par ce refus en première ligne.
+   * Réouverture de l'auto-inscription livreur (20 nov. 2026, demande du
+   * propriétaire) — fermée depuis le 13 oct. 2026 ("limiter le risque de
+   * malhonnêteté au lancement"). S'inscrire ici ne vaut plus garantie
+   * ELEGANZ : c'est une offre de service du livreur lui-même (personne
+   * physique ou morale), avec ses propres conditions (voir `conditions`
+   * ci-dessous, et `accepteConditions` validé côté DTO). Une boutique ne
+   * peut affecter ce livreur à une livraison qu'après l'avoir d'abord
+   * ajouté à sa propre liste de livreurs agréés ET que le livreur ait
+   * accepté — voir demanderAccesLivreur/repondreDemandeLivreur ci-dessous
+   * et le garde ajouté dans assignDriver(). La responsabilité de la
+   * livraison reste entièrement celle de la boutique qui le choisit,
+   * jamais celle de la plateforme (voir docs/ARCHITECTURE_FINANCE.md).
+   * `ShopDriver` (fiche sans compte, gérée par une boutique) n'est en rien
+   * affecté par cette réouverture — mécanisme parallèle inchangé.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async registerDriver(userId: string, _dto: RegisterDriverDto) {
-    throw new ForbiddenException(
-      "L'inscription livreur est temporairement fermée. Chaque boutique gère pour l'instant ses propres livreurs.",
-    );
+  async registerDriver(userId: string, dto: RegisterDriverDto) {
+    const existant = await this.prisma.driver.findUnique({ where: { userId } });
+    if (existant) {
+      throw new BadRequestException("Un profil livreur existe déjà pour ce compte.");
+    }
+    return this.prisma.driver.create({
+      data: {
+        userId,
+        zone: dto.zone,
+        phone: dto.phone,
+        whatsapp: dto.whatsapp,
+        address: dto.address,
+        vehicleType: dto.vehicleType,
+        vehiclePlate: dto.vehiclePlate,
+        licenseNumber: dto.licenseNumber,
+        idDocumentNumber: dto.idDocumentNumber,
+        conditions: dto.conditions,
+      },
+    });
   }
 
   /**
@@ -44,8 +66,15 @@ export class DeliveryService {
    * 13 oct. 2026, point 1 — le vendeur garde la main et peut changer de
    * livreur en cas de besoin). `driverId: null` retire l'affectation sans
    * exiger de vérification ; affecter un livreur exige qu'il soit vérifié.
+   *
+   * Garde ajoutée le 20 nov. 2026 (réouverture du réseau livreur) : une
+   * boutique ne peut affecter un livreur du réseau ELEGANZ que s'il fait
+   * déjà partie de SA propre liste de livreurs agréés (ShopDriverAccess en
+   * statut ACTIVE, donc déjà accepté par le livreur) — jamais un ajout
+   * unilatéral à l'affectation. N'affecte en rien assignShopDriver()
+   * ci-dessous (livreur sans compte, propre à la boutique).
    */
-  async assignDriver(shopOrderId: string, driverId: string | null) {
+  async assignDriver(shopId: string, shopOrderId: string, driverId: string | null) {
     if (driverId) {
       const driver = await this.prisma.driver.findUniqueOrThrow({ where: { id: driverId } });
       if (!driver.verified) {
@@ -58,8 +87,184 @@ export class DeliveryService {
       if (driver.billingStatus === DriverBillingStatus.SUSPENDED) {
         throw new BadRequestException("Ce livreur est suspendu pour impayé de son abonnement.");
       }
+      const acces = await this.prisma.shopDriverAccess.findUnique({
+        where: { shopId_driverId: { shopId, driverId } },
+      });
+      if (!acces || acces.status !== ShopDriverAccessStatus.ACTIVE) {
+        throw new BadRequestException("Ce livreur n'est pas encore dans votre liste de livreurs agréés.");
+      }
     }
     return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
+  }
+
+  // --- Réseau de livreurs ELEGANZ : recherche, demande, acceptation -------
+  // (réouverture du 20 nov. 2026 — voir le commentaire de registerDriver)
+
+  /**
+   * Recherche de livreurs vérifiés depuis le module Gestion, avant demande
+   * d'ajout à la liste de livreurs agréés — même restriction que
+   * listVerifiedDrivers() (ni pièce d'identité ni permis exposés), avec en
+   * plus `conditions` (l'offre de service du livreur, informative) et des
+   * filtres optionnels.
+   */
+  rechercherLivreurs(filtres: RechercherLivreursDto) {
+    return this.prisma.driver.findMany({
+      where: {
+        verified: true,
+        billingStatus: { not: DriverBillingStatus.SUSPENDED },
+        ...(filtres.zone ? { zone: { contains: filtres.zone, mode: "insensitive" } } : {}),
+        ...(filtres.vehicleType ? { vehicleType: filtres.vehicleType as DriverVehicleType } : {}),
+      },
+      select: {
+        id: true,
+        zone: true,
+        phone: true,
+        whatsapp: true,
+        vehicleType: true,
+        conditions: true,
+        user: { select: { fullName: true } },
+      },
+      orderBy: { user: { fullName: "asc" } },
+    });
+  }
+
+  /**
+   * Demande d'ajout d'un livreur à la liste de livreurs agréés d'une
+   * boutique — ne donne PAS accès à l'affectation tant que le livreur n'a
+   * pas répondu (voir repondreDemandeLivreur). Réactive une ancienne
+   * demande refusée/révoquée plutôt que d'empiler les lignes pour un même
+   * couple boutique/livreur (@@unique([shopId, driverId]) sur
+   * ShopDriverAccess).
+   */
+  async demanderAccesLivreur(shopId: string, driverId: string, userId: string) {
+    const driver = await this.prisma.driver.findUnique({ where: { id: driverId } });
+    if (!driver || !driver.verified) {
+      throw new BadRequestException("Ce livreur n'est pas disponible dans le réseau ELEGANZ.");
+    }
+    const existant = await this.prisma.shopDriverAccess.findUnique({
+      where: { shopId_driverId: { shopId, driverId } },
+    });
+    if (existant?.status === ShopDriverAccessStatus.ACTIVE) {
+      throw new ConflictException("Ce livreur est déjà dans votre liste de livreurs agréés.");
+    }
+    if (existant?.status === ShopDriverAccessStatus.PENDING) {
+      throw new ConflictException("Une demande est déjà en attente de réponse pour ce livreur.");
+    }
+    const acces = existant
+      ? await this.prisma.shopDriverAccess.update({
+          where: { id: existant.id },
+          data: {
+            status: ShopDriverAccessStatus.PENDING,
+            requestedByUserId: userId,
+            respondedAt: null,
+            revokedAt: null,
+          },
+        })
+      : await this.prisma.shopDriverAccess.create({
+          data: { shopId, driverId, requestedByUserId: userId },
+        });
+
+    const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { name: true } });
+    await this.notifications.notifierUtilisateurs([driver.userId], {
+      type: NotificationType.LIVREUR_DEMANDE_RECUE,
+      title: "Nouvelle demande de boutique",
+      body: `${shop?.name ?? "Une boutique"} souhaite vous ajouter à sa liste de livreurs agréés.`,
+      link: "/livreur/demandes",
+    });
+    return acces;
+  }
+
+  /** Demandes reçues par le livreur connecté (toutes, pour qu'il voie aussi l'historique). */
+  async mesDemandesLivreur(userId: string) {
+    const driver = await this.prisma.driver.findUnique({ where: { userId } });
+    if (!driver) return [];
+    return this.prisma.shopDriverAccess.findMany({
+      where: { driverId: driver.id },
+      include: {
+        shop: { select: { id: true, name: true, invoiceAddress: true, invoicePhone: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Réponse du livreur à une demande reçue — accepter fait passer l'accès
+   * en ACTIVE (la boutique peut dès lors l'affecter à une livraison via
+   * assignDriver ci-dessus), refuser en DECLINED. Jamais un ajout
+   * unilatéral de la boutique.
+   */
+  async repondreDemandeLivreur(userId: string, accessId: string, accepte: boolean) {
+    const driver = await this.prisma.driver.findUnique({ where: { userId } });
+    if (!driver) {
+      throw new BadRequestException("Aucun profil livreur pour ce compte.");
+    }
+    const acces = await this.prisma.shopDriverAccess.findUnique({ where: { id: accessId } });
+    if (!acces || acces.driverId !== driver.id) {
+      throw new NotFoundException("Demande introuvable.");
+    }
+    if (acces.status !== ShopDriverAccessStatus.PENDING) {
+      throw new ConflictException("Cette demande n'est plus en attente.");
+    }
+    const updated = await this.prisma.shopDriverAccess.update({
+      where: { id: accessId },
+      data: {
+        status: accepte ? ShopDriverAccessStatus.ACTIVE : ShopDriverAccessStatus.DECLINED,
+        respondedAt: new Date(),
+      },
+    });
+    await this.notifierBoutique(
+      acces.shopId,
+      NotificationType.LIVREUR_DEMANDE_REPONDUE,
+      "Réponse d'un livreur",
+      accepte
+        ? "Un livreur a accepté votre demande et fait maintenant partie de votre liste de livreurs agréés."
+        : "Un livreur a refusé votre demande d'ajout à votre liste de livreurs agréés.",
+      "/livreurs",
+    );
+    return updated;
+  }
+
+  /** Liste de livreurs agréés d'une boutique (tous statuts, pour l'écran Gestion). */
+  mesLivreursAgrees(shopId: string) {
+    return this.prisma.shopDriverAccess.findMany({
+      where: { shopId },
+      include: {
+        driver: {
+          select: {
+            id: true,
+            zone: true,
+            phone: true,
+            whatsapp: true,
+            vehicleType: true,
+            conditions: true,
+            user: { select: { fullName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async revoquerAccesLivreur(shopId: string, accessId: string) {
+    const acces = await this.prisma.shopDriverAccess.findUnique({ where: { id: accessId } });
+    if (!acces || acces.shopId !== shopId) {
+      throw new NotFoundException("Accès livreur introuvable pour cette boutique.");
+    }
+    return this.prisma.shopDriverAccess.update({
+      where: { id: accessId },
+      data: { status: ShopDriverAccessStatus.REVOKED, revokedAt: new Date() },
+    });
+  }
+
+  /** Notifie le propriétaire + le personnel actif d'une boutique (même sélection que notifierBoutiquesCommandeRecue, orders.service.ts). */
+  private async notifierBoutique(shopId: string, type: NotificationType, title: string, body: string, link: string) {
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { ownerId: true, staff: { where: { active: true }, select: { userId: true } } },
+    });
+    if (!shop) return;
+    const destinataires = [shop.ownerId, ...shop.staff.map((s) => s.userId)];
+    await this.notifications.notifierUtilisateurs(destinataires, { type, title, body, link });
   }
 
   /**
@@ -192,7 +397,20 @@ export class DeliveryService {
     // bien affecté — pas d'IDOR possible ici, juste la forme exigée par
     // transitionStatus.
     await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.PICKED_UP);
-    return this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.IN_TRANSIT);
+    const updated = await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.IN_TRANSIT);
+    // La boutique est notifiée ici de l'étape franchie PAR LE LIVREUR (20
+    // nov. 2026) — contrairement à une mise à jour de statut faite par son
+    // propre personnel (PATCH /shops/:shopId/orders/:shopOrderId/status),
+    // qui n'a pas besoin de se notifier elle-même. L'acheteur l'est déjà par
+    // OrdersService.transitionStatus (ETAPES_NOTIFIEES_ACHETEUR).
+    await this.notifierBoutique(
+      shopOrder.shopId,
+      NotificationType.LIVRAISON_ETAPE_MISE_A_JOUR,
+      "Étape de livraison",
+      "Le livreur a récupéré le colis chez vous — en route pour la livraison.",
+      "/commandes",
+    );
+    return updated;
   }
 
   /**
@@ -216,6 +434,14 @@ export class DeliveryService {
     if (shopOrder.order.payments[0]?.method === PaymentMethod.CASH_ON_DELIVERY && shopOrder.status === OrderStatus.IN_TRANSIT) {
       await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.PAYMENT_CONFIRMED);
     }
-    return this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
+    const updated = await this.ordersService.transitionStatus(shopOrder.shopId, shopOrderId, OrderStatus.DELIVERED_DECLARED, proofCode);
+    await this.notifierBoutique(
+      shopOrder.shopId,
+      NotificationType.LIVRAISON_ETAPE_MISE_A_JOUR,
+      "Étape de livraison",
+      "Le livreur a déclaré le colis livré.",
+      "/commandes",
+    );
+    return updated;
   }
 }

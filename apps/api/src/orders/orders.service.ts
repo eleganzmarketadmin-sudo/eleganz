@@ -484,8 +484,18 @@ export class OrdersService {
         newStatus === OrderStatus.IN_TRANSIT && updated.deliveryCode
           ? ` Code de livraison à donner au livreur à la remise : ${updated.deliveryCode}.`
           : "";
+      // Étapes de livraison proprement dites (PICKED_UP/IN_TRANSIT/
+      // DELIVERED_DECLARED) reclassées sous LIVRAISON_ETAPE_MISE_A_JOUR le
+      // 20 nov. 2026 (réouverture du réseau livreur) — les autres étapes de
+      // la commande (acceptée, en préparation, annulée, remboursée) restent
+      // AUTRE, ce ne sont pas des étapes de livraison.
+      const ETAPES_LIVRAISON = new Set<OrderStatus>([
+        OrderStatus.PICKED_UP,
+        OrderStatus.IN_TRANSIT,
+        OrderStatus.DELIVERED_DECLARED,
+      ]);
       await this.notifications.notifierUtilisateurs([shopOrder.order.buyerId], {
-        type: NotificationType.AUTRE,
+        type: ETAPES_LIVRAISON.has(newStatus) ? NotificationType.LIVRAISON_ETAPE_MISE_A_JOUR : NotificationType.AUTRE,
         title: `Commande ${shopOrder.shop.name}`,
         body: `${shopOrder.shop.name} ${LIBELLES[newStatus]}.${suffixeCode}`,
         link: "/marketplace/commandes",

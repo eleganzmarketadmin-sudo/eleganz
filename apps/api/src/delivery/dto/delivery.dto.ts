@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsString, Min, ValidateIf } from "class-validator";
+import { IsEnum, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateIf } from "class-validator";
 import { DriverVehicleType } from "@eleganz/database";
 
 export class CreateDeliveryZoneDto {
@@ -44,4 +44,49 @@ export class RegisterDriverDto {
 
   @IsString()
   idDocumentNumber!: string;
+
+  // Réouverture de l'auto-inscription (20 nov. 2026, demande du propriétaire) :
+  // texte libre et facultatif décrivant son offre de service (tarifs
+  // indicatifs, zones, disponibilités...) — affiché à titre informatif
+  // seulement, jamais un contrat. Voir Driver.conditions, schema.prisma.
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  conditions?: string;
+
+  // Case à cocher obligatoire du bandeau de responsabilité (même esprit que
+  // gliv_noteResponsabilite, du point de vue du livreur qui s'inscrit lui-
+  // même) : il propose son service en son nom propre, ELEGANZ ne le vérifie
+  // pas plus que ce que l'admin valide via `verified`, et la boutique qui le
+  // choisit reste seule responsable de la livraison. Jamais stocké comme un
+  // enregistrement de consentement séparé — simple garde côté DTO, même
+  // niveau de rigueur que le module Experts.
+  @IsIn([true], { message: "Vous devez accepter les conditions pour vous inscrire comme livreur." })
+  accepteConditions!: boolean;
+}
+
+/**
+ * Filtres de recherche d'un livreur du réseau ELEGANZ depuis le module
+ * Gestion (20 nov. 2026) — une boutique cherche ici avant de demander son
+ * ajout à sa propre liste de livreurs agréés (voir ShopDriverAccess).
+ */
+export class RechercherLivreursDto {
+  @IsOptional()
+  @IsString()
+  zone?: string;
+
+  @IsOptional()
+  @IsEnum(DriverVehicleType)
+  vehicleType?: DriverVehicleType;
+}
+
+/**
+ * Réponse du livreur à une demande d'ajout envoyée par une boutique — accepter
+ * fait passer ShopDriverAccess en ACTIVE (la boutique peut alors l'affecter à
+ * une livraison), refuser la fait passer en DECLINED. Jamais un ajout
+ * unilatéral de la boutique (décision verrouillée du 20 nov. 2026).
+ */
+export class RepondreDemandeLivreurDto {
+  @IsIn([true, false], { message: "Réponse invalide." })
+  accepte!: boolean;
 }

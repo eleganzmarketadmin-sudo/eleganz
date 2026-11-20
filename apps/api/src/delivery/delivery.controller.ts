@@ -1,6 +1,6 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { DeliveryService } from "./delivery.service";
-import { CreateDeliveryZoneDto, RegisterDriverDto } from "./dto/delivery.dto";
+import { CreateDeliveryZoneDto, RechercherLivreursDto, RegisterDriverDto, RepondreDemandeLivreurDto } from "./dto/delivery.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
@@ -36,6 +36,26 @@ export class DeliveryController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.deliveryService.myProfile(user.id);
+  }
+
+  // Demandes d'ajout à une liste de livreurs agréés, reçues par CE livreur
+  // (20 nov. 2026, réouverture du réseau) — jamais un ajout unilatéral de
+  // la boutique, le livreur accepte ou refuse ici. Voir
+  // DeliveryService.demanderAccesLivreur/repondreDemandeLivreur.
+  @Get("me/demandes")
+  @UseGuards(JwtAuthGuard)
+  mesDemandes(@CurrentUser() user: AuthenticatedUser) {
+    return this.deliveryService.mesDemandesLivreur(user.id);
+  }
+
+  @Post("me/demandes/:accessId/repondre")
+  @UseGuards(JwtAuthGuard)
+  repondreDemande(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("accessId") accessId: string,
+    @Body() dto: RepondreDemandeLivreurDto,
+  ) {
+    return this.deliveryService.repondreDemandeLivreur(user.id, accessId, dto.accepte);
   }
 
   // Liste des livreurs vérifiés, pour le sélecteur d'affectation côté
@@ -123,9 +143,10 @@ export class AssignDriverController {
   constructor(private readonly deliveryService: DeliveryService) {}
 
   // `shopDriverId` est le chemin normal depuis le 13 oct. 2026 (livreur
-  // propre à la boutique). `driverId` (réseau plateforme) est conservé en
-  // body pour ne pas casser un appel existant, mais l'inscription livreur
-  // plateforme étant fermée, ce chemin ne reçoit plus de nouveaux livreurs.
+  // propre à la boutique). `driverId` (réseau ELEGANZ) redevient utilisable
+  // le 20 nov. 2026 (réouverture du réseau) — mais seulement pour un livreur
+  // déjà dans la liste de livreurs agréés de CETTE boutique, voir
+  // DeliveryService.assignDriver.
   @Post()
   assign(
     @Param("shopId") shopId: string,
@@ -136,6 +157,44 @@ export class AssignDriverController {
     if (shopDriverId !== undefined) {
       return this.deliveryService.assignShopDriver(shopId, shopOrderId, shopDriverId || null);
     }
-    return this.deliveryService.assignDriver(shopOrderId, driverId || null);
+    return this.deliveryService.assignDriver(shopId, shopOrderId, driverId || null);
+  }
+}
+
+// Réseau de livreurs ELEGANZ côté boutique (20 nov. 2026, réouverture) :
+// rechercher un livreur vérifié, demander son ajout à sa propre liste de
+// livreurs agréés, consulter cette liste, révoquer un accès. Préfixe
+// "driver-network" choisi pour ne jamais entrer en collision avec
+// shops/:shopId/drivers (CRUD ShopDriver déjà existant, inchangé) — voir
+// ShopDriversController. Mêmes rôles que l'affectation ci-dessus : le
+// personnel qui peut affecter un livreur est celui qui gère ce réseau.
+@Controller("shops/:shopId/driver-network")
+@UseGuards(JwtAuthGuard, ShopMembershipGuard)
+@ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.SALES_LEAD, StaffRole.STOCK_KEEPER)
+export class ShopDriverNetworkController {
+  constructor(private readonly deliveryService: DeliveryService) {}
+
+  @Get("search")
+  rechercher(@Query() dto: RechercherLivreursDto) {
+    return this.deliveryService.rechercherLivreurs(dto);
+  }
+
+  @Get("roster")
+  roster(@Param("shopId") shopId: string) {
+    return this.deliveryService.mesLivreursAgrees(shopId);
+  }
+
+  @Post("roster/:driverId")
+  demanderAcces(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shopId") shopId: string,
+    @Param("driverId") driverId: string,
+  ) {
+    return this.deliveryService.demanderAccesLivreur(shopId, driverId, user.id);
+  }
+
+  @Delete("roster/:accessId")
+  revoquerAcces(@Param("shopId") shopId: string, @Param("accessId") accessId: string) {
+    return this.deliveryService.revoquerAccesLivreur(shopId, accessId);
   }
 }

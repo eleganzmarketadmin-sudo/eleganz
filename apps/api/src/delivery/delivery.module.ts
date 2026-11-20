@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { DeliveryService } from "./delivery.service";
 import { DriverBillingService } from "./driver-billing.service";
-import { DeliveryController, AssignDriverController } from "./delivery.controller";
+import { DeliveryController, AssignDriverController, ShopDriverNetworkController } from "./delivery.controller";
 import { DriverBillingController } from "./driver-billing.controller";
 import { ShopsModule } from "../shops/shops.module";
 import { OrdersModule } from "../orders/orders.module";
@@ -13,7 +13,7 @@ import { StorageModule } from "../storage/storage.module";
 @Module({
   imports: [ShopsModule, OrdersModule, AdminSettingsModule, FinanceModule, NotificationsModule, StorageModule],
   providers: [DeliveryService, DriverBillingService],
-  controllers: [DeliveryController, AssignDriverController, DriverBillingController],
+  controllers: [DeliveryController, AssignDriverController, ShopDriverNetworkController, DriverBillingController],
   exports: [DeliveryService, DriverBillingService],
 })
 export class DeliveryModule {}

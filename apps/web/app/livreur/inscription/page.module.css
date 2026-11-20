@@ -57,13 +57,33 @@
 }
 
 .champ input,
-.champ select {
+.champ select,
+.champ textarea {
   width: 100%;
   padding: var(--espace-3);
   border: 2px solid var(--color-ink);
   background: var(--color-surface);
   color: var(--color-ink);
   min-height: var(--touche-min);
+  font-family: inherit;
+}
+
+.champCase {
+  display: block;
+  margin-bottom: var(--espace-4);
+  font-size: 0.875rem;
+}
+
+.champCase label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-2);
+  cursor: pointer;
+}
+
+.champCase input {
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .bouton {

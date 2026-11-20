@@ -677,6 +677,7 @@ model Shop {
   reviews        Review[]
   variantOptions VariantOption[]
   shopDrivers    ShopDriver[]
+  driverAccess   ShopDriverAccess[]
   fiscalRules    FiscalRule[]
   accounts       Account[]
   journals       Journal[]
@@ -1592,9 +1593,18 @@ model Driver {
   suspendedAt      DateTime?
   suspensionReason String? // "IMPAYE" | "ADMIN"
 
+  // Réouverture de l'auto-inscription (20 nov. 2026, demande du
+  // propriétaire) : texte libre et facultatif où le livreur décrit son
+  // offre de service (tarifs indicatifs, zones, disponibilités...),
+  // affiché à titre informatif seulement sur son profil public — jamais un
+  // contrat, jamais de paiement géré par la plateforme. Même principe que
+  // ExpertProfile.conditions.
+  conditions String? @db.Text
+
   deliveries ShopOrder[]
   invoices   DriverInvoice[]
   reactivationRequests DriverReactivationRequest[]
+  shopAccess ShopDriverAccess[]
 }
 
 enum DriverBillingStatus {
@@ -1625,6 +1635,39 @@ model ShopDriver {
   deliveries ShopOrder[]
 
   @@index([shopId])
+}
+
+enum ShopDriverAccessStatus {
+  PENDING  // demande envoyée par la boutique, en attente de réponse du livreur
+  ACTIVE   // livreur accepté — la boutique peut l'affecter à une livraison
+  DECLINED // le livreur a refusé
+  REVOKED  // la boutique ou le livreur a mis fin à la relation
+}
+
+// Réouverture du module Livreur (20 nov. 2026, demande du propriétaire) :
+// une boutique ne peut affecter un livreur du réseau ELEGANZ (le `Driver`
+// ci-dessus, avec compte) à une livraison qu'après l'avoir d'abord ajouté
+// à sa propre liste de livreurs agréés — et le livreur doit accepter cette
+// demande, jamais un ajout unilatéral. Un éventuel contrat entre la
+// boutique et le livreur reste une affaire entre elles, hors plateforme :
+// aucun contrat/signature/paiement n'est modélisé ici. N'affecte en rien
+// `ShopDriver` ci-dessus (fiche sans compte, gérée entièrement par la
+// boutique) ni la règle d'exclusivité driverId/shopDriverId sur ShopOrder.
+model ShopDriverAccess {
+  id                String                 @id @default(uuid())
+  shopId            String
+  shop              Shop                   @relation(fields: [shopId], references: [id])
+  driverId          String
+  driver            Driver                 @relation(fields: [driverId], references: [id])
+  status            ShopDriverAccessStatus @default(PENDING)
+  requestedByUserId String
+  createdAt         DateTime               @default(now())
+  respondedAt       DateTime?
+  revokedAt         DateTime?
+
+  @@unique([shopId, driverId])
+  @@index([shopId, status])
+  @@index([driverId, status])
 }
 
 model DeliveryZone {
@@ -3386,6 +3429,14 @@ enum NotificationType {
   FACTURE_SUSPENDUE // notification de suspension (destinataire ET admins)
   PAIEMENT_RECU // reçu de confirmation après "marquer payée"
   REACTIVATION_DEMANDE // demande ouverte / validée / refusée
+
+  // Module Livreur, réouverture (20 nov. 2026) — demande d'ajout à une
+  // liste de livreurs agréés, réponse du livreur, et étape de livraison
+  // franchie (ramassage/livraison confirmés par le livreur).
+  LIVREUR_DEMANDE_RECUE // le livreur est notifié d'une demande d'une boutique
+  LIVREUR_DEMANDE_REPONDUE // la boutique est notifiée de l'acceptation/refus
+  LIVRAISON_ETAPE_MISE_A_JOUR // client et boutique notifiés à chaque étape franchie par le livreur
+
   AUTRE
 }
 
