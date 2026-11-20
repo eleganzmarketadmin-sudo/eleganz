@@ -75,6 +75,7 @@ export class DeliveryService {
    * ci-dessous (livreur sans compte, propre à la boutique).
    */
   async assignDriver(shopId: string, shopOrderId: string, driverId: string | null) {
+    let driverAssigne: { userId: string } | null = null;
     if (driverId) {
       const driver = await this.prisma.driver.findUniqueOrThrow({ where: { id: driverId } });
       if (!driver.verified) {
@@ -93,8 +94,23 @@ export class DeliveryService {
       if (!acces || acces.status !== ShopDriverAccessStatus.ACTIVE) {
         throw new BadRequestException("Ce livreur n'est pas encore dans votre liste de livreurs agréés.");
       }
+      driverAssigne = driver;
     }
-    return this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
+    const shopOrder = await this.prisma.shopOrder.update({ where: { id: shopOrderId }, data: { driverId } });
+    // Manquait jusqu'ici (retour client du 20 nov. 2026) : le livreur n'était
+    // jamais averti qu'une livraison venait de lui être affectée — seules
+    // les étapes suivantes (ramassage/livraison) généraient une
+    // notification, voir confirmPickup/confirmDelivery plus bas.
+    if (driverAssigne) {
+      const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { name: true } });
+      await this.notifications.notifierUtilisateurs([driverAssigne.userId], {
+        type: NotificationType.LIVRAISON_ASSIGNEE,
+        title: "Nouvelle livraison assignée",
+        body: `${shop?.name ?? "Une boutique"} vous a affecté une livraison.`,
+        link: "/livreur/missions",
+      });
+    }
+    return shopOrder;
   }
 
   // --- Réseau de livreurs ELEGANZ : recherche, demande, acceptation -------

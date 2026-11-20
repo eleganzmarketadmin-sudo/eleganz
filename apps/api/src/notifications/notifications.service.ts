@@ -23,6 +23,7 @@ const TYPES_ESPACE_LIVREUR: NotificationType[] = [
   NotificationType.PAIEMENT_RECU,
   NotificationType.REACTIVATION_DEMANDE,
   NotificationType.LIVREUR_DEMANDE_RECUE,
+  NotificationType.LIVRAISON_ASSIGNEE,
   NotificationType.AUTRE,
 ];
 

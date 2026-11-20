@@ -3435,6 +3435,7 @@ enum NotificationType {
   // franchie (ramassage/livraison confirmés par le livreur).
   LIVREUR_DEMANDE_RECUE // le livreur est notifié d'une demande d'une boutique
   LIVREUR_DEMANDE_REPONDUE // la boutique est notifiée de l'acceptation/refus
+  LIVRAISON_ASSIGNEE // le livreur est notifié qu'une boutique lui a affecté une livraison (manquait, retour client du 20 nov. 2026)
   LIVRAISON_ETAPE_MISE_A_JOUR // client et boutique notifiés à chaque étape franchie par le livreur
 
   AUTRE
