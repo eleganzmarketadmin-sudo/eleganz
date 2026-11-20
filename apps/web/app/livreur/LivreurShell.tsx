@@ -94,7 +94,7 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
         {reviewRecommended && (
           <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
         )}
-        <BandeMarque />
+        <BandeMarque couleur="var(--color-flamme-sur-fonce)" />
         <nav className={styles.nav} ref={navRef}>
           {LIENS.map((lien) => {
             const actif = pathname === lien.href;

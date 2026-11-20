@@ -126,34 +126,32 @@
   border-left-color: var(--color-vert-paiement-texte);
 }
 
+/* 20 nov. 2026 (retour client : "on a l'impression d'être sur le même
+   module même dans la navigation") — ce volet et chaque en-tête de portail
+   (*Shell.module.css) utilisaient jusqu'ici des couleurs différentes pour
+   un même module (ex. Livreur en vert-paiement ici mais en flamme dans son
+   propre en-tête). Les couleurs ci-dessous sont désormais la source
+   unique, reprise à l'identique dans chaque *Shell.module.css — voir le
+   commentaire dans globals.css pour la correspondance complète module ↔
+   couleur. Experts n'est pas un portail à part (il vit sous /marketplace),
+   donc il reprend la couleur de Marketplace plutôt qu'une teinte propre. */
 .experts {
-  border-left-color: var(--color-or-texte);
+  border-left-color: var(--color-magenta-texte);
 }
 
-/* Portail institutions (14 nov. 2026) — accent "encre" plutôt qu'une des
-   quatre couleurs déjà prises (cobalt/magenta/vert-paiement/or), pour
-   distinguer ce lien réservé aux partenaires déjà invités des quatre
-   modules en libre accès ci-dessus. */
+/* Institution reste volontairement neutre (encre) plutôt qu'une teinte
+   saturée — signal propre à ce portail réservé aux partenaires déjà
+   invités, par opposition aux modules en libre accès ci-dessus. */
 .institution {
   border-left-color: var(--color-ink);
 }
 
-/* Centre de pilotage (14 nov. 2026) — dernière des couleurs d'accent
-   disponibles dans la palette (cobalt/magenta/vert-paiement/or déjà prises
-   ci-dessus, ink pour Institution) : --color-or ferait doublon avec
-   --color-or-texte des Experts en thème sombre (même valeur), --color-flamme
-   reste la seule teinte encore distincte à ce stade. */
 .admin {
-  border-left-color: var(--color-flamme);
+  border-left-color: var(--color-or-texte);
 }
 
-/* Portail livreur (20 nov. 2026) — la palette d'accents est épuisée
-   (cobalt/magenta/vert-paiement/or/ink/flamme déjà prises ci-dessus) ;
-   réutilise vert-paiement comme Comptable, les deux étant des portails de
-   prestataires de service de l'écosystème (comptable, livreur) plutôt que
-   des portails boutique/acheteur/administration. */
 .livreur {
-  border-left-color: var(--color-vert-paiement-texte);
+  border-left-color: var(--color-flamme-texte);
 }
 
 .question {

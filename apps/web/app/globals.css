@@ -47,6 +47,23 @@
      lisible (~7.5:1), donc cette variante n'y change rien. */
   --color-or-texte: #8f6a0a;
 
+  /* 20 nov. 2026 (retour client : "on a l'impression d'être sur le même
+     module même dans la navigation") — chaque module authentifié a
+     désormais UNE couleur de référence, utilisée partout où il apparaît
+     (volet de navigation, en-tête, bande sous l'en-tête) : Gestion=cobalt,
+     Marketplace=magenta, Comptable=vert-paiement, Admin=or, Livreur=flamme.
+     Institution reste volontairement neutre (encre) plutôt qu'une teinte
+     saturée — signal propre à ce portail réservé aux partenaires déjà
+     invités, par opposition aux cinq modules en libre accès ci-dessus (la
+     palette ne compte que 5 teintes saturées pour 6 modules, donc l'un
+     d'eux devait de toute façon être traité différemment). --color-ink
+     lui-même ne convient pas tel quel en TEXTE/filet sur un en-tête à fond
+     fixe-sombre : en mode clair, --color-ink vaut exactement
+     --color-encre-fixe (même teinte que le fond, donc invisible). Variante
+     dédiée, fixe dans les deux thèmes (~8.5:1 de contraste sur
+     --color-encre-fixe). */
+  --color-institution-sur-fonce: #b7b3a4;
+
   /* Couleurs de graphique (19 nov. 2026, tableau de bord de gestion de la
      boutique — évolution du CA/marge/ventes). Teintes dérivées du cobalt et
      de l'or de marque, mais PAS les variables brutes : passées au

@@ -23,6 +23,10 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-4);
+  /* 20 nov. 2026 (différenciation visuelle des modules) : même couleur que
+     .marque span ci-dessous, pour que l'identité du module se voie même
+     sans lire le texte (voir le commentaire dans globals.css). */
+  border-bottom: 2px solid var(--color-institution-sur-fonce);
 }
 
 .groupeMarque {
@@ -40,7 +44,12 @@
 }
 
 .marque span {
-  color: var(--color-or, #d4a017);
+  /* 20 nov. 2026 (différenciation visuelle des modules) : Institution
+     utilisait --color-or, identique à Admin — collision directe (même
+     teinte, même usage). Passe à l'accent "encre" propre à ce portail
+     réservé (voir le commentaire dans globals.css) ; --color-institution-
+     sur-fonce est la variante lisible sur ce fond fixe-sombre. */
+  color: var(--color-institution-sur-fonce);
 }
 
 .enteteActions {
@@ -65,7 +74,11 @@
 .nav {
   display: flex;
   background: var(--color-surface);
-  border-bottom: 2px solid var(--color-or, #d4a017);
+  /* 20 nov. 2026 : --color-ink est déjà la variante correcte ici, ce filet
+     reposant sur --color-surface (qui se retourne avec le thème) et non
+     sur un fond fixe-sombre — même rôle que --color-cobalt-texte pour
+     Gestion, --color-vert-paiement-texte pour Comptable, etc. */
+  border-bottom: 2px solid var(--color-ink);
   overflow-x: auto;
 }
 
@@ -87,12 +100,15 @@
 }
 
 .navLienActif {
-  background: var(--color-or, #d4a017);
-  color: var(--color-encre-fixe);
+  /* 20 nov. 2026 : --color-ink/--color-toile forment une paire encre/papier
+     qui s'inverse correctement dans les deux thèmes (contrairement à un
+     texte fixe sur un aplat --color-or) — voir le commentaire plus haut. */
+  background: var(--color-ink);
+  color: var(--color-toile);
 }
 
 .navLienActif:hover {
-  background: var(--color-or, #d4a017);
+  background: var(--color-ink);
 }
 
 .contenu {

@@ -159,7 +159,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
         {reviewRecommended && (
           <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
         )}
-        <BandeMarque />
+        <BandeMarque couleur="var(--color-vert-paiement-sur-fonce)" />
         <nav className={styles.nav} ref={navRef}>
           {GROUPES_NAV.map((groupe, indexGroupe) => (
             <div className={styles.navGroupe} key={indexGroupe}>

@@ -140,7 +140,7 @@ export function MarketplaceHeader() {
           )}
         </nav>
       </header>
-      <BandeMarque />
+      <BandeMarque couleur="var(--color-magenta-sur-fonce)" />
     </div>
   );
 }

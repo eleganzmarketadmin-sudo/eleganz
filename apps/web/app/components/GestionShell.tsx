@@ -162,7 +162,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <BandeMarque />
+        <BandeMarque couleur="var(--color-cobalt-sur-fonce)" />
         <nav className={styles.nav} ref={navRef}>
           {ENTREES.map((entree, index) => {
             if (!estGroupe(entree)) {

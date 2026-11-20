@@ -156,7 +156,7 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <BandeMarque />
+        <BandeMarque couleur="var(--color-institution-sur-fonce)" />
         {navigationActive && (
           <nav className={styles.nav} ref={navRef}>
             {LIENS.map((lien) => {

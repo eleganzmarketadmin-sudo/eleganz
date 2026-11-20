@@ -207,7 +207,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
-        <BandeMarque />
+        <BandeMarque couleur="var(--color-or)" />
         <nav className={styles.nav} ref={navRef}>
           {ENTREES.map((entree, index) => {
             if (!estGroupe(entree)) {

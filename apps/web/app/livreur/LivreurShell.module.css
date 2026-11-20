@@ -23,6 +23,10 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--espace-3) var(--espace-4);
+  /* 20 nov. 2026 (différenciation visuelle des modules) : même couleur que
+     .marque span ci-dessous, pour que l'identité du module se voie même
+     sans lire le texte (voir le commentaire dans globals.css). */
+  border-bottom: 2px solid var(--color-flamme-sur-fonce);
 }
 
 .groupeMarque {

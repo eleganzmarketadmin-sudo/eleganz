@@ -57,7 +57,25 @@ export function LogoMark({ size = 32, className }: { size?: number; className?: 
  * à la manière du tissu wax, indépendant du monogramme LogoMark ci-dessus. */
 export const COULEURS_MARQUE = ["#17408a", "#c83e1f", "#d9a61a", "#a62368"];
 
-export function BandeMarque({ className }: { className?: string }) {
+/**
+ * 20 nov. 2026 (retour client : "on a l'impression d'être sur le même
+ * module même dans la navigation") — sur les pages publiques, hors de tout
+ * module authentifié (accueil, SiteHeader, pied de page), la bande garde
+ * les 4 couleurs ELEGANZ ci-dessus : elle représente la marque dans son
+ * ensemble, pas un module précis. Dans chaque portail authentifié
+ * (*Shell.tsx), `couleur` remplace ce motif par un aplat unique dans la
+ * teinte de référence du module — la même valeur que `.marque span` dans
+ * le *Shell.module.css correspondant, pour rester cohérente avec le nom du
+ * module affiché juste au-dessus.
+ */
+export function BandeMarque({ className, couleur }: { className?: string; couleur?: string }) {
+  if (couleur) {
+    return (
+      <div className={className} style={{ display: "flex", height: "4px" }} aria-hidden="true">
+        <span style={{ background: couleur, flex: 1 }} />
+      </div>
+    );
+  }
   return (
     <div className={className} style={{ display: "flex", height: "4px" }} aria-hidden="true">
       {COULEURS_MARQUE.map((couleur) => (
