@@ -44,6 +44,18 @@ function cheminMessagerie(pathname: string | null): string {
   return "/messagerie";
 }
 
+// Un même compte peut être à la fois membre du personnel d'une boutique et
+// livreur (20 nov. 2026, retour client : "je reçois sur ce portail les
+// notifications des commandes de la boutique") — l'API filtre déjà les
+// types par espace quand on le lui précise (voir NotificationsController /
+// filtreTypeParEspace), ce paramètre est ce qui le lui précise. Seul
+// l'espace livreur est filtré pour l'instant ; les autres espaces envoient
+// une requête identique à avant (espace omis).
+function espaceCourant(pathname: string | null): string | null {
+  if (pathname?.startsWith("/livreur")) return "livreur";
+  return null;
+}
+
 export function NotificationBell() {
   const router = useRouter();
   const pathname = usePathname();
@@ -64,14 +76,16 @@ export function NotificationBell() {
 
   const rafraichirCompteur = useCallback(async () => {
     try {
-      const res = await api.get<{ nonLues: number }>("/notifications/compteur");
+      const espace = espaceCourant(pathname);
+      const qs = espace ? `?espace=${espace}` : "";
+      const res = await api.get<{ nonLues: number }>(`/notifications/compteur${qs}`);
       setNonLues(res.nonLues);
     } catch (err) {
       // Une 401 passagère (jeton en cours de rafraîchissement) ne doit pas
       // casser l'affichage — on retentera au prochain sondage.
       if (!(err instanceof ApiError)) throw err;
     }
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     rafraichirCompteur();
@@ -94,7 +108,9 @@ export function NotificationBell() {
     setOuvert(prochainEtat);
     if (prochainEtat) {
       try {
-        const liste = await api.get<Notification[]>("/notifications");
+        const espace = espaceCourant(pathname);
+        const qs = espace ? `?espace=${espace}` : "";
+        const liste = await api.get<Notification[]>(`/notifications${qs}`);
         setNotifications(liste);
       } catch {
         setNotifications([]);
@@ -122,7 +138,9 @@ export function NotificationBell() {
   async function toutMarquerLu() {
     setNonLues(0);
     setNotifications((liste) => liste?.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })) ?? null);
-    api.post("/notifications/tout-marquer-lu").catch(() => {});
+    const espace = espaceCourant(pathname);
+    const qs = espace ? `?espace=${espace}` : "";
+    api.post(`/notifications/tout-marquer-lu${qs}`).catch(() => {});
   }
 
   return (

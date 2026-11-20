@@ -7,6 +7,30 @@ import { EmailSenderService } from "./channels/email-sender.service";
 import { SmsSenderService } from "./channels/sms-sender.service";
 import { WhatsAppSenderService } from "./channels/whatsapp-sender.service";
 
+// Notifications pertinentes pour l'espace livreur (20 nov. 2026, retour
+// client : un livreur voyait "nouvelle commande reçue" d'une boutique —
+// COMMANDE_RECUE, LIVREUR_DEMANDE_REPONDUE et LIVRAISON_ETAPE_MISE_A_JOUR
+// sont écrites pour la boutique/l'acheteur, jamais pour le livreur lui-même,
+// mais s'affichaient quand même sur son portail si ce même compte est par
+// ailleurs membre du personnel d'une boutique — la cloche n'a jusqu'ici
+// jamais filtré par espace). Volontairement restreint à l'espace livreur
+// seul : gestion/comptable/admin/institution continuent de tout voir
+// exactement comme avant, aucun changement de comportement pour eux.
+const TYPES_ESPACE_LIVREUR: NotificationType[] = [
+  NotificationType.NOUVEAU_MESSAGE,
+  NotificationType.FACTURE_RELANCE,
+  NotificationType.FACTURE_SUSPENDUE,
+  NotificationType.PAIEMENT_RECU,
+  NotificationType.REACTIVATION_DEMANDE,
+  NotificationType.LIVREUR_DEMANDE_RECUE,
+  NotificationType.AUTRE,
+];
+
+function filtreTypeParEspace(espace?: string): { type?: { in: NotificationType[] } } {
+  if (espace === "livreur") return { type: { in: TYPES_ESPACE_LIVREUR } };
+  return {};
+}
+
 /**
  * Notifications in-app (15 oct. 2026, demande UX point 7) — fondation
  * transverse : n'importe quel service de la plateforme peut appeler
@@ -217,16 +241,22 @@ export class NotificationsService {
     }
   }
 
-  list(userId: string, options: { nonLuesSeulement?: boolean } = {}) {
+  list(userId: string, options: { nonLuesSeulement?: boolean; espace?: string } = {}) {
     return this.prisma.notification.findMany({
-      where: { userId, ...(options.nonLuesSeulement ? { readAt: null } : {}) },
+      where: {
+        userId,
+        ...(options.nonLuesSeulement ? { readAt: null } : {}),
+        ...filtreTypeParEspace(options.espace),
+      },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
   }
 
-  async compterNonLues(userId: string) {
-    return this.prisma.notification.count({ where: { userId, readAt: null } });
+  async compterNonLues(userId: string, espace?: string) {
+    return this.prisma.notification.count({
+      where: { userId, readAt: null, ...filtreTypeParEspace(espace) },
+    });
   }
 
   async marquerLue(userId: string, id: string) {
@@ -237,7 +267,10 @@ export class NotificationsService {
     return this.prisma.notification.update({ where: { id }, data: { readAt: new Date() } });
   }
 
-  marquerToutesLues(userId: string) {
-    return this.prisma.notification.updateMany({ where: { userId, readAt: null }, data: { readAt: new Date() } });
+  marquerToutesLues(userId: string, espace?: string) {
+    return this.prisma.notification.updateMany({
+      where: { userId, readAt: null, ...filtreTypeParEspace(espace) },
+      data: { readAt: new Date() },
+    });
   }
 }
