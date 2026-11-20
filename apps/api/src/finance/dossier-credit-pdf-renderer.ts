@@ -2,7 +2,15 @@
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
 import type { DossierCreditBoutique } from "./finance.service";
-import { formaterDate, formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE } from "./dossier-credit-pdf-shared";
+import {
+  formaterDate,
+  formaterDateHeure,
+  dessinerCorpsFinancier,
+  dessinerEnTeteInstitution,
+  dessinerPiedPageInstitution,
+  LIBELLES_SECTEUR_ACTIVITE,
+  type IdentiteInstitutionPourPdf,
+} from "./dossier-credit-pdf-shared";
 
 /**
  * Dossier de crédit boutique (demande du 16 oct. 2026, point 1) — pendant
@@ -11,11 +19,25 @@ import { formaterDate, formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTE
  * comptables réelles de la boutique plutôt que d'une saisie déclarative.
  * Le bandeau d'avertissement ("non certifié") est répété comme sur l'autre
  * dossier, par cohérence et pour la même raison de conformité.
+ *
+ * `identiteInstitution` facultatif (20 nov. 2026) : cette fonction est
+ * appelée aussi bien depuis finance.controller.ts (export par la boutique
+ * elle-même, aucune institution impliquée) que depuis
+ * institution-portal.controller.ts (export par une institution partenaire,
+ * qui y ajoute son propre en-tête/pied de page) — voir institution-
+ * portal.service.ts pour la construction de cet objet.
  */
-export function renderDossierCreditPdf(dossier: DossierCreditBoutique): PDFKit.PDFDocument {
+export function renderDossierCreditPdf(
+  dossier: DossierCreditBoutique,
+  identiteInstitution?: IdentiteInstitutionPourPdf,
+): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+
+  if (identiteInstitution) {
+    dessinerEnTeteInstitution(doc, identiteInstitution);
+  }
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier de crédit — demande de financement", { align: "center" });
   doc.font("Helvetica").fontSize(10).fillColor("#333").text(dossier.shopName, { align: "center" });
@@ -69,6 +91,10 @@ export function renderDossierCreditPdf(dossier: DossierCreditBoutique): PDFKit.P
     "Rappel : ce dossier ne remplace pas un état financier certifié, un audit comptable ou une attestation fiscale.",
   );
   doc.fillColor("#000");
+
+  if (identiteInstitution) {
+    dessinerPiedPageInstitution(doc, identiteInstitution);
+  }
 
   doc.end();
   return doc;

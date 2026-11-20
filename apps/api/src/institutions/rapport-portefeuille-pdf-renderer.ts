@@ -1,7 +1,13 @@
 // Import CommonJS correct même sans `esModuleInterop` (voir
 // documents/pdf-renderer.ts pour l'explication complète du contournement).
 import PDFDocument = require("pdfkit");
-import { formaterDateHeure, formaterMontant } from "../finance/dossier-credit-pdf-shared";
+import {
+  formaterDateHeure,
+  formaterMontant,
+  dessinerEnTeteInstitution,
+  dessinerPiedPageInstitution,
+  type IdentiteInstitutionPourPdf,
+} from "../finance/dossier-credit-pdf-shared";
 import type { RapportPortefeuille } from "./rapport-portefeuille.service";
 
 const LIBELLES_CLASSIFICATION: Record<string, string> = {
@@ -22,14 +28,23 @@ function formaterPourcentage(valeur: number | null): string {
  * (dossier-credit-pdf-renderer.ts, demande-credit-pdf-renderer.ts) :
  * bandeau d'avertissement rappelant la portée purement informative,
  * jamais une attestation ou une décision ELEGANZ.
+ *
+ * `identiteInstitution` (20 nov. 2026) remplace l'ancien paramètre
+ * `institutionName: string` — voir institution-portal.service.ts pour sa
+ * construction (inclut désormais logo/adresse/en-tête/pied de page
+ * personnalisés).
  */
-export function renderRapportPortefeuillePdf(rapport: RapportPortefeuille, institutionName: string): PDFKit.PDFDocument {
+export function renderRapportPortefeuillePdf(
+  rapport: RapportPortefeuille,
+  identiteInstitution: IdentiteInstitutionPourPdf,
+): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
 
+  dessinerEnTeteInstitution(doc, identiteInstitution);
+
   doc.font("Helvetica-Bold").fontSize(16).text("Rapport de portefeuille", { align: "center" });
-  doc.font("Helvetica").fontSize(10).fillColor("#333").text(institutionName, { align: "center" });
   doc.fillColor("#000");
   doc.moveDown(0.6);
 
@@ -93,6 +108,8 @@ export function renderRapportPortefeuillePdf(rapport: RapportPortefeuille, insti
   doc.font("Helvetica").fontSize(7.5).fillColor("#555");
   doc.text(`Rapport généré le ${formaterDateHeure(rapport.genereLe)}.`);
   doc.fillColor("#000");
+
+  dessinerPiedPageInstitution(doc, identiteInstitution);
 
   doc.end();
   return doc;

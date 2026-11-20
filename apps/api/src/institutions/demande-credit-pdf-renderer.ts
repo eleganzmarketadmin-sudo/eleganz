@@ -3,7 +3,16 @@
 import PDFDocument = require("pdfkit");
 import { createHash } from "crypto";
 import type { DossierCreditBoutique } from "../finance/finance.service";
-import { formaterDateHeure, dessinerCorpsFinancier, LIBELLES_SECTEUR_ACTIVITE, LIBELLES_TYPE_GARANTIE, LIBELLES_TYPE_DOCUMENT_IDENTITE } from "../finance/dossier-credit-pdf-shared";
+import {
+  formaterDateHeure,
+  dessinerCorpsFinancier,
+  dessinerEnTeteInstitution,
+  dessinerPiedPageInstitution,
+  LIBELLES_SECTEUR_ACTIVITE,
+  LIBELLES_TYPE_GARANTIE,
+  LIBELLES_TYPE_DOCUMENT_IDENTITE,
+  type IdentiteInstitutionPourPdf,
+} from "../finance/dossier-credit-pdf-shared";
 import type { TypeGarantieCredit } from "@eleganz/database";
 
 export interface DemandeCreditPourPdf {
@@ -74,11 +83,21 @@ const LIBELLES_STATUT: Record<string, string> = {
  * statut, montant, décision, et le code de vérification du snapshot joint
  * s'il existe) — distinct du code de vérification propre au snapshot
  * lui-même, qui reste inchangé et vérifiable indépendamment.
+ *
+ * `identiteInstitution` (20 nov. 2026) — en-tête/pied de page personnalisés
+ * de l'institution qui exporte ce document, voir institution-portal.
+ * service.ts. Toujours fourni ici (contrairement à renderDossierCreditPdf) :
+ * cette fonction n'est jamais appelée hors du portail Institutions.
  */
-export function renderDemandeCreditPdf(demande: DemandeCreditPourPdf): PDFKit.PDFDocument {
+export function renderDemandeCreditPdf(
+  demande: DemandeCreditPourPdf,
+  identiteInstitution: IdentiteInstitutionPourPdf,
+): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: "A4", margin: 36 });
   const margeGauche = doc.page.margins.left;
   const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+
+  dessinerEnTeteInstitution(doc, identiteInstitution);
 
   doc.font("Helvetica-Bold").fontSize(16).text("Dossier de candidature de crédit", { align: "center" });
   doc.font("Helvetica").fontSize(10).fillColor("#333").text(`${demande.numero} — ${demande.institution.name}`, { align: "center" });
@@ -199,6 +218,8 @@ export function renderDemandeCreditPdf(demande: DemandeCreditPourPdf): PDFKit.PD
   doc.text(`Document généré le ${formaterDateHeure(new Date().toISOString())}.`);
   doc.text(`Code de vérification de ce document : ${codeVerification}`);
   doc.fillColor("#000");
+
+  dessinerPiedPageInstitution(doc, identiteInstitution);
 
   doc.end();
   return doc;

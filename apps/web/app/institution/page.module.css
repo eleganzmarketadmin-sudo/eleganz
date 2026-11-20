@@ -2,6 +2,40 @@
   margin-bottom: var(--espace-4);
 }
 
+/* Écran Paramètres (20 nov. 2026) — mêmes valeurs que
+   (gestion)/parametres/page.module.css, jamais réinventées. `.formulaire`
+   existe déjà plus bas en rangée horizontale (filtres) : `.formulaireVertical`
+   couvre le formulaire empilé du même genre que côté Gestion, sans toucher à
+   l'existant. */
+.section {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-6);
+}
+
+.sousTitre {
+  margin-bottom: var(--espace-2);
+}
+
+.note {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+  margin-bottom: var(--espace-4);
+}
+
+.logoApercu {
+  max-width: 120px;
+  max-height: 60px;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.formulaireVertical {
+  display: flex;
+  flex-direction: column;
+}
+
 .erreur {
   background: var(--color-flamme);
   color: #fff;

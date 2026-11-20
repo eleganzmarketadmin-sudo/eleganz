@@ -2707,6 +2707,21 @@ model Institution {
   // qu'aucun partenaire déjà actif ne voie son portail changer tant qu'il
   // n'a pas explicitement choisi le mode complet.
   modeUtilisation InstitutionModeUtilisation @default(RECEPTION_SIMPLE)
+  // Personnalisation des documents générés depuis le portail (20 nov. 2026,
+  // demande : "menu paramètre pour le portail institution afin de libérer
+  // les infos avec les infos d'identification de l'institution... avec
+  // entête personnalisé et/ou pied de page") — même principe que
+  // Shop.invoiceAddress/invoiceLogoUrl/invoiceFooterNote : tous facultatifs,
+  // jamais bloquants pour la génération d'un document (voir
+  // dossier-credit-pdf-shared.ts, consommé par les 3 exports PDF du
+  // portail). `headerNote` est l'"en-tête personnalisé" demandé (une courte
+  // ligne libre, ex. mention légale ou slogan, affichée sous le nom) ;
+  // `footerNote` le "pied de page" (ex. coordonnées complètes, mentions
+  // réglementaires).
+  address      String?
+  logoUrl      String?
+  headerNote   String?            @db.Text
+  footerNote   String?            @db.Text
   createdAt    DateTime           @default(now())
 
   shopAccess     ShopInstitutionAccess[]

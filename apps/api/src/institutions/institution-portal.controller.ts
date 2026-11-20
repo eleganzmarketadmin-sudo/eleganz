@@ -8,6 +8,8 @@ import { InviteInstitutionStaffDto } from "./dto/invite-institution-staff.dto";
 import { UpdateInstitutionStaffDto } from "./dto/update-institution-staff.dto";
 import { CreerDemandeCreditLibreDto } from "./dto/demande-credit.dto";
 import { ValiderAnalyseCreditDto } from "./dto/analyse-credit.dto";
+import { UpdateInstitutionSettingsDto } from "./dto/update-institution-settings.dto";
+import { RequestInstitutionLogoUploadDto } from "./dto/request-institution-logo-upload.dto";
 import { AnalyseCreditService } from "./analyse-credit.service";
 import { RapportPortefeuilleService } from "./rapport-portefeuille.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -78,8 +80,11 @@ export class InstitutionPortalController {
   @Get("shops/:shopId/dossier/export")
   @UseGuards(InstitutionMembershipGuard)
   async dossierExport(@CurrentInstitutionId() institutionId: string, @Param("shopId") shopId: string, @Res() res: Response) {
-    const resultat = await this.portal.dossier(institutionId, shopId);
-    const doc = renderDossierCreditPdf(resultat.financier);
+    const [resultat, identiteInstitution] = await Promise.all([
+      this.portal.dossier(institutionId, shopId),
+      this.portal.identitePourPdf(institutionId),
+    ]);
+    const doc = renderDossierCreditPdf(resultat.financier, identiteInstitution);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="dossier-credit-${shopId}.pdf"`);
     return doc.pipe(res);
@@ -144,9 +149,9 @@ export class InstitutionPortalController {
 
   @Get("rapports/portefeuille/export")
   @UseGuards(InstitutionMembershipGuard)
-  async rapportPortefeuilleExportPdf(@CurrentInstitutionId() institutionId: string, @CurrentUser() user: AuthenticatedUser, @Res() res: Response) {
-    const [rapport, profil] = await Promise.all([this.rapports.rapport(institutionId), this.portal.monProfil(user.id)]);
-    const doc = renderRapportPortefeuillePdf(rapport, profil.name);
+  async rapportPortefeuilleExportPdf(@CurrentInstitutionId() institutionId: string, @Res() res: Response) {
+    const [rapport, identiteInstitution] = await Promise.all([this.rapports.rapport(institutionId), this.portal.identitePourPdf(institutionId)]);
+    const doc = renderRapportPortefeuillePdf(rapport, identiteInstitution);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="rapport-portefeuille-${institutionId}.pdf"`);
     return doc.pipe(res);
@@ -213,8 +218,11 @@ export class InstitutionPortalController {
     @Param("numero") numero: string,
     @Res() res: Response,
   ) {
-    const demande = await this.demandes.detail(institutionId, numero);
-    const doc = renderDemandeCreditPdf(demande as unknown as DemandeCreditPourPdf);
+    const [demande, identiteInstitution] = await Promise.all([
+      this.demandes.detail(institutionId, numero),
+      this.portal.identitePourPdf(institutionId),
+    ]);
+    const doc = renderDemandeCreditPdf(demande as unknown as DemandeCreditPourPdf, identiteInstitution);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="demande-credit-${numero}.pdf"`);
     return doc.pipe(res);
@@ -323,5 +331,34 @@ export class InstitutionPortalController {
     @Param("staffId") staffId: string,
   ) {
     return this.staff.deactivateStaff(institutionId, staffId, user.id);
+  }
+
+  // Écran Paramètres (20 nov. 2026, demande du propriétaire : "menu
+  // paramètre pour le portail institution afin de libérer les infos
+  // d'identification de l'institution [...] avec entête personnalisé et/ou
+  // pied de page") — réservé à ADMINISTRATEUR/GESTIONNAIRE_COMPTE, même
+  // paire de rôles que l'équipe ci-dessus : ce sont des réglages engageant
+  // l'institution dans son ensemble (documents générés par toute l'équipe),
+  // jamais un réglage personnel à un seul membre.
+  @Patch("me/parametres")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  mettreAJourParametres(
+    @CurrentInstitutionId() institutionId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateInstitutionSettingsDto,
+  ) {
+    return this.portal.mettreAJourParametres(institutionId, user.id, dto);
+  }
+
+  // URL signée d'upload direct du logo vers R2 (même principe que
+  // ShopsController.requestLogoUpload) — le navigateur PUT ensuite le
+  // fichier directement sur R2, puis PATCH me/parametres avec l'URL
+  // publique obtenue.
+  @Post("me/parametres/logo-upload-url")
+  @UseGuards(InstitutionMembershipGuard)
+  @InstitutionRoles(InstitutionRole.ADMINISTRATEUR, InstitutionRole.GESTIONNAIRE_COMPTE)
+  creerUrlUploadLogo(@CurrentInstitutionId() institutionId: string, @Body() dto: RequestInstitutionLogoUploadDto) {
+    return this.portal.creerUrlUploadLogo(institutionId, dto.contentType);
   }
 }

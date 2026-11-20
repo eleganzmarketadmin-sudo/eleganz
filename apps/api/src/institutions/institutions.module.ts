@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ShopsModule } from "../shops/shops.module";
 import { FinanceModule } from "../finance/finance.module";
+import { StorageModule } from "../storage/storage.module";
 import { ShopInstitutionsService } from "./shop-institutions.service";
 import { ShopInstitutionsController, InstitutionsCatalogueController } from "./shop-institutions.controller";
 import { InstitutionPortalService } from "./institution-portal.service";
@@ -20,7 +21,7 @@ import { RapportPortefeuilleService } from "./rapport-portefeuille.service";
 // nov. 2026 FinanceService pour figer les vrais chiffres financiers d'une
 // boutique dans une DemandeCredit).
 @Module({
-  imports: [ShopsModule, FinanceModule],
+  imports: [ShopsModule, FinanceModule, StorageModule],
   providers: [
     ShopInstitutionsService,
     InstitutionPortalService,

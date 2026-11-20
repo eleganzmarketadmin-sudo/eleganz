@@ -125,6 +125,7 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
     { href: "/institution/prets", label: t("inst_nav_prets"), icone: "💰", ecran: "PRETS" },
     { href: "/institution/rapports", label: t("inst_nav_rapports"), icone: "📊", ecran: "RAPPORTS" },
     { href: "/institution/equipe", label: t("inst_nav_equipe"), icone: "👥", ecran: "EQUIPE" },
+    { href: "/institution/parametres", label: t("inst_nav_parametres"), icone: "⚙️", ecran: "PARAMETRES" },
   ].filter((lien) => monMenu.includes(lien.ecran));
 
   return (

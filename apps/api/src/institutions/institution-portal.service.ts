@@ -3,8 +3,12 @@ import { PrismaService } from "../prisma/prisma.service";
 import { BusinessPlanService } from "../finance/business-plan.service";
 import { LoansService } from "../finance/loans.service";
 import { FinanceService } from "../finance/finance.service";
+import { StorageService } from "../storage/storage.service";
+import { recupererLogoDepuisUrl } from "../common/logo-fetch.util";
+import type { IdentiteInstitutionPourPdf } from "../finance/dossier-credit-pdf-shared";
 import { ecransInstitutionEffectifs } from "./institution-staff.service";
 import { CreateLoanDecisionDto, RegisterInstitutionDto } from "./dto/institution.dto";
+import { UpdateInstitutionSettingsDto } from "./dto/update-institution-settings.dto";
 import { enregistrerAuditLog } from "../audit/audit-log.util";
 import {
   DemandeCreditStatut,
@@ -49,6 +53,7 @@ export class InstitutionPortalService {
     private readonly businessPlan: BusinessPlanService,
     private readonly loans: LoansService,
     private readonly finance: FinanceService,
+    private readonly storage: StorageService,
   ) {}
 
   /**
@@ -80,6 +85,64 @@ export class InstitutionPortalService {
       monRole: InstitutionRole.ADMINISTRATEUR,
       monMenu: Object.values(MenuInstitution),
       staffActif: true,
+    };
+  }
+
+  /**
+   * Écran Paramètres du portail (20 nov. 2026, demande : "libérer les infos
+   * d'identification de l'institution [...] avec entête personnalisé et/ou
+   * pied de page"). `contactEmail`/`contactPhone` n'existaient pas encore
+   * comme champs éditables en libre-service — jusqu'ici fixés à
+   * l'inscription (RegisterInstitutionDto) et jamais modifiables depuis le
+   * portail. `name`/`type` restent volontairement hors de ce DTO (voir
+   * UpdateInstitutionSettingsDto).
+   */
+  async mettreAJourParametres(institutionId: string, userId: string, dto: UpdateInstitutionSettingsDto) {
+    const institution = await this.prisma.institution.update({
+      where: { id: institutionId },
+      data: {
+        ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail || null }),
+        ...(dto.contactPhone !== undefined && { contactPhone: dto.contactPhone || null }),
+        ...(dto.address !== undefined && { address: dto.address || null }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl || null }),
+        ...(dto.headerNote !== undefined && { headerNote: dto.headerNote || null }),
+        ...(dto.footerNote !== undefined && { footerNote: dto.footerNote || null }),
+      },
+    });
+    await enregistrerAuditLog(this.prisma, {
+      actorId: userId,
+      action: "INSTITUTION_PARAMETRES_MODIFIES",
+      details: { institutionId },
+    });
+    return institution;
+  }
+
+  /**
+   * URL signée d'upload direct du logo vers R2 — même principe que
+   * ShopsService.requestLogoUpload (shops/shops.service.ts), préfixe propre
+   * à l'institution pour ne jamais mélanger les espaces de stockage.
+   */
+  creerUrlUploadLogo(institutionId: string, contentType: string) {
+    return this.storage.creerUrlUpload(`institutions/${institutionId}/logo`, contentType);
+  }
+
+  /**
+   * Identité d'institution prête à être passée aux renderers PDF du portail
+   * (dossier-credit-pdf-renderer.ts en option, demande-credit-pdf-renderer.ts
+   * et rapport-portefeuille-pdf-renderer.ts en obligatoire) — centralise la
+   * récupération du logo (recupererLogoDepuisUrl, avec son garde-fou de
+   * taille/délai) pour que chaque route d'export n'ait qu'à appeler cette
+   * seule méthode plutôt que de redupliquer la logique de fetch.
+   */
+  async identitePourPdf(institutionId: string): Promise<IdentiteInstitutionPourPdf> {
+    const institution = await this.prisma.institution.findUniqueOrThrow({ where: { id: institutionId } });
+    const logo = await recupererLogoDepuisUrl(institution.logoUrl);
+    return {
+      name: institution.name,
+      logo,
+      address: institution.address,
+      headerNote: institution.headerNote,
+      footerNote: institution.footerNote,
     };
   }
 

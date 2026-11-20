@@ -76,6 +76,78 @@ export function formaterDateHeure(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
 }
 
+// Identité d'une institution partenaire sur les documents qu'elle exporte
+// depuis son portail (20 nov. 2026, demande : "menu paramètre pour le
+// portail institution afin de libérer les infos... avec entête personnalisé
+// et/ou pied de page") — voir Institution.address/logoUrl/headerNote/
+// footerNote dans le schéma. `logo` est déjà le buffer récupéré (jamais
+// l'URL brute ici : voir recupererLogoDepuisUrl dans common/logo-fetch.util.ts),
+// pour que ces fonctions de dessin restent synchrones comme le reste des
+// renderers pdfkit de ce fichier.
+export interface IdentiteInstitutionPourPdf {
+  name: string;
+  logo: Buffer | null;
+  address: string | null;
+  headerNote: string | null;
+  footerNote: string | null;
+}
+
+/**
+ * En-tête personnalisé de l'institution qui exporte ce document — dessiné
+ * tout en haut, en flux normal (jamais en position absolue : un logo
+ * positionné avec un `y` explicite bloquerait l'avancement de `doc.y`,
+ * exactement le bug corrigé le 19 nov. 2026 sur le logo boutique — voir
+ * documents/pdf-renderer.ts), avant le titre propre à chaque document.
+ * Entièrement facultatif, champ par champ : un champ non renseigné ne
+ * dessine simplement rien, jamais un espace vide ni une valeur inventée.
+ * Volontairement distincte du titre du document (boutique ou demandeur
+ * selon le renderer appelant) : l'institution n'est que celle qui imprime
+ * ce document depuis son portail, jamais le sujet du document lui-même.
+ */
+export function dessinerEnTeteInstitution(doc: PDFKit.PDFDocument, identite: IdentiteInstitutionPourPdf): void {
+  if (identite.logo) {
+    try {
+      doc.image(identite.logo, doc.page.margins.left, undefined, { width: 70 });
+      doc.moveDown(0.3);
+    } catch {
+      // Jamais bloquant (image invalide ou trop grande) — même principe que
+      // documents/pdf-renderer.ts.
+    }
+  }
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#000").text(identite.name);
+  if (identite.headerNote) {
+    doc.font("Helvetica-Oblique").fontSize(7.5).fillColor("#555").text(identite.headerNote);
+  }
+  if (identite.address) {
+    doc.font("Helvetica").fontSize(7.5).fillColor("#555").text(identite.address);
+  }
+  doc.fillColor("#000").font("Helvetica");
+  doc.moveDown(0.3);
+  const margeGauche = doc.page.margins.left;
+  const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+  doc.moveTo(margeGauche, doc.y).lineTo(margeGauche + largeurPage, doc.y).strokeColor("#ccc").stroke();
+  doc.strokeColor("#000");
+  doc.moveDown(0.5);
+}
+
+/**
+ * Pied de page personnalisé — ne dessine rien si l'institution n'a pas
+ * renseigné `footerNote` (jamais un filet vide). Toujours appelé en tout
+ * dernier, après le pied de page existant du document (date de génération,
+ * code de vérification), jamais à sa place.
+ */
+export function dessinerPiedPageInstitution(doc: PDFKit.PDFDocument, identite: IdentiteInstitutionPourPdf): void {
+  if (!identite.footerNote) return;
+  const margeGauche = doc.page.margins.left;
+  const largeurPage = doc.page.width - margeGauche - doc.page.margins.right;
+  doc.moveDown(0.6);
+  doc.moveTo(margeGauche, doc.y).lineTo(margeGauche + largeurPage, doc.y).strokeColor("#ccc").stroke();
+  doc.strokeColor("#000");
+  doc.moveDown(0.3);
+  doc.font("Helvetica").fontSize(7.5).fillColor("#555").text(identite.footerNote, { width: largeurPage });
+  doc.fillColor("#000");
+}
+
 export function dessinerSectionBusinessPlan(
   doc: PDFKit.PDFDocument,
   margeGauche: number,
