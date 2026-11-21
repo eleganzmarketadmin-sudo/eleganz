@@ -261,6 +261,17 @@
   font-size: 0.75rem;
 }
 
+/* Choix du format d'impression du code-barres généré (21 nov. 2026) — petit
+   menu en ligne (feuille standard / étiquette dédiée) qui s'ouvre juste à
+   côté du bouton 🖨️, dans l'esprit "déplier au clic" du reste de cet écran
+   plutôt qu'un vrai popover positionné en absolu. */
+.choixImpressionCodeBarre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 4px;
+}
+
 /* Puces tailles/couleurs (21 nov. 2026) — remplace l'ancien <select
    multiple> natif : voir le commentaire sur SelecteurMultiple dans
    catalogue/page.tsx. Un clic bascule l'état, actif ou non, sans jamais

@@ -17,6 +17,14 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 import { CreatePriceTierDto } from "./dto/price-tier.dto";
 import { StockMovementType, VariantOptionKind } from "@eleganz/database";
 import { StorageService } from "../storage/storage.service";
+// Import CommonJS correct même sans `esModuleInterop` — même remarque que
+// pour pdfkit (voir documents/pdf-renderer.ts) : bwip-js déclare son module
+// avec `export =`.
+import bwipjs = require("bwip-js");
+import {
+  renderCodeBarreEtiquettePdf,
+  renderCodeBarreFeuillePdf,
+} from "./variant-barcode-pdf-renderer";
 
 /**
  * Catégories majeures proposées à la création de l'API (16 oct. 2026) — un
@@ -639,6 +647,56 @@ export class CatalogService implements OnModuleInit {
       this.prisma.variant.delete({ where: { id: variantId } }),
     ]);
     return { deleted: true };
+  }
+
+  /**
+   * Code-barres imprimable généré depuis la référence interne (SKU) d'une
+   * variante (21 nov. 2026, demande du propriétaire : "pour les notification
+   * ... créer un menu des articles et leur codes barres s'ils n'en ont pas
+   * proposer d'imprimer un code barre à partir des infos interne de la
+   * plateforme ... qu'on peut coller au produit"). Décision validée avec le
+   * propriétaire : un code-barres par VARIANTE (comme le SKU, déjà par
+   * variante), et deux formats au choix de la boutique au moment d'imprimer
+   * — voir variant-barcode-pdf-renderer.ts. N'exige PAS que `barcode` soit
+   * vide : rien n'empêche une boutique de regénérer/réimprimer une étiquette
+   * perdue même quand un vrai code-barres fabricant est déjà enregistré ; le
+   * frontend, lui, ne propose le bouton que quand `barcode` est vide (c'est
+   * le cas d'usage visé par la demande).
+   */
+  async renderVariantBarcodePdf(
+    shopId: string,
+    productId: string,
+    variantId: string,
+    format: "feuille" | "etiquette",
+  ) {
+    const variante = await this.prisma.variant.findFirstOrThrow({
+      where: { id: variantId, productId, product: { shopId } },
+    });
+
+    // Même appel bwip-js que pour le code-barres des documents commerciaux
+    // (voir DocumentsService.genererCodeBarres) — `includetext: true` dessine
+    // déjà le SKU en clair SOUS le code-barres dans l'image, jamais redessiné
+    // séparément dans le PDF.
+    let barcodePng: Buffer;
+    try {
+      barcodePng = await bwipjs.toBuffer({
+        bcid: "code128",
+        text: variante.sku,
+        scale: 2,
+        height: 8,
+        includetext: true,
+        textxalign: "center",
+      });
+    } catch (err) {
+      this.logger.warn(`Génération du code-barres échouée pour la variante ${variantId} : ${err}`);
+      throw new BadRequestException(
+        "Le code-barres n'a pas pu être généré pour cette référence. Réessayez, ou contactez le support si le problème persiste.",
+      );
+    }
+
+    return format === "etiquette"
+      ? renderCodeBarreEtiquettePdf({ sku: variante.sku, barcodePng })
+      : renderCodeBarreFeuillePdf({ sku: variante.sku, barcodePng });
   }
 
   /**

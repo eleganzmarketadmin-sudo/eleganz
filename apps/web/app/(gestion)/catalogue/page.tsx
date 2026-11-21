@@ -9,6 +9,7 @@ import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney, pourcentageRemise } from "../../lib/money";
 import { telechargerFichier, envoyerFichier } from "../../lib/telecharger-fichier";
+import { ouvrirDocumentPdf } from "../../lib/pdf";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
@@ -1034,6 +1035,29 @@ function CatalogueContent() {
     });
   }
 
+  // Code-barres imprimable depuis la référence interne (21 nov. 2026,
+  // demande du propriétaire : "créer un menu des articles et leur codes
+  // barres s'ils n'en ont pas proposer d'imprimer un code barre à partir des
+  // infos interne ... qu'on peut coller au produit"). Décision validée avec
+  // le propriétaire : un code-barres par variante, et les 2 formats
+  // d'impression au choix de la boutique — `varianteImpressionId` ne garde
+  // que l'identifiant de la variante dont le petit menu "Feuille/Étiquette"
+  // est actuellement ouvert (jamais plus d'un à la fois, pour rester
+  // compact).
+  const [varianteImpressionId, setVarianteImpressionId] = useState<string | null>(null);
+
+  async function imprimerCodeBarre(produitId: string, variantId: string, format: "feuille" | "etiquette") {
+    if (!currentShop) return;
+    setVarianteImpressionId(null);
+    try {
+      await ouvrirDocumentPdf(
+        `/shops/${currentShop.id}/products/${produitId}/variants/${variantId}/code-barre-pdf?format=${format}`,
+      );
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : t("cat_erreurImpressionCodeBarre"));
+    }
+  }
+
   function recharger() {
     if (!currentShop) return;
     setChargement(true);
@@ -1669,6 +1693,43 @@ function CatalogueContent() {
                             >
                               📷
                             </button>
+                            {/* Imprimer un code-barres depuis le SKU (21 nov.
+                                2026) — uniquement quand l'article n'a pas de
+                                vrai code-barres fabricant : dans ce cas, pas
+                                besoin d'en générer un, l'article en a déjà
+                                un. */}
+                            {!v.barcode && (
+                              <>
+                                <button
+                                  type="button"
+                                  className={styles.boutonCrayon}
+                                  title={t("cat_imprimerCodeBarreTitre")}
+                                  onClick={() =>
+                                    setVarianteImpressionId((prev) => (prev === v.id ? null : v.id))
+                                  }
+                                >
+                                  🖨️
+                                </button>
+                                {varianteImpressionId === v.id && (
+                                  <span className={styles.choixImpressionCodeBarre}>
+                                    <button
+                                      type="button"
+                                      className={styles.boutonRepli}
+                                      onClick={() => imprimerCodeBarre(produit.id, v.id, "feuille")}
+                                    >
+                                      {t("cat_imprimerFeuille")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.boutonRepli}
+                                      onClick={() => imprimerCodeBarre(produit.id, v.id, "etiquette")}
+                                    >
+                                      {t("cat_imprimerEtiquette")}
+                                    </button>
+                                  </span>
+                                )}
+                              </>
+                            )}
                           </small>
                         </td>
                         <td>

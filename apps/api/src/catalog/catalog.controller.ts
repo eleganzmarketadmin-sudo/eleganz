@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { CatalogService } from "./catalog.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
@@ -178,6 +179,34 @@ export class CatalogController {
     @Param("variantId") variantId: string,
   ) {
     return this.catalogService.deleteVariant(shopId, productId, variantId);
+  }
+
+  /**
+   * Code-barres imprimable généré depuis le SKU de la variante (21 nov.
+   * 2026) — voir le commentaire de CatalogService.renderVariantBarcodePdf.
+   * `format` : "feuille" (grille de plusieurs exemplaires sur page A4,
+   * défaut) ou "etiquette" (une seule étiquette 50×30mm).
+   */
+  @Get(":productId/variants/:variantId/code-barre-pdf")
+  async renderVariantBarcodePdf(
+    @Param("shopId") shopId: string,
+    @Param("productId") productId: string,
+    @Param("variantId") variantId: string,
+    @Query("format") format: string | undefined,
+    @Res() res: Response,
+  ) {
+    if (format !== undefined && format !== "feuille" && format !== "etiquette") {
+      throw new BadRequestException('Format invalide — attendu "feuille" ou "etiquette".');
+    }
+    const doc = await this.catalogService.renderVariantBarcodePdf(
+      shopId,
+      productId,
+      variantId,
+      format ?? "feuille",
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="code-barre-${variantId}.pdf"`);
+    doc.pipe(res);
   }
 }
 
