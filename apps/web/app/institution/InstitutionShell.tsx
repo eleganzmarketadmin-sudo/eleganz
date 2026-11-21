@@ -16,6 +16,7 @@ import { ModulesMenu } from "../components/ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
+import { useVoletRepliable } from "../lib/useVoletRepliable";
 import styles from "./InstitutionShell.module.css";
 
 interface ProfilInstitution {
@@ -85,6 +86,12 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
   const navRef = useRef<HTMLElement>(null);
   useScrollNavActifEnVue(navRef, pathname ?? "");
 
+  // Repli de la barre d'onglets et du bloc options sur téléphone (21 nov.
+  // 2026, retour propriétaire — "étaler ces modifications à tous les
+  // modules", voir le commentaire détaillé dans GestionShell.tsx).
+  const nav = useVoletRepliable(pathname);
+  const options = useVoletRepliable(pathname);
+
   const [profil, setProfil] = useState<ProfilInstitution | null>(null);
   const [erreurProfil, setErreurProfil] = useState<string | null>(null);
 
@@ -128,6 +135,9 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
     { href: "/institution/parametres", label: t("inst_nav_parametres"), icone: "⚙️", ecran: "PARAMETRES" },
   ].filter((lien) => monMenu.includes(lien.ecran));
 
+  const lienActifMobile = LIENS.find((l) => pathname === l.href);
+  const libelleNavMobile = lienActifMobile?.label ?? t("gshell_menu");
+
   return (
     <div className={styles.cadre}>
       <div className={styles.enveloppeFixe}>
@@ -139,40 +149,89 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
               ELEGANZ <span>{t("inst_titreMarque")}</span>
             </span>
           </div>
-          <div className={styles.enteteActions}>
-            <AccueilLien />
-            <NotificationBell />
-            <LanguageSwitcher />
-            <CurrencySwitcher />
-            <ThemeToggle clair />
+          <div className={styles.optionsBloc} ref={options.ref}>
             <button
-              className={styles.deconnexion}
+              type="button"
+              className={styles.boutonOptionsMobile}
               onClick={() => {
-                logout();
-                router.push("/");
+                options.basculer();
+                nav.setOuvert(false);
               }}
+              aria-expanded={options.ouvert}
+              aria-controls="institution-options"
+              aria-label={t("gshell_options")}
+              title={t("gshell_options")}
             >
-              {t("action_seDeconnecter")}
+              <span aria-hidden="true">⋮</span>
             </button>
+            <div id="institution-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
+              <AccueilLien etiquette />
+              <NotificationBell etiquette />
+              <div className={styles.separateurOptions} />
+              <div className={styles.groupePreferences}>
+                <span className={styles.titreSection}>{t("gshell_preferences")}</span>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("langue_label")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("commun_devise")}</span>
+                  <CurrencySwitcher />
+                </div>
+                <ThemeToggle clair etiquette />
+              </div>
+              <div className={styles.separateurOptions} />
+              <button
+                className={styles.deconnexion}
+                onClick={() => {
+                  options.setOuvert(false);
+                  logout();
+                  router.push("/");
+                }}
+              >
+                {t("action_seDeconnecter")}
+              </button>
+            </div>
           </div>
         </header>
         <BandeMarque couleur="var(--color-institution-sur-fonce)" />
         {navigationActive && (
-          <nav className={styles.nav} ref={navRef}>
-            {LIENS.map((lien) => {
-              const actif = pathname === lien.href;
-              return (
-                <Link
-                  key={lien.href}
-                  href={lien.href}
-                  className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
-                  data-nav-actif={actif ? "true" : undefined}
-                >
-                  <span aria-hidden="true">{lien.icone}</span> {lien.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <>
+            <button
+              type="button"
+              className={styles.boutonNavMobile}
+              onClick={() => {
+                nav.basculer();
+                options.setOuvert(false);
+              }}
+              aria-expanded={nav.ouvert}
+              aria-controls="institution-nav"
+            >
+              <span aria-hidden="true" className={styles.boutonNavMobileBarres}>
+                ☰
+              </span>
+              <span className={styles.boutonNavMobileLabel}>{libelleNavMobile}</span>
+              <span aria-hidden="true" className={styles.boutonNavMobileChevron}>
+                {nav.ouvert ? "▴" : "▾"}
+              </span>
+            </button>
+            <nav id="institution-nav" className={`${styles.nav} ${nav.ouvert ? styles.navOuvert : ""}`} ref={navRef}>
+              {LIENS.map((lien) => {
+                const actif = pathname === lien.href;
+                return (
+                  <Link
+                    key={lien.href}
+                    href={lien.href}
+                    className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
+                    data-nav-actif={actif ? "true" : undefined}
+                    onClick={() => nav.setOuvert(false)}
+                  >
+                    <span aria-hidden="true">{lien.icone}</span> {lien.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </>
         )}
       </div>
       <main className={styles.contenu} key={pathname}>

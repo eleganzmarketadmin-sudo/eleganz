@@ -17,6 +17,7 @@ import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { OfflineSyncProvider, useOfflineSync } from "../lib/offline-sync";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
+import { useVoletRepliable } from "../lib/useVoletRepliable";
 import styles from "./ComptableShell.module.css";
 
 /**
@@ -55,6 +56,12 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   const { nombreEnAttente, synchroniser } = useOfflineSync();
   const navRef = useRef<HTMLElement>(null);
   useScrollNavActifEnVue(navRef, pathname ?? "");
+
+  // Repli de la barre d'onglets et du bloc options sur téléphone (21 nov.
+  // 2026, retour propriétaire — "étaler ces modifications à tous les
+  // modules", voir le commentaire détaillé dans GestionShell.tsx).
+  const nav = useVoletRepliable(pathname);
+  const options = useVoletRepliable(pathname);
 
   // Indication (sans bloquer la navigation, le serveur reste la seule
   // véritable barrière — voir ComptableService.agenda/exportDossierFinancement)
@@ -113,6 +120,10 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
     },
   ];
 
+  const LIENS_PLATS = GROUPES_NAV.flatMap((g) => g.liens);
+  const lienActifMobile = LIENS_PLATS.find((l) => pathname === l.href);
+  const libelleNavMobile = lienActifMobile?.label ?? t("gshell_menu");
+
   return (
     <div className={styles.cadre}>
       {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
@@ -130,37 +141,79 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
               ELEGANZ <span>{t("titre_accueil")}</span>
             </span>
           </div>
-          <div className={styles.enteteActions}>
-            <AccueilLien />
-            {nombreEnAttente > 0 && (
-              <button
-                className={styles.pendingSync}
-                onClick={synchroniser}
-                title={t("horsLigne_cliquerSynchroniser")}
-              >
-                {nombreEnAttente} {t("horsLigne_enAttente")}
-              </button>
-            )}
-            <NotificationBell />
-            <LanguageSwitcher />
-            <CurrencySwitcher />
-            <ThemeToggle clair />
+          <div className={styles.optionsBloc} ref={options.ref}>
             <button
-              className={styles.deconnexion}
+              type="button"
+              className={styles.boutonOptionsMobile}
               onClick={() => {
-                logout();
-                router.push("/");
+                options.basculer();
+                nav.setOuvert(false);
               }}
+              aria-expanded={options.ouvert}
+              aria-controls="comptable-options"
+              aria-label={t("gshell_options")}
+              title={t("gshell_options")}
             >
-              {t("action_seDeconnecter")}
+              <span aria-hidden="true">⋮</span>
             </button>
+            <div id="comptable-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
+              <AccueilLien etiquette />
+              {nombreEnAttente > 0 && (
+                <button className={styles.pendingSync} onClick={synchroniser} title={t("horsLigne_cliquerSynchroniser")}>
+                  {nombreEnAttente} {t("horsLigne_enAttente")}
+                </button>
+              )}
+              <NotificationBell etiquette />
+              <div className={styles.separateurOptions} />
+              <div className={styles.groupePreferences}>
+                <span className={styles.titreSection}>{t("gshell_preferences")}</span>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("langue_label")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("commun_devise")}</span>
+                  <CurrencySwitcher />
+                </div>
+                <ThemeToggle clair etiquette />
+              </div>
+              <div className={styles.separateurOptions} />
+              <button
+                className={styles.deconnexion}
+                onClick={() => {
+                  options.setOuvert(false);
+                  logout();
+                  router.push("/");
+                }}
+              >
+                {t("action_seDeconnecter")}
+              </button>
+            </div>
           </div>
         </header>
         {reviewRecommended && (
           <p className={styles.bandeauRevue}>{t("langue_reviewNotice")}</p>
         )}
         <BandeMarque couleur="var(--color-vert-paiement-sur-fonce)" />
-        <nav className={styles.nav} ref={navRef}>
+        <button
+          type="button"
+          className={styles.boutonNavMobile}
+          onClick={() => {
+            nav.basculer();
+            options.setOuvert(false);
+          }}
+          aria-expanded={nav.ouvert}
+          aria-controls="comptable-nav"
+        >
+          <span aria-hidden="true" className={styles.boutonNavMobileBarres}>
+            ☰
+          </span>
+          <span className={styles.boutonNavMobileLabel}>{libelleNavMobile}</span>
+          <span aria-hidden="true" className={styles.boutonNavMobileChevron}>
+            {nav.ouvert ? "▴" : "▾"}
+          </span>
+        </button>
+        <nav id="comptable-nav" className={`${styles.nav} ${nav.ouvert ? styles.navOuvert : ""}`} ref={navRef}>
           {GROUPES_NAV.map((groupe, indexGroupe) => (
             <div className={styles.navGroupe} key={indexGroupe}>
               {groupe.liens.map((lien) => {
@@ -176,6 +229,7 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
                     className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                     data-nav-actif={actif ? "true" : undefined}
                     title={nonInclus ? t("abo_nonInclusBouquet") : undefined}
+                    onClick={() => nav.setOuvert(false)}
                   >
                     <span aria-hidden="true">{lien.icone}</span> {lien.label}
                     {nonInclus && <span aria-hidden="true"> 🔒</span>}

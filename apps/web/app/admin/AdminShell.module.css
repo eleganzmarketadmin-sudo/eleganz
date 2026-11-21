@@ -108,33 +108,192 @@
   gap: var(--espace-3);
 }
 
-/* 10 nov. 2026 : sur mobile, `justify-content: space-between` + un simple
-   `flex-wrap` éparpillait l'entête — bouton Accueil, cloche, sélecteur de
-   langue et bascule de thème retombaient en vrac sur une deuxième ligne, et
-   « Se déconnecter » se retrouvait seul sur sa propre ligne poussé tout à
-   droite par le `space-between` hérité, avec un grand vide à gauche. On
-   empile proprement en colonne à la place : la marque centrée, puis les
-   actions centrées et uniformément espacées, puis la déconnexion en pleine
-   largeur — plus de ligne avec un seul élément mal aligné. */
+/* Lignes du volet "options" repliable (21 nov. 2026, retour propriétaire :
+   "étaler ces modifications à tous les modules" — même volet déroulant que
+   GestionShell, voir son commentaire détaillé). Sans effet ≥561px : .nav et
+   .enteteActions restent la rangée compacte d'origine, inchangée. */
+.ligneChamp {
+  display: contents;
+}
+
+.etiquetteChamp {
+  display: none;
+}
+
+.groupePreferences {
+  display: contents;
+}
+
+.titreSection {
+  display: none;
+}
+
+.separateurOptions {
+  display: none;
+}
+
+.optionsBloc {
+  position: relative;
+  /* Garantit que le déclencheur "⋮" (et le volet ancré à son bord droit via
+     `right: 0`) reste collé au bord droit de l'en-tête même si celui-ci
+     passe sur deux lignes au point de rupture mobile (titre de marque trop
+     long pour tenir sur une seule ligne) — voir le commentaire détaillé dans
+     GestionShell.module.css. Sans effet quand tout tient sur une ligne. */
+  margin-left: auto;
+}
+
+.boutonOptionsMobile {
+  display: none;
+}
+
+.boutonNavMobile {
+  display: none;
+}
+
 @media (max-width: 560px) {
-  .entete {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--espace-3);
-  }
-  .marque {
-    justify-content: center;
-  }
-  .enteteActions {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .deconnexion {
-    width: 100%;
-    text-align: center;
-  }
   .contenu {
     padding: var(--espace-4) var(--espace-3);
+  }
+
+  .boutonOptionsMobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: none;
+    color: #fff;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .enteteActions {
+    display: none;
+  }
+
+  .enteteActionsOuvert {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-1);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    max-width: calc(100vw - 24px);
+    padding: var(--espace-3);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 150;
+  }
+
+  .enteteActionsOuvert > * {
+    width: 100%;
+  }
+
+  .ligneChamp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espace-2);
+    width: 100%;
+    min-height: var(--touche-min);
+  }
+
+  .etiquetteChamp {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+
+  .groupePreferences {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-1);
+    width: 100%;
+  }
+
+  .titreSection {
+    display: block;
+    color: var(--color-texte-muted);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: var(--espace-1);
+  }
+
+  .separateurOptions {
+    display: block;
+    border-top: 1px solid var(--color-border);
+    margin: var(--espace-1) 0;
+    width: 100%;
+  }
+
+  .enteteActionsOuvert .deconnexion {
+    border: 1px solid var(--color-border-forte);
+    color: var(--color-ink);
+  }
+
+  .enteteActionsOuvert .deconnexion:hover {
+    border-color: var(--color-ink);
+    background: var(--color-surface-muted);
+  }
+
+  /* Repli de la barre d'onglets — <nav> reste toujours monté dans le DOM,
+     seul l'affichage change ; jamais une boîte `overflow` ici (voir le
+     commentaire historique sur .nav plus haut — romprait les panneaux de
+     DropdownNavGroup). */
+  .boutonNavMobile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    width: 100%;
+    padding: var(--espace-3) var(--espace-4);
+    border: none;
+    border-bottom: 2px solid var(--color-or);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    min-height: var(--touche-min);
+  }
+
+  .boutonNavMobileLabel {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .boutonNavMobileBarres {
+    font-size: 1.0625rem;
+  }
+
+  .boutonNavMobileChevron {
+    opacity: 0.7;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .navOuvert {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navLien {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
   }
 }
 

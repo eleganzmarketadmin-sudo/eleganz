@@ -217,6 +217,16 @@
      donc fonctionne sans changement même imbriqué ici). */
   .optionsBloc {
     position: relative;
+    /* Garantit que le déclencheur "⋮" (et donc le volet qui s'ancre à son
+       bord droit via `right: 0`) reste collé au bord droit de l'en-tête même
+       si celui-ci passe sur deux lignes (titre de marque trop long pour
+       tenir sur une seule ligne à ce point de rupture, voir InstitutionShell
+       — "Portail Institutions" dans certaines locales) : sur une ligne
+       flex à un seul élément, une marge automatique le pousse quand même
+       tout à droite, là où `justify-content` seul laisserait un unique
+       élément au bord GAUCHE de sa ligne. Sans effet quand tout tient sur
+       une ligne (résultat déjà identique à .entete's justify-content). */
+    margin-left: auto;
   }
   .boutonOptionsMobile {
     display: inline-flex;

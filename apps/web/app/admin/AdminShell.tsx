@@ -18,6 +18,7 @@ import { DropdownNavGroup } from "../components/DropdownNavGroup";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useScrollNavActifEnVue } from "../lib/useScrollNavActif";
+import { useVoletRepliable } from "../lib/useVoletRepliable";
 import styles from "./AdminShell.module.css";
 
 interface LienSimple {
@@ -146,6 +147,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const ecransAutorises = menuItems ?? (user?.role ? MENUS_PAR_ROLE_ADMIN[user.role] : undefined) ?? LIENS.map((l) => l.menu);
 
+  // Repli de la barre d'onglets et du bloc options sur téléphone (21 nov.
+  // 2026, retour client — "étaler ces modifications à tous les modules" —
+  // mécanisme déjà en place sur GestionShell, voir son commentaire détaillé.
+  // `useVoletRepliable` centralise ici ce qui y était écrit à la main
+  // (fermeture à Échap/clic en dehors/changement de page) ; l'exclusion
+  // mutuelle entre les deux volets reste composée explicitement sur chaque
+  // bouton ci-dessous, comme sur GestionShell.
+  const nav = useVoletRepliable(pathname);
+  const options = useVoletRepliable(pathname);
+  const lienActifMobile = LIENS.find((l) => pathname === l.href || pathname?.startsWith(`${l.href}/`));
+  const libelleNavMobile = lienActifMobile?.label ?? t("gshell_menu");
+
   // (13 nov. 2026, signalement "connexion réussie mais revient à la page de
   // connexion") — se fier uniquement à `user` (contexte React) pour décider
   // de rediriger expose une fenêtre de course : juste après login(), le
@@ -190,25 +203,71 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               ELEGANZ <span>Centre de pilotage</span>
             </span>
           </div>
-          <div className={styles.enteteActions}>
-            <AccueilLien />
-            <NotificationBell />
-            <LanguageSwitcher />
-            <CurrencySwitcher />
-            <ThemeToggle clair />
+          <div className={styles.optionsBloc} ref={options.ref}>
             <button
-              className={styles.deconnexion}
+              type="button"
+              className={styles.boutonOptionsMobile}
               onClick={() => {
-                logout();
-                router.push("/");
+                options.basculer();
+                nav.setOuvert(false);
               }}
+              aria-expanded={options.ouvert}
+              aria-controls="admin-options"
+              aria-label={t("gshell_options")}
+              title={t("gshell_options")}
             >
-              {t("action_seDeconnecter")}
+              <span aria-hidden="true">⋮</span>
             </button>
+            <div id="admin-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
+              <AccueilLien etiquette />
+              <NotificationBell etiquette />
+              <div className={styles.separateurOptions} />
+              <div className={styles.groupePreferences}>
+                <span className={styles.titreSection}>{t("gshell_preferences")}</span>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("langue_label")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("commun_devise")}</span>
+                  <CurrencySwitcher />
+                </div>
+                <ThemeToggle clair etiquette />
+              </div>
+              <div className={styles.separateurOptions} />
+              <button
+                className={styles.deconnexion}
+                onClick={() => {
+                  options.setOuvert(false);
+                  logout();
+                  router.push("/");
+                }}
+              >
+                {t("action_seDeconnecter")}
+              </button>
+            </div>
           </div>
         </header>
         <BandeMarque couleur="var(--color-or)" />
-        <nav className={styles.nav} ref={navRef}>
+        <button
+          type="button"
+          className={styles.boutonNavMobile}
+          onClick={() => {
+            nav.basculer();
+            options.setOuvert(false);
+          }}
+          aria-expanded={nav.ouvert}
+          aria-controls="admin-nav"
+        >
+          <span aria-hidden="true" className={styles.boutonNavMobileBarres}>
+            ☰
+          </span>
+          <span className={styles.boutonNavMobileLabel}>{libelleNavMobile}</span>
+          <span aria-hidden="true" className={styles.boutonNavMobileChevron}>
+            {nav.ouvert ? "▴" : "▾"}
+          </span>
+        </button>
+        <nav id="admin-nav" className={`${styles.nav} ${nav.ouvert ? styles.navOuvert : ""}`} ref={navRef}>
           {ENTREES.map((entree, index) => {
             if (!estGroupe(entree)) {
               if (!ecransAutorises.includes(entree.menu)) return null;
@@ -219,6 +278,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   href={entree.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  onClick={() => nav.setOuvert(false)}
                 >
                   {entree.label}
                 </Link>
@@ -236,6 +296,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   href={seul.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  onClick={() => nav.setOuvert(false)}
                 >
                   {seul.label}
                 </Link>
