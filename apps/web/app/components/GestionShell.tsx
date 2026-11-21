@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useShop } from "../lib/shop-context";
@@ -92,6 +92,41 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   // façon) ; une fois chargée, la liste reçue fait foi, y compris vide.
   const ecransAutorises = currentShop?.menuItems ?? LIENS.map((l) => l.menu);
 
+  // Repli de la barre d'onglets sur téléphone (21 nov. 2026, retour client :
+  // "l'entête et les menus occupent la moitié de l'écran ... dérouler les
+  // menus (trois barres horizontales juste en dessous de la ligne logo +
+  // Eleganz)") — repliée par défaut sous le point de rupture mobile (voir
+  // .nav/.navOuvert dans GestionShell.module.css), dépliée via le bouton
+  // juste au-dessus d'elle. <nav> reste toujours monté (navigation au
+  // clavier/lecteur d'écran intacte) : seul l'affichage change, jamais une
+  // boîte `overflow` (voir l'historique sur .nav plus bas — romprait les
+  // panneaux de DropdownNavGroup).
+  const [navOuvert, setNavOuvert] = useState(false);
+
+  // Repli automatique dès que la page change — qu'on vienne d'un lien simple
+  // ou d'un enfant de groupe déroulant (DropdownNavGroup gère déjà la
+  // fermeture de SON propre panneau ; ceci referme en plus la barre entière).
+  useEffect(() => {
+    setNavOuvert(false);
+  }, [pathname]);
+
+  // Échap referme aussi le volet, même sans avoir changé de page — même
+  // convention que ModulesMenu/DropdownNavGroup ci-dessus.
+  useEffect(() => {
+    if (!navOuvert) return;
+    function surEchap(e: KeyboardEvent) {
+      if (e.key === "Escape") setNavOuvert(false);
+    }
+    document.addEventListener("keydown", surEchap);
+    return () => document.removeEventListener("keydown", surEchap);
+  }, [navOuvert]);
+
+  // Libellé affiché sur le bouton replié : la section où on se trouve déjà,
+  // plutôt qu'un mot générique "Menu" sans repère — utile puisque la barre
+  // entière reste masquée tant qu'on ne l'ouvre pas.
+  const lienActif = LIENS.find((l) => pathname === l.href || pathname?.startsWith(`${l.href}/`));
+  const libelleNavMobile = lienActif?.label ?? t("gshell_menu");
+
   return (
     <div className={styles.cadre}>
       {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
@@ -163,7 +198,26 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <BandeMarque couleur="var(--color-cobalt-sur-fonce)" />
-        <nav className={styles.nav} ref={navRef}>
+        {/* Bouton replier/déplier, visible uniquement sur téléphone (voir
+            .boutonNavMobile dans GestionShell.module.css) — distinct de
+            <ModulesMenu /> ci-dessus (passerelle ENTRE modules) : celui-ci ne
+            replie que la barre d'onglets DU module en cours. */}
+        <button
+          type="button"
+          className={styles.boutonNavMobile}
+          onClick={() => setNavOuvert((v) => !v)}
+          aria-expanded={navOuvert}
+          aria-controls="gestion-nav"
+        >
+          <span aria-hidden="true" className={styles.boutonNavMobileBarres}>
+            ☰
+          </span>
+          <span className={styles.boutonNavMobileLabel}>{libelleNavMobile}</span>
+          <span aria-hidden="true" className={styles.boutonNavMobileChevron}>
+            {navOuvert ? "▴" : "▾"}
+          </span>
+        </button>
+        <nav id="gestion-nav" className={`${styles.nav} ${navOuvert ? styles.navOuvert : ""}`} ref={navRef}>
           {ENTREES.map((entree, index) => {
             if (!estGroupe(entree)) {
               if (!ecransAutorises.includes(entree.menu)) return null;
@@ -174,6 +228,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   href={entree.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  onClick={() => setNavOuvert(false)}
                 >
                   {entree.label}
                 </Link>
@@ -191,6 +246,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   href={seul.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  onClick={() => setNavOuvert(false)}
                 >
                   {seul.label}
                 </Link>

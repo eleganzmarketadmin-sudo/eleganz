@@ -120,6 +120,16 @@
   background: var(--color-cobalt-dark);
 }
 
+/* Bouton de repli de la barre d'onglets, téléphone uniquement (21 nov. 2026,
+   retour client : "l'entête et les menus occupent la moitié de l'écran...
+   dérouler les menus (trois barres horizontales juste en dessous de la
+   ligne logo + Eleganz)") — masqué par défaut (desktop/tablette : .nav
+   reste affichée en permanence comme avant), affiché à la place de la barre
+   repliée sous le point de rupture mobile ci-dessous. */
+.boutonNavMobile {
+  display: none;
+}
+
 .contenu {
   flex: 1;
   padding: var(--espace-5);
@@ -154,5 +164,59 @@
   .navLien {
     padding: var(--espace-2) var(--espace-3);
     font-size: 0.9rem;
+  }
+
+  /* Repli de la barre d'onglets (voir .boutonNavMobile ci-dessus) — <nav>
+     reste toujours monté dans le DOM, seul l'affichage change ; jamais une
+     boîte `overflow` ici (voir le commentaire historique sur .nav plus haut
+     — romprait les panneaux de DropdownNavGroup). */
+  .boutonNavMobile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    width: 100%;
+    padding: var(--espace-3) var(--espace-4);
+    border: none;
+    border-bottom: 2px solid var(--color-cobalt-texte);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    min-height: var(--touche-min);
+  }
+
+  .boutonNavMobileLabel {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .boutonNavMobileBarres {
+    font-size: 1.0625rem;
+  }
+
+  .boutonNavMobileChevron {
+    opacity: 0.7;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  /* Dépliée (navOuvert) : empilée en liste verticale pleine largeur plutôt
+     qu'en rangée qui déborderait — jamais via `overflow`, voir plus haut. */
+  .navOuvert {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navLien {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
   }
 }
