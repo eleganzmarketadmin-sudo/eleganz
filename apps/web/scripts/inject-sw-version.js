@@ -52,38 +52,3 @@ if (misAJour === contenu) {
 
 fs.writeFileSync(cheminSw, misAJour);
 console.log(`[inject-sw-version] sw.js versionné pour ce build : ${version}`);
-
-/**
- * Même identifiant, réutilisé pour VersionWatcher.tsx (21 nov. 2026,
- * signalement récurrent : « la correction ne marche toujours pas » alors que
- * le déploiement avait bien réussi) — voir le commentaire de
- * ChunkErrorRecovery.tsx : celui-ci ne couvre que l'échec de chargement d'un
- * morceau de code chargé PARESSEUSEMENT après coup. Un composant importé
- * normalement dès le premier chargement de la page (ex. ScannerCodeBarre
- * dans catalogue/page.tsx) reste simplement en mémoire tel quel dans un
- * onglet resté ouvert, sans jamais retenter un chargement réseau — donc sans
- * jamais déclencher ce filet, même des heures après un déploiement corrigeant
- * exactement le bug que la personne continue de revoir.
- *
- * `public/version.json` n'est délibérément PAS sous `/_next/static/` ni
- * `/icons/` : le service worker (voir le filtre dans son écouteur "fetch")
- * ne l'intercepte donc jamais, et chaque lecture passe toujours par le
- * réseau — condition nécessaire pour que la comparaison ait un sens.
- */
-const cheminBuildVersion = path.join(__dirname, "..", "app", "lib", "build-version.ts");
-const contenuBuildVersion = fs.readFileSync(cheminBuildVersion, "utf8");
-const buildVersionMisAJour = contenuBuildVersion.replace(
-  /^export const BUILD_VERSION = ".*";$/m,
-  `export const BUILD_VERSION = "${version}";`,
-);
-if (buildVersionMisAJour === contenuBuildVersion) {
-  throw new Error(
-    `inject-sw-version: la ligne "export const BUILD_VERSION = ...;" est introuvable dans ${cheminBuildVersion} — ` +
-      "VersionWatcher ne pourrait jamais détecter une nouvelle version.",
-  );
-}
-fs.writeFileSync(cheminBuildVersion, buildVersionMisAJour);
-
-const cheminVersionJson = path.join(__dirname, "..", "public", "version.json");
-fs.writeFileSync(cheminVersionJson, JSON.stringify({ version }));
-console.log(`[inject-sw-version] build-version.ts et public/version.json versionnés : ${version}`);
