@@ -9,11 +9,37 @@
 
 .entete {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: var(--espace-2) var(--espace-3);
   padding: var(--espace-3) var(--espace-4);
   background: var(--color-encre-fixe);
   color: #fff;
+}
+
+/* 21 nov. 2026 (ligne résumée dépliable, même motif que Catalogue) : le
+   chevron bascule l'affichage du détail de la commande ; le résumé reste
+   visible replié (acheteur, date, montant) pour garder une vue utile de la
+   liste sans tout déplier. */
+.boutonChevron {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  min-height: 28px;
+  min-width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resume {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.8125rem;
+  font-weight: 400;
 }
 
 .corps {

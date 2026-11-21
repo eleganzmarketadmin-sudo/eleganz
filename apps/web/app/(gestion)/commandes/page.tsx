@@ -5,7 +5,7 @@ import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { StatusTag } from "../../components/StatusTag";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
-import { formatMoney } from "../../lib/money";
+import { formatMoney, formatDate } from "../../lib/money";
 import { ouvrirDocumentPdf, construireUrlPdfPublique } from "../../lib/pdf";
 import { telechargerFichier } from "../../lib/telecharger-fichier";
 import { useLocale } from "../../lib/i18n/LocaleContext";
@@ -173,6 +173,25 @@ function CommandesContent() {
   const [motifLitige, setMotifLitige] = useState("");
   const [exportEnCours, setExportEnCours] = useState(false);
   const [selectionLivreur, setSelectionLivreur] = useState<Record<string, string>>({});
+
+  // 21 nov. 2026, retour propriétaire — même motif que Catalogue : "la page
+  // doit présenter une ligne résumée ... qu'on peut dérouler ... pour une
+  // bonne gestion d'espace", généralisé ici à Commandes (1ʳᵉ priorité donnée
+  // par le propriétaire pour ce motif, parmi tous les écrans à liste de la
+  // plateforme). Chaque commande est repliée par défaut (contact, livreur,
+  // articles et actions masqués), ne laissant qu'une ligne résumée —
+  // numéro, acheteur, date, montant, statut. Plusieurs commandes peuvent
+  // être dépliées à la fois (pas un accordéon à un seul volet).
+  const [commandesOuvertes, setCommandesOuvertes] = useState<Set<string>>(new Set());
+
+  function basculerCommande(id: string) {
+    setCommandesOuvertes((prev) => {
+      const suivant = new Set(prev);
+      if (suivant.has(id)) suivant.delete(id);
+      else suivant.add(id);
+      return suivant;
+    });
+  }
 
   async function exporter() {
     if (!currentShop) return;
@@ -366,15 +385,44 @@ function CommandesContent() {
       ) : commandes.length === 0 ? (
         <p className={styles.messageVide}>{t("gcmd_aucuneCommande")}</p>
       ) : (
-        commandes.map((so) => (
+        commandes.map((so) => {
+          const estOuverte = commandesOuvertes.has(so.id);
+          return (
           <div className={styles.commande} key={so.id}>
             <div className={styles.entete}>
-              <span>{t("lit_commandeNum").replace("{{id}}", so.order.id.slice(0, 8))}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={styles.boutonChevron}
+                  onClick={() => basculerCommande(so.id)}
+                  aria-expanded={estOuverte}
+                  aria-label={estOuverte ? t("gcmd_replierCommande") : t("gcmd_deplierCommande")}
+                  title={estOuverte ? t("gcmd_replierCommande") : t("gcmd_deplierCommande")}
+                >
+                  <span aria-hidden="true">{estOuverte ? "▾" : "▸"}</span>
+                </button>
+                {/* Le nom/résumé (texte purement informatif) agrandit la zone
+                    cliquable au-delà du petit chevron — même motif que
+                    Catalogue (21 nov. 2026). */}
+                <strong onClick={() => basculerCommande(so.id)} style={{ cursor: "pointer" }}>
+                  {t("lit_commandeNum").replace("{{id}}", so.order.id.slice(0, 8))}
+                </strong>
+                <span
+                  className={styles.resume}
+                  onClick={() => basculerCommande(so.id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {(so.order.buyer?.fullName ?? t("gcmd_acheteurFallback"))} · {formatDate(so.order.createdAt)} ·{" "}
+                  {formatMoney(Number(so.subtotal))}
+                </span>
+              </span>
               <StatusTag
                 label={CLES_STATUT[so.status] ? t(CLES_STATUT[so.status]) : so.status}
                 humeur={HUMEUR_PAR_STATUT[so.status] ?? "neutre"}
               />
             </div>
+            {estOuverte && (
+            <>
             {(so.order.buyerWhatsapp ||
               so.order.buyerPhone ||
               so.order.deliveryCommune ||
@@ -545,8 +593,11 @@ function CommandesContent() {
                 </div>
               </div>
             )}
+            </>
+            )}
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );
