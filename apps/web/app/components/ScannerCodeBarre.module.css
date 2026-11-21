@@ -1,0 +1,75 @@
+/* Même convention que marketplace/commandes (.modaleFond / .modale) — overlay
+   plein écran semi-transparent, boîte centrée. */
+.fond {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+  z-index: 100;
+}
+
+.boite {
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  max-width: 420px;
+  width: 100%;
+}
+
+.entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--espace-3);
+  font-weight: 600;
+}
+
+.fermer {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.cadreVideo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Repère visuel indiquant où cadrer le code-barres — purement indicatif,
+   ZXing analyse l'image entière, pas seulement cette zone. */
+.guide {
+  position: absolute;
+  inset: 30% 10%;
+  border: 2px solid var(--color-vert-paiement, #2e7d32);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.aide {
+  margin-top: var(--espace-3);
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  text-align: center;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  font-size: 0.875rem;
+}

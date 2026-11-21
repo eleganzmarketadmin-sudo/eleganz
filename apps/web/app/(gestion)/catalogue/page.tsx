@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { StatusTag } from "../../components/StatusTag";
 import { BoutonBientotDisponible } from "../../components/BoutonBientotDisponible";
+import { ScannerCodeBarre } from "../../components/ScannerCodeBarre";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney, pourcentageRemise } from "../../lib/money";
@@ -328,9 +329,20 @@ interface VariantOptionsListe {
  * impossible sur un écran tactile de caisse — et son surlignage de survol
  * natif (premier élément, thème sombre) pouvait donner l'impression visuelle
  * d'une présélection alors que `selection` démarre bien vide à chaque
- * nouvelle variante. Une puce par valeur, active ou non selon `selection`,
- * rend l'état réellement sans ambiguïté : un clic ajoute OU retire, au
- * doigt comme à la souris, sans aucune touche spéciale.
+ * nouvelle variante.
+ *
+ * Corrigé le 21 nov. 2026 (second retour, même jour : « le x qui apparaît
+ * quand on clique sur ça, rien ne se supprime ou retirer ») — une première
+ * version affichait toutes les valeurs dans UNE seule liste, la valeur
+ * choisie se contentant de changer de couleur sur place (puce remplie avec
+ * ✕) au lieu de disparaître : le retrait fonctionnait bien en réalité
+ * (l'état se mettait à jour), mais rien ne le signalait assez fort pour être
+ * perçu comme un vrai retrait. Désormais en DEUX rangées distinctes :
+ * « Sélectionné(e)s » (puces remplies, cliquer retire ET fait disparaître la
+ * puce de cette rangée) et le reste des valeurs disponibles (puces creuses,
+ * cliquer ajoute ET fait disparaître la puce de CETTE rangée pour
+ * réapparaître dans l'autre). Une valeur qui change de rangée est un retrait
+ * ou un ajout sans ambiguïté possible.
  */
 function SelecteurMultiple({
   label,
@@ -349,12 +361,12 @@ function SelecteurMultiple({
   const [nouvelleValeur, setNouvelleValeur] = useState("");
   const [enCours, setEnCours] = useState(false);
 
-  function basculer(v: string) {
-    if (selection.includes(v)) {
-      onChangeSelection(selection.filter((s) => s !== v));
-    } else {
-      onChangeSelection([...selection, v]);
-    }
+  function retirer(v: string) {
+    onChangeSelection(selection.filter((s) => s !== v));
+  }
+
+  function ajouterALaSelection(v: string) {
+    onChangeSelection([...selection, v]);
   }
 
   async function ajouter() {
@@ -369,29 +381,43 @@ function SelecteurMultiple({
     }
   }
 
+  const disponibles = valeurs.filter((v) => !selection.includes(v));
+
   return (
     <div className={styles.champ}>
       <label>{label}</label>
-      <div className={styles.listePuces}>
-        {valeurs.length === 0 && (
-          <span style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>{t("cat_aucuneValeur")}</span>
-        )}
-        {valeurs.map((v) => {
-          const active = selection.includes(v);
-          return (
+      {selection.length > 0 && (
+        <div className={styles.listePuces}>
+          {selection.map((v) => (
             <button
               type="button"
-              key={v}
-              className={active ? styles.puceValeurActive : styles.puceValeur}
-              aria-pressed={active}
-              onClick={() => basculer(v)}
-              title={active ? t("cat_cliquerPourRetirer") : t("cat_cliquerPourAjouter")}
+              key={`sel-${v}`}
+              className={styles.puceValeurActive}
+              onClick={() => retirer(v)}
+              title={t("cat_cliquerPourRetirer")}
             >
               {v}
-              {active && <span aria-hidden="true"> ✕</span>}
+              <span aria-hidden="true"> ✕</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
+      )}
+      <div className={styles.listePuces}>
+        {valeurs.length === 0 ? (
+          <span style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>{t("cat_aucuneValeur")}</span>
+        ) : (
+          disponibles.map((v) => (
+            <button
+              type="button"
+              key={`dispo-${v}`}
+              className={styles.puceValeur}
+              onClick={() => ajouterALaSelection(v)}
+              title={t("cat_cliquerPourAjouter")}
+            >
+              {v}
+            </button>
+          ))
+        )}
       </div>
       <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
         <input
@@ -597,6 +623,7 @@ function NouvelleVariante({
   const [taillesChoisies, setTaillesChoisies] = useState<string[]>([]);
   const [couleursChoisies, setCouleursChoisies] = useState<string[]>([]);
   const [codeBarre, setCodeBarre] = useState("");
+  const [scanOuvert, setScanOuvert] = useState(false);
   const [prixAchat, setPrixAchat] = useState("");
   const [prixVente, setPrixVente] = useState("");
   const [stock, setStock] = useState("0");
@@ -702,16 +729,43 @@ function NouvelleVariante({
       {nombreVariantes === 1 ? (
         <div className={styles.champ}>
           <label>{t("cat_codeBarre")}</label>
-          <input
-            name="nouvelleVarianteCodeBarre"
-            autoComplete="off"
-            placeholder={t("cat_placeholderCodeBarre")}
-            value={codeBarre}
-            onChange={(e) => setCodeBarre(e.target.value)}
-          />
+          <div style={{ display: "flex", gap: "6px" }}>
+            <input
+              name="nouvelleVarianteCodeBarre"
+              autoComplete="off"
+              placeholder={t("cat_placeholderCodeBarre")}
+              value={codeBarre}
+              onChange={(e) => setCodeBarre(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            {/* Scan caméra (21 nov. 2026, retour client : "on doit donner la
+                possibilité de scanner le code en plus de la saisie manuelle
+                ... imaginez également les erreurs de saisie surtout pour des
+                longues saisies") — alternative à la frappe manuelle pour un
+                code-barres souvent long (EAN-13, UPC...), source d'erreurs
+                de saisie. */}
+            <button
+              type="button"
+              className={styles.boutonSecondaire}
+              style={{ padding: "4px 10px", minHeight: "32px" }}
+              onClick={() => setScanOuvert(true)}
+              title={t("cat_scanTitre")}
+            >
+              📷
+            </button>
+          </div>
         </div>
       ) : (
         <span className={styles.texteAide}>{t("cat_codeBarreIndisponibleLot")}</span>
+      )}
+      {scanOuvert && (
+        <ScannerCodeBarre
+          onFermer={() => setScanOuvert(false)}
+          onDetecte={(code) => {
+            setScanOuvert(false);
+            setCodeBarre(code);
+          }}
+        />
       )}
       <input
         name="nouvelleVarianteePrixAchat"
@@ -882,6 +936,12 @@ function CatalogueContent() {
   // Panneau "Prix en gros" déplié pour une variante (2 nov. 2026) — une seule
   // variante à la fois par simplicité, comme les `<details>` ailleurs.
   const [varianteGrosOuverte, setVarianteGrosOuverte] = useState<string | null>(null);
+  // Scan caméra du code-barres d'une variante déjà créée (21 nov. 2026,
+  // retour client) — identifie la variante concernée pendant que le modal de
+  // scan est ouvert ; `null` = modal fermé. Le crayon ✎ reste la saisie
+  // manuelle (window.prompt, inchangée), ce bouton caméra est une seconde
+  // façon de renseigner le même champ.
+  const [scanCodeBarrePour, setScanCodeBarrePour] = useState<{ produitId: string; variante: Variant } | null>(null);
 
   function recharger() {
     if (!currentShop) return;
@@ -1463,6 +1523,19 @@ function CatalogueContent() {
                             >
                               ✎
                             </button>
+                            {/* Scan caméra (21 nov. 2026) en plus du crayon
+                                (saisie manuelle) ci-dessus — un window.prompt
+                                ne peut pas contenir un flux vidéo, donc un
+                                bouton séparé ouvre le modal de scan et
+                                enregistre directement le résultat. */}
+                            <button
+                              type="button"
+                              className={styles.boutonCrayon}
+                              title={t("cat_scanTitre")}
+                              onClick={() => setScanCodeBarrePour({ produitId: produit.id, variante: v })}
+                            >
+                              📷
+                            </button>
                           </small>
                         </td>
                         <td>
@@ -1564,6 +1637,17 @@ function CatalogueContent() {
             />
           </div>
         ))
+      )}
+      {scanCodeBarrePour && (
+        <ScannerCodeBarre
+          onFermer={() => setScanCodeBarrePour(null)}
+          onDetecte={(code) => {
+            const { produitId, variante } = scanCodeBarrePour;
+            setScanCodeBarrePour(null);
+            if (code === (variante.barcode ?? "")) return;
+            patchVariante(produitId, variante.id, { barcode: code }, "cat_codeBarreImpossible");
+          }}
+        />
       )}
     </div>
   );
