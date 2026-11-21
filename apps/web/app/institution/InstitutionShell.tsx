@@ -91,6 +91,10 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
   // modules", voir le commentaire détaillé dans GestionShell.tsx).
   const nav = useVoletRepliable(pathname);
   const options = useVoletRepliable(pathname);
+  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
+  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
+  // AdminShell.tsx, même mécanisme à l'identique).
+  const [notifNonLues, setNotifNonLues] = useState(0);
 
   const [profil, setProfil] = useState<ProfilInstitution | null>(null);
   const [erreurProfil, setErreurProfil] = useState<string | null>(null);
@@ -163,10 +167,13 @@ export function InstitutionShell({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
+              {notifNonLues > 0 && (
+                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
+              )}
             </button>
             <div id="institution-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
               <AccueilLien etiquette />
-              <NotificationBell etiquette />
+              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

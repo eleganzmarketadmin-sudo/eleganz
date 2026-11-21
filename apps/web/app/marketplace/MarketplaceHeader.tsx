@@ -120,6 +120,10 @@ export function MarketplaceHeader() {
   // par construction.
   const nav = useVoletRepliable(pathname);
   const options = useVoletRepliable(pathname);
+  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
+  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
+  // AdminShell.tsx, même mécanisme à l'identique).
+  const [notifNonLues, setNotifNonLues] = useState(0);
 
   return (
     // Enveloppe sticky (retour client du 12 nov. 2026 : "l'en-tête doit
@@ -176,7 +180,7 @@ export function MarketplaceHeader() {
               <div className={styles.grpOptionsB}>
                 {user ? (
                   <>
-                    <NotificationBell etiquette />
+                    <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
                     <MenuCompte />
                   </>
                 ) : (
@@ -200,6 +204,9 @@ export function MarketplaceHeader() {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
+              {notifNonLues > 0 && (
+                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
+              )}
             </button>
           </div>
 

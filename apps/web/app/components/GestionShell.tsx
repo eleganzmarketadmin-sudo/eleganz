@@ -138,6 +138,10 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   // modifie, ce volet ne fait que les regrouper visuellement.
   const [optionsOuvert, setOptionsOuvert] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
+  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
+  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
+  // AdminShell.tsx, même mécanisme à l'identique).
+  const [notifNonLues, setNotifNonLues] = useState(0);
 
   // Repli automatique au changement de page — même raison que pour navOuvert
   // (ex. après un clic sur "Accueil" ou "Se déconnecter" qui navigue).
@@ -206,6 +210,9 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
+              {notifNonLues > 0 && (
+                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
+              )}
             </button>
             <div id="gestion-options" className={`${styles.droite} ${optionsOuvert ? styles.droiteOuvert : ""}`}>
               <AccueilLien etiquette />
@@ -231,7 +238,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   </select>
                 </div>
               )}
-              <NotificationBell etiquette />
+              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

@@ -148,7 +148,14 @@
   min-height: var(--touche-min);
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  /* 21 nov. 2026, retour propriétaire — "la barre de menu ... laisse des
+     champs vides" (voir le commentaire détaillé dans AdminShell.module.css,
+     même mécanisme à l'identique). Remplace l'ancien `flex-shrink: 0` (qui
+     n'empêchait que le rétrécissement, jamais la croissance — ce n'était
+     donc pas lui qui causait l'espace vide, simplement l'absence de
+     `flex-grow`) : `flex: 1 1 auto` couvre les deux. */
+  flex: 1 1 auto;
+  justify-content: center;
 }
 
 .navLien:hover {
@@ -242,6 +249,24 @@
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
+    position: relative;
+  }
+
+  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
+     les 🔔" (voir le commentaire détaillé dans AdminShell.module.css, même
+     mécanisme à l'identique). */
+  .badgeOptionsMobile {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--color-flamme);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    min-width: 14px;
+    text-align: center;
   }
   .droite {
     display: none;
@@ -395,5 +420,10 @@
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+    /* Annule le `justify-content: center` ajouté à la règle de base (21 nov.
+       2026, remplissage desktop) : empilés ici en colonne pleine largeur,
+       les libellés restent alignés à gauche, comme dans les autres
+       coquilles (SiteHeader/MarketplaceHeader). */
+    justify-content: flex-start;
   }
 }

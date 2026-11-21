@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth";
@@ -45,6 +45,10 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
   // modules", voir le commentaire détaillé dans GestionShell.tsx).
   const nav = useVoletRepliable(pathname);
   const options = useVoletRepliable(pathname);
+  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
+  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
+  // AdminShell.tsx, même mécanisme à l'identique).
+  const [notifNonLues, setNotifNonLues] = useState(0);
   const lienActifMobile = LIENS.find((l) => pathname === l.href);
   const libelleNavMobile = lienActifMobile?.label ?? t("gshell_menu");
 
@@ -97,10 +101,13 @@ export function LivreurShell({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
+              {notifNonLues > 0 && (
+                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
+              )}
             </button>
             <div id="livreur-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
               <AccueilLien etiquette />
-              <NotificationBell etiquette />
+              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

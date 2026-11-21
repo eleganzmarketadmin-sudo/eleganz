@@ -158,6 +158,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const options = useVoletRepliable(pathname);
   const lienActifMobile = LIENS.find((l) => pathname === l.href || pathname?.startsWith(`${l.href}/`));
   const libelleNavMobile = lienActifMobile?.label ?? t("gshell_menu");
+  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
+  // non lues (voir NotificationBell.onNonLuesChange) sur le bouton "⋮"
+  // lui-même — la cloche vit désormais dans le volet options replié, son
+  // propre badge n'y est plus visible tant que ce volet n'est pas ouvert.
+  const [notifNonLues, setNotifNonLues] = useState(0);
 
   // (13 nov. 2026, signalement "connexion réussie mais revient à la page de
   // connexion") — se fier uniquement à `user` (contexte React) pour décider
@@ -217,10 +222,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
+              {notifNonLues > 0 && (
+                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
+              )}
             </button>
             <div id="admin-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
               <AccueilLien etiquette />
-              <NotificationBell etiquette />
+              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

@@ -1,17 +1,29 @@
 .racine {
   position: relative;
   display: inline-flex;
+  /* 21 nov. 2026, retour propriétaire — "la barre de menu ... laisse des
+     champs vides" (voir le commentaire détaillé dans AdminShell.module.css).
+     `.racine` est l'élément flex réel de `.nav` (le déclencheur ci-dessous
+     n'en est qu'un enfant interne) — c'est donc ICI, pas sur `.declencheur`,
+     que doit porter `flex: 1 1 auto` pour que ce groupe déroulant grandisse
+     exactement comme ses voisins `.navLien` simples. */
+  flex: 1 1 auto;
 }
 
 .declencheur {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
   font: inherit;
   color: inherit;
+  /* Remplit `.racine` (voir ci-dessus) pour que le libellé se centre dans
+     toute la largeur gagnée, comme un `.navLien` voisin. */
+  width: 100%;
+  min-height: var(--touche-min);
 }
 
 .chevron {

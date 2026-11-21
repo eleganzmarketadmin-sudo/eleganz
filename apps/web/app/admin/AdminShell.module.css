@@ -86,6 +86,17 @@
   min-height: var(--touche-min);
   display: flex;
   align-items: center;
+  /* 21 nov. 2026, retour propriétaire — "la barre de menu ... laisse des
+     champs vides, ça donne l'impression d'un outil non fini" (capture :
+     espace noir après le dernier onglet sur grand écran). `flex: 1 1 auto`
+     fait grandir chaque onglet à partir de sa largeur de contenu (jamais en
+     dessous, contrairement à `flex-basis: 0` qui risquerait de compresser un
+     libellé long sous sa propre largeur et de le faire déborder sur son
+     voisin malgré `white-space: nowrap`) jusqu'à occuper tout `.nav`, qu'il y
+     ait 3 onglets (Livreur) ou 7 (Admin). `justify-content: center` centre le
+     libellé dans la place supplémentaire ainsi gagnée. */
+  flex: 1 1 auto;
+  justify-content: center;
 }
 
 .navLien:hover {
@@ -169,6 +180,29 @@
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
+    /* Ancre pour .badgeOptionsMobile ci-dessous. */
+    position: relative;
+  }
+
+  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
+     les 🔔" : la cloche de notifications vit maintenant dans le volet
+     "options" replié, donc son badge n'est plus visible tant que la
+     personne n'a pas ouvert ce volet. Relais du même compteur (voir
+     NotificationBell.onNonLuesChange, un seul sondage, pas un doublon) sur
+     le bouton "⋮" lui-même — même habillage que .badge dans
+     NotificationBell.module.css, pour rester visuellement identique. */
+  .badgeOptionsMobile {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--color-flamme);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    min-width: 14px;
+    text-align: center;
   }
 
   .enteteActions {
@@ -294,6 +328,11 @@
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+    /* Annule le `justify-content: center` ajouté à la règle de base (21 nov.
+       2026, remplissage desktop) : empilés ici en colonne pleine largeur,
+       les libellés restent alignés à gauche, comme dans les autres
+       coquilles (SiteHeader/MarketplaceHeader). */
+    justify-content: flex-start;
   }
 }
 

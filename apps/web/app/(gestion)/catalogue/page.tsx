@@ -667,6 +667,13 @@ function NouvelleVariante({
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  // 21 nov. 2026, retour propriétaire — "la page ... donne l'impression d'un
+  // outil non fini" (capture : ce formulaire toujours affiché, avec des
+  // champs "Prix de vente"/"Stock" vides à côté d'une variante existante déjà
+  // remplie). Replié par défaut derrière un bouton "+ Ajouter une variante",
+  // comme une ligne de tableau qu'on ajoute à la demande plutôt qu'un
+  // formulaire vide en permanence.
+  const [ouvert, setOuvert] = useState(false);
 
   useEffect(() => {
     if (!currentShop) return;
@@ -734,8 +741,22 @@ function NouvelleVariante({
     }
   }
 
+  if (!ouvert) {
+    return (
+      <button type="button" className={styles.boutonSecondaire} onClick={() => setOuvert(true)}>
+        {t("cat_nouvelleVarianteToggle")}
+      </button>
+    );
+  }
+
   return (
     <div className={styles.ajoutVariante}>
+      <div className={styles.ajoutVarianteEntete}>
+        <strong>{t("cat_nouvelleVarianteToggle")}</strong>
+        <button type="button" className={styles.boutonSecondaire} onClick={() => setOuvert(false)}>
+          {t("action_annuler")}
+        </button>
+      </div>
       <span
         className={styles.champRefAuto}
         title={t("cat_placeholderReference")}
@@ -995,6 +1016,23 @@ function CatalogueContent() {
   // manuelle (window.prompt, inchangée), ce bouton caméra est une seconde
   // façon de renseigner le même champ.
   const [scanCodeBarrePour, setScanCodeBarrePour] = useState<{ produitId: string; variante: Variant } | null>(null);
+  // 21 nov. 2026, retour propriétaire — "la page doit présenter une ligne
+  // résumée par article qu'on peut dérouler" (bonne gestion de l'espace) :
+  // chaque article est replié par défaut (description, images, tableau des
+  // variantes et formulaire d'ajout masqués), ne laissant qu'une ligne
+  // résumée — nom, catégorie, nombre de variantes, statut, actions
+  // existantes. Ensemble des identifiants d'articles actuellement dépliés
+  // (plusieurs à la fois, pas un accordéon à un seul volet).
+  const [produitsOuverts, setProduitsOuverts] = useState<Set<string>>(new Set());
+
+  function basculerProduit(id: string) {
+    setProduitsOuverts((prev) => {
+      const suivant = new Set(prev);
+      if (suivant.has(id)) suivant.delete(id);
+      else suivant.add(id);
+      return suivant;
+    });
+  }
 
   function recharger() {
     if (!currentShop) return;
@@ -1330,7 +1368,7 @@ function CatalogueContent() {
     setCreationConfirmee(false);
     setErreur(null);
     try {
-      await api.post(`/shops/${currentShop.id}/products`, {
+      const nouveau = await api.post<{ id: string }>(`/shops/${currentShop.id}/products`, {
         name: nomNouveau,
         category: categorieNouveau || undefined,
         description: descriptionNouveau || undefined,
@@ -1339,6 +1377,12 @@ function CatalogueContent() {
       setCategorieNouveau("");
       setDescriptionNouveau("");
       recharger();
+      // Déplié automatiquement (21 nov. 2026) : les articles sont repliés
+      // par défaut (voir produitsOuverts plus haut), donc sans ceci le
+      // nouvel article apparaîtrait replié juste après sa création — la
+      // personne devrait le rouvrir elle-même pour y ajouter sa première
+      // variante.
+      setProduitsOuverts((prev) => new Set(prev).add(nouveau.id));
       // Confirmation explicite (16 oct. 2026) : auparavant, rien ne
       // distinguait "enregistré" de "pas encore cliqué" une fois le
       // formulaire vidé — message transitoire, effacé dès la prochaine
@@ -1435,11 +1479,35 @@ function CatalogueContent() {
             : t("cat_aucunResultatRecherche")}
         </p>
       ) : (
-        produitsVisibles.map((produit) => (
+        produitsVisibles.map((produit) => {
+          const estOuvert = produitsOuverts.has(produit.id);
+          const stockTotal = produit.variants.reduce((somme, v) => somme + v.stockQty, 0);
+          return (
           <div className={styles.produit} key={produit.id}>
             <div className={styles.produitEntete}>
-              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <strong>{produit.name}</strong>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className={styles.boutonChevron}
+                  onClick={() => basculerProduit(produit.id)}
+                  aria-expanded={estOuvert}
+                  aria-label={estOuvert ? t("cat_replierArticle") : t("cat_deplierArticle")}
+                  title={estOuvert ? t("cat_replierArticle") : t("cat_deplierArticle")}
+                >
+                  <span aria-hidden="true">{estOuvert ? "▾" : "▸"}</span>
+                </button>
+                {/* 21 nov. 2026 — le chevron seul (28×28px) était une cible
+                    trop petite pour déplier/replier l'article, surtout au
+                    doigt : le nom et le résumé (texte purement informatif,
+                    sans action propre) agrandissent la zone cliquable sans
+                    toucher au bouton crayon ni aux étiquettes/actions, qui
+                    gardent chacun leur propre clic. */}
+                <strong
+                  onClick={() => basculerProduit(produit.id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {produit.name}
+                </strong>
                 <button
                   type="button"
                   className={styles.boutonCrayon}
@@ -1449,6 +1517,16 @@ function CatalogueContent() {
                 >
                   ✎
                 </button>
+                {/* 21 nov. 2026 — résumé visible même replié (nombre de
+                    variantes + stock total), pour garder une vue utile de la
+                    liste sans devoir tout déplier (gestion de l'espace). */}
+                <span
+                  className={styles.produitResume}
+                  onClick={() => basculerProduit(produit.id)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {produit.variants.length} {t("cat_variantesMinuscule")} · {t("cat_colStock")}: {stockTotal}
+                </span>
               </span>
               <span
                 className={styles.produitActions}
@@ -1512,6 +1590,8 @@ function CatalogueContent() {
                 </button>
               </span>
             </div>
+            {estOuvert && (
+            <>
             <p
               style={{
                 display: "flex",
@@ -1688,8 +1768,11 @@ function CatalogueContent() {
               produitCategorie={produit.category}
               onAjoutee={recharger}
             />
+            </>
+            )}
           </div>
-        ))
+          );
+        })
       )}
       {scanCodeBarrePour && (
         <ScannerCodeBarre

@@ -63,7 +63,10 @@ function espaceCourant(pathname: string | null): string | null {
  * s'intégrer proprement aux volets "options" repliables de chaque coquille,
  * sans rien changer à son usage normal dans un en-tête (icône seule).
  */
-export function NotificationBell({ etiquette }: { etiquette?: boolean } = {}) {
+export function NotificationBell({
+  etiquette,
+  onNonLuesChange,
+}: { etiquette?: boolean; onNonLuesChange?: (n: number) => void } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLocale();
@@ -99,6 +102,19 @@ export function NotificationBell({ etiquette }: { etiquette?: boolean } = {}) {
     const minuteur = setInterval(rafraichirCompteur, INTERVALLE_SONDAGE_MS);
     return () => clearInterval(minuteur);
   }, [rafraichirCompteur]);
+
+  // 21 nov. 2026, retour propriétaire : "avec la nouvelle présentation il
+  // faut aller dérouler pour voir les 🔔" — la cloche vit maintenant à
+  // l'intérieur du volet "options" replié sur mobile (voir chaque
+  // *Shell.tsx/MarketplaceHeader.tsx), donc son badge n'y est plus visible
+  // tant que la personne n'a pas ouvert le volet. `onNonLuesChange` relaie
+  // CE MÊME compteur (déjà sondé toutes les 30s ci-dessus — pas un second
+  // sondage indépendant) au parent, qui peut l'afficher sur le bouton "⋮"
+  // lui-même. Callback optionnel : rien ne change pour un appelant qui ne le
+  // fournit pas.
+  useEffect(() => {
+    onNonLuesChange?.(nonLues);
+  }, [nonLues, onNonLuesChange]);
 
   useEffect(() => {
     function surClicExterieur(e: MouseEvent) {

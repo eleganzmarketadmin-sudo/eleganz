@@ -283,6 +283,24 @@
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
+    position: relative;
+  }
+
+  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
+     les 🔔" (voir le commentaire détaillé dans AdminShell.module.css, même
+     mécanisme à l'identique). */
+  .badgeOptionsMobile {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--color-flamme);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    min-width: 14px;
+    text-align: center;
   }
 
   .grpNavPrincipal {
