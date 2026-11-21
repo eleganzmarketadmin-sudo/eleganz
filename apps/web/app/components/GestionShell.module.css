@@ -130,6 +130,14 @@
   display: none;
 }
 
+/* Bouton de repli du bloc options (notifications, langue, devise, thème,
+   déconnexion...), téléphone uniquement — voir le commentaire détaillé sur
+   .droite/.droiteOuvert dans le point de rupture mobile ci-dessous.
+   Desktop/tablette : masqué, .droite reste affichée comme avant. */
+.boutonOptionsMobile {
+  display: none;
+}
+
 .contenu {
   flex: 1;
   padding: var(--espace-5);
@@ -150,16 +158,54 @@
   .contenu {
     padding: var(--espace-4) var(--espace-3);
   }
-  /* 20 oct. 2026 (menu qui déborde sur petit écran) : .entete passe déjà à
-     la ligne (flex-wrap ci-dessus), mais .droite restait une rangée flex
-     rigide de 6 éléments (lien accueil, bouton sync, sélecteur boutique,
-     cloche, langue, thème, déconnexion) qui continuait de déborder
-     horizontalement sans wrap ni défilement propre. */
+  /* Repli du bloc options en volet déroulant (21 nov. 2026, retour client :
+     "en regroupant sous barre déroulante ou flèche au coin droit toutes les
+     options (notification, langue, devise, déconnecter, thème etc.)") —
+     remplace l'ancien `.droite { flex-wrap: wrap; ... }` (20 oct. 2026) qui
+     laissait les 7 éléments (lien accueil, bouton sync, sélecteur boutique,
+     cloche, langue, devise, thème, déconnexion) en rangée visible en
+     permanence, occupant à eux seuls une bonne partie de l'en-tête. Même
+     principe que .nav/.navOuvert plus bas : jamais de boîte `overflow` sur
+     un ancêtre, pour ne jamais rogner les panneaux déroulants internes
+     (NotificationBell, dont le panneau se recale déjà tout seul à l'écran
+     via useClampDropdownADroite — ce recalage se fait en coordonnées écran,
+     donc fonctionne sans changement même imbriqué ici). */
+  .optionsBloc {
+    position: relative;
+  }
+  .boutonOptionsMobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: none;
+    color: #fff;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
   .droite {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    display: none;
+  }
+  .droiteOuvert {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--espace-2);
-    width: 100%;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 240px;
+    max-width: calc(100vw - 24px);
+    padding: var(--espace-3);
+    background: var(--color-encre-fixe);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    z-index: 150;
   }
   .navLien {
     padding: var(--espace-2) var(--espace-3);

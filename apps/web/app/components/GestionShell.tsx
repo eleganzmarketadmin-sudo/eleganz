@@ -127,6 +127,44 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   const lienActif = LIENS.find((l) => pathname === l.href || pathname?.startsWith(`${l.href}/`));
   const libelleNavMobile = lienActif?.label ?? t("gshell_menu");
 
+  // Repli du bloc "options" (notifications, langue, devise, thème,
+  // déconnexion, etc.) sur téléphone (21 nov. 2026, retour client : "en
+  // regroupant sous barre déroulante ou flèche au coin droit toutes les
+  // options") — même principe que navOuvert ci-dessus : <div className=
+  // {styles.droite}> reste toujours montée, seul son affichage change sous
+  // le point de rupture mobile (voir .droite/.droiteOuvert). Chacun des
+  // composants qu'elle contient (NotificationBell, LanguageSwitcher...) gère
+  // déjà son propre panneau déroulant indépendamment — rien ici ne les
+  // modifie, ce volet ne fait que les regrouper visuellement.
+  const [optionsOuvert, setOptionsOuvert] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+
+  // Repli automatique au changement de page — même raison que pour navOuvert
+  // (ex. après un clic sur "Accueil" ou "Se déconnecter" qui navigue).
+  useEffect(() => {
+    setOptionsOuvert(false);
+  }, [pathname]);
+
+  // Échap, et clic en dehors du bloc — même convention que
+  // ModulesMenu/DropdownNavGroup/NotificationBell.
+  useEffect(() => {
+    if (!optionsOuvert) return;
+    function surEchap(e: KeyboardEvent) {
+      if (e.key === "Escape") setOptionsOuvert(false);
+    }
+    function surClicExterieur(e: MouseEvent) {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
+        setOptionsOuvert(false);
+      }
+    }
+    document.addEventListener("keydown", surEchap);
+    document.addEventListener("mousedown", surClicExterieur);
+    return () => {
+      document.removeEventListener("keydown", surEchap);
+      document.removeEventListener("mousedown", surClicExterieur);
+    };
+  }, [optionsOuvert]);
+
   return (
     <div className={styles.cadre}>
       {/* Enveloppe sticky (retour client du 12 nov. 2026 : "la fixation des
@@ -149,52 +187,74 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               {currentShop && <div className={styles.boutiqueNom}>{currentShop.name}</div>}
             </div>
           </div>
-          <div className={styles.droite}>
-            <AccueilLien />
-            {nombreEnAttente > 0 && (
+          <div className={styles.optionsBloc} ref={optionsRef}>
+            {/* Bouton de repli du bloc options, téléphone uniquement (voir
+                .boutonOptionsMobile) — distinct du bouton ☰ de la barre
+                d'onglets plus bas : celui-ci replie l'autre moitié de
+                l'en-tête (notifications, langue, devise, thème,
+                déconnexion...). */}
+            <button
+              type="button"
+              className={styles.boutonOptionsMobile}
+              onClick={() => {
+                setOptionsOuvert((v) => !v);
+                setNavOuvert(false);
+              }}
+              aria-expanded={optionsOuvert}
+              aria-controls="gestion-options"
+              aria-label={t("gshell_options")}
+              title={t("gshell_options")}
+            >
+              <span aria-hidden="true">⋮</span>
+            </button>
+            <div id="gestion-options" className={`${styles.droite} ${optionsOuvert ? styles.droiteOuvert : ""}`}>
+              <AccueilLien />
+              {nombreEnAttente > 0 && (
+                <button
+                  onClick={synchroniser}
+                  title={t("horsLigne_cliquerSynchroniser")}
+                  style={{
+                    background: "var(--color-or)",
+                    color: "var(--color-encre-fixe)",
+                    border: "none",
+                    padding: "8px 12px",
+                    minHeight: "40px",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  {nombreEnAttente} vente(s) en attente de synchronisation
+                </button>
+              )}
+              {shops.length > 1 && (
+                <select
+                  aria-label="Choisir la boutique"
+                  value={currentShop?.id ?? ""}
+                  onChange={(e) => setCurrentShopId(e.target.value)}
+                  style={{ padding: "8px", minHeight: "40px" }}
+                >
+                  {shops.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <NotificationBell />
+              <LanguageSwitcher />
+              <CurrencySwitcher />
+              <ThemeToggle clair />
               <button
-                onClick={synchroniser}
-                title={t("horsLigne_cliquerSynchroniser")}
-                style={{
-                  background: "var(--color-or)",
-                  color: "var(--color-encre-fixe)",
-                  border: "none",
-                  padding: "8px 12px",
-                  minHeight: "40px",
-                  cursor: "pointer",
-                  fontWeight: 600,
+                className={styles.deconnexion}
+                onClick={() => {
+                  setOptionsOuvert(false);
+                  logout();
+                  router.push("/");
                 }}
               >
-                {nombreEnAttente} vente(s) en attente de synchronisation
+                {t("action_seDeconnecter")}
               </button>
-            )}
-            {shops.length > 1 && (
-              <select
-                aria-label="Choisir la boutique"
-                value={currentShop?.id ?? ""}
-                onChange={(e) => setCurrentShopId(e.target.value)}
-                style={{ padding: "8px", minHeight: "40px" }}
-              >
-                {shops.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <NotificationBell />
-            <LanguageSwitcher />
-            <CurrencySwitcher />
-            <ThemeToggle clair />
-            <button
-              className={styles.deconnexion}
-              onClick={() => {
-                logout();
-                router.push("/");
-              }}
-            >
-              {t("action_seDeconnecter")}
-            </button>
+            </div>
           </div>
         </header>
         <BandeMarque couleur="var(--color-cobalt-sur-fonce)" />
@@ -205,7 +265,10 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
         <button
           type="button"
           className={styles.boutonNavMobile}
-          onClick={() => setNavOuvert((v) => !v)}
+          onClick={() => {
+            setNavOuvert((v) => !v);
+            setOptionsOuvert(false);
+          }}
           aria-expanded={navOuvert}
           aria-controls="gestion-nav"
         >
