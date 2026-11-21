@@ -290,8 +290,30 @@ select {
   }
 }
 
+/* 21 nov. 2026 (retour client confirmé reproductible : au Catalogue, le scan
+   caméra "n'ouvre ni la caméra ni la petite fenêtre") — BUG TROUVÉ, et pas
+   seulement pour le scan : `both` applique le remplissage "forwards" en plus
+   de "backwards", donc une fois l'animation terminée, cette div garde pour
+   toujours un `transform` à une valeur différente de `none` (la matrice
+   identité de "translateY(0)" — visuellement un no-op, mais PAS la même
+   chose pour le CSS). Tout élément `position: fixed` imbriqué à l'intérieur
+   (ScannerCodeBarre, toute future modale plein écran…) se retrouve alors
+   positionné par rapport à CETTE boîte — qui fait toute la hauteur de la
+   page, pas celle de l'écran — plutôt que par rapport au viewport. Sur une
+   page longue (catalogue avec beaucoup de produits, historique de
+   commandes…) une fois l'utilisateur descendu plus bas que la hauteur d'un
+   écran, la modale s'ouvre bien mais des milliers de pixels plus haut,
+   totalement invisible sans remonter tout en haut — reproduit et confirmé
+   avec Playwright (rectangle de la modale à top: -2368px après défilement).
+   `backwards` seul garde l'effet recherché par `both` (pas de flash de
+   l'état par défaut juste avant le début de l'animation) sans son effet de
+   bord : une fois l'animation terminée, l'élément redevient `transform:
+   none`, exactement comme s'il n'avait jamais été animé (la image de fin
+   "translateY(0)" est de toute façon visuellement identique à "none" — ce
+   correctif ne change donc rien à l'animation elle-même, seulement à ce qui
+   reste "collé" après coup). */
 .entree-page {
-  animation: eleganz-entree 320ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation: eleganz-entree 320ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
