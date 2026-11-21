@@ -63,25 +63,6 @@
   display: flex;
   align-items: center;
   gap: var(--espace-3);
-  margin-left: auto;
-}
-
-/* Signalement du 11 nov. 2026 : sur mobile en portrait, logo + sélecteur de
-   langue + bascule de thème + bouton "Se connecter" ne tenaient jamais sur
-   une seule ligne (aucun flex-wrap) — la ligne débordait du viewport et
-   entraînait tout l'en-tête (et la barre de nav en dessous) à déborder
-   horizontalement, texte coupé à droite. Les actions basculent sur leur
-   propre ligne, alignées à droite, dès que la place manque. */
-@media (max-width: 560px) {
-  .contenu {
-    flex-wrap: wrap;
-    row-gap: var(--espace-2);
-  }
-
-  .actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }
 
 .connexion {
@@ -98,4 +79,150 @@
 .connexion:hover {
   text-decoration: none;
   opacity: 0.85;
+}
+
+/* Lignes du volet "options" repliable + repli de la barre de nav (21 nov.
+   2026, retour propriétaire — "étaler ces modifications à tous les modules",
+   même mécanisme que GestionShell/AdminShell, voir leur commentaire
+   détaillé). Remplace l'ancien repli ad hoc du 11 nov. 2026 (actions passant
+   sur leur propre ligne pleine largeur, jamais vraiment repliées). Sans
+   effet ≥561px : .actions et .nav restent la rangée compacte d'origine,
+   inchangée. */
+.ligneChamp {
+  display: contents;
+}
+
+.etiquetteChamp {
+  display: none;
+}
+
+.optionsBloc {
+  position: relative;
+  margin-left: auto;
+}
+
+.boutonOptionsMobile {
+  display: none;
+}
+
+.boutonNavMobile {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .boutonOptionsMobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid var(--color-border-forte);
+    background: none;
+    color: var(--color-ink);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .actions {
+    display: none;
+  }
+
+  .actionsOuvert {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-1);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    max-width: calc(100vw - 24px);
+    padding: var(--espace-3);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 150;
+  }
+
+  .actionsOuvert > * {
+    width: 100%;
+  }
+
+  .ligneChamp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espace-2);
+    width: 100%;
+    min-height: var(--touche-min);
+  }
+
+  .etiquetteChamp {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+
+  .actionsOuvert .connexion {
+    justify-content: center;
+  }
+
+  .boutonNavMobile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    width: 100%;
+    padding: var(--espace-3) var(--espace-5);
+    border: none;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    min-height: var(--touche-min);
+  }
+
+  .boutonNavMobileLabel {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .boutonNavMobileBarres {
+    font-size: 1.0625rem;
+  }
+
+  .boutonNavMobileChevron {
+    opacity: 0.7;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .navOuvert {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  /* border-bottom reste réservé à l'indicateur "actif" hérité du desktop
+     (.navLienActif en change seulement la couleur) — la séparation entre
+     liens empilés passe donc par border-top, jamais par border-bottom, pour
+     ne jamais écraser cette couleur sur le lien actif. */
+  .navLien {
+    width: 100%;
+    padding: var(--espace-3) var(--espace-5);
+  }
+
+  .navLien + .navLien {
+    border-top: 1px solid var(--color-border);
+  }
 }

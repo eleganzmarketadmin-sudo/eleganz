@@ -56,6 +56,11 @@
   flex-wrap: wrap;
   gap: var(--espace-2) var(--espace-4);
   align-items: center;
+  /* Ancre pour le popover "options" en-dessous de 560px (voir
+     .optionsGroupeOuvert) — sans effet ≥561px, rien ne s'y positionne en
+     absolu à cette largeur (même convention que .optionsBloc dans les
+     autres coquilles, voir leur commentaire détaillé). */
+  position: relative;
 }
 
 .liens a,
@@ -70,7 +75,9 @@
 /* Présent par défaut — masqué uniquement sous 420px (voir media query plus
    bas). Doit rester déclaré AVANT cette media query : à spécificité égale,
    c'est l'ordre dans la feuille qui tranche, pas le fait d'être dans un
-   @media actif. */
+   @media actif. Seul le Panier utilise encore cette classe (21 nov. 2026) —
+   voir .menuCompteTexte pour "Mon compte", qui vit désormais dans le volet
+   "options" en pleine largeur, où le texte doit rester visible. */
 .texteBouton {
   display: inline;
 }
@@ -82,13 +89,98 @@
   }
 
   /* 10 nov. 2026 (signalement : en-tête mobile prenant une grande partie de
-     l'écran, boutons qui débordent) — "Panier" et "Mon compte" passent en
-     icône seule sous ce seuil, comme suggéré : ça libère assez de largeur
-     pour que ces deux-là tiennent sur la même ligne que le reste au lieu de
-     forcer encore une ligne de plus dans l'en-tête. */
+     l'écran, boutons qui débordent) — "Panier" passe en icône seule sous ce
+     seuil, comme suggéré : ça libère assez de largeur pour qu'il tienne sur
+     la même ligne que le reste au lieu de forcer encore une ligne de plus
+     dans l'en-tête. */
   .texteBouton {
     display: none;
   }
+}
+
+/* Regroupements du volet "options"/nav repliable (21 nov. 2026, retour
+   propriétaire — "étaler ces modifications à tous les modules"). Adaptation
+   sur mesure : contrairement aux autres coquilles, nav et options partagent
+   ici une seule rangée `.liens` sur desktop — elle doit rester strictement
+   inchangée ≥561px. Chaque regroupement ci-dessous est `display: contents`
+   en permanence au niveau desktop (aucune boîte ajoutée, les enfants
+   deviennent des éléments flex directs de `.liens`), et c'est la propriété
+   `order` ci-dessous — pas l'ordre DOM — qui fixe la position visuelle de
+   chacun sur desktop : Accueil/Boutiques/Experts (1), Langue/Devise/Thème
+   (2), Panier (3), Notifications/Mon compte ou Connexion (4) — exactement
+   l'ordre d'origine. En-dessous de 560px, le groupe nav disparaît
+   entièrement (doublé, liens simples sans état, dans la barre de nav mobile
+   séparée ci-dessous) et le groupe options devient le popover "⋮" ; le
+   panier reste toujours un élément flex normal et visible, jamais cette
+   logique de regroupement. */
+.grpNavPrincipal {
+  display: contents;
+}
+
+/* Sélecteur descendant (pas `>`) : .ligneChamp (plus bas) est LUI AUSSI
+   `display: contents`, donc les véritables éléments flex promus dans
+   `.liens` sont les PETITS-enfants (le <select> dans .ligneChamp, par
+   exemple), pas .ligneChamp lui-même — `order` sur une boîte `contents` est
+   sans effet. Un sélecteur descendant traverse n'importe quelle profondeur
+   d'emboîtement `contents` et retombe toujours sur le bon élément ; posé sur
+   un élément qui n'est pas un élément flex direct de `.liens` (ex. un lien
+   du menu déroulant interne de MenuCompte), `order` est alors simplement
+   sans effet, jamais un problème. */
+.grpNavPrincipal * {
+  order: 1;
+}
+
+.ancreOptions {
+  display: contents;
+}
+
+.optionsGroupe {
+  display: contents;
+}
+
+.grpOptionsA {
+  display: contents;
+}
+
+.grpOptionsA * {
+  order: 2;
+}
+
+.grpOptionsB {
+  display: contents;
+}
+
+.grpOptionsB * {
+  order: 4;
+}
+
+/* Ligne "Langue"/"Devise" avec libellé — même convention que
+   GestionShell/AdminShell (voir leur commentaire détaillé) : `display:
+   contents` + libellé masqué sur desktop (sélecteur nu, comme aujourd'hui),
+   ligne pleine largeur avec libellé visible une fois dans le popover
+   mobile. */
+.ligneChamp {
+  display: contents;
+}
+
+.etiquetteChamp {
+  display: none;
+}
+
+.boutonOptionsMobile {
+  display: none;
+  order: 10;
+}
+
+.boutonNavMobile {
+  display: none;
+}
+
+.navMobile {
+  display: none;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-bottom: 2px solid var(--color-magenta-texte);
 }
 
 .panier {
@@ -97,6 +189,7 @@
   align-items: center;
   gap: 6px;
   min-height: var(--touche-min);
+  order: 3;
 }
 
 .compteur {
@@ -124,6 +217,14 @@
   font: inherit;
   padding: 0;
   min-height: var(--touche-min);
+}
+
+/* Libellé "Mon compte" — classe distincte de .texteBouton (21 nov. 2026) :
+   ce bouton vit maintenant aussi en pleine largeur dans le volet "options"
+   repliable, où le texte doit rester visible quelle que soit la largeur
+   d'écran (jamais masqué sous 420px comme .texteBouton pour le Panier). */
+.menuCompteTexte {
+  display: inline;
 }
 
 .menuCompteDropdown {
@@ -165,4 +266,173 @@
   cursor: pointer;
   font: inherit;
   width: 100%;
+}
+
+@media (max-width: 560px) {
+  .boutonOptionsMobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: none;
+    color: #fff;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .grpNavPrincipal {
+    display: none;
+  }
+
+  .optionsGroupe {
+    display: none;
+  }
+
+  .optionsGroupeOuvert {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-1);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 260px;
+    max-width: calc(100vw - 24px);
+    padding: var(--espace-3);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 150;
+  }
+
+  .optionsGroupeOuvert > * {
+    width: 100%;
+    order: unset;
+  }
+
+  /* .grpOptionsA/.grpOptionsB restent `display: contents` même dans le
+     popover mobile (leurs enfants sont directement les éléments flex de
+     .optionsGroupeOuvert, empilés) — la largeur pleine doit donc cibler ces
+     enfants-là, pas les regroupements eux-mêmes (invisibles en boîte). */
+  .grpOptionsA > *,
+  .grpOptionsB > * {
+    width: 100%;
+  }
+
+  .ligneChamp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espace-2);
+    width: 100%;
+    min-height: var(--touche-min);
+  }
+
+  .etiquetteChamp {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+
+  .optionsGroupeOuvert .menuCompte {
+    width: 100%;
+  }
+
+  .optionsGroupeOuvert .menuCompteBouton {
+    width: 100%;
+    color: var(--color-ink);
+    font-size: 1rem;
+  }
+
+  .optionsGroupeOuvert .menuCompteTexte {
+    flex: 1;
+    text-align: left;
+  }
+
+  .optionsGroupeOuvert .connexionEtiquette {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touche-min);
+    padding: var(--espace-2) var(--espace-3);
+    border: 1px solid var(--color-border-forte);
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .optionsGroupeOuvert .connexionEtiquette:hover {
+    border-color: var(--color-ink);
+    background: var(--color-surface-muted);
+  }
+
+  /* Barre de nav mobile séparée (Accueil/Boutiques/Experts) — en-dessous de
+     l'en-tête, jamais montée sur desktop. */
+  .boutonNavMobile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    width: 100%;
+    padding: var(--espace-3) var(--espace-5);
+    border: none;
+    /* --color-magenta-texte (pas -sur-fonce) : ce bouton repose sur
+       --color-surface, qui se retourne avec le thème — même convention que
+       .boutonNavMobile dans les autres coquilles (voir leur commentaire). */
+    border-top: 2px solid var(--color-magenta-texte);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    min-height: var(--touche-min);
+  }
+
+  .boutonNavMobileLabel {
+    flex: 1;
+    text-align: left;
+  }
+
+  .boutonNavMobileBarres {
+    font-size: 1.0625rem;
+  }
+
+  .boutonNavMobileChevron {
+    opacity: 0.7;
+  }
+
+  .navMobile {
+    display: none;
+  }
+
+  .navMobileOuvert {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navMobileLien {
+    width: 100%;
+    padding: var(--espace-3) var(--espace-5);
+    color: var(--color-ink);
+    border-top: 1px solid var(--color-border);
+    min-height: var(--touche-min);
+    display: flex;
+    align-items: center;
+  }
+
+  /* AccueilLien (mode "etiquette") n'a pas de retrait horizontal propre
+     (pensé pour le popover "options", où c'est le conteneur qui porte le
+     padding) — ici la barre de nav est pleine largeur comme les autres
+     coquilles, chaque lien porte son propre retrait. On l'aligne donc sur
+     .navMobileLien ci-dessus en ciblant directement le lien qu'il rend (son
+     module CSS propre n'est pas accessible d'ici). */
+  .navMobileOuvert > a:first-child {
+    padding-left: var(--espace-5);
+    padding-right: var(--espace-5);
+  }
 }

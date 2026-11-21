@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart-context";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -14,6 +14,7 @@ import { ModulesMenu } from "../components/ModulesMenu";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { LanguageSwitcher } from "../lib/i18n/LanguageSwitcher";
 import { useClampDropdownADroite } from "../lib/useClampDropdown";
+import { useVoletRepliable } from "../lib/useVoletRepliable";
 import styles from "./MarketplaceHeader.module.css";
 
 /**
@@ -51,10 +52,13 @@ function MenuCompte() {
         aria-label={t("market_monCompte")}
       >
         <span aria-hidden="true">👤</span>
-        {/* 10 nov. 2026 : texte masqué en très petit écran (voir CSS) pour
-            que le bouton tienne sur la même ligne que le reste au lieu de
-            pousser l'en-tête à occuper l'essentiel de l'écran mobile. */}
-        <span className={styles.texteBouton}>{t("market_monCompte")}</span>
+        {/* 10 nov. 2026 : texte masqué en très petit écran pour que le
+            bouton tienne sur la même ligne (voir .texteBouton, utilisé
+            uniquement hors volet options). 21 nov. 2026 : classe distincte
+            (.menuCompteTexte) depuis que ce bouton vit aussi dans le volet
+            "options" repliable, en pleine largeur — là, le texte doit
+            rester visible quelle que soit la largeur d'écran. */}
+        <span className={styles.menuCompteTexte}>{t("market_monCompte")}</span>
         <span aria-hidden="true">{ouvert ? "▲" : "▼"}</span>
       </button>
       {ouvert && (
@@ -95,12 +99,27 @@ export function MarketplaceHeader() {
   const { lignes } = useCart();
   const { user } = useAuth();
   const { t } = useLocale();
+  const pathname = usePathname();
   // 10 nov. 2026 : affichait la SOMME des quantités (1 article × 1 + 1
   // article × 4 = "5"), ce qui ne correspond à rien de concret pour le
   // client — il voit "5" alors qu'il n'a que 2 articles différents dans son
   // panier. Le badge compte désormais le nombre de lignes (d'articles
   // distincts), pas les quantités commandées de chacun.
   const nombreArticles = lignes.length;
+
+  // Repli du volet "options" (préférences + compte) et du volet nav
+  // (Boutiques/Experts) sur téléphone (21 nov. 2026, retour propriétaire —
+  // "étaler ces modifications à tous les modules", même mécanisme que
+  // GestionShell/AdminShell). Adaptation sur mesure, pas un simple portage
+  // mécanique : ici nav et options partagent aujourd'hui une seule rangée
+  // `.liens` sur desktop — elle reste strictement inchangée ≥561px (l'ordre
+  // visuel de chaque élément est fixé par `order` en CSS, indépendamment de
+  // leur regroupement DOM ci-dessous) et ne se scinde qu'en-dessous. Le
+  // panier reste toujours visible, jamais derrière un volet replié (action
+  // commerciale principale) — ni le logo/ModulesMenu, déjà toujours visibles
+  // par construction.
+  const nav = useVoletRepliable(pathname);
+  const options = useVoletRepliable(pathname);
 
   return (
     // Enveloppe sticky (retour client du 12 nov. 2026 : "l'en-tête doit
@@ -119,28 +138,116 @@ export function MarketplaceHeader() {
           </Link>
         </div>
         <nav className={styles.liens}>
-          <AccueilLien />
-          <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>
-          <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
-          <LanguageSwitcher />
-          <CurrencySwitcher />
-          <ThemeToggle clair />
+          {/* Liens principaux — rangée inchangée sur desktop (`display:
+              contents`), masqués en-dessous de 560px : doublés (liens
+              simples, sans état) dans la barre de nav mobile séparée
+              ci-dessous, avec son propre bouton de repli. */}
+          <div className={styles.grpNavPrincipal}>
+            <AccueilLien />
+            <Link href="/marketplace/boutiques">{t("market_boutiques")}</Link>
+            <Link href="/marketplace/experts">{t("accueil_trouverUnExpert")}</Link>
+          </div>
+
+          {/* Volet "options" (préférences + compte) — rangée inchangée sur
+              desktop (`display: contents`, deux sous-groupes pour que
+              `order` CSS puisse intercaler le panier exactement à sa place
+              d'origine), devient le popover "⋮" en-dessous de 560px.
+              `options.ref` englobe ici À LA FOIS le déclencheur et le
+              popover (comme `.optionsBloc` dans les autres coquilles) :
+              sans ça, cliquer sur le bouton "⋮" lui-même serait vu comme un
+              clic "en dehors" par le hook, qui refermerait le volet au même
+              instant que le bouton l'ouvre. */}
+          <div ref={options.ref} className={styles.ancreOptions}>
+            <div
+              id="market-options"
+              className={`${styles.optionsGroupe} ${options.ouvert ? styles.optionsGroupeOuvert : ""}`}
+            >
+              <div className={styles.grpOptionsA}>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("langue_label")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("commun_devise")}</span>
+                  <CurrencySwitcher />
+                </div>
+                <ThemeToggle clair etiquette />
+              </div>
+              <div className={styles.grpOptionsB}>
+                {user ? (
+                  <>
+                    <NotificationBell etiquette />
+                    <MenuCompte />
+                  </>
+                ) : (
+                  <Link href="/marketplace/compte" className={styles.connexionEtiquette} onClick={() => options.setOuvert(false)}>
+                    {t("action_seConnecter")}
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.boutonOptionsMobile}
+              onClick={() => {
+                options.basculer();
+                nav.setOuvert(false);
+              }}
+              aria-expanded={options.ouvert}
+              aria-controls="market-options"
+              aria-label={t("gshell_options")}
+              title={t("gshell_options")}
+            >
+              <span aria-hidden="true">⋮</span>
+            </button>
+          </div>
+
+          {/* Panier — toujours visible, même replié (action commerciale
+              principale), jamais dans un volet. */}
           <Link href="/marketplace/panier" className={styles.panier} aria-label={t("nav_panier")}>
             <span aria-hidden="true">🛒</span>
             <span className={styles.texteBouton}>{t("nav_panier")}</span>
             {nombreArticles > 0 && <span className={styles.compteur}>{nombreArticles}</span>}
           </Link>
-          {user ? (
-            <>
-              <NotificationBell />
-              <MenuCompte />
-            </>
-          ) : (
-            <Link href="/marketplace/compte">{t("action_seConnecter")}</Link>
-          )}
         </nav>
       </header>
       <BandeMarque couleur="var(--color-magenta-sur-fonce)" />
+      {/* Bouton de repli de la barre de nav mobile — pas de `ref` sur le
+          volet nav lui-même (même convention que les autres coquilles,
+          voir AdminShell/ComptableShell : seul le volet "options" ferme au
+          clic en dehors ; la nav se referme en navigant ou au changement de
+          page, via l'effet du hook). */}
+      <button
+        type="button"
+        className={styles.boutonNavMobile}
+        onClick={() => {
+          nav.basculer();
+          options.setOuvert(false);
+        }}
+        aria-expanded={nav.ouvert}
+        aria-controls="market-nav-mobile"
+      >
+        <span aria-hidden="true" className={styles.boutonNavMobileBarres}>
+          ☰
+        </span>
+        <span className={styles.boutonNavMobileLabel}>{t("gshell_menu")}</span>
+        <span aria-hidden="true" className={styles.boutonNavMobileChevron}>
+          {nav.ouvert ? "▴" : "▾"}
+        </span>
+      </button>
+      <nav
+        id="market-nav-mobile"
+        className={`${styles.navMobile} ${nav.ouvert ? styles.navMobileOuvert : ""}`}
+      >
+        <AccueilLien etiquette />
+        <Link href="/marketplace/boutiques" className={styles.navMobileLien} onClick={() => nav.setOuvert(false)}>
+          {t("market_boutiques")}
+        </Link>
+        <Link href="/marketplace/experts" className={styles.navMobileLien} onClick={() => nav.setOuvert(false)}>
+          {t("accueil_trouverUnExpert")}
+        </Link>
+      </nav>
     </div>
   );
 }
