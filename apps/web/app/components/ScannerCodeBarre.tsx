@@ -40,6 +40,24 @@ export function ScannerCodeBarre({
   // autre application accaparant déjà la caméra, etc. peuvent produire le
   // même silence : ce composant ne doit plus jamais rester muet.
   const [pret, setPret] = useState(false);
+  // 21 nov. 2026 (retour client confirmé reproductible : « la demande
+  // d'autorisation apparaît puis rien ») — BUG TROUVÉ : le minuteur de
+  // secours ci-dessous lisait `pret` (l'état React) directement dans la
+  // fermeture de cet effet. Comme l'effet ne se relance JAMAIS (tableau de
+  // dépendances vide, volontaire pour ne pas redémarrer la caméra à chaque
+  // rendu), cette fermeture garde pour toujours la valeur de `pret` telle
+  // qu'elle était au tout premier rendu, c'est-à-dire `false` — qu'une image
+  // caméra soit déjà arrivée ou non. Résultat reproduit avec Playwright
+  // (caméra factice) : le flux démarre et s'affiche correctement dès la
+  // première seconde, PUIS, 10 secondes plus tard, le minuteur se déclenche
+  // quand même et remplace la vidéo — qui fonctionnait très bien — par
+  // "Impossible d'accéder à la caméra". Vu par la boutique exactement comme
+  // "ça demande l'autorisation puis plus rien ne se passe", surtout si elle
+  // met plus de 10 secondes à cadrer le code-barres. `controlesRef` (une
+  // vraie ref, lue à jour) servait déjà de garde-fou pour ce même problème
+  // de fermeture figée sur `controles` (voir plus bas) — `pretRef` applique
+  // exactement le même principe à `pret`.
+  const pretRef = useRef(false);
 
   useEffect(() => {
     let annule = false;
@@ -47,7 +65,7 @@ export function ScannerCodeBarre({
 
     const delaiMaxMs = 10_000;
     const minuteur = window.setTimeout(() => {
-      if (!annule && !pret) setErreur(t("cat_scanCameraImpossible"));
+      if (!annule && !pretRef.current) setErreur(t("cat_scanCameraImpossible"));
     }, delaiMaxMs);
 
     // Message adapté à la cause réelle (21 nov. 2026, 2e retour client sur ce
@@ -80,7 +98,10 @@ export function ScannerCodeBarre({
           (resultat, _err, controles) => {
             if (annule) return;
             controlesRef.current = controles;
-            if (!pret) setPret(true);
+            if (!pretRef.current) {
+              pretRef.current = true;
+              setPret(true);
+            }
             if (resultat) {
               controles.stop();
               onDetecte(resultat.getText());
