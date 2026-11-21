@@ -70,6 +70,51 @@
   text-decoration: none;
 }
 
+/* Lignes du volet "options" repliable (21 nov. 2026, polissage demandé par
+   le propriétaire : "soigner la présentation de ce menu déroulant en le
+   rendant plus moderne et fini") — toutes sans effet ≥561px (desktop/
+   tablette : .droite reste la rangée compacte d'origine, inchangée), pour
+   ne devenir des lignes de menu pleine largeur et labellisées que dans le
+   volet déroulant mobile lui-même (voir .droiteOuvert, @media plus bas).
+   `display: contents` sur les enveloppes ci-dessous les retire de l'arbre
+   de boîtes sur desktop : leurs enfants (NotificationBell, ThemeToggle,
+   LanguageSwitcher...) redeviennent alors des éléments flex directs de
+   .droite, exactement comme avant ce regroupement. */
+.ligneChamp {
+  display: contents;
+}
+
+.etiquetteChamp {
+  display: none;
+}
+
+.selectPleine {
+  padding: var(--espace-2);
+  min-height: 40px;
+}
+
+.groupePreferences {
+  display: contents;
+}
+
+.titreSection {
+  display: none;
+}
+
+.separateurOptions {
+  display: none;
+}
+
+.ligneSync {
+  background: var(--color-or);
+  color: var(--color-encre-fixe);
+  border: none;
+  padding: var(--espace-2) var(--espace-3);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .nav {
   display: flex;
   background: var(--color-surface);
@@ -191,22 +236,98 @@
   .droite {
     display: none;
   }
+  /* Fond/bordure/ombre repris de la convention déjà en place pour les
+     panneaux flottants de l'appli (ModulesMenu .volet, NotificationBell
+     .panneau, DropdownNavGroup) — surface du thème plutôt que l'ancien
+     fond sombre fixe, pour rester lisible aussi bien en thème clair qu'en
+     thème sombre (retour client du 21 nov. 2026 : "soigner la présentation
+     de ce menu déroulant en le rendant plus moderne et fini"). */
   .droiteOuvert {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: var(--espace-2);
+    gap: var(--espace-1);
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    min-width: 240px;
+    min-width: 260px;
     max-width: calc(100vw - 24px);
     padding: var(--espace-3);
-    background: var(--color-encre-fixe);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     z-index: 150;
   }
+
+  /* Chaque ligne (AccueilLien, cloche de notifications, bouton de sync, le
+     groupe préférences dans son ensemble, séparateurs, déconnexion) occupe
+     toute la largeur du volet — remplace l'ancien `align-items: stretch`
+     (qui étirait chaque enfant à sa taille naturelle plutôt qu'à la pleine
+     largeur, d'où le rendu signalé : AccueilLien en boîte vide, cloche
+     isolée avec du blanc à sa droite, interrupteur de thème en petit carré
+     perdu au milieu de rangées pleine largeur). */
+  .droiteOuvert > * {
+    width: 100%;
+  }
+
+  .ligneChamp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espace-2);
+    width: 100%;
+    min-height: var(--touche-min);
+  }
+
+  .etiquetteChamp {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+
+  .groupePreferences {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espace-1);
+    width: 100%;
+  }
+
+  .titreSection {
+    display: block;
+    color: var(--color-texte-muted);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: var(--espace-1);
+  }
+
+  .separateurOptions {
+    display: block;
+    border-top: 1px solid var(--color-border);
+    margin: var(--espace-1) 0;
+    width: 100%;
+  }
+
+  .ligneSync {
+    width: 100%;
+    text-align: left;
+  }
+
+  /* Déconnexion : bordure/couleur blanches d'origine (pensées pour le fond
+     sombre fixe de l'en-tête) illisibles sur la surface claire/sombre du
+     thème une fois à l'intérieur de ce volet — recolorée ici spécifiquement
+     dans ce contexte, sans toucher .deconnexion lui-même (toujours utilisé
+     tel quel sur desktop/tablette, directement dans la barre sombre). */
+  .droiteOuvert .deconnexion {
+    border: 1px solid var(--color-border-forte);
+    color: var(--color-ink);
+  }
+
+  .droiteOuvert .deconnexion:hover {
+    border-color: var(--color-ink);
+    background: var(--color-surface-muted);
+  }
+
   .navLien {
     padding: var(--espace-2) var(--espace-3);
     font-size: 0.9rem;

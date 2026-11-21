@@ -17,6 +17,35 @@
   color: inherit;
 }
 
+/* Ligne de menu pleine largeur (voir le prop `etiquette` dans
+   NotificationBell.tsx) — sans effet ≥561px : la cloche reste exactement
+   l'icône seule 40×40 de `.cloche` ci-dessus (desktop/tablette inchangé).
+   Le libellé texte et la mise en page pleine largeur ne s'appliquent qu'au
+   point de rupture mobile partagé par les coquilles (560px, voir
+   *Shell.module.css) — c'est seulement là, dans le volet "options"
+   repliable, que cette ligne doit s'étaler et porter son libellé visible.
+   Le badge (ci-dessous) reste ancré au coin droit du bouton dans les deux
+   cas. */
+.clocheTexte {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .clocheEtiquette {
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    width: 100%;
+    min-height: var(--touche-min);
+    font-size: 1rem;
+  }
+
+  .clocheTexte {
+    display: block;
+    flex: 1;
+    text-align: left;
+  }
+}
+
 .badge {
   position: absolute;
   top: 4px;

@@ -1,0 +1,61 @@
+/* Variante "etiquette" (voir le prop du même nom dans ThemeToggle.tsx,
+   21 nov. 2026, polissage des volets mobiles d'en-tête) — sans effet
+   ≥561px : reproduit ici en classes CSS exactement le style inline carré
+   40×40 que le composant appliquait déjà avant ce prop (desktop/tablette
+   inchangé). La ligne de menu pleine largeur avec libellé visible ne
+   s'applique qu'au point de rupture mobile partagé par les coquilles
+   (560px, voir *Shell.module.css) — c'est seulement là, dans le volet
+   "options" repliable, que ce bouton doit s'étaler et porter son libellé.
+   (Ce composant n'avait jusqu'ici aucun fichier CSS : tout était en style
+   inline. Le style inline reste utilisé tel quel pour l'usage normal
+   — hors `etiquette` — ci-dessous ; seule la variante `etiquette` passe par
+   ces classes, parce qu'un style inline ne peut pas être conditionné par
+   un @media.) */
+.bouton {
+  background: none;
+  border: 1px solid var(--color-border-forte);
+  color: var(--color-ink);
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.boutonClair {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.libelle {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .bouton,
+  .boutonClair {
+    background: none;
+    border: none;
+    color: inherit;
+    width: 100%;
+    min-height: var(--touche-min);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--espace-2);
+    font-size: 1rem;
+    padding: 0;
+    text-align: left;
+  }
+
+  .libelle {
+    display: block;
+    flex: 1;
+  }
+}

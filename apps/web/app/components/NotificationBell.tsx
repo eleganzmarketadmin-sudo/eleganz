@@ -56,7 +56,14 @@ function espaceCourant(pathname: string | null): string | null {
   return null;
 }
 
-export function NotificationBell() {
+/**
+ * `etiquette` (21 nov. 2026, polissage des volets mobiles d'en-tête) : rend
+ * la cloche comme une ligne de menu pleine largeur ("🔔 Notifications",
+ * badge aligné à droite) au lieu d'une icône carrée isolée — pour
+ * s'intégrer proprement aux volets "options" repliables de chaque coquille,
+ * sans rien changer à son usage normal dans un en-tête (icône seule).
+ */
+export function NotificationBell({ etiquette }: { etiquette?: boolean } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLocale();
@@ -147,12 +154,13 @@ export function NotificationBell() {
     <div className={styles.conteneur} ref={conteneurRef}>
       <button
         type="button"
-        className={styles.cloche}
+        className={`${styles.cloche} ${etiquette ? styles.clocheEtiquette : ""}`}
         onClick={ouvrirPanneau}
         aria-label={t("nav_notifications")}
         aria-expanded={ouvert}
       >
-        🔔
+        <span aria-hidden="true">🔔</span>
+        {etiquette && <span className={styles.clocheTexte}>{t("nav_notifications")}</span>}
         {nonLues > 0 && <span className={styles.badge}>{nonLues > 9 ? "9+" : nonLues}</span>}
       </button>
       {ouvert && (

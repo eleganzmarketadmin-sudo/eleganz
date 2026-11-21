@@ -8,20 +8,24 @@ import styles from "./AccueilLien.module.css";
  * bouton retour du navigateur. Volontairement distinct du logo/nom du
  * module affiché à côté (qui reste le repère de "où je suis"), pour que ce
  * lien précis et son intention ("sortir d'ici") ne soient jamais ambigus.
+ *
+ * `etiquette` (21 nov. 2026, polissage des volets mobiles d'en-tête) : rend
+ * le lien comme une ligne de menu pleine largeur, texte toujours visible,
+ * sur la couleur de surface du thème — pour s'intégrer au volet "options"
+ * repliable de chaque coquille (fond clair/sombre selon le thème, jamais
+ * le fond sombre fixe de la barre d'en-tête). Sans ce prop, comportement
+ * strictement inchangé (icône + texte sur fond sombre fixe de l'en-tête).
  */
-export function AccueilLien() {
+export function AccueilLien({ etiquette }: { etiquette?: boolean } = {}) {
   return (
     <Link
       href="/"
-      className={styles.lien}
+      className={etiquette ? styles.lienEtiquette : styles.lien}
       title="Retour à la page d'accueil ELEGANZ"
       aria-label="Retour à la page d'accueil ELEGANZ"
     >
       <span aria-hidden="true">←</span>
-      {/* 10 nov. 2026 (signalement : en-tête mobile trop haute) — texte
-          masqué sous 420px (voir AccueilLien.module.css), ne laissant que
-          la flèche, commune aux en-têtes de tous les espaces. */}
-      <span className={styles.texte}>Accueil</span>
+      <span className={etiquette ? undefined : styles.texte}>Accueil</span>
     </Link>
   );
 }

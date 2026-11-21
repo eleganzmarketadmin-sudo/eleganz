@@ -17,8 +17,50 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-@media (max-width: 420px) {
-  .texte {
-    display: none;
+/* Variante volet (voir le prop `etiquette`) — identique à `.lien` ci-dessus
+   par défaut (desktop/tablette : aucun changement visuel, toujours le
+   pastille bordée blanche sur le fond sombre fixe de l'en-tête), et devient
+   une ligne de menu pleine largeur, couleur de surface du thème, uniquement
+   au point de rupture mobile (voir @media plus bas) — c'est là, à
+   l'intérieur du volet "options" repliable clair/sombre selon le thème, que
+   le blanc fixe de `.lien` serait illisible. Le texte "Accueil" n'y est
+   plus jamais masqué : contrairement à l'ancienne rangée horizontale
+   d'en-tête que la règle ci-dessous (retirée le 21 nov. 2026) visait à
+   l'origine, le volet a toujours assez de largeur. */
+.lienEtiquette {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  opacity: 0.85;
+  font-weight: 500;
+  font-size: 0.9rem;
+  min-height: var(--touche-min);
+  padding: 0 var(--espace-2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.lienEtiquette:hover {
+  opacity: 1;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 560px) {
+  .lienEtiquette {
+    display: flex;
+    width: 100%;
+    gap: var(--espace-2);
+    color: var(--color-ink);
+    opacity: 1;
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 0;
+    border: none;
+  }
+
+  .lienEtiquette:hover {
+    opacity: 0.8;
+    background: none;
   }
 }

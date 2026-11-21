@@ -208,42 +208,44 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               <span aria-hidden="true">⋮</span>
             </button>
             <div id="gestion-options" className={`${styles.droite} ${optionsOuvert ? styles.droiteOuvert : ""}`}>
-              <AccueilLien />
+              <AccueilLien etiquette />
               {nombreEnAttente > 0 && (
-                <button
-                  onClick={synchroniser}
-                  title={t("horsLigne_cliquerSynchroniser")}
-                  style={{
-                    background: "var(--color-or)",
-                    color: "var(--color-encre-fixe)",
-                    border: "none",
-                    padding: "8px 12px",
-                    minHeight: "40px",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                >
+                <button onClick={synchroniser} title={t("horsLigne_cliquerSynchroniser")} className={styles.ligneSync}>
                   {nombreEnAttente} vente(s) en attente de synchronisation
                 </button>
               )}
               {shops.length > 1 && (
-                <select
-                  aria-label="Choisir la boutique"
-                  value={currentShop?.id ?? ""}
-                  onChange={(e) => setCurrentShopId(e.target.value)}
-                  style={{ padding: "8px", minHeight: "40px" }}
-                >
-                  {shops.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("gshell_boutique")}</span>
+                  <select
+                    aria-label="Choisir la boutique"
+                    value={currentShop?.id ?? ""}
+                    onChange={(e) => setCurrentShopId(e.target.value)}
+                    className={styles.selectPleine}
+                  >
+                    {shops.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
-              <NotificationBell />
-              <LanguageSwitcher />
-              <CurrencySwitcher />
-              <ThemeToggle clair />
+              <NotificationBell etiquette />
+              <div className={styles.separateurOptions} />
+              <div className={styles.groupePreferences}>
+                <span className={styles.titreSection}>{t("gshell_preferences")}</span>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("langue_label")}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className={styles.ligneChamp}>
+                  <span className={styles.etiquetteChamp}>{t("commun_devise")}</span>
+                  <CurrencySwitcher />
+                </div>
+                <ThemeToggle clair etiquette />
+              </div>
+              <div className={styles.separateurOptions} />
               <button
                 className={styles.deconnexion}
                 onClick={() => {
