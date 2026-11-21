@@ -2,6 +2,40 @@
   margin-bottom: var(--espace-5);
 }
 
+/* Résumé caisse accessible sans défiler, sur téléphone (21 nov. 2026, retour
+   client : "rendre la facture visible... sans défiler jusqu'au plus bas de
+   la page") — masqué dès que l'écran est assez large pour afficher le
+   ticket complet à côté de la grille (voir .disposition ci-dessous), où il
+   ferait doublon. Épinglé en haut pendant le défilement de la grille
+   d'articles : le commerçant voit toujours ce qui a déjà été ajouté au
+   ticket sans y défiler. */
+.resumeTicketMobile {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .resumeTicketMobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--espace-3);
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    margin-bottom: var(--espace-4);
+    padding: var(--espace-3) var(--espace-4);
+    border: none;
+    background: var(--color-encre-fixe);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    font-family: var(--font-mono), monospace;
+    cursor: pointer;
+    min-height: var(--touche-min);
+  }
+}
+
 /* Disposition en deux panneaux (prompt du 12 oct. 2026) : la grille
  * d'articles (plus grande, défilement propre) et le ticket (panneau
  * vertical) restent tous les deux visibles sans jamais devoir défiler

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { ChampQuantite } from "../../components/ChampQuantite";
 import { ScannerCodeBarre } from "../../components/ScannerCodeBarre";
@@ -100,6 +100,14 @@ function CaisseContent() {
     null,
   );
   const [impressionEnCours, setImpressionEnCours] = useState(false);
+  // Résumé caisse accessible sans défiler, sur téléphone (21 nov. 2026,
+  // retour client : "rendre la facture visible... sans défiler jusqu'au plus
+  // bas de la page") — sur petit écran, la grille d'articles (souvent longue)
+  // passe AVANT le ticket dans l'ordre d'affichage (une colonne empilée),
+  // donc voir ce qui vient d'être ajouté obligeait à défiler tout en bas.
+  // Cette référence permet à la barre résumé ci-dessous de faire défiler
+  // directement jusqu'au ticket complet au lieu de dupliquer son contenu.
+  const ticketRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!currentShop) return;
@@ -386,6 +394,23 @@ function CaisseContent() {
     <div>
       <h1 className={styles.titre}>{t("nav_caisse")}</h1>
 
+      {/* Visible uniquement sur petit écran (voir .resumeTicketMobile dans le
+          CSS) — reste épinglée en haut pendant le défilement de la grille
+          d'articles, pour voir en permanence ce qui a déjà été ajouté sans
+          défiler jusqu'au ticket complet plus bas. */}
+      {lignes.length > 0 && (
+        <button
+          type="button"
+          className={styles.resumeTicketMobile}
+          onClick={() => ticketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        >
+          <span>
+            🧾 {lignes.length} · {formatMoney(total, devise)}
+          </span>
+          <span>{t("caisse_voirTicket")} ▾</span>
+        </button>
+      )}
+
       <div className={styles.disposition}>
         {/* Panneau articles — plus large, avec son propre défilement : une
             boutique au catalogue de plusieurs milliers d'articles ne doit
@@ -490,7 +515,7 @@ function CaisseContent() {
 
         {/* Panneau ticket — vertical, toujours visible à côté de la grille
             (prompt : "disposition verticale... comme un panneau"). */}
-        <div className={styles.colonneTicket}>
+        <div className={styles.colonneTicket} ref={ticketRef}>
           <div className={styles.ticket}>
             {lignes.length === 0 ? (
               <p className={styles.messageVide}>{t("caisse_ticketVide")}</p>
