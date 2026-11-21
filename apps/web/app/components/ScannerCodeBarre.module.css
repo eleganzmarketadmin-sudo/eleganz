@@ -50,6 +50,22 @@
   object-fit: cover;
 }
 
+/* État d'attente explicite tant que la première image n'est pas arrivée
+   (21 nov. 2026) — voir le commentaire dans ScannerCodeBarre.tsx : un cadre
+   noir silencieux était indiscernable d'un gel. */
+.enAttente {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espace-4);
+  text-align: center;
+  color: #fff;
+  font-size: 0.875rem;
+  background: rgba(0, 0, 0, 0.35);
+}
+
 /* Repère visuel indiquant où cadrer le code-barres — purement indicatif,
    ZXing analyse l'image entière, pas seulement cette zone. */
 .guide {

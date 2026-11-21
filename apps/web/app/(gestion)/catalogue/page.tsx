@@ -386,22 +386,35 @@ function SelecteurMultiple({
   return (
     <div className={styles.champ}>
       <label>{label}</label>
+      {/* Légendes explicites (21 nov. 2026, même retour client répété deux
+          fois — "apparaît déjà avec Taille: L et Couleur: Noir par défaut",
+          puis "garde les dernières saisies par défaut") : ces pills reprises
+          d'un produit à l'autre sont le VOCABULAIRE PARTAGÉ de la boutique
+          (tailles/couleurs déjà utilisées ailleurs, visibles pour toute
+          nouvelle variante), jamais une sélection déjà appliquée — mais
+          rien ne le disait en toutes lettres, seule la couleur de fond le
+          distinguait. Un texte au-dessus de chaque rangée lève toute
+          ambiguïté, sans dépendre de la couleur perçue. */}
       {selection.length > 0 && (
-        <div className={styles.listePuces}>
-          {selection.map((v) => (
-            <button
-              type="button"
-              key={`sel-${v}`}
-              className={styles.puceValeurActive}
-              onClick={() => retirer(v)}
-              title={t("cat_cliquerPourRetirer")}
-            >
-              {v}
-              <span aria-hidden="true"> ✕</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <span className={styles.legendePuces}>{t("cat_selectionnes")}</span>
+          <div className={styles.listePuces}>
+            {selection.map((v) => (
+              <button
+                type="button"
+                key={`sel-${v}`}
+                className={styles.puceValeurActive}
+                onClick={() => retirer(v)}
+                title={t("cat_cliquerPourRetirer")}
+              >
+                {v}
+                <span aria-hidden="true"> ✕</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
+      {valeurs.length > 0 && <span className={styles.legendePuces}>{t("cat_disponibles")}</span>}
       <div className={styles.listePuces}>
         {valeurs.length === 0 ? (
           <span style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>{t("cat_aucuneValeur")}</span>
@@ -767,30 +780,46 @@ function NouvelleVariante({
           }}
         />
       )}
-      <input
-        name="nouvelleVarianteePrixAchat"
-        autoComplete="off"
-        placeholder={t("cat_placeholderPrixAchat")}
-        type="number"
-        value={prixAchat}
-        onChange={(e) => setPrixAchat(e.target.value)}
-      />
-      <input
-        name="nouvelleVariantePrixVente"
-        autoComplete="off"
-        placeholder={t("cat_placeholderPrixVente")}
-        type="number"
-        value={prixVente}
-        onChange={(e) => setPrixVente(e.target.value)}
-      />
-      <input
-        name="nouvelleVarianteStock"
-        autoComplete="off"
-        placeholder={t("cat_placeholderStockInitial")}
-        type="number"
-        value={stock}
-        onChange={(e) => setStock(e.target.value)}
-      />
+      {/* Libellés explicites (21 nov. 2026, retour client : "le champ stock
+          à enregistrer n'a pas de nom ou titre et difficile à repérer sauf
+          un habitué") — ces trois champs n'avaient qu'un placeholder, qui
+          disparaît dès qu'une valeur est saisie ; "stock" en particulier
+          démarre à "0" (une vraie valeur, pas un placeholder), donc son
+          placeholder ne s'affichait JAMAIS. Même habillage `.champ` +
+          `<label>` que Tailles/Couleurs/Code-barres ci-dessus. */}
+      <div className={styles.champ}>
+        <label>{t("cat_colPrixAchat")}</label>
+        <input
+          name="nouvelleVarianteePrixAchat"
+          autoComplete="off"
+          placeholder={t("cat_placeholderPrixAchat")}
+          type="number"
+          value={prixAchat}
+          onChange={(e) => setPrixAchat(e.target.value)}
+        />
+      </div>
+      <div className={styles.champ}>
+        <label>{t("cat_colPrixVente")}</label>
+        <input
+          name="nouvelleVariantePrixVente"
+          autoComplete="off"
+          placeholder={t("cat_placeholderPrixVente")}
+          type="number"
+          value={prixVente}
+          onChange={(e) => setPrixVente(e.target.value)}
+        />
+      </div>
+      <div className={styles.champ}>
+        <label>{t("cat_colStock")}</label>
+        <input
+          name="nouvelleVarianteStock"
+          autoComplete="off"
+          placeholder={t("cat_placeholderStockInitial")}
+          type="number"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+        />
+      </div>
       <button className={styles.bouton} onClick={ajouter} disabled={enCours || !prixVente}>
         {nombreVariantes > 1 ? `${t("cat_creer")} ${nombreVariantes} ${t("cat_variantesMinuscule")}` : t("cat_ajouterVariante")}
       </button>
