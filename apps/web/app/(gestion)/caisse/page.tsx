@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { ChampQuantite } from "../../components/ChampQuantite";
 import { useShop } from "../../lib/shop-context";
@@ -16,6 +16,10 @@ import styles from "./page.module.css";
 interface Variant {
   id: string;
   sku: string;
+  // Code-barres/QR du fabricant (21 nov. 2026, demande : "scanner un article
+  // à la caisse... comme dans les supermarchés"), facultatif — voir le
+  // commentaire sur Variant.barcode dans schema.prisma.
+  barcode?: string | null;
   size?: string | null;
   color?: string | null;
   sellPrice: string;
@@ -28,6 +32,9 @@ interface Product {
   id: string;
   name: string;
   category?: string | null;
+  // Déjà renvoyée par GET /shops/:id/products (même objet Product que le
+  // Catalogue) — seulement absente ici auparavant du côté affichage caisse.
+  images?: string[];
   variants: Variant[];
 }
 
@@ -163,7 +170,8 @@ function CaisseContent() {
     const sorties: { produit: Product; variante: Variant }[] = [];
     for (const produit of produits) {
       for (const variante of produit.variants) {
-        const texte = `${produit.name} ${variante.sku} ${variante.size ?? ""} ${variante.color ?? ""}`.toLowerCase();
+        const texte =
+          `${produit.name} ${variante.sku} ${variante.barcode ?? ""} ${variante.size ?? ""} ${variante.color ?? ""}`.toLowerCase();
         if (!q || texte.includes(q)) {
           sorties.push({ produit, variante });
         }
@@ -172,11 +180,46 @@ function CaisseContent() {
     return sorties;
   }, [produits, recherche]);
 
+  const [erreurScan, setErreurScan] = useState<string | null>(null);
+
+  // Scan code-barres/QR à la caisse (21 nov. 2026, demande : "comme dans les
+  // supermarchés... si on branche le dispositif de scan"). Une douchette
+  // USB/Bluetooth standard n'a besoin d'aucun pilote ni logiciel particulier :
+  // elle se comporte comme un clavier (elle "tape" le code puis Entrée), donc
+  // il suffit d'écouter la touche Entrée sur ce même champ de recherche déjà
+  // existant. Une correspondance EXACTE (code-barres ou référence) avec un
+  // article en stock l'ajoute directement au ticket et vide le champ,
+  // fin prêt pour le prochain scan — exactement comme à la caisse d'un
+  // supermarché. Si rien ne correspond exactement, Entrée ne fait rien de
+  // plus que la recherche habituelle (aucun changement de comportement pour
+  // une saisie manuelle au clavier).
+  function surToucheRecherche(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    const code = recherche.trim().toLowerCase();
+    if (!code) return;
+    const correspondance = produits
+      .flatMap((produit) => produit.variants.map((variante) => ({ produit, variante })))
+      .find(
+        ({ variante }) =>
+          variante.barcode?.trim().toLowerCase() === code || variante.sku.trim().toLowerCase() === code,
+      );
+    if (!correspondance) return;
+    e.preventDefault();
+    if (correspondance.variante.stockQty <= 0) {
+      setErreurScan(`${correspondance.produit.name} — ${t("caisse_epuise")}`);
+      return;
+    }
+    setErreurScan(null);
+    ajouterVariante(correspondance.produit, correspondance.variante);
+    setRecherche("");
+  }
+
   const devise = lignes[0]?.currency ?? "USD";
   const total = lignes.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
 
   function ajouterVariante(produit: Product, variante: Variant) {
     setConfirmation(null);
+    setErreurScan(null);
     setLignes((prev) => {
       const existante = prev.find((l) => l.variantId === variante.id);
       if (existante) {
@@ -320,8 +363,18 @@ function CaisseContent() {
             type="text"
             placeholder={t("caisse_placeholderRecherche")}
             value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
+            onChange={(e) => {
+              setRecherche(e.target.value);
+              setErreurScan(null);
+            }}
+            onKeyDown={surToucheRecherche}
+            // Toujours au clavier après l'ajout d'un article au ticket (scan
+            // ou clic) : une douchette tape dans le champ qui a le focus, et
+            // une caisse continue d'enchaîner les scans sans jamais devoir
+            // recliquer dans ce champ entre deux articles.
+            autoFocus
           />
+          {erreurScan && <p className={styles.erreurScan}>⚠ {erreurScan}</p>}
 
           <div className={styles.zoneArticles}>
             {variantesVisibles.length === 0 ? (
@@ -335,6 +388,23 @@ function CaisseContent() {
                     disabled={variante.stockQty <= 0}
                     onClick={() => ajouterVariante(produit, variante)}
                   >
+                    {/* Vignette photo (21 nov. 2026, demande : "rajouter une
+                        petite photo de ce produit"). Product.images existait
+                        déjà au catalogue — jamais affiché jusqu'ici côté
+                        caisse. Un espace réservé neutre remplace l'image
+                        quand l'article n'en a aucune, pour que les cartes
+                        gardent toutes la même hauteur dans la grille. */}
+                    {produit.images && produit.images.length > 0 ? (
+                      <img
+                        className={styles.carteArticleImage}
+                        src={produit.images[0]}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className={styles.carteArticleImageVide} aria-hidden="true" />
+                    )}
                     <span className={styles.carteArticleNom}>{produit.name}</span>
                     <span className={styles.carteArticleDetail}>
                       {[variante.size, variante.color].filter(Boolean).join(" · ") || variante.sku}

@@ -4,6 +4,14 @@ export class CreateVariantDto {
   @IsString()
   sku!: string;
 
+  // Code-barres/QR du fabricant (21 nov. 2026) — voir le commentaire sur
+  // Variant.barcode dans schema.prisma. Facultatif ; généralement laissé
+  // vide à la création et rempli ensuite via UpdateVariantDto (scan depuis
+  // l'écran Catalogue, une variante à la fois).
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+
   @IsOptional()
   @IsString()
   size?: string;
@@ -49,6 +57,12 @@ export class UpdateVariantDto {
   @IsOptional()
   @IsString()
   sku?: string;
+
+  // `null` explicite retire le code-barres déjà enregistré (voir le
+  // commentaire sur Variant.barcode dans schema.prisma).
+  @IsOptional()
+  @IsString()
+  barcode?: string | null;
 
   @IsOptional()
   @IsString()

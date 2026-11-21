@@ -225,6 +225,14 @@
   color: var(--color-cobalt-texte);
 }
 
+/* Code-barres du fabricant (21 nov. 2026) — seconde ligne discrète sous la
+   référence, même esprit que .boutonCrayon ci-dessus : ne doit pas alourdir
+   visuellement une colonne déjà dense. */
+.codeBarreLigne {
+  color: var(--color-texte-muted);
+  font-size: 0.75rem;
+}
+
 /* Bouton de suppression (13 nov. 2026, signalement : "il n'y a pas de
    possibilité/option de supprimer un produit et/ou une donnée ou une
    variante liée à ce produit") — même couleur d'alerte que .erreur, pour

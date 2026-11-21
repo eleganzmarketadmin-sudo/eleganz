@@ -49,6 +49,15 @@
   min-height: var(--touche-min);
 }
 
+/* Scan code-barres/QR (21 nov. 2026) — code scanné sans correspondance, ou
+   correspondant à un article épuisé : discret, juste sous le champ, jamais
+   bloquant (le champ reste utilisable immédiatement pour le scan suivant). */
+.erreurScan {
+  margin: calc(-1 * var(--espace-3)) 0 var(--espace-3);
+  color: var(--color-flamme-texte);
+  font-size: 0.8125rem;
+}
+
 /* Le panneau d'articles défile sur lui-même, indépendamment du reste de
  * la page — c'est ce qui évite de devoir défiler jusqu'au bout d'un
  * catalogue de plusieurs milliers d'articles avant de pouvoir encaisser. */
@@ -72,6 +81,27 @@
   text-align: left;
   cursor: pointer;
   min-height: var(--touche-min);
+}
+
+/* Vignette photo (21 nov. 2026) — même carré que l'espace réservé ci-dessous,
+   pour que la grille garde une hauteur de carte régulière, article avec ou
+   sans photo. object-fit: cover évite qu'une photo non carrée déforme la
+   grille (recadrée plutôt qu'étirée). */
+.carteArticleImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  margin-bottom: var(--espace-2);
+  background: var(--color-toile);
+}
+
+.carteArticleImageVide {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin-bottom: var(--espace-2);
+  background: var(--color-toile);
 }
 
 .carteArticle:hover {

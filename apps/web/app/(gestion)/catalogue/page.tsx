@@ -152,6 +152,7 @@ interface PriceTier {
 interface Variant {
   id: string;
   sku: string;
+  barcode?: string | null;
   size?: string | null;
   color?: string | null;
   costPrice?: string | null;
@@ -987,6 +988,21 @@ function CatalogueContent() {
     patchVariante(produitId, variante.id, { sku: valeur }, "cat_referenceImpossible");
   }
 
+  // Code-barres/QR du fabricant (21 nov. 2026, demande : "scanner un article
+  // à la caisse pour l'ajouter à la facture, comme en supermarché") — même
+  // mécanisme que modifierReference ci-dessus : window.prompt est un simple
+  // champ texte, donc scanner le code à ce moment-là le saisit exactement
+  // comme le ferait la frappe au clavier, sans rien de plus à construire.
+  // Laisser le champ vide retire le code-barres (contrairement à la
+  // référence, qui ne peut jamais être vide).
+  function modifierCodeBarre(produitId: string, variante: Variant) {
+    const saisie = window.prompt(t("cat_inviteCodeBarre"), variante.barcode ?? "");
+    if (saisie === null) return;
+    const valeur = saisie.trim() || null;
+    if (valeur === (variante.barcode ?? null)) return;
+    patchVariante(produitId, variante.id, { barcode: valeur }, "cat_codeBarreImpossible");
+  }
+
   function modifierTailleCouleur(produitId: string, variante: Variant) {
     const taille = window.prompt(t("cat_inviteTaille"), variante.size ?? "");
     if (taille === null) return;
@@ -1380,6 +1396,18 @@ function CatalogueContent() {
                           >
                             ✎
                           </button>
+                          <br />
+                          <small className={styles.codeBarreLigne}>
+                            {t("cat_codeBarre")}: {v.barcode || "—"}{" "}
+                            <button
+                              type="button"
+                              className={styles.boutonCrayon}
+                              title={t("cat_modifier")}
+                              onClick={() => modifierCodeBarre(produit.id, v)}
+                            >
+                              ✎
+                            </button>
+                          </small>
                         </td>
                         <td>
                           {[v.size, v.color].filter(Boolean).join(" · ") || "—"}{" "}

@@ -280,6 +280,7 @@ export class CatalogService implements OnModuleInit {
         data: {
           productId,
           sku: dto.sku,
+          barcode: dto.barcode ?? null,
           size: dto.size,
           color: dto.color,
           costPrice: dto.costPrice,
@@ -353,10 +354,26 @@ export class CatalogService implements OnModuleInit {
       }
     }
 
+    // Le code-barres n'est unique que PAR BOUTIQUE (voir le commentaire sur
+    // Variant.barcode dans schema.prisma) — contrairement à `sku` ci-dessus,
+    // pas de contrainte @unique globale, donc la vérification passe par la
+    // relation `product` plutôt que par un simple findUnique.
+    if (dto.barcode !== undefined && dto.barcode !== null && dto.barcode !== variante.barcode) {
+      const existante = await this.prisma.variant.findFirst({
+        where: { barcode: dto.barcode, product: { shopId }, NOT: { id: variantId } },
+      });
+      if (existante) {
+        throw new ConflictException(
+          `Le code-barres "${dto.barcode}" est déjà utilisé par une autre variante de cette boutique.`,
+        );
+      }
+    }
+
     return this.prisma.variant.update({
       where: { id: variantId },
       data: {
         ...(dto.sku !== undefined ? { sku: dto.sku } : {}),
+        ...(dto.barcode !== undefined ? { barcode: dto.barcode } : {}),
         ...(dto.size !== undefined ? { size: dto.size } : {}),
         ...(dto.color !== undefined ? { color: dto.color } : {}),
         ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),

@@ -1048,6 +1048,16 @@ model Variant {
   productId   String
   product     Product @relation(fields: [productId], references: [id])
   sku         String  @unique
+  // Code-barres/QR du fabricant (21 nov. 2026, demande : "scanner un article
+  // à la caisse pour l'ajouter à la facture, comme en supermarché") — distinct
+  // de `sku` ci-dessus (référence interne, générée par la plateforme) : ce
+  // champ reçoit le code réel imprimé sur l'emballage, en général rempli en
+  // scannant l'article une fois depuis l'écran Catalogue. Facultatif, et
+  // volontairement PAS `@unique` globalement comme `sku` : deux boutiques
+  // différentes peuvent légitimement vendre le même article du commerce et
+  // donc partager le même code-barres réel — l'unicité n'est vérifiée que
+  // par boutique, côté service (CatalogService), via la relation `product`.
+  barcode     String?
   size        String?
   color       String?
   costPrice   Decimal? @db.Decimal(12, 2) // prix d'achat — jamais exposé aux autres vendeurs
@@ -1077,6 +1087,8 @@ model Variant {
   coutMoyenPondere Decimal? @db.Decimal(12, 4)
 
   priceTiers PriceTier[]
+
+  @@index([barcode])
 }
 
 // Prix de gros par palier de quantité (2 nov. 2026, demande boutique : "les
