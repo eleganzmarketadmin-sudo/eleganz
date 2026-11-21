@@ -1,0 +1,35 @@
+/* Bandeau "nouvelle version disponible" (21 nov. 2026) — voir le commentaire
+   dans VersionWatcher.tsx. Position fixe en bas d'écran : ne doit jamais
+   recouvrir l'en-tête (navigation, sélecteur de boutique) ni bloquer la
+   saisie en cours, juste rester visible et atteignable jusqu'au clic. */
+.bandeau {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espace-3);
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--color-encre-fixe);
+  color: #fff;
+  font-size: 0.875rem;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-1) var(--espace-3);
+  min-height: 32px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:hover {
+  background: var(--color-cobalt-dark);
+}
