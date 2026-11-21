@@ -319,6 +319,19 @@ interface VariantOptionsListe {
  * champ "+ ajouter" permet d'enrichir la liste de la boutique sans quitter
  * l'écran ; la nouvelle valeur est aussitôt sélectionnée.
  */
+/**
+ * Refonte en puces cliquables (21 nov. 2026, retour client : « il n'y a pas
+ * de possibilité de supprimer ni retirer en pleine saisie les variantes » et
+ * « le nouveau produit apparaît déjà avec tailles: L et couleur: Noir par
+ * défaut »). L'ancien `<select multiple>` natif avait deux défauts : retirer
+ * une valeur déjà choisie exige un Ctrl/Cmd+clic non découvrable — et
+ * impossible sur un écran tactile de caisse — et son surlignage de survol
+ * natif (premier élément, thème sombre) pouvait donner l'impression visuelle
+ * d'une présélection alors que `selection` démarre bien vide à chaque
+ * nouvelle variante. Une puce par valeur, active ou non selon `selection`,
+ * rend l'état réellement sans ambiguïté : un clic ajoute OU retire, au
+ * doigt comme à la souris, sans aucune touche spéciale.
+ */
 function SelecteurMultiple({
   label,
   valeurs,
@@ -336,6 +349,14 @@ function SelecteurMultiple({
   const [nouvelleValeur, setNouvelleValeur] = useState("");
   const [enCours, setEnCours] = useState(false);
 
+  function basculer(v: string) {
+    if (selection.includes(v)) {
+      onChangeSelection(selection.filter((s) => s !== v));
+    } else {
+      onChangeSelection([...selection, v]);
+    }
+  }
+
   async function ajouter() {
     const v = nouvelleValeur.trim();
     if (!v) return;
@@ -351,19 +372,27 @@ function SelecteurMultiple({
   return (
     <div className={styles.champ}>
       <label>{label}</label>
-      <select
-        multiple
-        autoComplete="off"
-        value={selection}
-        onChange={(e) => onChangeSelection(Array.from(e.target.selectedOptions, (o) => o.value))}
-        style={{ minHeight: "84px" }}
-      >
-        {valeurs.map((v) => (
-          <option key={v} value={v}>
-            {v}
-          </option>
-        ))}
-      </select>
+      <div className={styles.listePuces}>
+        {valeurs.length === 0 && (
+          <span style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>{t("cat_aucuneValeur")}</span>
+        )}
+        {valeurs.map((v) => {
+          const active = selection.includes(v);
+          return (
+            <button
+              type="button"
+              key={v}
+              className={active ? styles.puceValeurActive : styles.puceValeur}
+              aria-pressed={active}
+              onClick={() => basculer(v)}
+              title={active ? t("cat_cliquerPourRetirer") : t("cat_cliquerPourAjouter")}
+            >
+              {v}
+              {active && <span aria-hidden="true"> ✕</span>}
+            </button>
+          );
+        })}
+      </div>
       <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
         <input
           name="selecteurMultipleNouvelleValeur"
@@ -567,6 +596,7 @@ function NouvelleVariante({
   }, [produitNom, produitCategorie, nonce]);
   const [taillesChoisies, setTaillesChoisies] = useState<string[]>([]);
   const [couleursChoisies, setCouleursChoisies] = useState<string[]>([]);
+  const [codeBarre, setCodeBarre] = useState("");
   const [prixAchat, setPrixAchat] = useState("");
   const [prixVente, setPrixVente] = useState("");
   const [stock, setStock] = useState("0");
@@ -608,6 +638,11 @@ function NouvelleVariante({
         `/shops/${currentShop.id}/products/${produitId}/variants/bulk`,
         {
           skuBase: skuBaseAuto,
+          // Le code-barres ne s'applique qu'à une seule variante à la fois
+          // (voir le commentaire dans CreateVariantsBulkDto côté API) — on ne
+          // l'envoie donc que lorsque la sélection actuelle n'en produit
+          // qu'une ; sinon le champ est de toute façon masqué ci-dessous.
+          barcode: nombreVariantes === 1 && codeBarre.trim() ? codeBarre.trim() : undefined,
           sizes: taillesChoisies.length ? taillesChoisies : undefined,
           colors: couleursChoisies.length ? couleursChoisies : undefined,
           costPrice: prixAchat ? Number(prixAchat) : undefined,
@@ -623,6 +658,7 @@ function NouvelleVariante({
       setNonce((n) => n + 1);
       setTaillesChoisies([]);
       setCouleursChoisies([]);
+      setCodeBarre("");
       setPrixAchat("");
       setPrixVente("");
       setStock("0");
@@ -657,6 +693,26 @@ function NouvelleVariante({
         onChangeSelection={setCouleursChoisies}
         onAjouterValeur={(v) => ajouterOption("COLOR", v)}
       />
+      {/* Code-barres à la création (21 nov. 2026, retour client : « le champ
+          code-barres [...] n'est pas visible ») — uniquement lorsque cette
+          sélection taille/couleur ne produira qu'UNE seule variante : un même
+          code-barres ne peut pas désigner plusieurs combinaisons à la fois
+          (voir CreateVariantsBulkDto côté API). Pour un lot, chaque variante
+          garde son code-barres ajoutable après coup depuis le tableau. */}
+      {nombreVariantes === 1 ? (
+        <div className={styles.champ}>
+          <label>{t("cat_codeBarre")}</label>
+          <input
+            name="nouvelleVarianteCodeBarre"
+            autoComplete="off"
+            placeholder={t("cat_placeholderCodeBarre")}
+            value={codeBarre}
+            onChange={(e) => setCodeBarre(e.target.value)}
+          />
+        </div>
+      ) : (
+        <span className={styles.texteAide}>{t("cat_codeBarreIndisponibleLot")}</span>
+      )}
       <input
         name="nouvelleVarianteePrixAchat"
         autoComplete="off"

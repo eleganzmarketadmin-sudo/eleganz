@@ -374,7 +374,16 @@ function CaisseContent() {
             // recliquer dans ce champ entre deux articles.
             autoFocus
           />
-          {erreurScan && <p className={styles.erreurScan}>⚠ {erreurScan}</p>}
+          {/* Rendre le scan visible (21 nov. 2026, retour client : « le champ
+              ou zone ajouté à la caisse lié au code barre ne sont pas
+              visible ») — la fonctionnalité réutilise ce même champ de
+              recherche (voir surToucheRecherche ci-dessus) sans écran séparé,
+              donc rien ne signalait qu'une douchette y était utilisable. */}
+          {erreurScan ? (
+            <p className={styles.erreurScan}>⚠ {erreurScan}</p>
+          ) : (
+            <p className={styles.aideScan}>📷 {t("caisse_aideScan")}</p>
+          )}
 
           <div className={styles.zoneArticles}>
             {variantesVisibles.length === 0 ? (

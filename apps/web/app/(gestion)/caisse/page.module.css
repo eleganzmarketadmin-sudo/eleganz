@@ -58,6 +58,15 @@
   font-size: 0.8125rem;
 }
 
+/* Même emplacement que .erreurScan ci-dessus, affiché à la place quand il
+   n'y a pas d'erreur — rend la prise en charge du scan visible en permanence
+   plutôt que de ne la révéler qu'au premier échec. */
+.aideScan {
+  margin: calc(-1 * var(--espace-3)) 0 var(--espace-3);
+  color: var(--color-texte-muted);
+  font-size: 0.8125rem;
+}
+
 /* Le panneau d'articles défile sur lui-même, indépendamment du reste de
  * la page — c'est ce qui évite de devoir défiler jusqu'au bout d'un
  * catalogue de plusieurs milliers d'articles avant de pouvoir encaisser. */

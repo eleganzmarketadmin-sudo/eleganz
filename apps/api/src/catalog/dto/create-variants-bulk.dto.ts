@@ -12,6 +12,17 @@ export class CreateVariantsBulkDto {
   @MinLength(1)
   skuBase!: string;
 
+  // Code-barres/QR du fabricant (21 nov. 2026, retour client : "le champ code
+  // barres ajouté à la création des articles n'est pas visible") — facultatif,
+  // et n'a de sens que lorsque cette requête ne crée QU'UNE SEULE variante
+  // (un même code-barres ne peut pas désigner plusieurs combinaisons
+  // taille/couleur à la fois) : rejeté par le service si sizes/colors
+  // produisent plus d'une combinaison. Pour un lot de plusieurs variantes, le
+  // code-barres de chacune reste à ajouter après coup (UpdateVariantDto).
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(50)

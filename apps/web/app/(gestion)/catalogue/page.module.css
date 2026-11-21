@@ -233,6 +233,38 @@
   font-size: 0.75rem;
 }
 
+/* Puces tailles/couleurs (21 nov. 2026) — remplace l'ancien <select
+   multiple> natif : voir le commentaire sur SelecteurMultiple dans
+   catalogue/page.tsx. Un clic bascule l'état, actif ou non, sans jamais
+   dépendre d'un Ctrl/Cmd+clic non découvrable ni d'un survol natif ambigu. */
+.listePuces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.puceValeur,
+.puceValeurActive {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.puceValeur:hover {
+  border-color: var(--color-cobalt-texte);
+}
+
+.puceValeurActive {
+  background: var(--color-cobalt);
+  color: #fff;
+  border-color: var(--color-cobalt);
+  font-weight: 600;
+}
+
 /* Bouton de suppression (13 nov. 2026, signalement : "il n'y a pas de
    possibilité/option de supprimer un produit et/ou une donnée ou une
    variante liée à ce produit") — même couleur d'alerte que .erreur, pour

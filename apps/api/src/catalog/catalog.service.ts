@@ -457,6 +457,15 @@ export class CatalogService implements OnModuleInit {
         "Trop de combinaisons à la fois (200 maximum) — réduisez la sélection.",
       );
     }
+    // Un code-barres désigne un produit physique précis : il ne peut pas être
+    // posé sur plusieurs variantes distinctes en une seule requête (21 nov.
+    // 2026). S'il y en a plus d'une, le champ reste vide ici et chaque
+    // variante reçoit son propre code-barres après coup (UpdateVariantDto).
+    if (dto.barcode && combinaisons.length > 1) {
+      throw new BadRequestException(
+        "Un code-barres ne peut être associé qu'à une seule variante à la fois — affinez la sélection taille/couleur à une seule combinaison, ou ajoutez-le après coup depuis le tableau.",
+      );
+    }
     if (combinaisons.length > 1) {
       const shop = await this.prisma.shop.findUnique({
         where: { id: shopId },
@@ -493,10 +502,26 @@ export class CatalogService implements OnModuleInit {
           );
         }
 
+        // Unicité par boutique seulement (pas globale) — voir le commentaire
+        // sur Variant.barcode dans schema.prisma : deux boutiques différentes
+        // peuvent légitimement vendre le même article avec le même
+        // code-barres fabricant.
+        if (dto.barcode) {
+          const barcodeExistant = await tx.variant.findFirst({
+            where: { barcode: dto.barcode, product: { shopId } },
+          });
+          if (barcodeExistant) {
+            throw new ConflictException(
+              `Le code-barres "${dto.barcode}" est déjà utilisé par une autre variante de cette boutique.`,
+            );
+          }
+        }
+
         const variant = await tx.variant.create({
           data: {
             productId,
             sku,
+            barcode: dto.barcode ?? null,
             size: combo.size,
             color: combo.color,
             costPrice: dto.costPrice,
