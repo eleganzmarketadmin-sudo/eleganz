@@ -41,12 +41,38 @@
   }
 }
 
+/* Champ de recherche + bouton scan caméra côte à côte (21 nov. 2026, retour
+   client : "sur la caisse on ne sait pas lancer la caméra car le bouton
+   scan n'existe pas") — même disposition que le champ code-barres du
+   Catalogue : le champ garde toute la largeur disponible, le bouton reste
+   une icône carrée à côté, jamais en dessous. */
+.ligneRecherche {
+  display: flex;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-4);
+  align-items: stretch;
+}
+
 .recherche {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--espace-3);
   border: 2px solid var(--color-ink);
-  margin-bottom: var(--espace-4);
   min-height: var(--touche-min);
+}
+
+.boutonScanCamera {
+  flex-shrink: 0;
+  padding: 0 var(--espace-3);
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-size: 1.25rem;
+  min-height: var(--touche-min);
+}
+
+.boutonScanCamera:hover {
+  background: var(--color-toile);
 }
 
 /* Scan code-barres/QR (21 nov. 2026) — code scanné sans correspondance, ou

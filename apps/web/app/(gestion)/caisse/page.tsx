@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ProtectedGestionPage } from "../../components/ProtectedGestionPage";
 import { ChampQuantite } from "../../components/ChampQuantite";
+import { ScannerCodeBarre } from "../../components/ScannerCodeBarre";
 import { useShop } from "../../lib/shop-context";
 import { api, ApiError } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
@@ -181,6 +182,12 @@ function CaisseContent() {
   }, [produits, recherche]);
 
   const [erreurScan, setErreurScan] = useState<string | null>(null);
+  // Scan caméra (21 nov. 2026, retour client : "sur la caisse on ne sait pas
+  // lancer la caméra car le bouton scan n'existe pas") — jusqu'ici seule une
+  // douchette USB/Bluetooth physique était utilisable (voir plus bas) ; les
+  // boutiques sans ce matériel n'avaient aucun moyen de scanner depuis cet
+  // écran. Réutilise le même composant caméra que le Catalogue.
+  const [scanOuvert, setScanOuvert] = useState(false);
 
   // Scan code-barres/QR à la caisse (21 nov. 2026, demande : "comme dans les
   // supermarchés... si on branche le dispositif de scan"). Une douchette
@@ -190,28 +197,55 @@ function CaisseContent() {
   // existant. Une correspondance EXACTE (code-barres ou référence) avec un
   // article en stock l'ajoute directement au ticket et vide le champ,
   // fin prêt pour le prochain scan — exactement comme à la caisse d'un
-  // supermarché. Si rien ne correspond exactement, Entrée ne fait rien de
-  // plus que la recherche habituelle (aucun changement de comportement pour
-  // une saisie manuelle au clavier).
-  function surToucheRecherche(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    const code = recherche.trim().toLowerCase();
-    if (!code) return;
+  // supermarché. Si rien ne correspond exactement, rien de plus que la
+  // recherche habituelle (aucun changement de comportement pour une saisie
+  // manuelle au clavier).
+  //
+  // Extrait en fonction partagée (21 nov. 2026) pour être réutilisée aussi
+  // par le scan caméra ci-dessous : les deux mécanismes doivent se comporter
+  // de façon identique une fois le code lu, seule la façon de LIRE le code
+  // diffère (clavier émulé par la douchette vs. callback du composant
+  // caméra). Retourne `true` si une correspondance exacte a été trouvée
+  // (qu'elle ait pu être ajoutée ou non, ex. rupture de stock).
+  function traiterCodeScanne(codeBrut: string): boolean {
+    const code = codeBrut.trim().toLowerCase();
+    if (!code) return false;
     const correspondance = produits
       .flatMap((produit) => produit.variants.map((variante) => ({ produit, variante })))
       .find(
         ({ variante }) =>
           variante.barcode?.trim().toLowerCase() === code || variante.sku.trim().toLowerCase() === code,
       );
-    if (!correspondance) return;
-    e.preventDefault();
+    if (!correspondance) return false;
     if (correspondance.variante.stockQty <= 0) {
       setErreurScan(`${correspondance.produit.name} — ${t("caisse_epuise")}`);
-      return;
+      return true;
     }
     setErreurScan(null);
     ajouterVariante(correspondance.produit, correspondance.variante);
     setRecherche("");
+    return true;
+  }
+
+  function surToucheRecherche(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    const code = recherche.trim();
+    if (!code) return;
+    if (traiterCodeScanne(code)) {
+      e.preventDefault();
+    }
+  }
+
+  // Code lu par la caméra : même traitement que la douchette ci-dessus. Sans
+  // correspondance exacte, le code scanné est placé dans le champ de
+  // recherche (comme une saisie manuelle) plutôt que silencieusement perdu —
+  // la grille se filtre et le commerçant peut chercher/ajuster à la main.
+  function surCodeCameraDetecte(code: string) {
+    setScanOuvert(false);
+    if (!traiterCodeScanne(code)) {
+      setErreurScan(null);
+      setRecherche(code);
+    }
   }
 
   const devise = lignes[0]?.currency ?? "USD";
@@ -358,27 +392,45 @@ function CaisseContent() {
             jamais obliger à défiler toute la grille pour atteindre le ticket
             et le bouton d'encaissement, qui restent visibles à côté. */}
         <div className={styles.colonneArticles}>
-          <input
-            className={styles.recherche}
-            type="text"
-            placeholder={t("caisse_placeholderRecherche")}
-            value={recherche}
-            onChange={(e) => {
-              setRecherche(e.target.value);
-              setErreurScan(null);
-            }}
-            onKeyDown={surToucheRecherche}
-            // Toujours au clavier après l'ajout d'un article au ticket (scan
-            // ou clic) : une douchette tape dans le champ qui a le focus, et
-            // une caisse continue d'enchaîner les scans sans jamais devoir
-            // recliquer dans ce champ entre deux articles.
-            autoFocus
-          />
+          <div className={styles.ligneRecherche}>
+            <input
+              className={styles.recherche}
+              type="text"
+              placeholder={t("caisse_placeholderRecherche")}
+              value={recherche}
+              onChange={(e) => {
+                setRecherche(e.target.value);
+                setErreurScan(null);
+              }}
+              onKeyDown={surToucheRecherche}
+              // Toujours au clavier après l'ajout d'un article au ticket (scan
+              // ou clic) : une douchette tape dans le champ qui a le focus, et
+              // une caisse continue d'enchaîner les scans sans jamais devoir
+              // recliquer dans ce champ entre deux articles.
+              autoFocus
+            />
+            {/* Bouton scan caméra (21 nov. 2026, retour client : "sur la
+                caisse on ne sait pas lancer la caméra car le bouton scan
+                n'existe pas") — à côté du champ, comme au Catalogue. */}
+            <button
+              type="button"
+              className={styles.boutonScanCamera}
+              onClick={() => setScanOuvert(true)}
+              title={t("cat_scanTitre")}
+              aria-label={t("cat_scanTitre")}
+            >
+              📷
+            </button>
+          </div>
+          {scanOuvert && (
+            <ScannerCodeBarre onFermer={() => setScanOuvert(false)} onDetecte={surCodeCameraDetecte} />
+          )}
           {/* Rendre le scan visible (21 nov. 2026, retour client : « le champ
               ou zone ajouté à la caisse lié au code barre ne sont pas
-              visible ») — la fonctionnalité réutilise ce même champ de
-              recherche (voir surToucheRecherche ci-dessus) sans écran séparé,
-              donc rien ne signalait qu'une douchette y était utilisable. */}
+              visible ») — la douchette réutilise ce même champ de recherche
+              (voir surToucheRecherche ci-dessus) sans écran séparé, donc rien
+              ne signalait qu'elle y était utilisable ; le bouton 📷 ci-dessus
+              couvre maintenant aussi les boutiques sans douchette physique. */}
           {erreurScan ? (
             <p className={styles.erreurScan}>⚠ {erreurScan}</p>
           ) : (
