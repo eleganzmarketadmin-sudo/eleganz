@@ -254,6 +254,26 @@
   margin-top: 4px;
 }
 
+/* Repli "réutiliser une valeur existante" (21 nov. 2026) — voir le
+   commentaire dans SelecteurMultiple : masque par défaut le vocabulaire
+   partagé de la boutique pour qu'un article neuf parte d'un champ
+   visuellement vide. */
+.boutonRepli {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-cobalt-texte);
+  text-align: left;
+  width: fit-content;
+}
+
+.boutonRepli:hover {
+  text-decoration: underline;
+}
+
 .puceValeur,
 .puceValeurActive {
   border: 1px solid var(--color-border);

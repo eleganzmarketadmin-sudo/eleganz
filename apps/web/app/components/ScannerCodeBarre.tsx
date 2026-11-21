@@ -50,6 +50,22 @@ export function ScannerCodeBarre({
       if (!annule && !pret) setErreur(t("cat_scanCameraImpossible"));
     }, delaiMaxMs);
 
+    // Message adapté à la cause réelle (21 nov. 2026, 2e retour client sur ce
+    // même écran : « ça demande l'autorisation caméra mais n'ouvre jamais
+    // vraiment ») — `NotReadableError` (caméra déjà accaparée par une autre
+    // application — Teams, Zoom, l'appareil Photos de Windows…) est de loin
+    // la cause la plus probable sur un ordinateur de bureau une fois
+    // l'autorisation du navigateur accordée, et ne se résout JAMAIS en
+    // réessayant depuis cette page : seul un message qui le dit évite à la
+    // boutique de rester bloquée à réessayer sans comprendre pourquoi.
+    function messagePourErreur(e: unknown): string {
+      const nom = e instanceof DOMException ? e.name : undefined;
+      if (nom === "NotReadableError" || nom === "TrackStartError") {
+        return t("cat_scanCameraOccupee");
+      }
+      return t("cat_scanCameraImpossible");
+    }
+
     try {
       const lecteur = new BrowserMultiFormatReader();
 
@@ -74,15 +90,29 @@ export function ScannerCodeBarre({
             // pas une erreur à afficher.
           },
         )
-        .catch(() => {
+        .then((controles) => {
+          // Capturé ICI en plus du paramètre de callback ci-dessus (21 nov.
+          // 2026) : si le composant est démonté avant la toute première
+          // image (fermeture rapide, double montage React en
+          // développement…), le callback n'est jamais invoqué une seule
+          // fois — `controlesRef` restait alors `null` au nettoyage, et
+          // `.stop()` n'était donc jamais appelé : le flux caméra restait
+          // ouvert indéfiniment (caméra toujours "allumée" dans l'onglet)
+          // même modale fermée. La promesse, elle, se résout dans tous les
+          // cas dès que le flux démarre — on y arrime `controlesRef` pour
+          // garantir la libération, même si `annule` est déjà vrai.
+          controlesRef.current = controles;
+          if (annule) controles.stop();
+        })
+        .catch((e) => {
           // Permission caméra refusée, aucune caméra disponible, contexte
           // non sécurisé (http non local), etc. — la saisie manuelle reste
           // disponible dans le champ juste à côté, ce n'est jamais bloquant.
-          if (!annule) setErreur(t("cat_scanCameraImpossible"));
+          if (!annule) setErreur(messagePourErreur(e));
         });
-    } catch {
+    } catch (e) {
       // Échec synchrone (ex. bibliothèque indisponible) — même traitement.
-      if (!annule) setErreur(t("cat_scanCameraImpossible"));
+      if (!annule) setErreur(messagePourErreur(e));
     }
 
     return () => {

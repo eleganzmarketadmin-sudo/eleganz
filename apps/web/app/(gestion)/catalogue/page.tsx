@@ -360,6 +360,18 @@ function SelecteurMultiple({
   const { t } = useLocale();
   const [nouvelleValeur, setNouvelleValeur] = useState("");
   const [enCours, setEnCours] = useState(false);
+  // Repli masqué par défaut (21 nov. 2026 — 3e signalement du même
+  // malentendu malgré la légende explicite ajoutée juste avant : « un
+  // nouveau produit a déjà deux tailles par défaut [...] qu'on arrive pas
+  // à supprimer »). Ces pills restent le vocabulaire PARTAGÉ de la
+  // boutique (tailles/couleurs déjà utilisées ailleurs — voir plus bas),
+  // jamais une sélection appliquée à CET article ; mais les afficher en
+  // permanence, même avec une légende « Disponibles », continuait à
+  // donner l'impression d'un article déjà pré-rempli qu'on ne peut pas
+  // vider. Masquées derrière ce repli : un nouvel article démarre sur un
+  // champ visuellement vide, rien à "retirer" tant qu'on n'a pas
+  // explicitement choisi de réutiliser une valeur existante.
+  const [disponiblesOuvert, setDisponiblesOuvert] = useState(false);
 
   function retirer(v: string) {
     onChangeSelection(selection.filter((s) => s !== v));
@@ -414,24 +426,36 @@ function SelecteurMultiple({
           </div>
         </>
       )}
-      {valeurs.length > 0 && <span className={styles.legendePuces}>{t("cat_disponibles")}</span>}
-      <div className={styles.listePuces}>
-        {valeurs.length === 0 ? (
-          <span style={{ fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>{t("cat_aucuneValeur")}</span>
-        ) : (
-          disponibles.map((v) => (
-            <button
-              type="button"
-              key={`dispo-${v}`}
-              className={styles.puceValeur}
-              onClick={() => ajouterALaSelection(v)}
-              title={t("cat_cliquerPourAjouter")}
-            >
-              {v}
-            </button>
-          ))
-        )}
-      </div>
+      {disponibles.length > 0 && (
+        <>
+          <button
+            type="button"
+            className={styles.boutonRepli}
+            onClick={() => setDisponiblesOuvert((o) => !o)}
+            aria-expanded={disponiblesOuvert}
+          >
+            {t("cat_reutiliserValeurs")} {disponiblesOuvert ? "▴" : "▾"}
+          </button>
+          {disponiblesOuvert && (
+            <>
+              <span className={styles.legendePuces}>{t("cat_disponibles")}</span>
+              <div className={styles.listePuces}>
+                {disponibles.map((v) => (
+                  <button
+                    type="button"
+                    key={`dispo-${v}`}
+                    className={styles.puceValeur}
+                    onClick={() => ajouterALaSelection(v)}
+                    title={t("cat_cliquerPourAjouter")}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
       <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
         <input
           name="selecteurMultipleNouvelleValeur"
