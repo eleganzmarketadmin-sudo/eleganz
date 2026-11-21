@@ -5,6 +5,7 @@ import { ExchangeRateProvider } from "./lib/exchange-rate";
 import { DisplayCurrencyProvider } from "./lib/display-currency";
 import { ServiceWorkerRegistration } from "./components/ServiceWorkerRegistration";
 import { ChunkErrorRecovery } from "./components/ChunkErrorRecovery";
+import { VersionWatcher } from "./components/VersionWatcher";
 import { SCRIPT_INIT_THEME } from "./components/ThemeToggle";
 import { LocaleProvider } from "./lib/i18n/LocaleContext";
 import "./globals.css";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ServiceWorkerRegistration />
         <ChunkErrorRecovery />
         <LocaleProvider>
+          <VersionWatcher />
           <AuthProvider>
             <ExchangeRateProvider>
               <DisplayCurrencyProvider>{children}</DisplayCurrencyProvider>

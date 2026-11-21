@@ -73,12 +73,12 @@ console.log(`[inject-sw-version] sw.js versionné pour ce build : ${version}`);
 const cheminBuildVersion = path.join(__dirname, "..", "app", "lib", "build-version.ts");
 const contenuBuildVersion = fs.readFileSync(cheminBuildVersion, "utf8");
 const buildVersionMisAJour = contenuBuildVersion.replace(
-  /^export const BUILD_VERSION = ".*";$/m,
-  `export const BUILD_VERSION = "${version}";`,
+  /^export const BUILD_VERSION: string = ".*";$/m,
+  `export const BUILD_VERSION: string = "${version}";`,
 );
 if (buildVersionMisAJour === contenuBuildVersion) {
   throw new Error(
-    `inject-sw-version: la ligne "export const BUILD_VERSION = ...;" est introuvable dans ${cheminBuildVersion} — ` +
+    `inject-sw-version: la ligne "export const BUILD_VERSION: string = ...;" est introuvable dans ${cheminBuildVersion} — ` +
       "VersionWatcher ne pourrait jamais détecter une nouvelle version.",
   );
 }
