@@ -6,6 +6,10 @@ import {
   Logger,
   OnModuleInit,
 } from "@nestjs/common";
+// Utilisé uniquement pour tirer la référence interne courte (voir
+// genererReferenceCourte ci-dessous) — même convention que
+// password-reset.service.ts / admin-users.service.ts.
+import * as crypto from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { CreateVariantDto, UpdateVariantDto } from "./dto/create-variant.dto";
@@ -25,6 +29,30 @@ import {
   renderCodeBarreEtiquettePdf,
   renderCodeBarreFeuillePdf,
 } from "./variant-barcode-pdf-renderer";
+
+/**
+ * Référence interne (SKU) courte et alphanumérique (23 nov. 2026, retour
+ * propriétaire) — remplace l'ancien schéma qui concaténait catégorie + nom
+ * d'article + un suffixe par taille/couleur, produisant des références de 40
+ * caractères et plus une fois multipliées par le nombre de combinaisons :
+ * illisibles, et surtout une fois converties en code-barres (zone de
+ * code-barres "kilométrique", repère propriétaire). Ce tirage est un simple
+ * identifiant interne unique, totalement indépendant des attributs de
+ * l'article — jamais reconstitué à partir du nom/catégorie/taille/couleur.
+ * Alphabet volontairement privé des caractères ambigus à la lecture (0/O,
+ * 1/I/L) pour rester relisible à l'œil si le code-barres ne scanne pas.
+ */
+const ALPHABET_REFERENCE_COURTE = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const LONGUEUR_REFERENCE_COURTE = 8;
+const TENTATIVES_MAX_REFERENCE_COURTE = 10;
+
+function tirerReferenceCourte(): string {
+  let code = "";
+  for (let i = 0; i < LONGUEUR_REFERENCE_COURTE; i++) {
+    code += ALPHABET_REFERENCE_COURTE[crypto.randomInt(ALPHABET_REFERENCE_COURTE.length)];
+  }
+  return code;
+}
 
 /**
  * Catégories majeures proposées à la création de l'API (16 oct. 2026) — un
@@ -429,10 +457,14 @@ export class CatalogService implements OnModuleInit {
   /**
    * Génère une variante par combinaison taille × couleur sélectionnée
    * (demande du 12 oct. 2026) — remplace la ressaisie manuelle répétée d'un
-   * même article en plusieurs tailles/couleurs. `skuBase` est complété avec
-   * un suffixe par combinaison pour garantir l'unicité (contrainte
-   * `Variant.sku @unique`) ; si une combinaison est déjà prise, l'ensemble de
-   * l'opération échoue (transaction) plutôt que de créer un lot partiel.
+   * même article en plusieurs tailles/couleurs. Chaque variante reçoit sa
+   * propre référence interne courte, tirée indépendamment des autres (voir
+   * tirerReferenceCourte) ; si le tirage entre en collision avec une
+   * référence déjà prise (contrainte `Variant.sku @unique`), un nouveau
+   * tirage est fait (TENTATIVES_MAX_REFERENCE_COURTE essais) plutôt que
+   * d'échouer — corrigé le 23 nov. 2026 (retour propriétaire : l'ancien
+   * schéma, concaténation catégorie+nom+taille+couleur, produisait des
+   * références trop longues pour un code-barres lisible).
    *
    * Corrigé le 12 nov. 2026 (retour client, parcours d'achat complet) —
    * cette route était jusqu'ici restreinte en bloc au bouquet
@@ -487,26 +519,21 @@ export class CatalogService implements OnModuleInit {
       }
     }
 
-    const slug = (texte: string) =>
-      texte
-        .trim()
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-
     return this.prisma.$transaction(async (tx) => {
       const variantesCreees = [];
       for (const combo of combinaisons) {
-        const suffixe = [combo.size, combo.color]
-          .filter((v): v is string => v != null && v !== "")
-          .map(slug)
-          .join("-");
-        const sku = suffixe ? `${dto.skuBase}-${suffixe}` : dto.skuBase;
-
-        const existante = await tx.variant.findUnique({ where: { sku } });
-        if (existante) {
+        let sku: string | null = null;
+        for (let tentative = 0; tentative < TENTATIVES_MAX_REFERENCE_COURTE; tentative++) {
+          const candidate = tirerReferenceCourte();
+          const existante = await tx.variant.findUnique({ where: { sku: candidate } });
+          if (!existante) {
+            sku = candidate;
+            break;
+          }
+        }
+        if (!sku) {
           throw new ConflictException(
-            `Le SKU "${sku}" existe déjà — modifiez le préfixe ou la sélection.`,
+            "Impossible de générer une référence interne unique — réessayez.",
           );
         }
 

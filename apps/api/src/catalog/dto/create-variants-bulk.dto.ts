@@ -1,17 +1,19 @@
-import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Min, MinLength } from "class-validator";
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from "class-validator";
 
 /**
  * Génère une ou plusieurs variantes à partir d'une sélection multiple de
  * tailles et/ou de couleurs (demande du 12 oct. 2026) — une variante par
  * combinaison, pour éviter de ressaisir manuellement chaque SKU. Si les deux
- * listes sont vides, une seule variante "simple" est créée avec `skuBase`
- * comme SKU complet.
+ * listes sont vides, une seule variante "simple" est créée.
+ *
+ * La référence interne (SKU) de chaque variante n'est plus construite à
+ * partir d'un préfixe fourni par le client (23 nov. 2026, retour
+ * propriétaire — une référence courte et alphanumérique est préférable à une
+ * concaténation catégorie/nom/taille/couleur, surtout une fois convertie en
+ * code-barres) : elle est désormais tirée côté service, voir
+ * CatalogService.addVariantsBulk / tirerReferenceCourte.
  */
 export class CreateVariantsBulkDto {
-  @IsString()
-  @MinLength(1)
-  skuBase!: string;
-
   // Code-barres/QR du fabricant (21 nov. 2026, retour client : "le champ code
   // barres ajouté à la création des articles n'est pas visible") — facultatif,
   // et n'a de sens que lorsque cette requête ne crée QU'UNE SEULE variante
