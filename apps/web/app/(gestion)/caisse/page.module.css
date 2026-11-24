@@ -364,6 +364,46 @@
   border-color: var(--color-cobalt);
 }
 
+/* Monnaie à rendre (24 nov. 2026, retour propriétaire : "système de
+   différence à retourner par rapport à un billet de valeur faciale
+   élevée... pour la transparence et faciliter les calculs à la caisse") */
+.montantRecu {
+  margin-bottom: var(--espace-4);
+}
+
+.montantRecuTitre {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-2);
+}
+
+.montantRecuChamp {
+  width: 100%;
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: var(--touche-min);
+  margin-bottom: var(--espace-2);
+}
+
+.monnaieARendre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-3);
+  font-weight: 600;
+}
+
+.monnaieARendreOk {
+  background: var(--color-vert-paiement);
+  color: #fff;
+}
+
+.monnaieARendreInsuffisant {
+  background: var(--color-flamme);
+  color: #fff;
+}
+
 .barreAction {
   position: sticky;
   bottom: 0;

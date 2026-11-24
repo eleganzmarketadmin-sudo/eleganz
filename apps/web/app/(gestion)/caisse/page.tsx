@@ -84,6 +84,14 @@ function CaisseContent() {
   const [recherche, setRecherche] = useState("");
   const [lignes, setLignes] = useState<LigneTicket[]>([]);
   const [moyen, setMoyen] = useState<(typeof MOYENS)[number]["valeur"]>("CASH");
+  // Monnaie à rendre (24 nov. 2026, retour propriétaire : "système de
+  // différence à retourner par rapport à un billet de valeur faciale
+  // élevée... pour la transparence et faciliter les calculs à la caisse")
+  // — calcul purement local, jamais envoyé à l'API : ce que le client tend
+  // en espèces et ce que le caissier lui rend ne regardent pas le montant
+  // de la vente elle-même (toujours égal au total, voir `payments` dans
+  // `encaisser` plus bas), seulement l'aide au calcul mental du caissier.
+  const [montantRecu, setMontantRecu] = useState("");
   // Saisie libre client à l'encaissement (19 nov. 2026, demande : "ajouter à
   // la facture les champs optionnels... identité du client et son numéro
   // phone whatsapp"). Entièrement optionnel — PosService associe ou crée
@@ -258,6 +266,11 @@ function CaisseContent() {
 
   const devise = lignes[0]?.currency ?? "USD";
   const total = lignes.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const montantRecuNombre = montantRecu.trim() === "" ? null : Number(montantRecu);
+  const monnaieARendre =
+    montantRecuNombre != null && Number.isFinite(montantRecuNombre)
+      ? montantRecuNombre - total
+      : null;
 
   function ajouterVariante(produit: Product, variante: Variant) {
     setConfirmation(null);
@@ -323,6 +336,7 @@ function CaisseContent() {
       const vente = await api.post<{ id: string }>(`/shops/${currentShop.id}/pos/sales`, payload);
       setConfirmation(`${t("caisse_venteEnregistree")} ${formatMoney(total, devise)} ${t("caisse_encaisse")}`);
       setLignes([]);
+      setMontantRecu("");
       setClientNom("");
       setClientTelephone("");
       try {
@@ -359,6 +373,7 @@ function CaisseContent() {
             `${t("caisse_venteEnregistreeHorsLigne")} ${formatMoney(total, devise)}. ${t("caisse_synchroAutomatique")}`,
           );
           setLignes([]);
+          setMontantRecu("");
           setClientNom("");
           setClientTelephone("");
           synchroniser();
@@ -617,6 +632,34 @@ function CaisseContent() {
                   </button>
                 ))}
               </div>
+
+              {moyen === "CASH" && (
+                <div className={styles.montantRecu}>
+                  <span className={styles.montantRecuTitre}>{t("caisse_montantRecu")}</span>
+                  <input
+                    className={styles.montantRecuChamp}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="any"
+                    placeholder={formatMoney(total, devise)}
+                    value={montantRecu}
+                    onChange={(e) => setMontantRecu(e.target.value)}
+                  />
+                  {monnaieARendre != null && (
+                    <div
+                      className={`${styles.monnaieARendre} ${
+                        monnaieARendre >= 0 ? styles.monnaieARendreOk : styles.monnaieARendreInsuffisant
+                      }`}
+                    >
+                      <span>
+                        {monnaieARendre >= 0 ? t("caisse_monnaieARendre") : t("caisse_montantInsuffisant")}
+                      </span>
+                      <span className="chiffre">{formatMoney(Math.abs(monnaieARendre), devise)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
                 <label htmlFor="typeDocument" style={{ fontSize: "0.85rem" }}>
