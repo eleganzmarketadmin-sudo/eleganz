@@ -75,7 +75,13 @@ export function NotificationBell({
   const [notifications, setNotifications] = useState<Notification[] | null>(null);
   const conteneurRef = useRef<HTMLDivElement>(null);
   const panneauRef = useRef<HTMLDivElement>(null);
-  useClampDropdownADroite(panneauRef, ouvert);
+  // 25 nov. 2026 : en-dessous de 560px (même seuil mobile que tout le
+  // reste de la plateforme), .panneau passe en prise en charge plein écran
+  // par CSS (voir NotificationBell.module.css) — ce recalage par
+  // JavaScript, pensé pour un petit panneau ancré à son bouton, doit alors
+  // rester inactif plutôt que d'écraser ce plein écran avec des styles en
+  // ligne left/right/top/bottom.
+  useClampDropdownADroite(panneauRef, ouvert, undefined, 560);
   const { etat: etatPush, activer: activerPush, rejeterInvite, inviteDejaRejetee } = usePushNotifications();
   const [inviteRejeteeIci, setInviteRejeteeIci] = useState(false);
   // 10 nov. 2026 (demande : alerte sur le téléphone à l'arrivée d'un
@@ -183,11 +189,26 @@ export function NotificationBell({
         <div className={styles.panneau} role="menu" ref={panneauRef}>
           <div className={styles.entetePanneau}>
             <span>{t("nav_notifications")}</span>
-            {nonLues > 0 && (
-              <button type="button" className={styles.lienAction} onClick={toutMarquerLu}>
-                {t("notif_toutMarquerLu")}
+            <div className={styles.entetePanneauActions}>
+              {nonLues > 0 && (
+                <button type="button" className={styles.lienAction} onClick={toutMarquerLu}>
+                  {t("notif_toutMarquerLu")}
+                </button>
+              )}
+              {/* 25 nov. 2026 : visible uniquement en-dessous de 560px (voir
+                  le CSS) — une fois le panneau en plein écran, le bouton
+                  "🔔" qui l'a ouvert n'est plus visible pour le refermer en
+                  re-cliquant dessus ; au-dessus de ce seuil, le petit
+                  panneau ancré se ferme déjà normalement au clic en dehors. */}
+              <button
+                type="button"
+                className={styles.panneauFermer}
+                onClick={() => setOuvert(false)}
+                aria-label={t("action_fermer")}
+              >
+                ✕
               </button>
-            )}
+            </div>
           </div>
           {proposerPush && (
             <div className={styles.invitePush}>

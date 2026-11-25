@@ -23,10 +23,28 @@ import { useEffect, type RefObject } from "react";
  * Partagée entre tous les menus déroulants concernés (cloche de
  * notifications, menu "Mon compte", etc.) pour que le correctif ne soit
  * écrit qu'une seule fois.
+ *
+ * `ignorerSousLargeur` (25 nov. 2026, retour propriétaire : "les
+ * notifications ne peuvent pas s'ouvrir [en petit panneau] ... pour éviter
+ * les débordements dus à la petite taille, comme le panier par exemple") —
+ * un appelant dont le CSS bascule déjà son propre panneau en prise en
+ * charge plein écran en-dessous d'une certaine largeur (voir la cloche de
+ * notifications) doit pouvoir désactiver ce recalage par JavaScript à cette
+ * même largeur : sinon les styles en ligne posés ici (left/right/top/
+ * bottom) — plus spécifiques qu'une règle de feuille de style — écraseraient
+ * le `position: fixed; inset: 0` du CSS. Reste `undefined` (comportement
+ * strictement inchangé) pour tout appelant qui ne le précise pas, comme le
+ * menu "Mon compte".
  */
-export function useClampDropdownADroite(ref: RefObject<HTMLElement | null>, ouvert: boolean, margeMinimale = 12) {
+export function useClampDropdownADroite(
+  ref: RefObject<HTMLElement | null>,
+  ouvert: boolean,
+  margeMinimale = 12,
+  ignorerSousLargeur?: number,
+) {
   useEffect(() => {
     if (!ouvert) return;
+    if (ignorerSousLargeur !== undefined && window.innerWidth <= ignorerSousLargeur) return;
     const element = ref.current;
     if (!element) return;
     const parent = element.parentElement;
@@ -78,5 +96,5 @@ export function useClampDropdownADroite(ref: RefObject<HTMLElement | null>, ouve
       // à une hauteur inutilisable — mieux vaut un défilement de page
       // qu'un contenu totalement illisible.
     }
-  }, [ouvert, ref, margeMinimale]);
+  }, [ouvert, ref, margeMinimale, ignorerSousLargeur]);
 }

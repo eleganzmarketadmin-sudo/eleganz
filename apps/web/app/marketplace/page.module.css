@@ -26,14 +26,73 @@
   background: var(--color-magenta);
 }
 
-.herosPhoto img,
-.herosPhoto svg {
+/* Repli motif wax (MotifWax, voir page.tsx) — seul enfant direct de
+   .herosPhoto dans ce cas (pas de bande à faire défiler, rien à régler). */
+.herosPhoto > svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+/* Bande défilante de produits (25 nov. 2026, retour propriétaire — "sans
+   être un menu défilant des différents produits") — remplace l'unique
+   photo statique d'origine. Chaque vignette occupe toute la hauteur du
+   bloc et une largeur fixe ; la liste de produits est dupliquée une fois
+   dans page.tsx, et l'animation ci-dessous translate exactement de la
+   largeur d'une copie (-50%) avant de reprendre à l'identique — boucle
+   infinie sans à-coup ni coupure visible. L'espacement est posé en
+   margin-right sur chaque vignette (y compris la dernière, invisible —
+   masquée par .herosPhoto { overflow: hidden }) plutôt qu'en `gap` sur ce
+   conteneur : un `gap` ne s'applique PAS après le dernier élément, donc la
+   moitié de la largeur totale (translateX(-50%)) tombait 2 à 4px avant le
+   début réel de la seconde copie — un à-coup visible à chaque boucle. Une
+   marge uniforme sur chaque vignette rend les deux moitiés rigoureusement
+   identiques, quels que soient le nombre de produits ou leur largeur. */
+.herosDefilement {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  animation: heros-defiler 45s linear infinite;
+}
+
+/* Pause au survol — laisse le temps de regarder une vignette ou de cliquer
+   dessus sans qu'elle continue de glisser sous le curseur. */
+.herosPhoto:hover .herosDefilement {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .herosDefilement {
+    animation: none;
+  }
+}
+
+.herosVignette {
+  flex: 0 0 150px;
+  margin-right: var(--espace-1);
+  display: block;
+}
+
+.herosVignette img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
+}
+
+@keyframes heros-defiler {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* La moitié de la largeur totale : exactement la largeur d'une copie de
+       la liste, puisque page.tsx rend la liste deux fois à la suite. */
+    transform: translateX(-50%);
+  }
 }
 
 .herosBloc {

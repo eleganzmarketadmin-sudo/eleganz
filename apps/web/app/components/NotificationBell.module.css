@@ -85,6 +85,27 @@
   font-weight: 600;
 }
 
+.entetePanneauActions {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+/* Masqué par défaut (desktop/tablette) : le petit panneau ancré s'y ferme
+   déjà normalement au clic en dehors ou en re-cliquant sur la cloche —
+   voir la media query plus bas pour le plein écran mobile, où ce bouton
+   devient nécessaire. */
+.panneauFermer {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+}
+
 .lienAction {
   background: none;
   border: none;
@@ -200,4 +221,47 @@
 
 .voirTout:hover {
   text-decoration: underline;
+}
+
+/* 25 nov. 2026, retour propriétaire : "les notifications ne peuvent pas
+   s'ouvrir [en petit panneau] ... pour éviter les débordements dus à la
+   petite taille, comme le panier par exemple" — plutôt que de recorriger
+   une énième fois l'ancrage du petit panneau (il a déjà fallu l'ajuster à
+   chaque nouvel emplacement du bouton dans le DOM, voir
+   useClampDropdownADroite), le panneau devient ici une prise en charge
+   plein écran en-dessous de 560px (même seuil mobile que tout le reste de
+   la plateforme) — immunisée PAR CONSTRUCTION contre tout débordement
+   horizontal, puisqu'elle ne dépend plus de la position du bouton "🔔" qui
+   l'ouvre. Change de comportement sur les 6 portails à la fois (composant
+   partagé) — cohérent avec la demande d'origine du propriétaire d'étaler
+   ces corrections à toute la plateforme. */
+@media (max-width: 560px) {
+  .panneau {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    border: none;
+    z-index: 1000;
+  }
+
+  .entetePanneau {
+    padding: var(--espace-4);
+    font-size: 1.0625rem;
+  }
+
+  .panneauFermer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touche-min);
+    min-height: var(--touche-min);
+    font-size: 1.25rem;
+  }
+
+  .liste {
+    flex: 1;
+    max-height: none;
+  }
 }

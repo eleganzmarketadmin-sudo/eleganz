@@ -206,22 +206,40 @@ function MarketplaceContenu() {
   // entièrement posé sur l'aplat de couleur, jamais sur la photo, donc même
   // un dégradé de lisibilité n'est pas nécessaire ici.
   //
-  // La photo est un vrai produit du catalogue (contenu authentique déjà
-  // hébergé par la plateforme, jamais une image d'archive téléchargée depuis
-  // l'extérieur) — le premier article illustré trouvé dans les résultats
-  // courants. Tant que le catalogue n'a encore rien chargé (ou si aucun
-  // article n'a de photo), on affiche à la place un motif géométrique
-  // original façon tissu wax (voir MotifWax plus bas) : jamais de case vide,
-  // jamais une image cassée.
-  const produitVedette = produits.find((p) => p.images[0]);
+  // 25 nov. 2026, retour propriétaire : "affiche une photo... sans être un
+  // menu défilant des différents produits" — une seule photo statique ne
+  // rendait pas compte de la diversité du catalogue. Remplacée par un
+  // défilement continu (bande façon pellicule) de plusieurs vrais produits
+  // du catalogue (contenu authentique déjà hébergé par la plateforme,
+  // jamais une image d'archive téléchargée depuis l'extérieur), chacun
+  // cliquable vers sa fiche. Dupliqué une fois pour boucler sans coupure
+  // (voir l'animation dans page.module.css) ; mis en pause au survol pour
+  // laisser le temps de regarder/cliquer, et à l'arrêt si la personne a
+  // demandé de réduire les animations (prefers-reduced-motion). Tant que le
+  // catalogue n'a encore rien chargé (ou si aucun article n'a de photo), on
+  // affiche à la place un motif géométrique original façon tissu wax (voir
+  // MotifWax plus bas) : jamais de case vide, jamais une image cassée.
+  const produitsIllustres = produits.filter((p) => p.images[0]).slice(0, 10);
 
   return (
     <div className={styles.cadre}>
       <div className={styles.heros}>
         <div className={styles.herosPhoto}>
-          {produitVedette ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={produitVedette.images[0]} alt={produitVedette.name} />
+          {produitsIllustres.length > 0 ? (
+            <div className={styles.herosDefilement}>
+              {[...produitsIllustres, ...produitsIllustres].map((p, i) => (
+                <Link
+                  key={`${p.id}-${i}`}
+                  href={`/marketplace/produit/${p.id}`}
+                  className={styles.herosVignette}
+                  aria-hidden={i >= produitsIllustres.length ? "true" : undefined}
+                  tabIndex={i >= produitsIllustres.length ? -1 : undefined}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.images[0]} alt={p.name} />
+                </Link>
+              ))}
+            </div>
           ) : (
             <MotifWax />
           )}
