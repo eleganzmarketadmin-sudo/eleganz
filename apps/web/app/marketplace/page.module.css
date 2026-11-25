@@ -3,33 +3,126 @@
   background: var(--color-surface);
 }
 
-/* Réduit le 12 nov. 2026 (retour client) : pour un visiteur déjà venu une
-   fois, cette page EST l'accueil (voir MarqueurVisiteMarketplace — il saute
-   directement ici depuis "/" dès la deuxième visite), si bien que le grand
-   bandeau d'argumentaire de vente d'origine n'avait plus de rôle et
-   occupait un écran entier avant la moindre barre de recherche. Un bandeau
-   compact, titre + phrase courte sur la même respiration visuelle, reste
-   utile pour qui atterrit directement sur /marketplace (premier lien
-   partagé, moteur de recherche) sans justifier tout cet espace. */
-.entete {
+/* Héros éditorial (25 nov. 2026, retour propriétaire — voir le commentaire
+   détaillé dans page.tsx) — remplace l'ancien bandeau plat compact (titre +
+   phrase sur un aplat magenta uni, 12 nov. 2026) par le héros en deux blocs
+   inégaux déjà documenté dans docs/DESIGN_SYSTEM.md ("Marketplace — bloc de
+   couleur éditorial") mais jamais construit jusqu'ici. Toujours pas de
+   centrage systématique (principe du système) : alignement sobre à gauche à
+   l'intérieur du bloc de couleur. Empilé en colonne (photo au-dessus,
+   hauteur plafonnée pour ne pas répéter l'erreur déjà signalée ailleurs —
+   "l'en-tête occupe une grande partie de l'écran" — sur un héros, pas une
+   barre de navigation, mais le risque de proportion est le même) ; redevient
+   la rangée à deux blocs inégaux voulue par le système à partir de 720px. */
+.heros {
+  display: flex;
+  flex-direction: column;
+}
+
+.herosPhoto {
+  position: relative;
+  min-height: 200px;
+  overflow: hidden;
+  background: var(--color-magenta);
+}
+
+.herosPhoto img,
+.herosPhoto svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.herosBloc {
   background: var(--color-magenta);
   color: #fff;
-  padding: var(--espace-4) var(--espace-5);
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--espace-1) var(--espace-3);
+  padding: var(--espace-5);
 }
 
-.entete h1 {
+.herosTitre {
   font-family: var(--font-display), serif;
-  font-size: 1.375rem;
+  font-weight: 600;
+  font-style: italic;
+  font-size: clamp(1.75rem, 6vw, 2.75rem);
+  line-height: 1.05;
+  margin-bottom: var(--espace-3);
 }
 
-.entete p {
+.herosSousTitre {
   max-width: 48ch;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   opacity: 0.9;
+  margin-bottom: var(--espace-4);
+}
+
+/* Bouton plein (pas un lien souligné) — reprend la même logique d'aplat que
+   .boutonRecherche/.boutonFiltre plus bas, mais en Toile sur Magenta plutôt
+   qu'en Encre sur Toile : un aplat clair posé sur l'aplat de couleur du
+   héros, comme un badge de wax cousu sur un pan de couleur contrastée. */
+.herosCta {
+  display: inline-block;
+  background: var(--color-toile);
+  color: var(--color-ink);
+  font-weight: 600;
+  padding: var(--espace-3) var(--espace-5);
+  min-height: var(--touche-min);
+  line-height: calc(var(--touche-min) - 2 * var(--espace-3));
+}
+
+.herosCta:hover {
+  text-decoration: none;
+  /* --color-surface (pas un blanc fixe) : en mode sombre, --color-toile et
+     --color-ink se retournent tous deux (bouton sombre/texte clair) — un
+     survol en blanc fixe aurait gardé le texte clair du mode sombre
+     (--color-ink) sur un fond devenu blanc, illisible. --color-surface
+     retourné (#1c1e24 en mode sombre) reste assorti à --color-ink dans les
+     deux thèmes, comme partout ailleurs dans l'appli. */
+  background: var(--color-surface);
+}
+
+@media (min-width: 720px) {
+  .heros {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .herosPhoto {
+    flex: 0 0 42%;
+    min-height: 360px;
+  }
+
+  .herosBloc {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--espace-6);
+    /* "Titre serif qui chevauche légèrement le bloc" (docs/DESIGN_SYSTEM.md)
+       — l'aplat Magenta déborde légèrement sur la photo plutôt qu'un calage
+       strict bord à bord, pour que les deux blocs se lisent comme un seul
+       ensemble plutôt que deux rectangles juxtaposés. Le texte lui-même ne
+       bouge pas (padding inchangé) : il reste entièrement sur l'aplat
+       Magenta, jamais sur la photo. */
+    margin-left: calc(-1 * var(--espace-6));
+  }
+
+  /* Arabe (seule locale RTL du site, voir LocaleContext) : `dir="rtl"`
+     inverse l'ordre visuel de la rangée flex (photo à droite, bloc de
+     couleur à gauche) mais `margin-left` reste un côté PHYSIQUE, jamais
+     logique — sans ce correctif, le débord ci-dessus tirerait le bloc vers
+     la gauche, donc à l'opposé de la photo (maintenant à droite) au lieu de
+     la chevaucher. */
+  [dir="rtl"] .herosBloc {
+    margin-left: 0;
+    margin-right: calc(-1 * var(--espace-6));
+  }
+
+  .herosTitre {
+    font-size: clamp(2.25rem, 4vw, 3.25rem);
+  }
 }
 
 .barreRecherche {

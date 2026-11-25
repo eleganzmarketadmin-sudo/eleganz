@@ -46,6 +46,30 @@ interface Categorie {
 }
 
 /**
+ * Motif géométrique original façon tissu wax (25 nov. 2026, héros éditorial
+ * Marketplace) — losanges décalés en aplats de couleur pleine, jamais de
+ * dégradé ni d'ombre (voir docs/DESIGN_SYSTEM.md, principe n°2). Sert de
+ * repli quand aucune photo produit n'est encore disponible pour illustrer le
+ * héros (catalogue vide ou pas encore chargé) : uniquement les teintes déjà
+ * attribuées à ce module (Magenta Sape) + Encre + une touche d'Or, jamais une
+ * couleur empruntée à un autre module.
+ */
+function MotifWax() {
+  return (
+    <svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" role="presentation" aria-hidden="true">
+      <rect width="120" height="120" fill="var(--color-magenta)" />
+      <pattern id="wax-losanges" width="40" height="40" patternUnits="userSpaceOnUse">
+        <rect width="40" height="40" fill="var(--color-magenta)" />
+        <polygon points="20,2 38,20 20,38 2,20" fill="var(--color-encre-fixe)" opacity="0.18" />
+        <polygon points="0,0 8,0 0,8" fill="var(--color-or)" opacity="0.5" />
+        <polygon points="40,40 32,40 40,32" fill="var(--color-or)" opacity="0.5" />
+      </pattern>
+      <rect width="120" height="120" fill="url(#wax-losanges)" />
+    </svg>
+  );
+}
+
+/**
  * Enveloppe `useSearchParams` dans un Suspense (convention recommandée du
  * App Router) — nécessaire pour lire `?q=` / `?category=` (11 nov. 2026,
  * amélioration "expérience grand public" : la barre de recherche de
@@ -169,11 +193,46 @@ function MarketplaceContenu() {
     setPrixMaxActif("");
   }
 
+  // Héros éditorial (25 nov. 2026, retour propriétaire — "quelles variations
+  // de couleurs dégradées granulées... bref pas une programmation robotique,
+  // inspirez-vous d'autres plateformes" ; référence citée :
+  // fcbarcelona.fr/fr) — remplace l'ancien bandeau plat (titre + phrase,
+  // aplat magenta uni) par le héros en deux blocs inégaux déjà PRÉVU dans
+  // docs/DESIGN_SYSTEM.md ("Marketplace — bloc de couleur éditorial") mais
+  // jamais construit : photo pleine hauteur + aplat Magenta Sape, dans
+  // l'esprit d'une veste et d'un pantalon de couleurs contrastées. Aucun
+  // dégradé nulle part dans ce bloc (principe du système : "la hiérarchie
+  // vient des aplats de couleur, pas des ombres") — le titre reste toujours
+  // entièrement posé sur l'aplat de couleur, jamais sur la photo, donc même
+  // un dégradé de lisibilité n'est pas nécessaire ici.
+  //
+  // La photo est un vrai produit du catalogue (contenu authentique déjà
+  // hébergé par la plateforme, jamais une image d'archive téléchargée depuis
+  // l'extérieur) — le premier article illustré trouvé dans les résultats
+  // courants. Tant que le catalogue n'a encore rien chargé (ou si aucun
+  // article n'a de photo), on affiche à la place un motif géométrique
+  // original façon tissu wax (voir MotifWax plus bas) : jamais de case vide,
+  // jamais une image cassée.
+  const produitVedette = produits.find((p) => p.images[0]);
+
   return (
     <div className={styles.cadre}>
-      <div className={styles.entete}>
-        <h1>ELEGANZ {t("nom_market")}</h1>
-        <p>{t("market_sousTitre")}</p>
+      <div className={styles.heros}>
+        <div className={styles.herosPhoto}>
+          {produitVedette ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={produitVedette.images[0]} alt={produitVedette.name} />
+          ) : (
+            <MotifWax />
+          )}
+        </div>
+        <div className={styles.herosBloc}>
+          <h1 className={styles.herosTitre}>{t("market_herosTitre")}</h1>
+          <p className={styles.herosSousTitre}>{t("market_sousTitre")}</p>
+          <Link href="/marketplace/boutiques" className={styles.herosCta}>
+            {t("market_herosCta")}
+          </Link>
+        </div>
       </div>
 
       <form
