@@ -1,0 +1,159 @@
+.titre {
+  margin-bottom: var(--espace-3);
+}
+
+.introduction {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-4);
+  max-width: 70ch;
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-3);
+}
+
+.sousTitre {
+  margin: 0;
+}
+
+.caseAfficher {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: 0.875rem;
+}
+
+.signalement {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-4);
+  padding: var(--espace-4);
+}
+
+.ligneEntete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
+  margin-bottom: var(--espace-2);
+  font-size: 0.875rem;
+  color: var(--color-texte-muted);
+}
+
+.boutiqueStatut {
+  font-weight: 500;
+}
+
+.detail {
+  margin-bottom: var(--espace-1);
+}
+
+.valeurSaisie {
+  background: var(--color-surface);
+  padding: var(--espace-2) var(--espace-3);
+  margin-bottom: var(--espace-3);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  word-break: break-word;
+}
+
+.resolution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.resolution input {
+  flex: 1;
+  min-width: 160px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonIgnorer {
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled,
+.boutonIgnorer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.statutTraite {
+  font-size: 0.875rem;
+  color: var(--color-texte-muted);
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+}
+
+.ajoutTerme {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-4);
+}
+
+.ajoutTerme input {
+  flex: 1;
+  min-width: 220px;
+  padding: var(--espace-2) var(--espace-3);
+  border: 2px solid var(--color-ink);
+  min-height: 44px;
+}
+
+.listeTermes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.puceTerme {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  border: 1px solid var(--color-border);
+  padding: var(--espace-1) var(--espace-2);
+  font-size: 0.875rem;
+}
+
+.boutonRetirerTerme {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-flamme);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 var(--espace-1);
+}
+
+.boutonRetirerTerme:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

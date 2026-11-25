@@ -19,8 +19,11 @@ import { AdjustStockDto } from "./dto/adjust-stock.dto";
 import { CreateProductCategoryDto } from "./dto/product-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { CreatePriceTierDto } from "./dto/price-tier.dto";
-import { StockMovementType, VariantOptionKind } from "@eleganz/database";
+import { NotificationType, StockMovementType, VariantOptionKind } from "@eleganz/database";
 import { StorageService } from "../storage/storage.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
+import { trouverTermeInterdit } from "./illicit-content-guard";
 // Import CommonJS correct même sans `esModuleInterop` — même remarque que
 // pour pdfkit (voir documents/pdf-renderer.ts) : bwip-js déclare son module
 // avec `export =`.
@@ -109,6 +112,115 @@ const RATTRAPAGE_CATEGORIES_LIBRES: Record<string, string> = {
   "Robes & boubous": "Mode femme",
 };
 
+/**
+ * Socle de termes interdits amorcé au premier démarrage (24 nov. 2026, voir
+ * le commentaire sur ModerationBlockedTerm dans schema.prisma) — UNIQUEMENT
+ * un point de départ, jamais la liste complète attendue par le
+ * propriétaire : volontairement limité aux langues où une traduction fiable
+ * est raisonnablement certaine (français/anglais/espagnol/arabe/portugais).
+ * Le swahili, le lingala, le kikongo et le tshiluba ne sont PAS couverts ici
+ * — plutôt que d'inventer une traduction incertaine dans un système de
+ * conformité, ces termes restent à ajouter par l'équipe admin (qui a accès
+ * au terrain/à la langue) depuis /admin/moderation, sans redéploiement.
+ *
+ * Volontairement des expressions précises ("cannabis", "chanvre indien",
+ * "arme à feu") plutôt que des mots génériques trop larges ("chanvre" seul
+ * couvrirait aussi le chanvre textile/cosmétique légal ; "arme" seul
+ * couvrirait un article de sport ou de décoration) — un terme trop large
+ * produirait surtout des faux positifs qui useraient la vigilance de
+ * l'admin plutôt que de vraiment protéger la plateforme. L'admin reste
+ * libre d'ajouter un terme plus large si l'expérience montre que c'est
+ * nécessaire.
+ */
+const TERMES_INTERDITS_PAR_DEFAUT = [
+  // Français
+  "drogue",
+  "drogues",
+  "stupéfiant",
+  "stupéfiants",
+  "cocaïne",
+  "héroïne",
+  "cannabis",
+  "chanvre indien",
+  "marijuana",
+  "haschich",
+  "ecstasy",
+  "méthamphétamine",
+  "arme à feu",
+  "armes à feu",
+  "pistolet",
+  "fusil d'assaut",
+  "kalachnikov",
+  "grenade",
+  "explosifs",
+  "munitions de guerre",
+  // English
+  "drug dealer",
+  "narcotics",
+  "cocaine",
+  "heroin",
+  "cannabis",
+  "marijuana",
+  "hashish",
+  "methamphetamine",
+  "firearm",
+  "firearms",
+  "handgun",
+  "assault rifle",
+  "kalashnikov",
+  "grenade",
+  "explosives",
+  "ammunition",
+  // Español
+  "droga",
+  "drogas",
+  "estupefacientes",
+  "cocaína",
+  "heroína",
+  "cannabis",
+  "marihuana",
+  "hachís",
+  "metanfetamina",
+  "arma de fuego",
+  "armas de fuego",
+  "pistola",
+  "fusil de asalto",
+  "kaláshnikov",
+  "granada",
+  "explosivos",
+  "municiones",
+  // العربية
+  "مخدرات",
+  "كوكايين",
+  "هيروين",
+  "حشيش",
+  "ماريجوانا",
+  "سلاح ناري",
+  "مسدس",
+  "بندقية هجومية",
+  "قنبلة يدوية",
+  "متفجرات",
+  "ذخيرة حربية",
+  // Português
+  "droga",
+  "drogas",
+  "entorpecentes",
+  "cocaína",
+  "heroína",
+  "cannabis",
+  "maconha",
+  "haxixe",
+  "metanfetamina",
+  "arma de fogo",
+  "armas de fogo",
+  "pistola",
+  "fuzil de assalto",
+  "kalashnikov",
+  "granada",
+  "explosivos",
+  "munição de guerra",
+];
+
 @Injectable()
 export class CatalogService implements OnModuleInit {
   private readonly logger = new Logger(CatalogService.name);
@@ -116,6 +228,7 @@ export class CatalogService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
@@ -139,6 +252,79 @@ export class CatalogService implements OnModuleInit {
       this.logger.error("Amorçage du référentiel de catégories échoué", err as Error);
     }
     await this.rattraperCategoriesLibres();
+    await this.amorcerTermesInterdits();
+  }
+
+  /**
+   * Amorce la liste de termes interdits (contrôle anti-blanchiment/produits
+   * illicites, 24 nov. 2026) si elle est encore vide. Idempotent, même
+   * principe que l'amorçage du référentiel de catégories ci-dessus : ne
+   * touche à rien si l'admin a déjà ajouté/retiré des termes entre-temps.
+   */
+  private async amorcerTermesInterdits() {
+    try {
+      const nombre = await this.prisma.moderationBlockedTerm.count();
+      if (nombre > 0) return;
+      await this.prisma.moderationBlockedTerm.createMany({
+        data: TERMES_INTERDITS_PAR_DEFAUT.map((term) => ({ term })),
+        skipDuplicates: true,
+      });
+      this.logger.log(`Liste de termes interdits amorcée (${TERMES_INTERDITS_PAR_DEFAUT.length} termes).`);
+    } catch (err) {
+      this.logger.error("Amorçage de la liste de termes interdits échoué", err as Error);
+    }
+  }
+
+  /**
+   * Bloque la création/modification d'un article dont la saisie correspond
+   * à un terme interdit (contrôle anti-blanchiment/produits illicites, 24
+   * nov. 2026) : crée un signalement consultable par l'admin
+   * (ShopModerationFlag) et le notifie, puis rejette la requête — jamais de
+   * suspension automatique de la boutique par ce seul mécanisme (voir le
+   * commentaire sur ShopModerationFlag dans schema.prisma). Ne fait rien si
+   * la table de termes est vide (ex. tout juste après une migration, avant
+   * le premier `onModuleInit`) plutôt que de tout bloquer par excès de
+   * prudence.
+   */
+  private async verifierContenuLicite(
+    shopId: string,
+    champsASaisie: Array<{ champ: string; valeur: string | null | undefined }>,
+  ): Promise<void> {
+    const termes = await this.prisma.moderationBlockedTerm.findMany({ select: { term: true } });
+    if (termes.length === 0) return;
+    const listeTermes = termes.map((t) => t.term);
+
+    for (const { champ, valeur } of champsASaisie) {
+      if (!valeur) continue;
+      const termeDetecte = trouverTermeInterdit([valeur], listeTermes);
+      if (!termeDetecte) continue;
+
+      await this.prisma.shopModerationFlag.create({
+        data: { shopId, champ, motDetecte: termeDetecte, valeurSaisie: valeur },
+      });
+
+      try {
+        const admins = await this.prisma.user.findMany({
+          where: { role: { in: [...ROLES_ADMIN] } },
+          select: { id: true },
+        });
+        await this.notifications.notifierUtilisateurs(
+          admins.map((a) => a.id),
+          {
+            type: NotificationType.CONTENU_SUSPECT_SIGNALE,
+            title: "Contenu suspect signalé",
+            body: `Une boutique a tenté d'enregistrer un article avec un terme interdit ("${termeDetecte}", champ "${champ}") — à examiner.`,
+            link: "/admin/moderation",
+          },
+        );
+      } catch (err) {
+        this.logger.error("Notification admin (contenu suspect) échouée", err as Error);
+      }
+
+      throw new BadRequestException(
+        `Cet article n'a pas pu être enregistré : son contenu ("${champ}") correspond à un terme interdit sur la plateforme (produits illicites / blanchiment de capitaux). La boutique a été signalée à l'administration pour vérification.`,
+      );
+    }
   }
 
   private async rattraperCategoriesLibres() {
@@ -203,6 +389,12 @@ export class CatalogService implements OnModuleInit {
    * `maxActiveProducts` à `null` = illimité (bouquet Premium).
    */
   async createProduct(shopId: string, dto: CreateProductDto) {
+    await this.verifierContenuLicite(shopId, [
+      { champ: "nom", valeur: dto.name },
+      { champ: "description", valeur: dto.description },
+      { champ: "catégorie", valeur: dto.category },
+    ]);
+
     const shop = await this.prisma.shop.findUnique({
       where: { id: shopId },
       select: { gestionBouquet: { select: { name: true, maxActiveProducts: true } } },
@@ -236,6 +428,12 @@ export class CatalogService implements OnModuleInit {
    * un id.
    */
   async updateProduct(shopId: string, productId: string, dto: UpdateProductDto) {
+    await this.verifierContenuLicite(shopId, [
+      { champ: "nom", valeur: dto.name },
+      { champ: "description", valeur: dto.description },
+      { champ: "catégorie", valeur: dto.category },
+    ]);
+
     const produit = await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
     return this.prisma.product.update({
       where: { id: produit.id },
@@ -303,6 +501,11 @@ export class CatalogService implements OnModuleInit {
    * avec le principe d'unicité du stock décrit dans ARCHITECTURE.md.
    */
   async addVariant(shopId: string, productId: string, dto: CreateVariantDto) {
+    await this.verifierContenuLicite(shopId, [
+      { champ: "taille", valeur: dto.size },
+      { champ: "couleur", valeur: dto.color },
+    ]);
+
     // Même principe que updateVariant (incident du 20 oct. 2026) : un prix
     // barré invalide à la création doit être signalé, jamais ignoré en
     // silence.
@@ -354,6 +557,11 @@ export class CatalogService implements OnModuleInit {
    * variante d'une autre).
    */
   async updateVariant(shopId: string, productId: string, variantId: string, dto: UpdateVariantDto) {
+    await this.verifierContenuLicite(shopId, [
+      { champ: "taille", valeur: dto.size },
+      { champ: "couleur", valeur: dto.color },
+    ]);
+
     const variante = await this.prisma.variant.findFirstOrThrow({
       where: { id: variantId, productId, product: { shopId } },
     });
@@ -479,6 +687,11 @@ export class CatalogService implements OnModuleInit {
    * un vrai lot, et ça reste à juste titre réservé au bouquet supérieur.
    */
   async addVariantsBulk(shopId: string, productId: string, dto: CreateVariantsBulkDto) {
+    await this.verifierContenuLicite(shopId, [
+      { champ: "taille", valeur: dto.sizes?.join(", ") },
+      { champ: "couleur", valeur: dto.colors?.join(", ") },
+    ]);
+
     await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
 
     const tailles = dto.sizes?.length ? dto.sizes : [null];

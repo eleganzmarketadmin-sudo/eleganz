@@ -14,6 +14,7 @@ import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { OrdersModule } from "./orders/orders.module";
 import { DeliveryModule } from "./delivery/delivery.module";
 import { DisputesModule } from "./disputes/disputes.module";
+import { ModerationModule } from "./moderation/moderation.module";
 import { BillingModule } from "./billing/billing.module";
 import { AdminCockpitModule } from "./admin-cockpit/admin-cockpit.module";
 import { AdminTeamModule } from "./admin-team/admin-team.module";
@@ -64,6 +65,7 @@ import { AdminAuditModule } from "./admin-audit/admin-audit.module";
     OrdersModule,
     DeliveryModule,
     DisputesModule,
+    ModerationModule,
     BillingModule,
     AdminCockpitModule,
     AdminTeamModule,

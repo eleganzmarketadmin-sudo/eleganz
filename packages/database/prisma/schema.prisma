@@ -363,6 +363,14 @@ enum MenuAdmin {
   // menuAdminParDefaut, où seuls ADMIN_SUPER (accès total) et ADMIN_AUDITOR
   // (rôle dédié à ce type de consultation) le reçoivent.
   AUDIT
+  // 24 nov. 2026 — Modération du contenu (contrôle anti-blanchiment/produits
+  // illicites à la création d'articles, voir ShopModerationFlag plus bas).
+  // Volontairement PAS accordé par défaut à tous les rôles admin (comme
+  // AUDIT) : accordé explicitement à ADMIN_OPS/ADMIN_SUPPORT (déjà en
+  // charge de LITIGES, donc de la relation avec les boutiques au
+  // quotidien) et ADMIN_AUDITOR (rôle de contrôle/conformité) dans
+  // menuAdminParDefaut.
+  MODERATION
 }
 
 model User {
@@ -709,6 +717,10 @@ model Shop {
   // Demandes de crédit numérotées soumises auprès d'institutions
   // partenaires (16 nov. 2026) — voir le commentaire sur DemandeCredit.
   demandesCredit    DemandeCredit[]
+
+  // Signalements anti-blanchiment/produits illicites (24 nov. 2026) — voir
+  // le commentaire sur ShopModerationFlag plus bas.
+  moderationFlags ShopModerationFlag[]
 }
 
 model ShopStaff {
@@ -1523,6 +1535,59 @@ model Dispute {
   status      String    @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED
   resolution  String?
   createdAt   DateTime  @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// MODÉRATION — contrôle de saisie à la création/modification d'un article
+// (24 nov. 2026, retour propriétaire : "mettre en place le controle de
+// saisie ... pour eviter de devenir une plateforme de blanchiment des
+// capitaux et de vente des produits illicites ... et ne pas permettre de
+// créer de tels produits et signaler la boutique à l'administration").
+//
+// Volontairement PAS une suspension automatique de la boutique : le
+// propriétaire demande de "signaler" (ShopModerationFlag, consultable par
+// l'admin), jamais de "suspendre" — ShopStatus.SUSPENDED (voir plus haut)
+// reste un acte discrétionnaire de l'admin, qui peut choisir d'y recourir
+// APRÈS avoir examiné le signalement, ou de le classer sans suite si c'est
+// un faux positif (ex. un article "chanvre" à usage cosmétique légitime —
+// une simple recherche de termes ne peut jamais remplacer un examen humain).
+// La création elle-même est bloquée immédiatement (CatalogService), avant
+// tout signalement.
+//
+// Liste de termes tenue en base (ModerationBlockedTerm) plutôt que codée en
+// dur dans le service : modifiable par l'admin sans redéploiement depuis
+// /admin/moderation, et extensible à une langue locale (lingala, kikongo,
+// tshiluba...) au fur et à mesure des signalements réels plutôt que sur une
+// traduction supposée. Seedée au démarrage avec un socle en
+// français/anglais/espagnol/arabe/portugais (voir CatalogService.
+// onModuleInit) ; jamais réécrasée ensuite une fois la table non vide.
+model ModerationBlockedTerm {
+  id        String   @id @default(uuid())
+  term      String   @unique
+  createdAt DateTime @default(now())
+}
+
+enum ShopModerationFlagStatus {
+  OUVERT
+  TRAITE
+  IGNORE
+}
+
+model ShopModerationFlag {
+  id           String                    @id @default(uuid())
+  shopId       String
+  shop         Shop                      @relation(fields: [shopId], references: [id])
+  status       ShopModerationFlagStatus  @default(OUVERT)
+  motDetecte   String
+  champ        String // "nom" | "description" | "catégorie" | "taille" | "couleur"
+  valeurSaisie String                    @db.Text
+  createdAt    DateTime                  @default(now())
+  resolvedAt   DateTime?
+  resolvedByUserId String?
+  resolutionNote   String?               @db.Text
+
+  @@index([shopId, status])
+  @@index([status, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -3449,6 +3514,8 @@ enum NotificationType {
   LIVREUR_DEMANDE_REPONDUE // la boutique est notifiée de l'acceptation/refus
   LIVRAISON_ASSIGNEE // le livreur est notifié qu'une boutique lui a affecté une livraison (manquait, retour client du 20 nov. 2026)
   LIVRAISON_ETAPE_MISE_A_JOUR // client et boutique notifiés à chaque étape franchie par le livreur
+
+  CONTENU_SUSPECT_SIGNALE // admins notifiés : article refusé à la création (terme interdit), voir ShopModerationFlag
 
   AUTRE
 }

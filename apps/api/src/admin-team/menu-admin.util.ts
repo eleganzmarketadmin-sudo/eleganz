@@ -46,6 +46,7 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.LITIGES,
         MenuAdmin.RELEVES,
         MenuAdmin.BOUTIQUES,
+        MenuAdmin.MODERATION,
         MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_LOGISTICS:
@@ -60,13 +61,23 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.MESSAGERIE,
         MenuAdmin.SUIVI_COMMANDES,
         MenuAdmin.EXPERTS,
+        MenuAdmin.MODERATION,
         MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_AUDITOR:
       // AUDIT (journal d'audit interne, 18 nov. 2026) : ce rôle existe
       // précisément pour ce type de consultation — voir le commentaire sur
-      // MenuAdmin.AUDIT dans schema.prisma.
-      return [MenuAdmin.PILOTAGE, MenuAdmin.FINANCE, MenuAdmin.FACTURES, MenuAdmin.RELEVES, MenuAdmin.AUDIT, MenuAdmin.CENTRE_AIDE];
+      // MenuAdmin.AUDIT dans schema.prisma. MODERATION (24 nov. 2026) :
+      // même logique de contrôle/conformité, voir son propre commentaire.
+      return [
+        MenuAdmin.PILOTAGE,
+        MenuAdmin.FINANCE,
+        MenuAdmin.FACTURES,
+        MenuAdmin.RELEVES,
+        MenuAdmin.AUDIT,
+        MenuAdmin.MODERATION,
+        MenuAdmin.CENTRE_AIDE,
+      ];
     default:
       return [];
   }

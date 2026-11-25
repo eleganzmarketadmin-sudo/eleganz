@@ -48,16 +48,17 @@ function estGroupe(e: LienSimple | GroupeNav): e is GroupeNav {
 // admin) fait foi. Équipe admin et Paramètres plateforme restent réservés
 // à ADMIN_SUPER par défaut.
 const MENUS_PAR_ROLE_ADMIN: Record<string, string[]> = {
-  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "AUDIT", "CENTRE_AIDE"],
+  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "AUDIT", "MODERATION", "CENTRE_AIDE"],
   ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES", "CENTRE_AIDE"],
   ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES", "CENTRE_AIDE"],
-  ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES", "CENTRE_AIDE"],
+  ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES", "MODERATION", "CENTRE_AIDE"],
   ADMIN_LOGISTICS: ["PILOTAGE", "LIVREURS", "SUIVI_COMMANDES", "CENTRE_AIDE"],
   ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE", "CENTRE_AIDE"],
-  ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS", "CENTRE_AIDE"],
+  ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS", "MODERATION", "CENTRE_AIDE"],
   // AUDIT (journal d'audit interne, 18 nov. 2026) : ce rôle existe
   // précisément pour ce type de consultation — voir menu-admin.util.ts.
-  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES", "AUDIT", "CENTRE_AIDE"],
+  // MODERATION (24 nov. 2026) : même logique de contrôle/conformité.
+  ADMIN_AUDITOR: ["PILOTAGE", "FINANCE", "FACTURES", "RELEVES", "AUDIT", "MODERATION", "CENTRE_AIDE"],
 };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -92,6 +93,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/suivi-commandes", label: t("nav_suiviCommandes"), menu: "SUIVI_COMMANDES" },
     { href: "/admin/litiges", label: t("nav_litiges"), menu: "LITIGES" },
     { href: "/admin/experts", label: t("nav_experts"), menu: "EXPERTS" },
+    { href: "/admin/moderation", label: t("nav_moderation"), menu: "MODERATION" },
   ];
   const GROUPE_COMPTES: LienSimple[] = [
     { href: "/admin/utilisateurs", label: t("nav_utilisateurs"), menu: "UTILISATEURS" },
