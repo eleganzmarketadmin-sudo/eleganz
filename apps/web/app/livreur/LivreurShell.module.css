@@ -1,5 +1,6 @@
 .cadre {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--color-toile);
@@ -170,7 +171,11 @@
   margin: 0 auto;
 }
 
-@media (max-width: 560px) {
+/* 25 nov. 2026 — même correctif qu'à l'identique sur GestionShell.module.css
+   (voir son commentaire détaillé) : ajout de la condition orientation
+   paysage + hauteur <= 500px, pour que ce même repli mobile se déclenche
+   aussi sur téléphone en paysage, pas seulement en portrait étroit. */
+@media (max-width: 560px), (orientation: landscape) and (max-height: 500px) {
   .entete {
     flex-wrap: wrap;
     gap: var(--espace-2);

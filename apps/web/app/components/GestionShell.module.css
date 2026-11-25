@@ -1,5 +1,6 @@
 .cadre {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--color-toile);
@@ -202,7 +203,19 @@
   margin: 0 auto;
 }
 
-@media (max-width: 560px) {
+/* 25 nov. 2026 (retour propriétaire : en mode paysage sur petit écran,
+   l'en-tête/la barre de menus occupent la moitié de l'écran) — cette
+   condition était jusqu'ici uniquement basée sur la largeur (560px), qui ne
+   se déclenche presque jamais en paysage téléphone (la largeur y dépasse
+   souvent 560px alors que la hauteur reste très réduite). On ajoute une
+   seconde condition, combinée par une virgule CSS (= OU logique) :
+   orientation paysage ET hauteur <= 500px, choisie pour couvrir les hauteurs
+   usuelles d'un téléphone en paysage (~320-430px) sans déclencher sur
+   tablette (~768px+) ni sur un écran de bureau. Les deux conditions
+   déclenchent exactement le même repli mobile qu'en portrait étroit — aucun
+   comportement existant n'est modifié, seule la plage de déclenchement
+   s'élargit. */
+@media (max-width: 560px), (orientation: landscape) and (max-height: 500px) {
   .entete {
     flex-wrap: wrap;
     gap: var(--espace-2);
