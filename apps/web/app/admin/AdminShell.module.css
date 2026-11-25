@@ -152,6 +152,12 @@
      long pour tenir sur une seule ligne) — voir le commentaire détaillé dans
      GestionShell.module.css. Sans effet quand tout tient sur une ligne. */
   margin-left: auto;
+  /* 25 nov. 2026 : contient maintenant aussi la cloche (toujours montée),
+     à côté du déclencheur "⋮" — voir le commentaire détaillé dans
+     GestionShell.module.css. */
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
 }
 
 .boutonOptionsMobile {
@@ -185,29 +191,7 @@
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
-    /* Ancre pour .badgeOptionsMobile ci-dessous. */
     position: relative;
-  }
-
-  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
-     les 🔔" : la cloche de notifications vit maintenant dans le volet
-     "options" replié, donc son badge n'est plus visible tant que la
-     personne n'a pas ouvert ce volet. Relais du même compteur (voir
-     NotificationBell.onNonLuesChange, un seul sondage, pas un doublon) sur
-     le bouton "⋮" lui-même — même habillage que .badge dans
-     NotificationBell.module.css, pour rester visuellement identique. */
-  .badgeOptionsMobile {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: var(--color-flamme);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 2px 4px;
-    min-width: 14px;
-    text-align: center;
   }
 
   .enteteActions {

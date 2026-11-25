@@ -138,10 +138,6 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   // modifie, ce volet ne fait que les regrouper visuellement.
   const [optionsOuvert, setOptionsOuvert] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
-  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
-  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
-  // AdminShell.tsx, même mécanisme à l'identique).
-  const [notifNonLues, setNotifNonLues] = useState(0);
 
   // Repli automatique au changement de page — même raison que pour navOuvert
   // (ex. après un clic sur "Accueil" ou "Se déconnecter" qui navigue).
@@ -192,11 +188,23 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className={styles.optionsBloc} ref={optionsRef}>
+            {/* 25 nov. 2026, retour propriétaire : "sortir la cloche de
+                notification des 3 points ... et la garder toujours
+                visible" — la cloche vivait jusqu'ici À L'INTÉRIEUR du
+                volet "options" replié (voir .droite/.droiteOuvert
+                ci-dessous), donc invisible sur téléphone tant qu'on ne
+                l'ouvrait pas (un badge sur le bouton "⋮" relayait le
+                compteur, en pis-aller). Elle est maintenant montée ICI,
+                hors du volet, toujours visible quelle que soit la largeur
+                d'écran — même traitement que le panier sur la Marketplace,
+                jamais caché derrière un repli. Une seule instance (pas de
+                doublon dans le volet) : NotificationBell gère déjà son
+                propre sondage et son propre panneau déroulant. */}
+            <NotificationBell />
             {/* Bouton de repli du bloc options, téléphone uniquement (voir
                 .boutonOptionsMobile) — distinct du bouton ☰ de la barre
                 d'onglets plus bas : celui-ci replie l'autre moitié de
-                l'en-tête (notifications, langue, devise, thème,
-                déconnexion...). */}
+                l'en-tête (langue, devise, thème, déconnexion...). */}
             <button
               type="button"
               className={styles.boutonOptionsMobile}
@@ -210,9 +218,6 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
-              {notifNonLues > 0 && (
-                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
-              )}
             </button>
             <div id="gestion-options" className={`${styles.droite} ${optionsOuvert ? styles.droiteOuvert : ""}`}>
               <AccueilLien etiquette />
@@ -238,7 +243,6 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   </select>
                 </div>
               )}
-              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

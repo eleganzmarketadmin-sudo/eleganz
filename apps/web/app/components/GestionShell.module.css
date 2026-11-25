@@ -183,12 +183,24 @@
   display: none;
 }
 
-/* Bouton de repli du bloc options (notifications, langue, devise, thème,
-   déconnexion...), téléphone uniquement — voir le commentaire détaillé sur
+/* Bouton de repli du bloc options (langue, devise, thème, déconnexion...),
+   téléphone uniquement — voir le commentaire détaillé sur
    .droite/.droiteOuvert dans le point de rupture mobile ci-dessous.
    Desktop/tablette : masqué, .droite reste affichée comme avant. */
 .boutonOptionsMobile {
   display: none;
+}
+
+/* 25 nov. 2026 (retour propriétaire : cloche toujours visible, jamais
+   cachée derrière le "⋮") — .optionsBloc contient maintenant la cloche
+   (toujours montée) À CÔTÉ du déclencheur "⋮"/volet replié, plutôt que de
+   ne contenir que ce dernier : il lui faut donc sa propre mise en page en
+   rangée, à toutes les largeurs (la media query plus bas n'ajoute que le
+   recalage à droite, jamais ce display). */
+.optionsBloc {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
 }
 
 .contenu {
@@ -263,23 +275,6 @@
     line-height: 1;
     cursor: pointer;
     position: relative;
-  }
-
-  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
-     les 🔔" (voir le commentaire détaillé dans AdminShell.module.css, même
-     mécanisme à l'identique). */
-  .badgeOptionsMobile {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: var(--color-flamme);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 2px 4px;
-    min-width: 14px;
-    text-align: center;
   }
   .droite {
     display: none;

@@ -62,10 +62,6 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
   // modules", voir le commentaire détaillé dans GestionShell.tsx).
   const nav = useVoletRepliable(pathname);
   const options = useVoletRepliable(pathname);
-  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
-  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
-  // AdminShell.tsx, même mécanisme à l'identique).
-  const [notifNonLues, setNotifNonLues] = useState(0);
 
   // Indication (sans bloquer la navigation, le serveur reste la seule
   // véritable barrière — voir ComptableService.agenda/exportDossierFinancement)
@@ -146,6 +142,10 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <div className={styles.optionsBloc} ref={options.ref}>
+            {/* 25 nov. 2026, retour propriétaire : cloche toujours visible,
+                hors du volet replié — voir le commentaire détaillé dans
+                GestionShell.tsx, même mécanisme à l'identique. */}
+            <NotificationBell />
             <button
               type="button"
               className={styles.boutonOptionsMobile}
@@ -159,9 +159,6 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
-              {notifNonLues > 0 && (
-                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
-              )}
             </button>
             <div id="comptable-options" className={`${styles.enteteActions} ${options.ouvert ? styles.enteteActionsOuvert : ""}`}>
               <AccueilLien etiquette />
@@ -170,7 +167,6 @@ function ComptableShellInterieur({ children }: { children: React.ReactNode }) {
                   {nombreEnAttente} {t("horsLigne_enAttente")}
                 </button>
               )}
-              <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
               <div className={styles.separateurOptions} />
               <div className={styles.groupePreferences}>
                 <span className={styles.titreSection}>{t("gshell_preferences")}</span>

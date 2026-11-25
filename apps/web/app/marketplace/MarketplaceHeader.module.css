@@ -192,6 +192,21 @@
   order: 3;
 }
 
+/* 25 nov. 2026, retour propriétaire : cloche toujours visible, hors du volet
+   replié — voir le commentaire détaillé dans MarketplaceHeader.tsx. Élément
+   flex à part entière (pas `display: contents` comme .grpOptionsA/B) puisque
+   NotificationBell n'a pas besoin d'être désassemblé en plusieurs éléments :
+   un seul `order`, identique à .panier juste au-dessus, suffit à la garder
+   juste à côté du panier — même « ligne visuelle d'origine » que les autres
+   éléments de `.liens`, et place à l'identique sur toute largeur d'écran
+   (y compris en-dessous de 560px, où .liens reste, lui, protégé par le
+   correctif margin-left:auto ci-dessous). */
+.clocheToujoursVisible {
+  display: flex;
+  align-items: center;
+  order: 3;
+}
+
 .compteur {
   background: var(--color-magenta);
   color: #fff;
@@ -269,6 +284,25 @@
 }
 
 @media (max-width: 560px) {
+  /* 25 nov. 2026 (retour propriétaire : "le menu se trouve à gauche... en y
+     cliquant on ne sait pas voir les options", capture à l'appui) — cause
+     trouvée et reproduite : `.liens` contient ici panier + bouton "⋮" (la
+     nav principale et le volet options disparaissent/se replient en-dessous
+     de ce seuil). Quand la marque ("ELEGANZ Market" + logo) est trop large
+     pour tenir sur la même ligne, `.liens` passe seul sur sa propre ligne —
+     et sur une ligne flex à un seul élément, `justify-content: space-between`
+     (sur .entete) ne peut rien répartir : l'élément reste au bord GAUCHE au
+     lieu du bord droit attendu. Le volet qui s'ancre en `right: 0` sur
+     `.liens` hérite alors de cette mauvaise position. Même bug, même
+     correctif que GestionShell/AdminShell/ComptableShell/InstitutionShell/
+     LivreurShell appliquent déjà sur leur `.optionsBloc` (voir leur
+     commentaire détaillé) — ici sur `.liens` entier, puisque panier et
+     options y partagent la même ligne. Sans effet quand tout tient sur une
+     ligne (résultat déjà identique à .entete's justify-content). */
+  .liens {
+    margin-left: auto;
+  }
+
   .boutonOptionsMobile {
     display: inline-flex;
     align-items: center;
@@ -284,23 +318,6 @@
     line-height: 1;
     cursor: pointer;
     position: relative;
-  }
-
-  /* 21 nov. 2026, retour propriétaire — "il faut aller dérouler pour voir
-     les 🔔" (voir le commentaire détaillé dans AdminShell.module.css, même
-     mécanisme à l'identique). */
-  .badgeOptionsMobile {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: var(--color-flamme);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 2px 4px;
-    min-width: 14px;
-    text-align: center;
   }
 
   .grpNavPrincipal {

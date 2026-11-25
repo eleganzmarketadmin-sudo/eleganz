@@ -120,10 +120,6 @@ export function MarketplaceHeader() {
   // par construction.
   const nav = useVoletRepliable(pathname);
   const options = useVoletRepliable(pathname);
-  // 21 nov. 2026, retour propriétaire : relais du compteur de notifications
-  // non lues sur le bouton "⋮" (voir le commentaire détaillé dans
-  // AdminShell.tsx, même mécanisme à l'identique).
-  const [notifNonLues, setNotifNonLues] = useState(0);
 
   return (
     // Enveloppe sticky (retour client du 12 nov. 2026 : "l'en-tête doit
@@ -179,10 +175,7 @@ export function MarketplaceHeader() {
               </div>
               <div className={styles.grpOptionsB}>
                 {user ? (
-                  <>
-                    <NotificationBell etiquette onNonLuesChange={setNotifNonLues} />
-                    <MenuCompte />
-                  </>
+                  <MenuCompte />
                 ) : (
                   <Link href="/marketplace/compte" className={styles.connexionEtiquette} onClick={() => options.setOuvert(false)}>
                     {t("action_seConnecter")}
@@ -204,11 +197,20 @@ export function MarketplaceHeader() {
               title={t("gshell_options")}
             >
               <span aria-hidden="true">⋮</span>
-              {notifNonLues > 0 && (
-                <span className={styles.badgeOptionsMobile}>{notifNonLues > 9 ? "9+" : notifNonLues}</span>
-              )}
             </button>
           </div>
+
+          {/* 25 nov. 2026, retour propriétaire : "sortir la cloche de
+              notification des 3 points ... et la garder toujours visible" —
+              la cloche vivait jusqu'ici À L'INTÉRIEUR du volet "options"
+              replié ci-dessus (grpOptionsB), donc invisible sur téléphone
+              tant qu'on ne l'ouvrait pas. Même traitement que le panier
+              juste en dessous : toujours visible, jamais dans un volet. */}
+          {user && (
+            <div className={styles.clocheToujoursVisible}>
+              <NotificationBell />
+            </div>
+          )}
 
           {/* Panier — toujours visible, même replié (action commerciale
               principale), jamais dans un volet. */}
