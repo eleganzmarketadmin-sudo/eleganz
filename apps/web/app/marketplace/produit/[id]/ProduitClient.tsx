@@ -5,7 +5,7 @@ import { api } from "../../../lib/api";
 import { useCart } from "../../../lib/cart-context";
 import { AvisProduit } from "./AvisProduit";
 import { RetourLien } from "../../../components/RetourLien";
-import { PrixPromo, RubanPromo, RubanNouveau } from "../../../components/PrixPromo";
+import { PrixPromo, RubanPromo, RubanNouveau, EtiquettePaiementEchelonne } from "../../../components/PrixPromo";
 import { ChampQuantite } from "../../../components/ChampQuantite";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import { nomPays } from "../../../lib/i18n/nomPays";
@@ -178,6 +178,12 @@ export default function ProduitClient({ id }: { id: string }) {
               compareAtPrice={quantite === 1 ? variante.compareAtPrice : null}
               currency={variante.currency}
             />
+          </div>
+        )}
+
+        {produit.paiementEchelonneActif && (
+          <div style={{ marginBottom: "16px" }}>
+            <EtiquettePaiementEchelonne nombreTranches={produit.paiementEchelonneNombreTranches} />
           </div>
         )}
 

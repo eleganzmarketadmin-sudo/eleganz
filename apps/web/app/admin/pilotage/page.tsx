@@ -85,6 +85,22 @@ interface Dashboard {
     modules: ModuleRevenu[];
   };
   operations: { openDisputes: number };
+  // Paiement échelonné (26 nov. 2026) — purement informatif, voir
+  // AdminCockpitService.executiveDashboard. ELEGANZ n'agit jamais sur ces
+  // chiffres (pas de commission sur l'intérêt, pas de moteur de relance) ;
+  // donne juste à l'admin une vue d'ensemble de l'usage réel de l'option,
+  // y compris quand l'interrupteur global est coupé.
+  paiementEchelonne: {
+    interrupteurActif: boolean;
+    nombreArticlesEligibles: number;
+    nombreEchelonnementsEnCours: number;
+    nombreEchelonnementsTotal: number;
+    montantEnAttenteTotal: number;
+    nombreTranchesEnAttente: number;
+    montantEnRetardTotal: number;
+    nombreTranchesEnRetard: number;
+    montantPercuTotal: number;
+  };
   // Vue consolidée du risque institutions (18 nov. 2026) — purement
   // informatif, voir AdminCockpitService.executiveDashboard. ELEGANZ
   // n'agit jamais sur ces chiffres, chaque institution reste seule
@@ -407,6 +423,58 @@ function PilotageContent() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className={styles.section}>
+        <h2 className={styles.sectionTitre}>{t("admpilot_echelonneTitre")}</h2>
+        <p className={styles.noteRevenu}>{t("admpilot_echelonneNote")}</p>
+        <div className={styles.grille}>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneTitre")}</span>
+            <span className={styles.carteValeur}>
+              <StatusTag
+                label={
+                  dashboard.paiementEchelonne.interrupteurActif
+                    ? t("admpilot_echelonneActif")
+                    : t("admpilot_echelonneInactif")
+                }
+                humeur={dashboard.paiementEchelonne.interrupteurActif ? "paye" : "neutre"}
+              />
+            </span>
+          </div>
+          <div className={`${styles.carte} ${styles.carteCobalt}`}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneArticlesEligibles")}</span>
+            <span className={styles.carteValeur}>
+              <CompteurAnime valeur={dashboard.paiementEchelonne.nombreArticlesEligibles} />
+            </span>
+          </div>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneEnCours")}</span>
+            <span className={styles.carteValeur}>
+              <CompteurAnime valeur={dashboard.paiementEchelonne.nombreEchelonnementsEnCours} />
+            </span>
+          </div>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneTotal")}</span>
+            <span className={styles.carteValeur}>
+              <CompteurAnime valeur={dashboard.paiementEchelonne.nombreEchelonnementsTotal} />
+            </span>
+          </div>
+          <div className={styles.carte}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneMontantEnAttente")}</span>
+            <span className={styles.carteValeur}>{formatMoney(dashboard.paiementEchelonne.montantEnAttenteTotal)}</span>
+          </div>
+          <div
+            className={`${styles.carte} ${dashboard.paiementEchelonne.montantEnRetardTotal > 0 ? styles.carteFlamme : ""}`}
+          >
+            <span className={styles.carteLabel}>{t("admpilot_echelonneMontantEnRetard")}</span>
+            <span className={styles.carteValeur}>{formatMoney(dashboard.paiementEchelonne.montantEnRetardTotal)}</span>
+          </div>
+          <div className={`${styles.carte} ${styles.carteOr}`}>
+            <span className={styles.carteLabel}>{t("admpilot_echelonneMontantPercu")}</span>
+            <span className={styles.carteValeur}>{formatMoney(dashboard.paiementEchelonne.montantPercuTotal)}</span>
+          </div>
+        </div>
       </div>
 
       <div className={styles.section}>

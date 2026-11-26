@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
-import { PrixPromo, RubanPromo, RubanNouveau } from "../components/PrixPromo";
+import { PrixPromo, RubanPromo, RubanNouveau, EtiquettePaiementEchelonne } from "../components/PrixPromo";
 import { useLocale } from "../lib/i18n/LocaleContext";
 import { nomPays } from "../lib/i18n/nomPays";
 import styles from "./page.module.css";
@@ -27,6 +27,11 @@ interface Produit {
   isNewArrival: boolean;
   shop: { id: string; name: string; slug: string };
   variants: Variant[];
+  // Paiement échelonné (26 nov. 2026, correctif de signalement) — voir
+  // EtiquettePaiementEchelonne dans components/PrixPromo.tsx. Déjà masqué à
+  // `false`/`null` par l'API publique si l'interrupteur global est désactivé.
+  paiementEchelonneActif: boolean;
+  paiementEchelonneNombreTranches?: number | null;
 }
 
 interface Pays {
@@ -406,6 +411,14 @@ function MarketplaceContenu() {
                       sellPrice={Number(moinsCher.sellPrice)}
                       compareAtPrice={moinsCher.compareAtPrice}
                       currency={moinsCher.currency}
+                      taille="petite"
+                    />
+                  </div>
+                )}
+                {produit.paiementEchelonneActif && (
+                  <div style={{ marginTop: "4px" }}>
+                    <EtiquettePaiementEchelonne
+                      nombreTranches={produit.paiementEchelonneNombreTranches}
                       taille="petite"
                     />
                   </div>

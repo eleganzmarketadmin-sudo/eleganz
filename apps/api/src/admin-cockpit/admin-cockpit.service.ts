@@ -36,6 +36,13 @@ export class AdminCockpitService {
       institutionsRisqueParClassification,
       institutionsRisqueParInstitution,
       institutionsNoms,
+      echelonneInterrupteur,
+      echelonneArticlesEligibles,
+      echelonneAchatsTotal,
+      echelonneAchatsEnCours,
+      echelonneTranchesEnAttente,
+      echelonneTranchesEnRetard,
+      echelonneTranchesPercues,
     ] = await Promise.all([
       this.prisma.shop.groupBy({ by: ["status"], _count: { _all: true } }),
       this.prisma.shop.count(),
@@ -89,6 +96,35 @@ export class AdminCockpitService {
         _sum: { soldeRestant: true, provisionRequise: true },
       }),
       this.prisma.institution.findMany({ select: { id: true, name: true } }),
+      // Paiement échelonné (26 nov. 2026, correctif de signalement — "aucun
+      // suivi côté Centre de pilotage pour cette fonctionnalité") — même
+      // esprit que la vue risque institutions ci-dessus : purement
+      // informatif, ELEGANZ n'agit jamais sur ces chiffres (pas de
+      // commission sur l'intérêt, pas de moteur de relance). Donne juste à
+      // l'admin une vue d'ensemble de l'usage réel de l'option sur la
+      // Marketplace, y compris quand l'interrupteur global est coupé (sinon
+      // l'admin ne pourrait jamais savoir ce qu'il réactiverait).
+      this.prisma.platformSettings.findUnique({
+        where: { id: "platform" },
+        select: { paiementEchelonneActivePlateforme: true },
+      }),
+      this.prisma.product.count({ where: { paiementEchelonneActif: true } }),
+      this.prisma.echelonnementAchat.count(),
+      this.prisma.echelonnementAchat.count({ where: { tranches: { some: { statut: "A_PAYER" } } } }),
+      this.prisma.echelonnementTranche.aggregate({
+        where: { statut: "A_PAYER" },
+        _sum: { montant: true },
+        _count: { _all: true },
+      }),
+      // "En retard" dérivé à la lecture (dateEcheance < maintenant), jamais
+      // stocké — même convention que Invoice.OVERDUE et que l'affichage déjà
+      // fait côté boutique/acheteur pour ces mêmes tranches.
+      this.prisma.echelonnementTranche.aggregate({
+        where: { statut: "A_PAYER", dateEcheance: { lt: maintenant } },
+        _sum: { montant: true },
+        _count: { _all: true },
+      }),
+      this.prisma.echelonnementTranche.aggregate({ where: { statut: "PAYEE" }, _sum: { montant: true } }),
     ]);
 
     // Revenu ELEGANZ par nature (frais d'ouverture, abonnements, crédits
@@ -258,6 +294,19 @@ export class AdminCockpitService {
         parInstitution: Array.from(parInstitutionMap.values()).sort(
           (a, b) => b.soldeRestant - a.soldeRestant,
         ),
+      },
+      // Paiement échelonné (26 nov. 2026) — voir commentaire sur la requête
+      // ci-dessus. Purement informatif.
+      paiementEchelonne: {
+        interrupteurActif: echelonneInterrupteur?.paiementEchelonneActivePlateforme ?? false,
+        nombreArticlesEligibles: echelonneArticlesEligibles,
+        nombreEchelonnementsEnCours: echelonneAchatsEnCours,
+        nombreEchelonnementsTotal: echelonneAchatsTotal,
+        montantEnAttenteTotal: Number(echelonneTranchesEnAttente._sum.montant ?? 0),
+        nombreTranchesEnAttente: echelonneTranchesEnAttente._count._all,
+        montantEnRetardTotal: Number(echelonneTranchesEnRetard._sum.montant ?? 0),
+        nombreTranchesEnRetard: echelonneTranchesEnRetard._count._all,
+        montantPercuTotal: Number(echelonneTranchesPercues._sum.montant ?? 0),
       },
       // Pas encore de données réelles : les modules IA (recherche visuelle,
       // studio publicitaire) ne sont pas encore implémentés (voir

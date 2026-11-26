@@ -137,3 +137,46 @@ export function RubanNouveau({ isNewArrival }: { isNewArrival?: boolean }) {
     </span>
   );
 }
+
+/**
+ * Étiquette "Paiement en N fois" (26 nov. 2026, correctif de signalement —
+ * "rien de visible côté acheteur ni même l'indication de ce mode de
+ * paiement possible sur ce produit") — posée à côté du prix, sur les trois
+ * surfaces qui affichent un article (listing, page boutique, fiche
+ * produit). Volontairement un discret contour (pas un ruban plein comme
+ * PROMO/NOUVEAU, déjà posés sur l'image) : le choix détaillé — tranches,
+ * taux — reste réservé au panier/à la commande, ce badge ne fait que
+ * signaler que l'option existe sur cet article. `produit.paiementEchelonneActif`
+ * est déjà masqué à `false` par l'API publique si l'interrupteur global
+ * (Centre de pilotage) est désactivé — ce composant n'a donc qu'à vérifier
+ * `nombreTranches`, jamais besoin de relire le réglage lui-même.
+ */
+export function EtiquettePaiementEchelonne({
+  nombreTranches,
+  taille = "normale",
+}: {
+  nombreTranches?: number | null;
+  taille?: "normale" | "petite";
+}) {
+  const { t } = useLocale();
+  if (!nombreTranches) return null;
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        background: "rgba(37, 99, 235, 0.1)",
+        color: "var(--color-cobalt, #2563eb)",
+        border: "1px solid var(--color-cobalt, #2563eb)",
+        borderRadius: "4px",
+        padding: taille === "petite" ? "1px 6px" : "2px 8px",
+        fontSize: taille === "petite" ? "0.7rem" : "0.75rem",
+        fontWeight: 600,
+        letterSpacing: "0.01em",
+      }}
+    >
+      {t("market_echelonneEtiquette").replace("{{n}}", String(nombreTranches))}
+    </span>
+  );
+}
