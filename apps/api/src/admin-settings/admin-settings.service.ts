@@ -72,6 +72,9 @@ export class AdminSettingsService {
         ...(dto.footerNote !== undefined && { footerNote: dto.footerNote || null }),
         ...(dto.photoSearchEnabled !== undefined && { photoSearchEnabled: dto.photoSearchEnabled }),
         ...(dto.adStudioEnabled !== undefined && { adStudioEnabled: dto.adStudioEnabled }),
+        ...(dto.paiementEchelonneActivePlateforme !== undefined && {
+          paiementEchelonneActivePlateforme: dto.paiementEchelonneActivePlateforme,
+        }),
         ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
         ...(dto.driverMonthlyFee !== undefined && { driverMonthlyFee: dto.driverMonthlyFee }),
         ...(dto.driverFreeMonths !== undefined && { driverFreeMonths: dto.driverFreeMonths }),
@@ -167,6 +170,11 @@ export class AdminSettingsService {
       photoSearchEnabled: settings.photoSearchEnabled,
       adStudioEnabled: settings.adStudioEnabled,
       chatWidgetEnabled: settings.chatWidgetEnabled,
+      // Paiement échelonné (26 nov. 2026) — interrupteur global lu
+      // publiquement par le panier/la commande Marketplace, pour savoir si
+      // l'option peut être proposée même quand l'article concerné l'a
+      // activée côté boutique (voir Product.paiementEchelonneActif).
+      paiementEchelonneActivePlateforme: settings.paiementEchelonneActivePlateforme,
     };
   }
 

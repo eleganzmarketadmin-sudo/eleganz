@@ -34,57 +34,67 @@ export class MarketplaceCatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async search(dto: SearchProductsDto) {
-    const produits = await this.prisma.product.findMany({
-      where: {
-        isPublished: true,
-        shop: {
-          isPubliclyListed: true,
-          status: { in: ["FREE_PERIOD", "ACTIVE"] },
-          // Filtre "livre chez moi" (prompt du 15 oct. 2026) — ne garde que
-          // les boutiques ayant déclaré cette ville comme zone de livraison.
-          ...(dto.cityId ? { deliveryZones: { some: { cityId: dto.cityId } } } : {}),
-          // Filtre "page boutique publique" (prompt du 15 oct. 2026, point 6).
-          ...(dto.shopSlug ? { slug: dto.shopSlug } : {}),
-        },
-        // Insensible à la casse (12 nov. 2026, retour client) — défensif :
-        // le référentiel ProductCategory impose la casse exacte à la
-        // création, mais rien n'empêche un ancien produit ou une future
-        // intégration externe d'écrire la même catégorie avec une casse
-        // différente ; autant que le filtre la retrouve quand même.
-        ...(dto.category ? { category: { equals: dto.category, mode: "insensitive" } } : {}),
-        ...(dto.q
-          ? {
-              OR: [
-                { name: { contains: dto.q, mode: "insensitive" } },
-                { description: { contains: dto.q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-        variants: {
-          some: {
-            stockQty: { gt: 0 },
-            ...(dto.size ? { size: dto.size } : {}),
-            ...(dto.color ? { color: dto.color } : {}),
-            ...(dto.minPrice != null ? { sellPrice: { gte: dto.minPrice } } : {}),
-            ...(dto.maxPrice != null ? { sellPrice: { lte: dto.maxPrice } } : {}),
+    const [produits, paiementEchelonneActifGlobalement] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          isPublished: true,
+          shop: {
+            isPubliclyListed: true,
+            status: { in: ["FREE_PERIOD", "ACTIVE"] },
+            // Filtre "livre chez moi" (prompt du 15 oct. 2026) — ne garde que
+            // les boutiques ayant déclaré cette ville comme zone de livraison.
+            ...(dto.cityId ? { deliveryZones: { some: { cityId: dto.cityId } } } : {}),
+            // Filtre "page boutique publique" (prompt du 15 oct. 2026, point 6).
+            ...(dto.shopSlug ? { slug: dto.shopSlug } : {}),
+          },
+          // Insensible à la casse (12 nov. 2026, retour client) — défensif :
+          // le référentiel ProductCategory impose la casse exacte à la
+          // création, mais rien n'empêche un ancien produit ou une future
+          // intégration externe d'écrire la même catégorie avec une casse
+          // différente ; autant que le filtre la retrouve quand même.
+          ...(dto.category ? { category: { equals: dto.category, mode: "insensitive" } } : {}),
+          ...(dto.q
+            ? {
+                OR: [
+                  { name: { contains: dto.q, mode: "insensitive" } },
+                  { description: { contains: dto.q, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+          variants: {
+            some: {
+              stockQty: { gt: 0 },
+              ...(dto.size ? { size: dto.size } : {}),
+              ...(dto.color ? { color: dto.color } : {}),
+              ...(dto.minPrice != null ? { sellPrice: { gte: dto.minPrice } } : {}),
+              ...(dto.maxPrice != null ? { sellPrice: { lte: dto.maxPrice } } : {}),
+            },
           },
         },
-      },
-      include: {
-        variants: { where: { stockQty: { gt: 0 } }, select: VARIANT_PUBLIC_SELECT },
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            deliveryZones: { include: { country: true, city: true } },
+        include: {
+          variants: { where: { stockQty: { gt: 0 } }, select: VARIANT_PUBLIC_SELECT },
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              deliveryZones: { include: { country: true, city: true } },
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      }),
+      this.estPaiementEchelonneActifGlobalement(),
+    ]);
 
-    return this.appliquerPrioriteBoost(produits);
+    // Masquage AVANT le tri de priorité Boost (pas après) : évite de
+    // chaîner deux appels génériques l'un dans l'autre (ce qui, avec le
+    // client Prisma non régénéré de ce bac à sable, fait perdre à TS le
+    // type réel de `produits` au profit de la seule contrainte générique
+    // de `appliquerPrioriteBoost`) — `id`/`shopId`, dont elle a besoin,
+    // sont inchangés par le masquage.
+    const masques = this.masquerPaiementEchelonneSiDesactive(produits, paiementEchelonneActifGlobalement);
+    return this.appliquerPrioriteBoost(masques);
   }
 
   /**
@@ -126,19 +136,67 @@ export class MarketplaceCatalogService {
   }
 
   async findPublished(productId: string) {
-    return this.prisma.product.findFirstOrThrow({
-      where: { id: productId, isPublished: true, shop: { isPubliclyListed: true } },
-      include: {
-        variants: { select: VARIANT_PUBLIC_SELECT },
-        shop: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            deliveryZones: { include: { country: true, city: true } },
+    const [produit, paiementEchelonneActifGlobalement] = await Promise.all([
+      this.prisma.product.findFirstOrThrow({
+        where: { id: productId, isPublished: true, shop: { isPubliclyListed: true } },
+        include: {
+          variants: { select: VARIANT_PUBLIC_SELECT },
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              deliveryZones: { include: { country: true, city: true } },
+            },
           },
         },
-      },
+      }),
+      this.estPaiementEchelonneActifGlobalement(),
+    ]);
+    return this.masquerPaiementEchelonneSiDesactive([produit], paiementEchelonneActifGlobalement)[0];
+  }
+
+  /**
+   * Paiement échelonné (26 nov. 2026) — interrupteur global, voir le
+   * commentaire sur PlatformSettings.paiementEchelonneActivePlateforme dans
+   * schema.prisma. Lu directement ici (sans passer par
+   * AdminSettingsService.get(), qui CRÉE la ligne si elle est absente) :
+   * cette lecture est publique et à fort trafic (toute visite du
+   * catalogue/fiche produit), pas la peine de provoquer une écriture en
+   * base pour ça — `false` par défaut si la ligne n'existe pas encore
+   * (même valeur que le défaut du schéma).
+   */
+  private async estPaiementEchelonneActifGlobalement(): Promise<boolean> {
+    const reglages = await this.prisma.platformSettings.findUnique({
+      where: { id: "platform" },
+      select: { paiementEchelonneActivePlateforme: true },
     });
+    return reglages?.paiementEchelonneActivePlateforme ?? false;
+  }
+
+  /**
+   * Coupe-circuit (même principe que partout ailleurs pour ce chantier) :
+   * si l'interrupteur global est désactivé, le Marketplace ne doit JAMAIS
+   * laisser croire qu'un article est payable en tranches — même si la
+   * boutique a réglé l'option sur cet article. Le réglage reste en base,
+   * intact, prêt à redevenir visible dès que l'admin réactive
+   * l'interrupteur ; on ne fait ici que masquer la réponse publique.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- voir le
+  // commentaire ci-dessus : signature volontairement non générique pour ne
+  // pas enchaîner deux fonctions à contrainte générique (appliquerPrioriteBoost
+  // + celle-ci) sur une donnée Prisma non typée dans ce bac à sable, ce qui
+  // fait perdre à TS la vraie forme de l'objet au profit de la seule
+  // contrainte générique de l'appel le plus imbriqué — sans effet en
+  // production une fois le client Prisma régénéré (la forme réelle des
+  // objets ne change pas, seule l'annotation locale est assouplie).
+  private masquerPaiementEchelonneSiDesactive(produits: any[], actifGlobalement: boolean): any[] {
+    if (actifGlobalement) return produits;
+    return produits.map((p) => ({
+      ...p,
+      paiementEchelonneActif: false,
+      paiementEchelonneNombreTranches: null,
+      paiementEchelonneTauxInteretPct: null,
+    }));
   }
 }

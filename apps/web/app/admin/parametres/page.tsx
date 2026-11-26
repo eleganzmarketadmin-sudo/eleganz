@@ -33,6 +33,10 @@ interface PlatformSettings {
   // utilisée aujourd'hui uniquement pour les relances de facturation.
   notificationsWhatsappEnabled?: boolean;
   chatWidgetEnabled?: boolean;
+  // Paiement échelonné (26 nov. 2026) — interrupteur global, voir le
+  // commentaire sur PlatformSettings.paiementEchelonneActivePlateforme dans
+  // schema.prisma. `false` par défaut.
+  paiementEchelonneActivePlateforme?: boolean;
   // Identité fiscale d'ELEGANZ en tant que société (16 oct. 2026, commit
   // c819cb8) — champs déjà en base et déjà consommés par le dossier crédit
   // plateforme et le rapport annuel (admin-finance.service.ts,
@@ -74,6 +78,7 @@ type ChampTexte = Exclude<
   | "notificationsSmsEnabled"
   | "notificationsWhatsappEnabled"
   | "chatWidgetEnabled"
+  | "paiementEchelonneActivePlateforme"
 >;
 
 const CLES_CANAUX_NOTIFICATION: {
@@ -597,6 +602,33 @@ function ParametresContent() {
           <div>
             <div className={styles.basculeLabel}>{t("admparam_afficherBulleChat")}</div>
             <div className={styles.basculeDescription}>{t("admparam_activeeParDefaut")}</div>
+          </div>
+        </label>
+      </div>
+
+      <h2 className={styles.titreSection}>{t("admparam_titreEchelonne")}</h2>
+      <p className={styles.sousTitre}>{t("admparam_echelonneSousTitre")}</p>
+      <div className={styles.listeBascules}>
+        <label className={styles.bascule}>
+          <input
+            type="checkbox"
+            checked={Boolean(valeurs.paiementEchelonneActivePlateforme)}
+            onChange={async (e) => {
+              const coche = e.target.checked;
+              setValeurs((v) => ({ ...v, paiementEchelonneActivePlateforme: coche }));
+              try {
+                const resultat = await api.patch<PlatformSettings>("/admin/platform-settings", {
+                  paiementEchelonneActivePlateforme: coche,
+                });
+                setValeurs(resultat);
+              } catch (err) {
+                setErreur(err instanceof ApiError ? err.message : t("admparam_enregistrementImpossible"));
+              }
+            }}
+          />
+          <div>
+            <div className={styles.basculeLabel}>{t("admparam_activerEchelonnePlateforme")}</div>
+            <div className={styles.basculeDescription}>{t("admparam_echelonneDesactiveParDefaut")}</div>
           </div>
         </label>
       </div>

@@ -435,6 +435,24 @@ export class CatalogService implements OnModuleInit {
     ]);
 
     const produit = await this.prisma.product.findFirstOrThrow({ where: { id: productId, shopId } });
+
+    // Paiement échelonné (26 nov. 2026) — `nombreTranches`/`tauxInteretPct`
+    // sont exigés ENSEMBLE dès que l'option est (ou reste) active, qu'ils
+    // soient fournis dans CETTE requête ou déjà enregistrés en base (une
+    // boutique qui ne fait que changer le taux d'un article déjà actif ne
+    // renvoie pas forcément `paiementEchelonneActif` à chaque fois) — même
+    // esprit que la validation déjà faite dans boost-tarifs.service.ts.
+    const futurActif = dto.paiementEchelonneActif ?? produit.paiementEchelonneActif;
+    if (futurActif) {
+      const futurNombreTranches = dto.paiementEchelonneNombreTranches ?? produit.paiementEchelonneNombreTranches;
+      const futurTaux = dto.paiementEchelonneTauxInteretPct ?? produit.paiementEchelonneTauxInteretPct;
+      if (futurNombreTranches == null || futurTaux == null) {
+        throw new BadRequestException(
+          "Indiquez le nombre de tranches et le taux d'intérêt avant d'activer le paiement échelonné sur cet article.",
+        );
+      }
+    }
+
     return this.prisma.product.update({
       where: { id: produit.id },
       data: {
@@ -443,6 +461,13 @@ export class CatalogService implements OnModuleInit {
         ...(dto.category !== undefined ? { category: dto.category } : {}),
         ...(dto.images !== undefined ? { images: dto.images } : {}),
         ...(dto.isNewArrival !== undefined ? { isNewArrival: dto.isNewArrival } : {}),
+        ...(dto.paiementEchelonneActif !== undefined ? { paiementEchelonneActif: dto.paiementEchelonneActif } : {}),
+        ...(dto.paiementEchelonneNombreTranches !== undefined
+          ? { paiementEchelonneNombreTranches: dto.paiementEchelonneNombreTranches }
+          : {}),
+        ...(dto.paiementEchelonneTauxInteretPct !== undefined
+          ? { paiementEchelonneTauxInteretPct: dto.paiementEchelonneTauxInteretPct }
+          : {}),
       },
       include: { variants: { include: { priceTiers: true } } },
     });

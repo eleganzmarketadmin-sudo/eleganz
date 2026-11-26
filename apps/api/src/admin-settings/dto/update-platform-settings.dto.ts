@@ -77,6 +77,13 @@ export class UpdatePlatformSettingsDto {
   @IsBoolean()
   adStudioEnabled?: boolean;
 
+  // Paiement échelonné (26 nov. 2026) — interrupteur global, voir le
+  // commentaire sur PlatformSettings.paiementEchelonneActivePlateforme
+  // dans schema.prisma. `false` par défaut.
+  @IsOptional()
+  @IsBoolean()
+  paiementEchelonneActivePlateforme?: boolean;
+
   // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
   // 100 % paramétrable depuis le Centre de pilotage, sans redéploiement.
   @IsOptional()

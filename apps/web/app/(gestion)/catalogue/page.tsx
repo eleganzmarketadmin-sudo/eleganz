@@ -174,6 +174,12 @@ interface Product {
   isNewArrival: boolean;
   images: string[];
   variants: Variant[];
+  // Paiement échelonné (26 nov. 2026) — activation et conditions propres à
+  // cet article, voir le commentaire sur Product.paiementEchelonne* dans
+  // schema.prisma.
+  paiementEchelonneActif: boolean;
+  paiementEchelonneNombreTranches?: number | null;
+  paiementEchelonneTauxInteretPct?: string | null;
 }
 
 function ImagesProduit({
@@ -1087,6 +1093,73 @@ function CatalogueContent() {
   }
 
   /**
+   * Paiement échelonné (26 nov. 2026) — case à cocher par article, voir le
+   * commentaire sur Product.paiementEchelonne* dans schema.prisma.
+   * Désactiver est une simple bascule (les tranches/taux restent en base,
+   * prêts à être réutilisés si la boutique réactive plus tard) ; activer
+   * exige de connaître le nombre de tranches et le taux, donc on redirige
+   * vers `modifierConditionsPaiementEchelonne` qui les demande.
+   */
+  async function basculerPaiementEchelonne(produit: Product) {
+    if (!currentShop) return;
+    if (produit.paiementEchelonneActif) {
+      setErreur(null);
+      try {
+        await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, { paiementEchelonneActif: false });
+        recharger();
+      } catch (err) {
+        setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
+      }
+      return;
+    }
+    await modifierConditionsPaiementEchelonne(produit);
+  }
+
+  /**
+   * Saisie/modification du nombre de tranches et du taux d'intérêt —
+   * utilisée à l'activation ET pour corriger ces valeurs sur un article
+   * déjà actif (bouton crayon), même esprit que modifierPrixBarre plus bas.
+   * Les deux valeurs sont requises par l'API dès que `paiementEchelonneActif`
+   * passe à `true` (voir CatalogService.updateProduct) : on les redemande
+   * donc toutes les deux à chaque fois, pré-remplies avec les valeurs
+   * actuelles si l'article était déjà configuré.
+   */
+  async function modifierConditionsPaiementEchelonne(produit: Product) {
+    if (!currentShop) return;
+    const saisieTranches = window.prompt(
+      t("cat_echelonneNombreTranchesInvite"),
+      produit.paiementEchelonneNombreTranches != null ? String(produit.paiementEchelonneNombreTranches) : "3",
+    );
+    if (saisieTranches === null) return; // annulé
+    const nombreTranches = Number(saisieTranches.trim());
+    if (!Number.isInteger(nombreTranches) || nombreTranches < 2 || nombreTranches > 24) {
+      setErreur(t("cat_echelonneNombreTranchesInvalide"));
+      return;
+    }
+    const saisieTaux = window.prompt(
+      t("cat_echelonneTauxInvite"),
+      produit.paiementEchelonneTauxInteretPct != null ? String(produit.paiementEchelonneTauxInteretPct) : "10",
+    );
+    if (saisieTaux === null) return; // annulé
+    const tauxInteretPct = Number(saisieTaux.trim());
+    if (!Number.isFinite(tauxInteretPct) || tauxInteretPct < 0 || tauxInteretPct > 100) {
+      setErreur(t("cat_echelonneTauxInvalide"));
+      return;
+    }
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produit.id}`, {
+        paiementEchelonneActif: true,
+        paiementEchelonneNombreTranches: nombreTranches,
+        paiementEchelonneTauxInteretPct: tauxInteretPct,
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cat_modificationArticleImpossible"));
+    }
+  }
+
+  /**
    * Mécanisme de promotion — corrigé le 20 oct. 2026 (signalement : "J'ai
    * défini une promotion mais qui ne marche", saisie "30" sur un article à
    * $38). Cause réelle : la première version demandait le PRIX BARRÉ
@@ -1542,6 +1615,38 @@ function CatalogueContent() {
                 >
                   🆕 {t("cat_etiquetteNouveau")}
                 </button>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <button
+                    type="button"
+                    className={styles.boutonSecondaire}
+                    title={t("cat_echelonneBasculerAide")}
+                    style={{
+                      padding: "4px 10px",
+                      minHeight: "28px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      opacity: produit.paiementEchelonneActif ? 1 : 0.5,
+                    }}
+                    onClick={() => basculerPaiementEchelonne(produit)}
+                  >
+                    📅 {t("cat_echelonneEtiquette")}
+                  </button>
+                  {produit.paiementEchelonneActif && (
+                    <>
+                      <small style={{ color: "var(--color-texte-muted)" }}>
+                        {produit.paiementEchelonneNombreTranches}× · {Number(produit.paiementEchelonneTauxInteretPct ?? 0)}%
+                      </small>
+                      <button
+                        type="button"
+                        className={styles.boutonCrayon}
+                        title={t("cat_modifier")}
+                        onClick={() => modifierConditionsPaiementEchelonne(produit)}
+                      >
+                        ✎
+                      </button>
+                    </>
+                  )}
+                </span>
                 {produit.isPublished ? (
                   <>
                     <StatusTag label={t("cat_publieSurMarketplace")} humeur="paye" />

@@ -31,6 +31,24 @@ interface Livreur {
   active: boolean;
 }
 
+interface EchelonnementTranche {
+  id: string;
+  numero: number;
+  montant: string;
+  dateEcheance: string;
+  statut: "A_PAYER" | "PAYEE";
+}
+
+interface EchelonnementAchat {
+  id: string;
+  nombreTranches: number;
+  tauxInteretPct: string;
+  montantCash: string;
+  montantTotal: string;
+  product: { name: string };
+  tranches: EchelonnementTranche[];
+}
+
 interface ShopOrder {
   id: string;
   status: string;
@@ -38,6 +56,9 @@ interface ShopOrder {
   createdAt: string;
   lines: OrderLine[];
   shopDriver: { id: string; fullName: string; phone: string | null } | null;
+  // Paiement échelonné (26 nov. 2026) — voir le commentaire sur
+  // OrdersService.listForShop/marquerTranchePayee.
+  echelonnements: EchelonnementAchat[];
   order: {
     id: string;
     createdAt: string;
@@ -121,11 +142,14 @@ const TRANSITIONS_STAFF_PAIEMENT_LIVRAISON: Record<string, { cible: string; cle:
 };
 
 /** Choisit le circuit de transitions à afficher selon le mode de paiement
- * annoncé par l'acheteur à la commande — même logique que circuitSuivi()
- * côté API (orders.service.ts), jamais recalculée indépendamment. */
+ * annoncé par l'acheteur à la commande, OU dès que la commande comporte au
+ * moins un échéancier (paiement échelonné, 26 nov. 2026 — la marchandise
+ * part avant que le règlement soit complet, exactement comme pour le
+ * paiement à la livraison) — même logique que circuitSuivi() côté API
+ * (orders.service.ts), jamais recalculée indépendamment. */
 function transitionsPour(so: ShopOrder): { cible: string; cle: string; annulation?: boolean }[] {
   const circuit =
-    so.order.payments?.[0]?.method === "CASH_ON_DELIVERY"
+    so.order.payments?.[0]?.method === "CASH_ON_DELIVERY" || so.echelonnements.length > 0
       ? TRANSITIONS_STAFF_PAIEMENT_LIVRAISON
       : TRANSITIONS_STAFF;
   return circuit[so.status] ?? [];
@@ -173,6 +197,13 @@ function CommandesContent() {
   const [motifLitige, setMotifLitige] = useState("");
   const [exportEnCours, setExportEnCours] = useState(false);
   const [selectionLivreur, setSelectionLivreur] = useState<Record<string, string>>({});
+
+  // Paiement échelonné (26 nov. 2026) — constater un encaissement de tranche
+  // est une action financière, même trio de rôles que le dépôt de preuve de
+  // paiement des factures/Boost (pas STOCK_KEEPER/SALES_LEAD, qui peuvent
+  // faire avancer une commande mais pas constater un encaissement) — voir
+  // ShopOrdersController.marquerTranchePayee côté API.
+  const peutGererEchelonnement = ["OWNER", "MANAGER", "ACCOUNTANT"].includes(currentShop?.myRole ?? "");
 
   // 21 nov. 2026, retour propriétaire — même motif que Catalogue : "la page
   // doit présenter une ligne résumée ... qu'on peut dérouler ... pour une
@@ -286,6 +317,21 @@ function CommandesContent() {
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("gcmd_changementStatutImpossible"));
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  async function marquerTranchePayee(so: ShopOrder, echelonnementId: string, trancheId: string) {
+    setEnCours(so.id);
+    setErreur(null);
+    try {
+      await api.post(
+        `/shops/${currentShop!.id}/orders/${so.id}/echelonnements/${echelonnementId}/tranches/${trancheId}/marquer-payee`,
+      );
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("gcmd_marquerTranchePayeeImpossible"));
     } finally {
       setEnCours(null);
     }
@@ -529,6 +575,47 @@ function CommandesContent() {
                 <span className="chiffre">{formatMoney(Number(so.subtotal))}</span>
               </div>
             </div>
+            {so.echelonnements.length > 0 && (
+              <div className={styles.corps}>
+                {so.echelonnements.map((ech) => (
+                  <div key={ech.id} style={{ marginBottom: "var(--espace-2)" }}>
+                    <div style={{ fontWeight: 600, marginBottom: "4px" }}>
+                      {t("cmd_echeancierTitre").replace("{{article}}", ech.product.name)}
+                    </div>
+                    {ech.tranches.map((tr) => {
+                      const enRetard = tr.statut === "A_PAYER" && new Date(tr.dateEcheance) < new Date();
+                      return (
+                        <div className={styles.ligne} key={tr.id}>
+                          <span>
+                            {t("cmd_echeancierTranche").replace("{{numero}}", String(tr.numero))} —{" "}
+                            {formatDate(tr.dateEcheance)}
+                          </span>
+                          <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span className="chiffre">{formatMoney(Number(tr.montant))}</span>
+                            {tr.statut === "PAYEE" ? (
+                              <StatusTag label={t("cmd_echeancierPayee")} humeur="paye" />
+                            ) : (
+                              <>
+                                {enRetard && <StatusTag label={t("cmd_echeancierEnRetard")} humeur="alerte" />}
+                                {peutGererEchelonnement && (
+                                  <button
+                                    className={styles.boutonAction}
+                                    disabled={enCours === so.id}
+                                    onClick={() => marquerTranchePayee(so, ech.id, tr.id)}
+                                  >
+                                    {t("gcmd_marquerTranchePayee")}
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className={styles.actions}>
               {transitionsPour(so).map((transition) => (
                 <button

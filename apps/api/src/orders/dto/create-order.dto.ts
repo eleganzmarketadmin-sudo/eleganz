@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -18,6 +19,18 @@ export class OrderItemDto {
   @IsInt()
   @IsPositive()
   quantity!: number;
+
+  // Paiement échelonné (26 nov. 2026) — l'acheteur signale, LIGNE PAR
+  // LIGNE, qu'il veut payer CET article en tranches plutôt que maintenant
+  // (cash/mobile money). N'a d'effet que si l'article (son Product) a
+  // activé l'option ET que l'interrupteur global PlatformSettings.
+  // paiementEchelonneActivePlateforme est aussi actif — sinon
+  // OrdersService.createOrder refuse la commande (voir le commentaire
+  // détaillé là-bas). `undefined`/`false` = ligne payée normalement, comme
+  // avant ce chantier.
+  @IsOptional()
+  @IsBoolean()
+  paiementEchelonne?: boolean;
 }
 
 export class CreateOrderDto {

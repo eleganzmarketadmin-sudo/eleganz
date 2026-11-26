@@ -4,11 +4,65 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/auth";
-import { useCart } from "../../lib/cart-context";
+import { useCart, type LigneDuPanier } from "../../lib/cart-context";
 import { api, ApiError, getToken } from "../../lib/api";
 import { formatMoney } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
+
+interface GroupeEchelonne {
+  productId: string;
+  productName: string;
+  nombreTranches: number;
+  tauxInteretPct: number;
+  montantCash: number;
+  montantTotal: number;
+  montantParTranche: number;
+}
+
+/**
+ * Paiement échelonné (26 nov. 2026) — décision validée avec le propriétaire :
+ * chaque article éligible coché garde son PROPRE échéancier dans le même
+ * panier (pas de restriction à un seul article à la fois). Les lignes
+ * échelonnées d'un même article (plusieurs variantes possibles) fusionnent
+ * en un seul groupe, exactement comme OrdersService.createOrder le fera
+ * côté serveur — ceci n'est qu'un APERÇU local, les montants définitifs
+ * (et leur arrondi) sont calculés et figés par l'API à la création de la
+ * commande.
+ */
+function calculerGroupesEchelonnes(lignes: LigneDuPanier[], choix: Record<string, boolean>): GroupeEchelonne[] {
+  const parProduit = new Map<
+    string,
+    { productName: string; nombreTranches: number; tauxInteretPct: number; montantCash: number }
+  >();
+  for (const l of lignes) {
+    if (!l.paiementEchelonneActif || !choix[l.variantId]) continue;
+    const montant = l.quantity * l.unitPrice;
+    const existant = parProduit.get(l.productId);
+    if (existant) {
+      existant.montantCash += montant;
+    } else {
+      parProduit.set(l.productId, {
+        productName: l.productName,
+        nombreTranches: l.paiementEchelonneNombreTranches ?? 1,
+        tauxInteretPct: l.paiementEchelonneTauxInteretPct ?? 0,
+        montantCash: montant,
+      });
+    }
+  }
+  return [...parProduit.entries()].map(([productId, g]) => {
+    const montantTotal = g.montantCash * (1 + g.tauxInteretPct / 100);
+    return {
+      productId,
+      productName: g.productName,
+      nombreTranches: g.nombreTranches,
+      tauxInteretPct: g.tauxInteretPct,
+      montantCash: g.montantCash,
+      montantTotal,
+      montantParTranche: montantTotal / g.nombreTranches,
+    };
+  });
+}
 
 interface AdresseEnregistree {
   id: string;
@@ -45,6 +99,12 @@ export default function CommandePage() {
   // OrdersService.createOrder) : CASH reste le choix par défaut puisque
   // c'est déjà le fonctionnement implicite de la plateforme.
   const [modePaiement, setModePaiement] = useState<"CASH" | "MOBILE_MONEY">("CASH");
+
+  // Paiement échelonné (26 nov. 2026) — choix de l'acheteur, LIGNE PAR LIGNE
+  // (clé = variantId), indépendant de `modePaiement` ci-dessus : une
+  // commande peut mélanger des lignes échelonnées et des lignes payées
+  // normalement (cash/mobile money), voir calculerGroupesEchelonnes plus haut.
+  const [tranchesChoisies, setTranchesChoisies] = useState<Record<string, boolean>>({});
 
   // Carnet d'adresses (prompt du 15 oct. 2026, point 2) — pré-remplit les
   // champs ci-dessus au lieu de les resaisir à chaque commande ; la saisie
@@ -116,7 +176,11 @@ export default function CommandePage() {
     setErreur(null);
     try {
       await api.post("/marketplace/orders", {
-        items: lignes.map((l) => ({ variantId: l.variantId, quantity: l.quantity })),
+        items: lignes.map((l) => ({
+          variantId: l.variantId,
+          quantity: l.quantity,
+          paiementEchelonne: Boolean(l.paiementEchelonneActif && tranchesChoisies[l.variantId]),
+        })),
         buyerWhatsapp: whatsapp.trim() || undefined,
         buyerPhone: telephone.trim() || undefined,
         deliveryCommune: commune.trim() || undefined,
@@ -161,17 +225,39 @@ export default function CommandePage() {
     );
   }
 
+  const groupesEchelonnes = calculerGroupesEchelonnes(lignes, tranchesChoisies);
+  const montantEchelonneTotal = groupesEchelonnes.reduce((s, g) => s + g.montantCash, 0);
+  const montantAPayerMaintenant = total - montantEchelonneTotal;
+
   return (
     <div className={styles.cadre}>
       <h1 className={styles.titre}>{t("cmd_titreConfirmer")}</h1>
 
       <div className={styles.recap}>
         {lignes.map((l) => (
-          <div className={styles.ligne} key={l.variantId}>
-            <span>
-              {l.productName} × {l.quantity}
-            </span>
-            <span className="chiffre">{formatMoney(l.quantity * l.unitPrice, l.currency)}</span>
+          <div className={styles.ligne} key={l.variantId} style={{ flexDirection: "column", alignItems: "stretch", gap: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+              <span>
+                {l.productName} × {l.quantity}
+              </span>
+              <span className="chiffre">{formatMoney(l.quantity * l.unitPrice, l.currency)}</span>
+            </div>
+            {l.paiementEchelonneActif && (
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8125rem", color: "var(--color-texte-muted)" }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(tranchesChoisies[l.variantId])}
+                  onChange={(e) =>
+                    setTranchesChoisies((prev) => ({ ...prev, [l.variantId]: e.target.checked }))
+                  }
+                />
+                <span>
+                  {t("cmd_echelonnePayerEn")
+                    .replace("{{n}}", String(l.paiementEchelonneNombreTranches ?? 0))
+                    .replace("{{taux}}", String(l.paiementEchelonneTauxInteretPct ?? 0))}
+                </span>
+              </label>
+            )}
           </div>
         ))}
         <div className={styles.total}>
@@ -179,6 +265,29 @@ export default function CommandePage() {
           <span className="chiffre">{formatMoney(total, devise)}</span>
         </div>
       </div>
+
+      {groupesEchelonnes.length > 0 && (
+        <div className={styles.recap} style={{ marginTop: "var(--espace-3)" }}>
+          <h2 className={styles.sousTitre}>{t("cmd_echelonneRecapTitre")}</h2>
+          {groupesEchelonnes.map((g) => (
+            <div key={g.productId} style={{ marginBottom: "var(--espace-2)" }}>
+              <div className={styles.ligne}>
+                <span>{g.productName}</span>
+                <span className="chiffre">{formatMoney(g.montantTotal, devise)}</span>
+              </div>
+              <p className={styles.note} style={{ margin: 0 }}>
+                {t("cmd_echelonneApercu")
+                  .replace("{{n}}", String(g.nombreTranches))
+                  .replace("{{montant}}", formatMoney(g.montantParTranche, devise))}
+              </p>
+            </div>
+          ))}
+          <div className={styles.total}>
+            <span>{t("cmd_echelonneAPayerMaintenant")}</span>
+            <span className="chiffre">{formatMoney(montantAPayerMaintenant, devise)}</span>
+          </div>
+        </div>
+      )}
 
       <p className={styles.note}>{t("cmd_notePaiement")}</p>
 

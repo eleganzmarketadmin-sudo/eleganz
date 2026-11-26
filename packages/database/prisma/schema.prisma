@@ -54,6 +54,18 @@ model PlatformSettings {
   // Centre de pilotage sans redéploiement.
   chatWidgetEnabled Boolean @default(true)
 
+  // Paiement échelonné (26 nov. 2026, demande propriétaire : "achat par
+  // tranche") — interrupteur global : une boutique peut activer l'option
+  // sur un article (voir Product.paiementEchelonneActif ci-dessous), mais
+  // elle ne devient réellement disponible à l'achat (exposition publique
+  // Marketplace + acceptation côté OrdersService.createOrder) que si CE
+  // champ est AUSSI à true — permet à l'admin de couper l'option partout
+  // sans redéploiement, sans effacer la configuration de chaque boutique.
+  // `false` par défaut : fonctionnalité neuve, l'admin l'active lui-même
+  // une fois prêt (même esprit que photoSearchEnabled/adStudioEnabled,
+  // plutôt que chatWidgetEnabled qui est une fonctionnalité déjà éprouvée).
+  paiementEchelonneActivePlateforme Boolean @default(false)
+
   // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
   // frais d'ouverture à la souscription + abonnement mensuel, tous deux
   // paramétrables depuis le Centre de pilotage, avec un nombre de mois de
@@ -1028,6 +1040,31 @@ model Product {
   // Boost payant (26 nov. 2026) — voir le commentaire sur le modèle Boost
   // plus bas.
   boosts Boost[]
+
+  // Paiement échelonné (26 nov. 2026, demande propriétaire) — activation
+  // PAR ARTICLE, avec ses propres conditions (une boutique peut proposer 3
+  // mensualités à 10 % sur un article et 6 mensualités à 5 % sur un
+  // autre — pas un barème unique pour toute la boutique, contrairement au
+  // Boost qui a des forfaits plateforme). N'est réellement activé à
+  // l'achat que si PlatformSettings.paiementEchelonneActivePlateforme est
+  // AUSSI à true (interrupteur global, voir ce champ) — comparé en direct,
+  // jamais mis en cache. `nombreTranches`/`tauxInteretPct` ne sont
+  // exigés que lorsque `paiementEchelonneActif` passe à true (validation
+  // de service dans CatalogService, pas une contrainte de colonne) ; ils
+  // restent en base si l'option est ensuite désactivée, pour ne pas faire
+  // perdre son réglage à la boutique qui la réactiverait plus tard — même
+  // convention que BoostTarif.actif, qui ne supprime jamais durée/prix.
+  paiementEchelonneActif          Boolean  @default(false)
+  paiementEchelonneNombreTranches Int?
+  // Taux fixe appliqué UNE SEULE FOIS sur le prix comptant total (type
+  // "vente à tempérament" courante en RDC), jamais un taux annuel composé
+  // comme Loan.tauxAnnuel (domaine totalement différent — financement
+  // boutique via une Institution, voir plus bas — ne jamais confondre les
+  // deux) : montantTotal = montantCash × (1 + tauxInteretPct/100), réparti
+  // ensuite également entre les tranches (voir EchelonnementAchat).
+  paiementEchelonneTauxInteretPct Decimal? @db.Decimal(5, 2)
+
+  echelonnements EchelonnementAchat[]
 }
 
 // Référentiel global des catégories d'articles (16 oct. 2026, demande
@@ -1500,6 +1537,13 @@ model ShopOrder {
   dispute       Dispute?
   reviews       Review[]
   statusEvents  OrderStatusEvent[]
+
+  // Paiement échelonné (26 nov. 2026) — un panier peut mélanger un article
+  // éligible avec d'autres articles (décision du propriétaire) : chaque
+  // article éligible obtient son PROPRE échéancier, donc plusieurs
+  // EchelonnementAchat peuvent coexister sur une même sous-commande (un
+  // par productId échelonné) — voir le commentaire sur EchelonnementAchat.
+  echelonnements EchelonnementAchat[]
 }
 
 // Horodatage de chaque changement de statut d'une sous-commande (demande du
@@ -1527,6 +1571,86 @@ model OrderLine {
   variant   Variant @relation(fields: [variantId], references: [id])
   quantity  Int
   unitPrice Decimal @db.Decimal(12, 2)
+
+  // Paiement échelonné (26 nov. 2026) — renseigné après coup par
+  // OrdersService.createOrder (une fois l'EchelonnementAchat créé, cette
+  // ligne y est rattachée via updateMany) quand l'acheteur a choisi de
+  // payer CETTE ligne en tranches ; `null` = ligne payée normalement
+  // (cash/mobile money, comme avant ce chantier).
+  echelonnementId String?
+  echelonnement   EchelonnementAchat? @relation(fields: [echelonnementId], references: [id])
+}
+
+// Paiement échelonné — "achat par tranche" (26 nov. 2026, demande
+// propriétaire). Un échéancier par ARTICLE ÉLIGIBLE ET par sous-commande :
+// si l'acheteur met au panier deux articles différents tous deux activés
+// par leur boutique, chacun obtient le SIEN (tranches/taux propres à son
+// produit), jamais combinés en un seul — décision explicite du
+// propriétaire pour éviter de mélanger des conditions différentes dans un
+// seul échéancier. Les variantes d'un même produit (tailles/couleurs)
+// fusionnent en revanche dans UN SEUL EchelonnementAchat (`@@unique`
+// ci-dessous), puisqu'elles partagent les mêmes conditions (celles du
+// produit). `nombreTranches`/`tauxInteretPct` sont COPIÉS du produit au
+// moment de l'achat (jamais recalculés depuis Product si la boutique
+// change ses conditions ensuite) — même principe que ShopOrder.
+// commissionAmount ou Boost.montant : le tarif facturé reste celui en
+// vigueur à l'achat.
+model EchelonnementAchat {
+  id             String    @id @default(uuid())
+  shopOrderId    String
+  shopOrder      ShopOrder @relation(fields: [shopOrderId], references: [id])
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id])
+  nombreTranches Int
+  tauxInteretPct Decimal   @db.Decimal(5, 2)
+  // Somme des lignes concernées, prix comptant (sans intérêt) — sert de
+  // référence pour exclure ce montant de OrderPayment (la portion
+  // "normale" de la commande), jamais recalculé après coup.
+  montantCash    Decimal   @db.Decimal(12, 2)
+  // montantCash × (1 + tauxInteretPct/100), figé à l'achat — c'est ce
+  // montant qui est réparti entre les tranches (voir EchelonnementTranche),
+  // PAS montantCash : l'intérêt est bien payé par l'acheteur, jamais
+  // absorbé par la boutique ni par ELEGANZ.
+  montantTotal   Decimal   @db.Decimal(12, 2)
+  createdAt      DateTime  @default(now())
+
+  tranches EchelonnementTranche[]
+  lines    OrderLine[]
+
+  @@unique([shopOrderId, productId])
+}
+
+enum StatutTranchePaiement {
+  A_PAYER
+  PAYEE
+}
+
+// Une tranche/mensualité individuelle d'un EchelonnementAchat. Volontairement
+// PAS de statut "EN_RETARD" stocké — même convention que Invoice.OVERDUE :
+// une tranche en retard se déduit en comparant `dateEcheance` à l'instant
+// présent à l'affichage (Gestion), jamais écrit ni recalculé par un cron.
+// Marquée PAYEE par un simple geste de la boutique (OrdersService.
+// marquerTranchePayee) — aucun upload de preuve ici, contrairement aux
+// factures/Boost : les commandes Marketplace n'ont jamais eu ce mécanisme
+// (la confirmation de paiement d'une commande est déjà, aujourd'hui, un
+// simple changement de statut — voir OrdersService.transitionStatus).
+model EchelonnementTranche {
+  id                 String                @id @default(uuid())
+  echelonnementId    String
+  echelonnement      EchelonnementAchat    @relation(fields: [echelonnementId], references: [id], onDelete: Cascade)
+  numero             Int
+  montant            Decimal               @db.Decimal(12, 2)
+  // Tranche 1 = date de la commande (due immédiatement, en parallèle de la
+  // portion "normale" de la commande qui suit son propre circuit de
+  // livraison) ; tranche k (k>=2) = date de la commande + (k-1) mois —
+  // posées une fois pour toutes à la création, jamais redécalées ensuite.
+  dateEcheance       DateTime
+  statut             StatutTranchePaiement @default(A_PAYER)
+  paidAt             DateTime?
+  markedPaidByUserId String?
+
+  @@unique([echelonnementId, numero])
+  @@index([statut, dateEcheance])
 }
 
 model OrderPayment {

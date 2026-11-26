@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/auth";
@@ -17,6 +17,24 @@ interface OrderLine {
   variant?: { product: { id: string; name: string } };
 }
 
+interface EchelonnementTranche {
+  id: string;
+  numero: number;
+  montant: string;
+  dateEcheance: string;
+  statut: "A_PAYER" | "PAYEE";
+}
+
+interface EchelonnementAchat {
+  id: string;
+  nombreTranches: number;
+  tauxInteretPct: string;
+  montantCash: string;
+  montantTotal: string;
+  product: { name: string };
+  tranches: EchelonnementTranche[];
+}
+
 interface ShopOrder {
   id: string;
   shopId: string;
@@ -29,6 +47,10 @@ interface ShopOrder {
   // présent ici seulement pendant la fenêtre où l'acheteur doit encore le
   // communiquer au livreur.
   deliveryCode: string | null;
+  // Paiement échelonné (26 nov. 2026) — lecture seule ici : l'acheteur
+  // consulte son échéancier mais ne peut pas marquer une tranche payée
+  // (seule la boutique le peut, voir Gestion → Commandes).
+  echelonnements: EchelonnementAchat[];
 }
 
 interface Order {
@@ -250,7 +272,8 @@ export default function CommandesPage() {
               <span className="chiffre">{formatMoney(Number(commande.totalAmount), commande.currency)}</span>
             </div>
             {commande.shopOrders.map((so) => (
-              <div className={styles.sousCommande} key={so.id}>
+              <Fragment key={so.id}>
+              <div className={styles.sousCommande}>
                 <span>
                   {so.lines.length} {t("cmd_articleSuffix")}
                   {so.driver && (
@@ -343,6 +366,45 @@ export default function CommandesPage() {
                   )}
                 </span>
               </div>
+              {so.echelonnements.length > 0 && (
+                <div style={{ padding: "0 0 var(--espace-2)" }}>
+                  {so.echelonnements.map((ech) => (
+                    <div key={ech.id} style={{ marginBottom: "8px" }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.8125rem", marginBottom: "4px" }}>
+                        {t("cmd_echeancierTitre").replace("{{article}}", ech.product.name)}
+                      </div>
+                      <table style={{ width: "100%", fontSize: "0.8125rem", borderCollapse: "collapse" }}>
+                        <tbody>
+                          {ech.tranches.map((tr) => {
+                            const enRetard = tr.statut === "A_PAYER" && new Date(tr.dateEcheance) < new Date();
+                            return (
+                              <tr key={tr.id}>
+                                <td style={{ padding: "2px 8px 2px 0" }}>
+                                  {t("cmd_echeancierTranche").replace("{{numero}}", String(tr.numero))}
+                                </td>
+                                <td style={{ padding: "2px 8px" }}>{formatDate(tr.dateEcheance)}</td>
+                                <td className="chiffre" style={{ padding: "2px 8px" }}>
+                                  {formatMoney(Number(tr.montant), commande.currency)}
+                                </td>
+                                <td style={{ padding: "2px 0" }}>
+                                  {tr.statut === "PAYEE" ? (
+                                    <StatusTag label={t("cmd_echeancierPayee")} humeur="paye" />
+                                  ) : enRetard ? (
+                                    <StatusTag label={t("cmd_echeancierEnRetard")} humeur="alerte" />
+                                  ) : (
+                                    <StatusTag label={t("cmd_echeancierAPayer")} humeur="attente" />
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+              </Fragment>
             ))}
           </div>
         ))

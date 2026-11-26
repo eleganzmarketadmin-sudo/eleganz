@@ -43,6 +43,12 @@ interface Produit {
   isNewArrival: boolean;
   shop: { id: string; name: string; slug: string; deliveryZones?: ZoneLivraison[] };
   variants: Variant[];
+  // Paiement échelonné (26 nov. 2026) — déjà masqués à `false`/`null` par
+  // l'API publique si l'interrupteur global (Centre de pilotage) est
+  // désactivé, voir MarketplaceCatalogService.
+  paiementEchelonneActif: boolean;
+  paiementEchelonneNombreTranches?: number | null;
+  paiementEchelonneTauxInteretPct?: string | null;
 }
 
 /**
@@ -105,6 +111,11 @@ export default function ProduitClient({ id }: { id: string }) {
         unitPrice: prixUnitaireActuel,
         currency: variante.currency,
         stockDisponible: variante.stockQty,
+        productId: produit.id,
+        paiementEchelonneActif: produit.paiementEchelonneActif,
+        paiementEchelonneNombreTranches: produit.paiementEchelonneNombreTranches,
+        paiementEchelonneTauxInteretPct:
+          produit.paiementEchelonneTauxInteretPct != null ? Number(produit.paiementEchelonneTauxInteretPct) : null,
       },
       quantite,
     );

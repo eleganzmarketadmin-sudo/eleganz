@@ -59,9 +59,18 @@ const ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON: Record<OrderStatus, OrderStatus[]>
 
 /** Choisit le circuit de suivi selon le mode de paiement annoncé par
  * l'acheteur à la commande (voir createOrder ci-dessous) — CASH_ON_DELIVERY
- * suit le second circuit, tout le reste (mobile money) garde le premier. */
-function circuitSuivi(methodePaiement: PaymentMethod | undefined): Record<OrderStatus, OrderStatus[]> {
-  return methodePaiement === PaymentMethod.CASH_ON_DELIVERY
+ * suit le second circuit, tout le reste (mobile money) garde le premier.
+ *
+ * Paiement échelonné (26 nov. 2026) : une sous-commande avec au moins un
+ * échéancier suit AUSSI le second circuit — même réutilisation, pas de 3ᵉ
+ * circuit créé : l'idée (la marchandise part avant que le règlement soit
+ * complètement bouclé) est déjà exactement celle de ce circuit, qu'il
+ * s'agisse d'espèces à la livraison ou de tranches étalées dans le temps. */
+function circuitSuivi(
+  methodePaiement: PaymentMethod | undefined,
+  aDesEchelonnements: boolean,
+): Record<OrderStatus, OrderStatus[]> {
+  return methodePaiement === PaymentMethod.CASH_ON_DELIVERY || aDesEchelonnements
     ? ALLOWED_TRANSITIONS_PAIEMENT_LIVRAISON
     : ALLOWED_TRANSITIONS;
 }
@@ -84,7 +93,31 @@ export class OrdersService {
    */
   async createOrder(buyerId: string, dto: CreateOrderDto) {
     const order = await this.prisma.$transaction(async (tx) => {
-      const byShop = new Map<string, { variantId: string; quantity: number; unitPrice: number }[]>();
+      // Réglages plateforme lus une seule fois, en tête de transaction —
+      // réutilisés à la fois pour la validation d'éligibilité au paiement
+      // échelonné ci-dessous et pour le calcul de commission plus bas (qui
+      // lisait déjà ce même modèle séparément avant ce chantier ; fusionné
+      // ici pour n'avoir qu'une seule lecture de PlatformSettings).
+      const platformSettings = await tx.platformSettings.findUnique({
+        where: { id: "platform" },
+        select: {
+          marketplaceCommissionRateDefault: true,
+          marketplaceCommissionFreeMonths: true,
+          marketplaceCommissionMinAmount: true,
+          paiementEchelonneActivePlateforme: true,
+        },
+      });
+
+      // Paiement échelonné (26 nov. 2026) — chaque ligne garde son
+      // `productId` (pour regrouper les lignes échelonnées par article,
+      // voir plus bas) et le choix `paiementEchelonne` de l'acheteur pour
+      // CETTE ligne (décision du propriétaire : un panier peut mélanger
+      // plusieurs articles éligibles, chacun son échéancier — voir le
+      // commentaire sur EchelonnementAchat dans schema.prisma).
+      const byShop = new Map<
+        string,
+        { variantId: string; quantity: number; unitPrice: number; productId: string; paiementEchelonne: boolean }[]
+      >();
 
       for (const item of dto.items) {
         const variant = await tx.variant.findUniqueOrThrow({
@@ -94,6 +127,19 @@ export class OrdersService {
 
         if (!variant.product.isPublished) {
           throw new BadRequestException(`Le produit ${variant.product.name} n'est pas publié.`);
+        }
+
+        // Refus explicite plutôt qu'un échelonnement silencieusement ignoré
+        // — soit l'interrupteur global est coupé (l'admin a pu le
+        // désactiver sans toucher à la configuration de chaque boutique),
+        // soit CET article précis n'a jamais activé l'option.
+        if (item.paiementEchelonne) {
+          if (!platformSettings?.paiementEchelonneActivePlateforme) {
+            throw new BadRequestException("Le paiement échelonné n'est pas disponible actuellement.");
+          }
+          if (!variant.product.paiementEchelonneActif) {
+            throw new BadRequestException(`Le paiement échelonné n'est pas disponible pour ${variant.product.name}.`);
+          }
         }
 
         // Mise à jour conditionnelle atomique (20 oct. 2026, audit de
@@ -131,13 +177,30 @@ export class OrdersService {
         );
 
         const shopItems = byShop.get(variant.product.shopId) ?? [];
-        shopItems.push({ variantId: item.variantId, quantity: item.quantity, unitPrice: prixUnitaire });
+        shopItems.push({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          unitPrice: prixUnitaire,
+          productId: variant.product.id,
+          paiementEchelonne: Boolean(item.paiementEchelonne),
+        });
         byShop.set(variant.product.shopId, shopItems);
       }
 
       const totalAmount = [...byShop.values()]
         .flat()
         .reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+
+      // Portion échelonnée du total, toutes boutiques confondues — exclue de
+      // l'OrderPayment créé plus bas, qui ne doit couvrir que ce qui reste à
+      // régler maintenant (voir le commentaire sur EchelonnementAchat.
+      // montantCash dans schema.prisma : l'intérêt est réglé via les
+      // tranches, jamais via cet OrderPayment).
+      const montantEchelonneTotal = [...byShop.values()]
+        .flat()
+        .filter((l) => l.paiementEchelonne)
+        .reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+      const montantPayeMaintenant = totalAmount - montantEchelonneTotal;
 
       // Commission ELEGANZ Market (14 oct. 2026, plan commercial) : taux du
       // bouquet Marketplace de la boutique, sinon le taux par défaut de la
@@ -157,25 +220,20 @@ export class OrdersService {
       // processTrialExpirations pour une boutique sans freeTrialStartedAt
       // (données anciennes/irrégulières) : on ne prend jamais une commission
       // sur une date de départ inconnue, donc la boutique reste exonérée.
+      //
+      // Paiement échelonné (26 nov. 2026) : la commission reste calculée sur
+      // `subtotal` (prix comptant, intérêt exclu) — aucun changement ici,
+      // décision du propriétaire de ne pas faire gagner ELEGANZ sur
+      // l'intérêt perçu par la boutique.
       const shopIds = [...byShop.keys()];
-      const [shopsAvecBouquet, platformSettings] = await Promise.all([
-        tx.shop.findMany({
-          where: { id: { in: shopIds } },
-          select: {
-            id: true,
-            freeTrialStartedAt: true,
-            marketplaceBouquet: { select: { commissionRate: true } },
-          },
-        }),
-        tx.platformSettings.findUnique({
-          where: { id: "platform" },
-          select: {
-            marketplaceCommissionRateDefault: true,
-            marketplaceCommissionFreeMonths: true,
-            marketplaceCommissionMinAmount: true,
-          },
-        }),
-      ]);
+      const shopsAvecBouquet = await tx.shop.findMany({
+        where: { id: { in: shopIds } },
+        select: {
+          id: true,
+          freeTrialStartedAt: true,
+          marketplaceBouquet: { select: { commissionRate: true } },
+        },
+      });
       const moisExoneration = platformSettings?.marketplaceCommissionFreeMonths ?? 0;
       const now = new Date();
       const tauxParBoutique = new Map(
@@ -205,14 +263,23 @@ export class OrdersService {
           // Intention de paiement (demande du 10 nov. 2026, point 4) — simple
           // enregistrement informatif (`confirmed: false`, aucune passerelle
           // branchée) : voir le commentaire sur CreateOrderDto.paymentMethod.
-          payments: {
-            create: {
-              method: dto.paymentMethod === "MOBILE_MONEY" ? PaymentMethod.MOBILE_MONEY : PaymentMethod.CASH_ON_DELIVERY,
-              provider: dto.paymentMethod === "MOBILE_MONEY" ? "mobile_money_a_la_livraison" : "cash_on_delivery",
-              amount: totalAmount,
-              confirmed: false,
-            },
-          },
+          // Paiement échelonné (26 nov. 2026) : ne couvre que la portion non
+          // échelonnée (`montantPayeMaintenant`) — omis entièrement quand
+          // elle est nulle (panier intégralement échelonné), ce qu'acceptent
+          // déjà tous les lecteurs existants (`payments?.[0]`).
+          ...(montantPayeMaintenant > 0
+            ? {
+                payments: {
+                  create: {
+                    method:
+                      dto.paymentMethod === "MOBILE_MONEY" ? PaymentMethod.MOBILE_MONEY : PaymentMethod.CASH_ON_DELIVERY,
+                    provider: dto.paymentMethod === "MOBILE_MONEY" ? "mobile_money_a_la_livraison" : "cash_on_delivery",
+                    amount: montantPayeMaintenant,
+                    confirmed: false,
+                  },
+                },
+              }
+            : {}),
           shopOrders: {
             create: [...byShop.entries()].map(([shopId, items]) => {
               const subtotal = items.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
@@ -229,7 +296,13 @@ export class OrdersService {
                 shopId,
                 subtotal,
                 commissionAmount,
-                lines: { create: items },
+                lines: {
+                  create: items.map((it) => ({
+                    variantId: it.variantId,
+                    quantity: it.quantity,
+                    unitPrice: it.unitPrice,
+                  })),
+                },
               };
             }),
           },
@@ -243,6 +316,73 @@ export class OrdersService {
       await tx.orderStatusEvent.createMany({
         data: order.shopOrders.map((so) => ({ shopOrderId: so.id, status: OrderStatus.CREATED })),
       });
+
+      // Paiement échelonné (26 nov. 2026) — un échéancier par (boutique,
+      // article éligible marqué par l'acheteur), fait APRÈS la création des
+      // OrderLine ci-dessus pour pouvoir les y rattacher (`echelonnementId`).
+      // Les variantes d'un même produit fusionnent dans UN SEUL échéancier
+      // (voir le commentaire sur EchelonnementAchat dans schema.prisma).
+      for (const shopOrder of order.shopOrders) {
+        const itemsBoutique = byShop.get(shopOrder.shopId) ?? [];
+        const parProduit = new Map<string, typeof itemsBoutique>();
+        for (const it of itemsBoutique) {
+          if (!it.paiementEchelonne) continue;
+          const liste = parProduit.get(it.productId) ?? [];
+          liste.push(it);
+          parProduit.set(it.productId, liste);
+        }
+
+        for (const [productId, lignesEchelonnees] of parProduit) {
+          const produit = await tx.product.findUniqueOrThrow({
+            where: { id: productId },
+            select: { paiementEchelonneNombreTranches: true, paiementEchelonneTauxInteretPct: true },
+          });
+          // Secours défensif (ne devrait jamais arriver : l'éligibilité est
+          // déjà vérifiée plus haut, et CatalogService.updateProduct exige
+          // ces deux champs dès que l'option est active) — mieux vaut un
+          // échéancier à 1 tranche sans intérêt qu'un plantage en pleine
+          // transaction de commande.
+          const nombreTranches = produit.paiementEchelonneNombreTranches ?? 1;
+          const tauxInteretPct = Number(produit.paiementEchelonneTauxInteretPct ?? 0);
+          const montantCash = lignesEchelonnees.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+          const montantTotal = Math.round(montantCash * (1 + tauxInteretPct / 100) * 100) / 100;
+
+          const echelonnement = await tx.echelonnementAchat.create({
+            data: {
+              shopOrderId: shopOrder.id,
+              productId,
+              nombreTranches,
+              tauxInteretPct,
+              montantCash,
+              montantTotal,
+            },
+          });
+
+          // Répartition égale entre les tranches, la DERNIÈRE absorbant
+          // l'écart d'arrondi — même soin que `commissionAmount` plus haut.
+          const montantParTranche = Math.round((montantTotal / nombreTranches) * 100) / 100;
+          const dateCommande = new Date();
+          let cumul = 0;
+          for (let numero = 1; numero <= nombreTranches; numero++) {
+            const estDerniere = numero === nombreTranches;
+            const montant = estDerniere ? Math.round((montantTotal - cumul) * 100) / 100 : montantParTranche;
+            cumul += montant;
+            // Tranche 1 = date de la commande (due immédiatement, en
+            // parallèle de la portion "normale" qui suit son propre circuit
+            // de livraison) ; tranche k (k>=2) = +(k-1) mois.
+            const dateEcheance = new Date(dateCommande);
+            dateEcheance.setMonth(dateEcheance.getMonth() + (numero - 1));
+            await tx.echelonnementTranche.create({
+              data: { echelonnementId: echelonnement.id, numero, montant, dateEcheance },
+            });
+          }
+
+          await tx.orderLine.updateMany({
+            where: { shopOrderId: shopOrder.id, variantId: { in: lignesEchelonnees.map((l) => l.variantId) } },
+            data: { echelonnementId: echelonnement.id },
+          });
+        }
+      }
 
       return order;
     });
@@ -296,6 +436,15 @@ export class OrdersService {
             // la livraison (prompt du 13 oct. 2026, point 3) — aucune autre
             // information sur le livreur (téléphone, véhicule...).
             driver: { select: { user: { select: { fullName: true } } } },
+            // Paiement échelonné (26 nov. 2026) — échéanciers en cours,
+            // lecture seule pour l'acheteur (il ne peut pas marquer une
+            // tranche payée lui-même, seule la boutique le peut).
+            echelonnements: {
+              include: {
+                product: { select: { name: true } },
+                tranches: { orderBy: { numero: "asc" } },
+              },
+            },
           },
         },
       },
@@ -311,6 +460,14 @@ export class OrdersService {
         // Le vendeur garde la main sur l'affectation et doit voir qui est
         // affecté pour pouvoir en changer (prompt du 13 oct. 2026, point 1).
         driver: { select: { id: true, user: { select: { fullName: true } } } },
+        // Paiement échelonné (26 nov. 2026) — la boutique a besoin du détail
+        // complet (montants/dates/statut) pour marquer les tranches reçues.
+        echelonnements: {
+          include: {
+            product: { select: { name: true } },
+            tranches: { orderBy: { numero: "asc" } },
+          },
+        },
         // Livreur propre à la boutique (13 oct. 2026, remplace le réseau
         // plateforme pour les nouvelles affectations) — voir ShopDriver.
         shopDriver: { select: { id: true, fullName: true, phone: true } },
@@ -362,9 +519,14 @@ export class OrdersService {
         lines: true,
         order: { include: { payments: { select: { method: true } } } },
         shop: { select: { name: true } },
+        // Paiement échelonné (26 nov. 2026) — juste l'id suffit à
+        // circuitSuivi (il ne compte que la présence d'au moins un
+        // échéancier, voir son commentaire).
+        echelonnements: { select: { id: true } },
       },
     });
-    const allowed = circuitSuivi(shopOrder.order.payments[0]?.method)[shopOrder.status] ?? [];
+    const allowed =
+      circuitSuivi(shopOrder.order.payments[0]?.method, shopOrder.echelonnements.length > 0)[shopOrder.status] ?? [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(`Transition ${shopOrder.status} → ${newStatus} non autorisée.`);
     }
@@ -563,5 +725,33 @@ export class OrdersService {
     });
 
     return updated;
+  }
+
+  /**
+   * Paiement échelonné (26 nov. 2026) — marque une tranche comme reçue par
+   * la boutique. Volontairement un simple geste (pas de preuve de paiement
+   * à déposer) : les commandes Marketplace n'ont jamais eu ce mécanisme
+   * (voir le commentaire sur EchelonnementTranche dans schema.prisma),
+   * c'est la même confirmation manuelle que `transitionStatus` pratique
+   * déjà pour le reste d'une commande. `findFirstOrThrow` avec la chaîne
+   * complète (tranche -> échéancier -> sous-commande -> shopId) empêche
+   * qu'une boutique marque payée la tranche d'une autre boutique en
+   * devinant/énumérant un id (même précaution IDOR que transitionStatus).
+   */
+  async marquerTranchePayee(shopId: string, shopOrderId: string, echelonnementId: string, trancheId: string, userId: string) {
+    const tranche = await this.prisma.echelonnementTranche.findFirstOrThrow({
+      where: {
+        id: trancheId,
+        echelonnementId,
+        echelonnement: { shopOrderId, shopOrder: { shopId } },
+      },
+    });
+    if (tranche.statut === "PAYEE") {
+      return tranche;
+    }
+    return this.prisma.echelonnementTranche.update({
+      where: { id: tranche.id },
+      data: { statut: "PAYEE", paidAt: new Date(), markedPaidByUserId: userId },
+    });
   }
 }

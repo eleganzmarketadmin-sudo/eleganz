@@ -18,6 +18,17 @@ export interface LigneDuPanier {
   currency: string;
   quantity: number;
   stockDisponible: number;
+  // Paiement échelonné (26 nov. 2026) — renseignés à l'ajout au panier
+  // depuis la fiche produit (ces 3 champs viennent de la réponse publique
+  // de l'API, déjà masqués à `false`/`null` côté serveur si l'interrupteur
+  // global est désactivé — voir MarketplaceCatalogService). `productId`
+  // identifie l'article pour fusionner, à la commande, toutes les lignes
+  // échelonnées d'un même article en un seul échéancier (décision : chaque
+  // article éligible garde son propre échéancier dans le même panier).
+  productId: string;
+  paiementEchelonneActif: boolean;
+  paiementEchelonneNombreTranches?: number | null;
+  paiementEchelonneTauxInteretPct?: number | null;
 }
 
 interface CartContextValue {

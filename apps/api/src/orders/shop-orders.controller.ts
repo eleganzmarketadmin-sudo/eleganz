@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { OrdersService } from "./orders.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
+import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
 import { OrderStatus, StaffRole } from "@eleganz/database";
@@ -54,5 +56,21 @@ export class ShopOrdersController {
     @Body("deliveryCode") deliveryCode?: string,
   ) {
     return this.ordersService.transitionStatus(shopId, shopOrderId, status, deliveryCode);
+  }
+
+  // Paiement échelonné (26 nov. 2026) — action financière (confirme qu'une
+  // somme a été réellement perçue), même trio de rôles que le dépôt de
+  // preuve de paiement des factures/Boost (pas STOCK_KEEPER/SALES_LEAD, qui
+  // peuvent faire avancer une commande mais pas constater un encaissement).
+  @Post(":shopOrderId/echelonnements/:echelonnementId/tranches/:trancheId/marquer-payee")
+  @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+  marquerTranchePayee(
+    @Param("shopId") shopId: string,
+    @Param("shopOrderId") shopOrderId: string,
+    @Param("echelonnementId") echelonnementId: string,
+    @Param("trancheId") trancheId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.marquerTranchePayee(shopId, shopOrderId, echelonnementId, trancheId, user.id);
   }
 }
