@@ -86,7 +86,6 @@ function BoostContent() {
   const [tarifId, setTarifId] = useState("");
   const [etapeReglement, setEtapeReglement] = useState(false);
   const [achatEnCours, setAchatEnCours] = useState(false);
-  const [boostCree, setBoostCree] = useState<Boost | null>(null);
 
   const [noteParBoost, setNoteParBoost] = useState<Record<string, string>>({});
   const [preuveOuverte, setPreuveOuverte] = useState<string | null>(null);
@@ -119,12 +118,11 @@ function BoostContent() {
     setErreur(null);
     setMessage(null);
     try {
-      const boost = await api.post<Boost>(`/shops/${currentShop.id}/boosts`, {
+      await api.post<Boost>(`/shops/${currentShop.id}/boosts`, {
         cible,
         productId: cible === "PRODUIT" ? productId : undefined,
         tarifId,
       });
-      setBoostCree(boost);
       setMessage(t("boost_confirmeAchat"));
       setEtapeReglement(false);
       setCible("BOUTIQUE");
@@ -145,7 +143,6 @@ function BoostContent() {
     try {
       await api.delete(`/shops/${currentShop.id}/boosts/${boostId}`);
       setMessage(t("boost_confirmeAnnule"));
-      if (boostCree?.id === boostId) setBoostCree(null);
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cmd_erreurGenerique"));
@@ -171,7 +168,6 @@ function BoostContent() {
       });
       setMessage(t("factElg_preuveDeposee"));
       setPreuveOuverte(null);
-      if (boostCree?.id === boostId) setBoostCree(null);
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError || err instanceof Error ? err.message : t("factElg_erreurEnvoiPreuve"));
@@ -193,7 +189,7 @@ function BoostContent() {
       {erreur && <p className={styles.erreur}>{erreur}</p>}
       {message && <p className={styles.confirmation}>{message}</p>}
 
-      {peutAcheter && !boostCree && (
+      {peutAcheter && (
         <div className={styles.carte}>
           <h2 className={styles.sousTitre}>{t("boost_sectionDemarrer")}</h2>
 
@@ -285,79 +281,84 @@ function BoostContent() {
         </div>
       )}
 
-      {boostCree && boostCree.invoice && (
-        <div className={styles.carte}>
-          <h2 className={styles.sousTitre}>{t("boost_factureCreeTitre")}</h2>
-          <p>{t("boost_factureCreeDescription")}</p>
-          <p className={styles.note}>
-            {t("boost_montantAregler")} : {formatMoney(Number(boostCree.montant))} · {t("crd_colEcheance")} :{" "}
-            {formatDate(boostCree.invoice.dueAt)}
-          </p>
-          <button
-            className={styles.bouton}
-            type="button"
-            onClick={() => setPreuveOuverte(preuveOuverte === boostCree.id ? null : boostCree.id)}
-          >
-            📎 {t("factElg_deposerPreuve")}
-          </button>
-          {preuveOuverte === boostCree.id && (
-            <div className={styles.depotPreuve}>
-              <input
-                type="text"
-                placeholder={t("factElg_notePlaceholder")}
-                value={noteParBoost[boostCree.id] ?? ""}
-                onChange={(e) => setNoteParBoost((prev) => ({ ...prev, [boostCree.id]: e.target.value }))}
-              />
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                disabled={enCoursPreuve === boostCree.id}
-                onChange={(e) => {
-                  const fichier = e.target.files?.[0];
-                  if (fichier && boostCree.invoice) deposerPreuve(boostCree.id, boostCree.invoice.id, fichier);
-                }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
       <h2 className={styles.sousTitre} style={{ marginTop: "var(--espace-5)" }}>
         {t("boost_historique")}
       </h2>
       {boosts.length === 0 ? (
         <p className={styles.messageVide}>{t("boost_aucunBoost")}</p>
       ) : (
-        boosts.map((b) => (
-          <div className={styles.ligneBoost} key={b.id}>
-            <div className={styles.entete}>
-              <span>
-                {b.cible === "PRODUIT" ? (b.product?.name ?? t("boost_cibleArticle")) : t("boost_cibleBoutique")}
-              </span>
-              <StatusTag label={t(CLES_STATUT[b.status])} humeur={HUMEUR_STATUT[b.status]} />
-            </div>
-            <div className={styles.detailsBoost}>
-              <span>
-                {t("boost_colDuree")} : {b.dureeJours} j · {t("boost_colMontant")} : {formatMoney(Number(b.montant))}
-              </span>
-              {b.startsAt && b.endsAt && (
+        boosts.map((b) => {
+          const enAttentePaiement = b.status === "EN_ATTENTE_PAIEMENT";
+          return (
+            <div className={styles.ligneBoost} key={b.id}>
+              <div className={styles.entete}>
                 <span>
-                  {formatDate(b.startsAt)} → {formatDate(b.endsAt)}
+                  {b.cible === "PRODUIT" ? (b.product?.name ?? t("boost_cibleArticle")) : t("boost_cibleBoutique")}
                 </span>
+                <StatusTag label={t(CLES_STATUT[b.status])} humeur={HUMEUR_STATUT[b.status]} />
+              </div>
+              <div className={styles.detailsBoost}>
+                <span>
+                  {t("boost_colDuree")} : {b.dureeJours} j · {t("boost_colMontant")} : {formatMoney(Number(b.montant))}
+                </span>
+                {b.startsAt && b.endsAt ? (
+                  <span>
+                    {formatDate(b.startsAt)} → {formatDate(b.endsAt)}
+                  </span>
+                ) : (
+                  enAttentePaiement &&
+                  b.invoice && (
+                    <span>
+                      {t("crd_colEcheance")} : {formatDate(b.invoice.dueAt)}
+                    </span>
+                  )
+                )}
+              </div>
+              {enAttentePaiement && b.invoice && (
+                <>
+                  <div className={styles.boutonsReglement}>
+                    <button
+                      className={styles.boutonSecondaire}
+                      type="button"
+                      onClick={() => setPreuveOuverte(preuveOuverte === b.id ? null : b.id)}
+                    >
+                      📎 {t("factElg_deposerPreuve")}
+                    </button>
+                    {peutAcheter && (
+                      <button
+                        className={styles.boutonSecondaire}
+                        type="button"
+                        disabled={annulationEnCours === b.id}
+                        onClick={() => annuler(b.id)}
+                      >
+                        {t("boost_annuler")}
+                      </button>
+                    )}
+                  </div>
+                  {preuveOuverte === b.id && (
+                    <div className={styles.depotPreuve}>
+                      <input
+                        type="text"
+                        placeholder={t("factElg_notePlaceholder")}
+                        value={noteParBoost[b.id] ?? ""}
+                        onChange={(e) => setNoteParBoost((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                      />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        disabled={enCoursPreuve === b.id}
+                        onChange={(e) => {
+                          const fichier = e.target.files?.[0];
+                          if (fichier && b.invoice) deposerPreuve(b.id, b.invoice.id, fichier);
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            {b.status === "EN_ATTENTE_PAIEMENT" && peutAcheter && (
-              <button
-                className={styles.boutonSecondaire}
-                type="button"
-                disabled={annulationEnCours === b.id}
-                onClick={() => annuler(b.id)}
-              >
-                {t("boost_annuler")}
-              </button>
-            )}
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
