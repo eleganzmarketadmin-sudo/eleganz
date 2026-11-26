@@ -651,7 +651,17 @@ function FacturesContent() {
         enAttente={enAttente}
         historique={autres}
         nomGetter={(f) => f.shop.name}
-        kindLabelGetter={(f) => f.kind}
+        kindLabelGetter={(f) =>
+          f.kind === "opening_fee"
+            ? t("admfact_fraisOuverture")
+            : f.kind === "subscription"
+              ? t("admfact_abonnementMensuel")
+              : f.kind === "commission"
+                ? t("admfact_kindCommission")
+                : f.kind === "boost"
+                  ? t("admfact_kindBoost")
+                  : f.kind
+        }
         labelVideEnAttente={t("admfact_aucuneFactureEnAttente")}
         labelVideHistorique={t("admfact_aucuneAutreFacture")}
         onChange={toutRecharger}

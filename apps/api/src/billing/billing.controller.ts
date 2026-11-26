@@ -11,6 +11,7 @@ import { requireAdminMenu } from "../admin-team/menu-admin.util";
 import { BulkRemindDto } from "./dto/bulk-remind.dto";
 import { CreerUploadPreuvePaiementDto, SoumettrePreuvePaiementDto } from "./dto/payment-proof.dto";
 import { ReactivationDecisionDto } from "./dto/reactivation-decision.dto";
+import { BoostService } from "../boost/boost.service";
 
 // Granularité par route (audit du 18 oct. 2026) : la liste et le paiement
 // des factures sont gérés depuis l'écran Factures (FACTURES), les
@@ -24,6 +25,7 @@ export class BillingController {
   constructor(
     private readonly billingService: BillingService,
     private readonly loansService: LoansService,
+    private readonly boostService: BoostService,
   ) {}
 
   @Get("shops/:shopId/invoices")
@@ -81,9 +83,18 @@ export class BillingController {
 
   @Post("admin/billing/invoices/:invoiceId/mark-paid")
   @UseGuards(JwtAuthGuard)
-  markPaid(@CurrentUser() user: AuthenticatedUser, @Param("invoiceId") invoiceId: string) {
+  async markPaid(@CurrentUser() user: AuthenticatedUser, @Param("invoiceId") invoiceId: string) {
     requireAdmin(user, MenuAdmin.FACTURES);
-    return this.billingService.markInvoicePaidAndReactivate(invoiceId, user.id);
+    const resultat = await this.billingService.markInvoicePaidAndReactivate(invoiceId, user.id);
+    // Boost payant (26 nov. 2026) — hook additif, ne modifie pas
+    // BillingService (aucun risque de régression sur les autres `kind` de
+    // facture) : une facture kind="boost" active le Boost lié une fois son
+    // paiement confirmé par un admin. Ne fait rien pour les autres natures
+    // de facture (opening_fee/subscription/commission/...).
+    if (resultat.kind === "boost") {
+      await this.boostService.activerDepuisFacture(invoiceId);
+    }
+    return resultat;
   }
 
   // --- Relances numérotées, preuves de paiement, réactivation (16 nov.

@@ -70,6 +70,7 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
     { href: "/caisse", label: t("nav_caisse"), menu: "CAISSE" },
     { href: "/tableau-de-bord", label: t("nav_tableauDeBord"), menu: "TABLEAU_DE_BORD" },
     { href: "/catalogue", label: t("nav_catalogue"), menu: "CATALOGUE" },
+    { href: "/boost", label: t("nav_boost"), menu: "BOOST" },
     { href: "/commandes", label: t("nav_commandes"), menu: "COMMANDES" },
     { groupeLabel: t("nav_finance"), liens: GROUPE_FINANCE },
     { href: "/livreurs", label: t("nav_livreurs"), menu: "LIVREURS" },

@@ -18,8 +18,8 @@ import styles from "./page.module.css";
 // valent `null` pour les modules sans cycle de facturation (Caisse,
 // Institutions) : le frontend n'affiche alors que facturé/encaissé.
 interface ModuleRevenu {
-  cle: "gestion" | "marketplace" | "livreur" | "secourable" | "caisse" | "institutions";
-  typeRevenu: "abonnement" | "commission" | "valeur_vendeur";
+  cle: "gestion" | "marketplace" | "livreur" | "secourable" | "boost" | "caisse" | "institutions";
+  typeRevenu: "abonnement" | "commission" | "valeur_vendeur" | "achat_ponctuel";
   facture: number;
   encaisse: number;
   enAttente: number | null;
@@ -31,6 +31,7 @@ const CLES_MODULE: Record<ModuleRevenu["cle"], string> = {
   marketplace: "admfinance_commissionMarketplace",
   livreur: "admpilot_mod_livreur",
   secourable: "admpilot_mod_secourable",
+  boost: "admpilot_mod_boost",
   caisse: "admpilot_mod_caisse",
   institutions: "admpilot_mod_institutions",
 };
@@ -50,6 +51,10 @@ const DESTINATION_MODULE: Record<ModuleRevenu["cle"], string> = {
   marketplace: "/admin/factures?kind=commission#section-boutiques",
   livreur: "/admin/factures#section-livreurs",
   secourable: "/admin/factures#section-comptable",
+  // Boost payant (26 nov. 2026) — même table Invoice boutique que gestion/
+  // marketplace, isolée par le même filtre `?kind=` déjà générique sur
+  // l'écran Factures (voir admin/factures/page.tsx : filtreKind).
+  boost: "/admin/factures?kind=boost#section-boutiques",
   caisse: "/admin/finance/ventes-caisse",
   // Commission Institutions (19 nov. 2026, demande du propriétaire : "les
   // commissions facturées aux institutions doivent figurer dans les

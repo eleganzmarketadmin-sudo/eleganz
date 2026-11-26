@@ -5,6 +5,7 @@ import { DriverBillingService } from "../delivery/driver-billing.service";
 import { ComptableBillingService } from "../comptable/comptable-billing.service";
 import { EcheancierService } from "../echeancier/echeancier.service";
 import { RisqueCreditService } from "../institutions/risque-credit.service";
+import { BoostService } from "../boost/boost.service";
 
 /**
  * Automatisation du cycle de facturation (18 oct. 2026, point 6 de l'audit
@@ -28,6 +29,11 @@ import { RisqueCreditService } from "../institutions/risque-credit.service";
  *      selon le module) n'expire à l'étape suivante.
  *   4. Suspensions pour impayé — en dernier, une fois que les relances ont
  *      eu leur chance d'aboutir à un paiement.
+ *   5. Expiration des boosts payants (26 nov. 2026) — purement cosmétique/
+ *      historique (voir BoostService.expirerBoostsTermines) : placée en toute
+ *      fin, sans lien de dépendance avec les étapes de facturation
+ *      ci-dessus, le tri du catalogue ne se fiant jamais à ce `status` seul
+ *      mais toujours à `endsAt` comparé à l'instant présent.
  *
  * Chaque étape reste aussi déclenchable manuellement depuis les écrans admin
  * existants (POST /admin/.../run-...) — ce cron ne les remplace pas, il
@@ -43,6 +49,7 @@ export class CronJobsService {
     private readonly comptableBilling: ComptableBillingService,
     private readonly echeancier: EcheancierService,
     private readonly risqueCredit: RisqueCreditService,
+    private readonly boost: BoostService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: "cycle-facturation-quotidien" })
@@ -80,6 +87,9 @@ export class CronJobsService {
         this.comptableBilling.executerEscaladeFacturesComptable(),
       ]);
       this.logger.log(`CRON_FACTURATION_SUSPENSIONS ${JSON.stringify(suspensions)}`);
+
+      const boostsExpires = await this.boost.expirerBoostsTermines();
+      this.logger.log(`CRON_FACTURATION_BOOSTS_EXPIRES ${JSON.stringify(boostsExpires)}`);
     } catch (err) {
       // Une étape qui échoue ne doit jamais empêcher la prochaine exécution
       // quotidienne — le marqueur greppable permet de repérer l'incident

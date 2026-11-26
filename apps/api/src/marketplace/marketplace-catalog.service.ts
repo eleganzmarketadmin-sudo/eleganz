@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { SearchProductsDto } from "./dto/search-products.dto";
+import { BoostCible, BoostStatus } from "@eleganz/database";
 
 /**
  * Champs d'une variante sûrs à exposer publiquement (20 oct. 2026, correctif
@@ -33,7 +34,7 @@ export class MarketplaceCatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async search(dto: SearchProductsDto) {
-    return this.prisma.product.findMany({
+    const produits = await this.prisma.product.findMany({
       where: {
         isPublished: true,
         shop: {
@@ -82,6 +83,46 @@ export class MarketplaceCatalogService {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    return this.appliquerPrioriteBoost(produits);
+  }
+
+  /**
+   * Boost payant (26 nov. 2026, décision propriétaire : "remonte dans le tri
+   * du catalogue/recherche", sans badge visuel) — remonte en tête tout
+   * produit dont l'id EST boosté, ou dont la boutique entière EST boostée,
+   * sans toucher au tri `createdAt desc` existant à l'intérieur de chaque
+   * groupe (Array.prototype.sort est stable en V8/Node).
+   *
+   * Comparaison en direct sur `endsAt > now`, jamais sur `Boost.status` seul
+   * (même principe "dérivé à la lecture" déjà appliqué à `Invoice.OVERDUE`) :
+   * un boost qui vient d'expirer à l'instant ne doit jamais rester pris en
+   * compte juste parce que le cron quotidien n'est pas encore repassé.
+   */
+  private async appliquerPrioriteBoost<T extends { id: string; shopId: string }>(
+    produits: T[],
+  ): Promise<T[]> {
+    if (produits.length === 0) return produits;
+
+    const maintenant = new Date();
+    const [produitsBoostes, boutiquesBoostees] = await Promise.all([
+      this.prisma.boost.findMany({
+        where: { cible: BoostCible.PRODUIT, status: BoostStatus.ACTIF, endsAt: { gt: maintenant } },
+        select: { productId: true },
+      }),
+      this.prisma.boost.findMany({
+        where: { cible: BoostCible.BOUTIQUE, status: BoostStatus.ACTIF, endsAt: { gt: maintenant } },
+        select: { shopId: true },
+      }),
+    ]);
+
+    if (produitsBoostes.length === 0 && boutiquesBoostees.length === 0) return produits;
+
+    const idsProduitsBoostes = new Set(produitsBoostes.map((b) => b.productId));
+    const idsBoutiquesBoostees = new Set(boutiquesBoostees.map((b) => b.shopId));
+    const estBooste = (p: T) => idsProduitsBoostes.has(p.id) || idsBoutiquesBoostees.has(p.shopId);
+
+    return [...produits].sort((a, b) => Number(estBooste(b)) - Number(estBooste(a)));
   }
 
   async findPublished(productId: string) {

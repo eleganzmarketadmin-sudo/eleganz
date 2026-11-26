@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { BoostCible, BoostStatus } from "@eleganz/database";
 
 /**
  * Recherche et fiche publique des boutiques (prompt du 15 oct. 2026, points
@@ -41,7 +42,7 @@ export class MarketplaceShopsService {
     });
     const noteParBoutique = new Map(notes.map((n) => [n.shopId, n]));
 
-    return boutiques.map((b) => ({
+    const resultats = boutiques.map((b) => ({
       id: b.id,
       name: b.name,
       slug: b.slug,
@@ -51,6 +52,22 @@ export class MarketplaceShopsService {
       noteMoyenne: noteParBoutique.get(b.id)?._avg.rating ?? null,
       nombreAvis: noteParBoutique.get(b.id)?._count.rating ?? 0,
     }));
+
+    // Boost payant (26 nov. 2026) — même principe que
+    // MarketplaceCatalogService.appliquerPrioriteBoost : remonte en tête les
+    // boutiques boostées (cible BOUTIQUE) sans toucher au tri `name asc`
+    // existant à l'intérieur de chaque groupe (tri stable), comparaison en
+    // direct sur `endsAt > now`, jamais sur `Boost.status` seul.
+    const boutiquesBoostees = await this.prisma.boost.findMany({
+      where: { cible: BoostCible.BOUTIQUE, status: BoostStatus.ACTIF, endsAt: { gt: new Date() } },
+      select: { shopId: true },
+    });
+    if (boutiquesBoostees.length === 0) return resultats;
+
+    const idsBoutiquesBoostees = new Set(boutiquesBoostees.map((bo) => bo.shopId));
+    return [...resultats].sort(
+      (a, b) => Number(idsBoutiquesBoostees.has(b.id)) - Number(idsBoutiquesBoostees.has(a.id)),
+    );
   }
 
   async findBySlug(slug: string) {

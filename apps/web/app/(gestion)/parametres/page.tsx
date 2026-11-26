@@ -90,6 +90,24 @@ interface FactureEleganz {
   penaltyAmount: string | null;
 }
 
+// Libellé lisible pour chaque nature de facture ELEGANZ (26 nov. 2026,
+// ajout de "boost" — voir le même mapping côté admin dans
+// admin/factures/page.tsx, kindLabelGetter de la section boutiques).
+function libelleKindFacture(kind: string, t: (cle: string) => string): string {
+  switch (kind) {
+    case "opening_fee":
+      return t("admfact_fraisOuverture");
+    case "subscription":
+      return t("admfact_abonnementMensuel");
+    case "commission":
+      return t("admfact_kindCommission");
+    case "boost":
+      return t("admfact_kindBoost");
+    default:
+      return kind;
+  }
+}
+
 const CLES_PALIER_FACTURATION: Record<number, string> = {
   1: "admfact_palier1",
   2: "admfact_palier2",
@@ -171,7 +189,7 @@ function FacturationElegansSection({ shopId, shopStatus }: { shopId: string; sho
           <div key={f.id} className={styles.champ} style={{ border: "1px solid var(--color-border)", borderRadius: "8px", padding: "var(--espace-3)" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--espace-3)", alignItems: "center", justifyContent: "space-between" }}>
               <span>
-                <strong>{f.kind}</strong> — {formatMoney(Number(f.amount))} · {t("crd_colEcheance")} : {formatDate(f.dueAt)}
+                <strong>{libelleKindFacture(f.kind, t)}</strong> — {formatMoney(Number(f.amount))} · {t("crd_colEcheance")} : {formatDate(f.dueAt)}
                 {f.reminderStage > 0 && CLES_PALIER_FACTURATION[f.reminderStage] && (
                   <> · {t(CLES_PALIER_FACTURATION[f.reminderStage])}</>
                 )}
@@ -216,7 +234,7 @@ function FacturationElegansSection({ shopId, shopStatus }: { shopId: string; sho
         historique.slice(0, 10).map((f) => (
           <div key={f.id} className={styles.champ} style={{ display: "flex", justifyContent: "space-between" }}>
             <span>
-              {f.kind} — {formatMoney(Number(f.amount))}
+              {libelleKindFacture(f.kind, t)} — {formatMoney(Number(f.amount))}
               {f.penaltyAmount && Number(f.penaltyAmount) > 0 && (
                 <> · {t("admfact_penalite")} : {formatMoney(Number(f.penaltyAmount))}</>
               )}

@@ -110,15 +110,18 @@ export class AdminCockpitService {
     // Répartition par module (16 nov. 2026, refonte du Centre de pilotage,
     // plan §4) — un module = une carte côté frontend, chacune avec le même
     // triptyque revenu/en attente/en retard quand il a un sens pour ce
-    // module. "gestion" regroupe tout Invoice hors commission marketplace
-    // (frais d'ouverture, abonnements, crédits IA, ...) ; "marketplace" isole
-    // la commission ELEGANZ Market (kind: "commission") de ces abonnements,
-    // qui est un revenu de nature différente. "caisse" (POS) et
+    // module. "gestion" regroupe tout Invoice hors commission marketplace et
+    // hors boost (frais d'ouverture, abonnements, crédits IA, ...) ;
+    // "marketplace" isole la commission ELEGANZ Market (kind: "commission")
+    // de ces abonnements, qui est un revenu de nature différente ; "boost"
+    // (26 nov. 2026) isole de même la mise en avant payante (kind: "boost"),
+    // un achat ponctuel plutôt qu'un abonnement récurrent. "caisse" (POS) et
     // "institutions" (commission sur prêts) n'ont pas de cycle de
     // facturation attente/retard — enAttente/enRetard valent `null` pour
     // que le frontend n'affiche pas ces deux colonnes pour ces deux cartes.
-    const facturesGestion = invoiceLines.filter((l) => l.kind !== "commission");
+    const facturesGestion = invoiceLines.filter((l) => l.kind !== "commission" && l.kind !== "boost");
     const facturesCommissionMarketplace = invoiceLines.filter((l) => l.kind === "commission");
+    const facturesBoost = invoiceLines.filter((l) => l.kind === "boost");
     const totalVentesCaisse = Number(posSalesTotal._sum.totalAmount ?? 0);
     const totalCommissionInstitutions = Number(institutionsCommissionTotal._sum.institutionCommissionAmount ?? 0);
 
@@ -142,6 +145,11 @@ export class AdminCockpitService {
         cle: "secourable" as const,
         typeRevenu: "abonnement" as const,
         ...repartirFacturation(comptableInvoiceLines, maintenant),
+      },
+      {
+        cle: "boost" as const,
+        typeRevenu: "achat_ponctuel" as const,
+        ...repartirFacturation(facturesBoost, maintenant),
       },
       {
         // Valeur des ventes Caisse — PAS un revenu ELEGANZ (comme
