@@ -648,6 +648,7 @@ export class CatalogService implements OnModuleInit {
         ...(dto.costPrice !== undefined ? { costPrice: dto.costPrice } : {}),
         ...(dto.sellPrice !== undefined ? { sellPrice: dto.sellPrice } : {}),
         ...(compareAtPriceExplicite ? { compareAtPrice: dto.compareAtPrice } : {}),
+        ...(dto.lowStockAt !== undefined ? { lowStockAt: dto.lowStockAt } : {}),
       },
     });
   }

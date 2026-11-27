@@ -72,6 +72,14 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
     { href: "/catalogue", label: t("nav_catalogue"), menu: "CATALOGUE" },
     { href: "/boost", label: t("nav_boost"), menu: "BOOST" },
     { href: "/commandes", label: t("nav_commandes"), menu: "COMMANDES" },
+    // Classement des meilleures ventes (27 nov. 2026, demande : "Dans
+    // gestion sur Ajouter un classement des produits de la boutique les
+    // plus vendus quantité et valeur" — réponse du propriétaire : nouvelle
+    // page « Statistiques » dédiée, pas intégrée à Catalogue/Tableau de
+    // bord). Nouvelle clé de menu STATISTIQUES (schema.prisma) — accordée
+    // par défaut à OWNER/MANAGER uniquement (menuGestionParDefaut,
+    // shops.service.ts), comme BOOST.
+    { href: "/statistiques", label: t("nav_statistiques"), menu: "STATISTIQUES" },
     { groupeLabel: t("nav_finance"), liens: GROUPE_FINANCE },
     { href: "/livreurs", label: t("nav_livreurs"), menu: "LIVREURS" },
     { href: "/litiges", label: t("nav_litiges"), menu: "LITIGES" },

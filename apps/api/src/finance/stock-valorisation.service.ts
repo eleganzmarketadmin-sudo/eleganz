@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { AccountingService } from "./accounting.service";
 import { CreateReceptionStockDto } from "./dto/reception-stock.dto";
 import { StockMovementType } from "@eleganz/database";
+import { construireClasseurExcel } from "../common/xlsx.util";
 
 /**
  * Stock & CMV — chantier SYSCOHADA, phase 4 (14 oct. 2026). Coût Unitaire
@@ -114,5 +115,47 @@ export class StockValorisationService {
       where: { shopId, variantId },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  /**
+   * Lignes d'export Stock & CMV (27 nov. 2026, demande : "possibilité
+   * d'exporter en Excel ou pdf"), gardé distinct de `listPourVariante`
+   * ci-dessus — une ligne par variante, toutes les variantes de la
+   * boutique, valeur de stock calculée au CUMP connu (0 si CUMP encore
+   * inconnu, cohérent avec l'affichage "—" déjà en place sur l'écran).
+   */
+  async listPourExport(shopId: string) {
+    const variants = await this.prisma.variant.findMany({
+      where: { product: { shopId } },
+      include: { product: { select: { name: true } } },
+      orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
+    });
+    return variants.map((v) => {
+      const cump = v.coutMoyenPondere != null ? Number(v.coutMoyenPondere) : null;
+      return {
+        produitNom: v.product.name,
+        sku: v.sku,
+        size: v.size,
+        color: v.color,
+        stockQty: v.stockQty,
+        cump,
+        valeurStock: cump != null ? Math.round(v.stockQty * cump * 100) / 100 : 0,
+        lowStockAt: v.lowStockAt,
+      };
+    });
+  }
+
+  async exporterExcel(shopId: string): Promise<Buffer> {
+    const lignes = await this.listPourExport(shopId);
+    const entetes = ["Article", "Variante", "Stock", "CUMP", "Valeur stock", "Seuil alerte"];
+    const corps = lignes.map((l) => [
+      l.produitNom,
+      [l.sku, l.size, l.color].filter(Boolean).join(" · "),
+      l.stockQty,
+      l.cump ?? "",
+      l.valeurStock,
+      l.lowStockAt,
+    ]);
+    return construireClasseurExcel("Stock", entetes, corps);
   }
 }

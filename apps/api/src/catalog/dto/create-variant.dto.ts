@@ -87,4 +87,15 @@ export class UpdateVariantDto {
   @IsNumber()
   @Min(0)
   compareAtPrice?: number | null;
+
+  // Seuil d'alerte de stock bas (27 nov. 2026, demande : "Ajouter un menu ou
+  // option d'alerte sur les articles et leurs quantité pour organiser un
+  // approvisionnement") — champ `Variant.lowStockAt` déjà présent dans le
+  // schéma (valeur par défaut 3) mais jamais exposé à l'édition jusqu'ici.
+  // Un article est "en stock bas" dès que `stockQty <= lowStockAt`, comparé
+  // à l'affichage uniquement (voir page Stock & CMV), jamais stocké.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  lowStockAt?: number;
 }

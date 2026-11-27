@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProtectedGestionPage } from "../../../components/ProtectedGestionPage";
 import { FinanceSubNav } from "../../../components/FinanceSubNav";
 import { useShop } from "../../../lib/shop-context";
 import { api, ApiError } from "../../../lib/api";
+import { telechargerFichier } from "../../../lib/telecharger-fichier";
+import { ouvrirDocumentPdf } from "../../../lib/pdf";
 import { useLocale } from "../../../lib/i18n/LocaleContext";
 import styles from "../page.module.css";
 
@@ -13,6 +15,11 @@ import styles from "../page.module.css";
 // seul point d'entrée qui fait progresser le CUMP d'une variante. Tant
 // qu'aucune réception n'a eu lieu pour une variante, son CUMP reste
 // inconnu (affiché "—"), exactement comme avant ce chantier.
+//
+// Tri, export et alerte de stock bas ajoutés le 27 nov. 2026 (demande :
+// "rajouter les boutons pour filtrer les quantités par article croissant
+// ou décroissant ... exporter en Excel ou pdf ... menu ou option d'alerte
+// sur les articles et leurs quantité pour organiser un approvisionnement").
 interface Variant {
   id: string;
   sku: string;
@@ -20,12 +27,19 @@ interface Variant {
   color: string | null;
   stockQty: number;
   coutMoyenPondere: string | null;
+  lowStockAt: number;
 }
 
 interface Product {
   id: string;
   name: string;
   variants: Variant[];
+}
+
+interface LigneStock {
+  produitId: string;
+  produitNom: string;
+  variante: Variant;
 }
 
 interface Supplier {
@@ -60,6 +74,12 @@ function StockContenu() {
   const [supplierId, setSupplierId] = useState("");
   const [onCredit, setOnCredit] = useState(false);
   const [enCours, setEnCours] = useState(false);
+
+  const [triStock, setTriStock] = useState<"asc" | "desc" | null>(null);
+  const [stockBasUniquement, setStockBasUniquement] = useState(false);
+  const [seuilEnEdition, setSeuilEnEdition] = useState<Record<string, string>>({});
+  const [seuilEnCours, setSeuilEnCours] = useState<string | null>(null);
+  const [exportEnCours, setExportEnCours] = useState<"xlsx" | "pdf" | null>(null);
 
   function recharger() {
     if (!currentShop) return;
@@ -119,6 +139,72 @@ function StockContenu() {
     }
   }
 
+  // Lignes aplaties (une par variante), filtrées sur le stock bas si demandé,
+  // puis triées sur la quantité en stock selon `triStock` — le tableau par
+  // défaut garde l'ordre d'arrivée de l'API (produit le plus récent d'abord),
+  // `triStock` ne s'applique que si l'utilisateur clique l'en-tête "Stock".
+  const toutesLesLignes: LigneStock[] = useMemo(
+    () =>
+      produits.flatMap((p) =>
+        p.variants.map((v) => ({ produitId: p.id, produitNom: p.name, variante: v })),
+      ),
+    [produits],
+  );
+
+  const lignesStockBas = toutesLesLignes.filter((l) => l.variante.stockQty <= l.variante.lowStockAt);
+
+  const lignes = useMemo(() => {
+    const base = stockBasUniquement ? lignesStockBas : toutesLesLignes;
+    if (!triStock) return base;
+    const triees = [...base].sort((a, b) => a.variante.stockQty - b.variante.stockQty);
+    return triStock === "asc" ? triees : triees.reverse();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toutesLesLignes, stockBasUniquement, triStock]);
+
+  function basculerTriStock() {
+    setTriStock((t) => (t === "asc" ? "desc" : t === "desc" ? null : "asc"));
+  }
+
+  async function enregistrerSeuil(produitId: string, variantId: string) {
+    if (!currentShop) return;
+    const valeur = Number(seuilEnEdition[variantId]);
+    if (!Number.isFinite(valeur) || valeur < 0) return;
+    setSeuilEnCours(variantId);
+    setErreur(null);
+    try {
+      await api.patch(`/shops/${currentShop.id}/products/${produitId}/variants/${variantId}`, {
+        lowStockAt: Math.round(valeur),
+      });
+      setSeuilEnEdition((prev) => {
+        const { [variantId]: _retire, ...reste } = prev;
+        return reste;
+      });
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("fin_erreurGenerique"));
+    } finally {
+      setSeuilEnCours(null);
+    }
+  }
+
+  async function exporter(format: "xlsx" | "pdf") {
+    if (!currentShop) return;
+    setExportEnCours(format);
+    setErreur(null);
+    try {
+      const path = `/shops/${currentShop.id}/stock/export?format=${format}`;
+      if (format === "xlsx") {
+        await telechargerFichier(path, "stock-eleganz.xlsx");
+      } else {
+        await ouvrirDocumentPdf(path);
+      }
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : t("fact_exportImpossible"));
+    } finally {
+      setExportEnCours(null);
+    }
+  }
+
   return (
     <div>
       <h1 className={styles.titre}>{t("fin_titre")}</h1>
@@ -127,6 +213,39 @@ function StockContenu() {
       <p style={{ color: "#888", fontSize: "0.875rem", marginBottom: "20px" }}>
         {t("sto_noteAide")}
       </p>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center", marginBottom: "16px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <input
+            type="checkbox"
+            checked={stockBasUniquement}
+            onChange={(e) => setStockBasUniquement(e.target.checked)}
+          />
+          {t("sto_stockBasUniquement")}
+        </label>
+        {lignesStockBas.length > 0 && (
+          <span
+            style={{
+              background: "var(--color-flamme, #c0392b)",
+              color: "#fff",
+              borderRadius: "999px",
+              padding: "2px 10px",
+              fontSize: "0.8125rem",
+              fontWeight: 600,
+            }}
+          >
+            {t("sto_articlesStockBas").replace("{{n}}", String(lignesStockBas.length))}
+          </span>
+        )}
+        <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+          <button onClick={() => exporter("xlsx")} disabled={exportEnCours !== null}>
+            {exportEnCours === "xlsx" ? "…" : t("fact_exporterExcel")}
+          </button>
+          <button onClick={() => exporter("pdf")} disabled={exportEnCours !== null}>
+            {exportEnCours === "pdf" ? "…" : t("rel_exporterPdf")}
+          </button>
+        </div>
+      </div>
 
       {erreur && <div className={styles.erreur}>{erreur}</div>}
       {chargement ? (
@@ -137,27 +256,56 @@ function StockContenu() {
             <tr>
               <th>{t("sto_colArticle")}</th>
               <th>{t("sto_colVariante")}</th>
-              <th style={{ textAlign: "right" }}>{t("cat_colStock")}</th>
+              <th style={{ textAlign: "right", cursor: "pointer", userSelect: "none" }} onClick={basculerTriStock}>
+                {t("cat_colStock")} {triStock === "asc" ? "▲" : triStock === "desc" ? "▼" : "⇅"}
+              </th>
               <th style={{ textAlign: "right" }}>{t("sto_colCump")}</th>
+              <th style={{ textAlign: "right" }}>{t("sto_colValeurStock")}</th>
+              <th style={{ textAlign: "right" }}>{t("sto_seuilAlerte")}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {produits.flatMap((p) =>
-              p.variants.map((v) => (
-                <tr key={v.id}>
-                  <td>{p.name}</td>
+            {lignes.map(({ produitId, produitNom, variante: v }) => {
+              const enAlerte = v.stockQty <= v.lowStockAt;
+              const valeurStock = v.coutMoyenPondere ? v.stockQty * Number(v.coutMoyenPondere) : 0;
+              const seuilBrouillon = seuilEnEdition[v.id];
+              return (
+                <tr key={v.id} style={enAlerte ? { background: "rgba(192, 57, 43, 0.08)" } : undefined}>
+                  <td>{produitNom}</td>
                   <td>
                     {v.sku} {v.size ? `· ${v.size}` : ""} {v.color ? `· ${v.color}` : ""}
                   </td>
                   <td style={{ textAlign: "right" }}>{v.stockQty}</td>
                   <td style={{ textAlign: "right" }}>{v.coutMoyenPondere ? `${f(v.coutMoyenPondere)} $` : "—"}</td>
+                  <td style={{ textAlign: "right" }}>{valeurStock ? `${f(valeurStock)} $` : "—"}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end", alignItems: "center" }}>
+                      <input
+                        type="number"
+                        min="0"
+                        style={{ width: "60px", textAlign: "right" }}
+                        value={seuilBrouillon ?? String(v.lowStockAt)}
+                        onChange={(e) =>
+                          setSeuilEnEdition((prev) => ({ ...prev, [v.id]: e.target.value }))
+                        }
+                      />
+                      {seuilBrouillon !== undefined && seuilBrouillon !== String(v.lowStockAt) && (
+                        <button
+                          onClick={() => enregistrerSeuil(produitId, v.id)}
+                          disabled={seuilEnCours === v.id}
+                        >
+                          {seuilEnCours === v.id ? "…" : t("action_enregistrer")}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <button onClick={() => ouvrirVariante(v.id)}>{t("sto_receptionner")}</button>
                   </td>
                 </tr>
-              )),
-            )}
+              );
+            })}
           </tbody>
         </table>
       )}

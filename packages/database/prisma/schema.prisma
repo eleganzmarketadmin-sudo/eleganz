@@ -341,6 +341,14 @@ enum MenuGestion {
   // OWNER/MANAGER uniquement via TOUS_LES_ECRANS_GESTION, cohérent avec le
   // reste de la facturation (c'est un engagement financier).
   BOOST
+  // Statistiques — classement des meilleures ventes (27 nov. 2026, demande :
+  // "Dans gestion sur Ajouter un classement des produits de la boutique les
+  // plus vendus"). Même principe que BOOST ci-dessus : pas ajouté aux listes
+  // de rôle par défaut de CASHIER/STOCK_KEEPER/SALES_LEAD/ACCOUNTANT dans
+  // menuGestionParDefaut(), accordé par défaut à OWNER/MANAGER uniquement
+  // (donnée de performance commerciale globale) — le propriétaire/gérant
+  // peut toujours l'ouvrir à un rôle précis via l'override par membre.
+  STATISTIQUES
 }
 
 // Écrans du menu Centre de pilotage, un par entrée de AdminShell.LIENS (16
