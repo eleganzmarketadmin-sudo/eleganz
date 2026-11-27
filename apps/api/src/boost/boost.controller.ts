@@ -45,18 +45,21 @@ export class BoostController {
   }
 
   // --- Centre de pilotage (visibilité opérationnelle + modération) ---
+  // Déplacé le 27 nov. 2026 de MenuAdmin.TARIFS vers le nouveau
+  // MenuAdmin.BOOST dédié (demande propriétaire : "créer un menu dans le
+  // centre de pilotage où tout pourra être modifié").
 
   @Get("admin/boost")
   @UseGuards(JwtAuthGuard)
   listerEnCours(@CurrentUser() user: AuthenticatedUser) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostService.listerBoostsEnCours();
   }
 
   @Post("admin/boost/:boostId/revoquer")
   @UseGuards(JwtAuthGuard)
   revoquer(@CurrentUser() user: AuthenticatedUser, @Param("boostId") boostId: string) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostService.revoquer(boostId, user.id);
   }
 
@@ -67,7 +70,7 @@ export class BoostController {
   @Post("admin/boost/expirer-maintenant")
   @UseGuards(JwtAuthGuard)
   expirerMaintenant(@CurrentUser() user: AuthenticatedUser) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostService.expirerBoostsTermines();
   }
 }

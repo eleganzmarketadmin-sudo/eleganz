@@ -8,9 +8,12 @@ import { BoostCible, MenuAdmin } from "@eleganz/database";
 import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
 /**
- * Tarifs Boost (26 nov. 2026) — même structure que
- * SubscriptionPlansController : lecture publique (l'écran d'achat côté
- * Gestion en a besoin sans etre admin), écriture réservée à MenuAdmin.TARIFS.
+ * Tarifs Boost (26 nov. 2026 ; étendu le 27 nov. 2026, refonte ELEGANZ
+ * BOOST) — même structure que SubscriptionPlansController : lecture
+ * publique (l'écran d'achat côté Gestion en a besoin sans être admin),
+ * écriture réservée au nouveau menu dédié MenuAdmin.BOOST (déplacé de
+ * MenuAdmin.TARIFS — demande propriétaire : "créer un menu... où tout
+ * pourra être modifié").
  */
 @Controller()
 export class BoostTarifsController {
@@ -24,14 +27,14 @@ export class BoostTarifsController {
   @Get("admin/billing/boost-tarifs")
   @UseGuards(JwtAuthGuard)
   listAll(@CurrentUser() user: AuthenticatedUser, @Query("cible") cible?: BoostCible) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostTarifsService.listAll(cible);
   }
 
   @Post("admin/billing/boost-tarifs")
   @UseGuards(JwtAuthGuard)
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateBoostTarifDto) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostTarifsService.create(dto);
   }
 
@@ -42,7 +45,7 @@ export class BoostTarifsController {
     @Param("tarifId") tarifId: string,
     @Body() dto: UpdateBoostTarifDto,
   ) {
-    requireAdminMenu(user, MenuAdmin.TARIFS);
+    requireAdminMenu(user, MenuAdmin.BOOST);
     return this.boostTarifsService.update(tarifId, dto);
   }
 }

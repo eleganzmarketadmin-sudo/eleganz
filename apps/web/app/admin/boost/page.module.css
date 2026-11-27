@@ -1,0 +1,206 @@
+.titre {
+  margin-bottom: var(--espace-5);
+}
+
+.sectionTitre {
+  font-size: 1rem;
+  margin: var(--espace-5) 0 var(--espace-3);
+  padding-bottom: var(--espace-2);
+  border-bottom: 2px solid var(--color-ink);
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.plan {
+  border: 2px solid var(--color-ink);
+  margin-bottom: var(--espace-3);
+}
+
+.planInactif {
+  opacity: 0.55;
+}
+
+.planEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--color-encre-fixe);
+  color: #fff;
+}
+
+.planNom {
+  font-weight: 600;
+}
+
+.planStatut {
+  font-size: 0.8125rem;
+  color: var(--color-or-texte);
+}
+
+.planChamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+}
+
+.champ input {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+  min-width: 140px;
+}
+
+.champLarge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.8125rem;
+  flex: 1 1 260px;
+}
+
+.champLarge input {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 40px;
+}
+
+.planActions {
+  display: flex;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.boutonEnregistrer,
+.boutonBasculer,
+.boutonNouveau {
+  border: none;
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonEnregistrer {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonBasculer {
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink);
+}
+
+.boutonEnregistrer:disabled,
+.boutonBasculer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonNouveau {
+  background: var(--color-or);
+  margin-top: var(--espace-4);
+}
+
+.nouveauPlan {
+  margin-top: var(--espace-4);
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  align-items: center;
+}
+
+.nouveauPlan select,
+.nouveauPlan input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+}
+
+.messageVide {
+  padding: var(--espace-3);
+  color: var(--color-texte-muted);
+}
+
+.sousTitreFamille {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-texte-muted);
+  margin: var(--espace-4) 0 var(--espace-2);
+}
+
+.note {
+  font-size: 0.8125rem;
+  color: var(--color-texte-muted);
+  padding: 0 var(--espace-4) var(--espace-2);
+  max-width: 70ch;
+}
+
+.champLarge textarea {
+  padding: var(--espace-2);
+  border: 1px solid var(--color-border);
+  min-height: 60px;
+  font: inherit;
+  resize: vertical;
+}
+
+.boutonSupprimer {
+  border: 1px solid var(--color-flamme);
+  background: var(--color-surface);
+  color: var(--color-flamme);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.boutonSupprimer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ligneCoche {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: 0.8125rem;
+}
+
+.rapportGrille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+}
+
+.rapportChiffre {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rapportChiffre strong {
+  font-size: 1.125rem;
+}
+
+.rapportChiffre span {
+  font-size: 0.75rem;
+  color: var(--color-texte-muted);
+}

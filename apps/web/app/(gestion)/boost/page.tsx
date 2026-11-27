@@ -10,14 +10,39 @@ import { formatMoney, formatDate } from "../../lib/money";
 import { useLocale } from "../../lib/i18n/LocaleContext";
 import styles from "./page.module.css";
 
-type BoostCible = "BOUTIQUE" | "PRODUIT";
+type BoostCible = "BOUTIQUE" | "PRODUIT" | "COLLECTION" | "SOCIAL_360";
+type BoostCanal = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "GOOGLE" | "X";
 type BoostStatus = "EN_ATTENTE_PAIEMENT" | "ACTIF" | "EXPIRE" | "ANNULE";
+
+const FAMILLES: BoostCible[] = ["PRODUIT", "COLLECTION", "BOUTIQUE", "SOCIAL_360"];
+const CANAUX: BoostCanal[] = ["FACEBOOK", "INSTAGRAM", "TIKTOK", "GOOGLE", "X"];
+
+// Noms de marque — jamais traduits, même convention que le Centre de
+// pilotage (apps/web/app/admin/boost/page.tsx).
+const LIBELLE_CANAL: Record<BoostCanal, string> = {
+  FACEBOOK: "Facebook Ads",
+  INSTAGRAM: "Instagram Ads",
+  TIKTOK: "TikTok Ads",
+  GOOGLE: "Google Ads",
+  X: "X Ads",
+};
+
+function cleFamille(cible: BoostCible): string {
+  if (cible === "PRODUIT") return "boost_cibleArticle";
+  if (cible === "COLLECTION") return "boost_cibleCollection";
+  if (cible === "SOCIAL_360") return "boost_cibleSocial360";
+  return "boost_cibleBoutique";
+}
 
 interface BoostTarif {
   id: string;
   cible: BoostCible;
+  nom: string;
   dureeJours: number;
-  prix: string;
+  prixUSD: string;
+  prixCDF: string | null;
+  maxProduits: number | null;
+  featuresJson: Record<string, unknown>;
   actif: boolean;
 }
 
@@ -27,14 +52,22 @@ interface ProduitPublie {
   isPublished: boolean;
 }
 
+interface ProduitRef {
+  id: string;
+  name: string;
+}
+
 interface Boost {
   id: string;
   cible: BoostCible;
   productId: string | null;
-  product: { id: string; name: string } | null;
+  product: ProduitRef | null;
+  boostProduits: { product: ProduitRef }[];
+  canauxJson: string[] | null;
   tarif: BoostTarif;
   dureeJours: number;
   montant: string;
+  remiseAppliqueePct: string | null;
   status: BoostStatus;
   invoice: { id: string; status: string; dueAt: string; paidAt: string | null } | null;
   startsAt: string | null;
@@ -56,15 +89,32 @@ const HUMEUR_STATUT: Record<BoostStatus, "paye" | "attente" | "alerte" | "neutre
   ANNULE: "neutre",
 };
 
+function libelleCible(b: Boost, t: (cle: string) => string): string {
+  if (b.cible === "PRODUIT") return b.product?.name ?? t("boost_cibleArticle");
+  if (b.cible === "COLLECTION") {
+    const noms = b.boostProduits.map((bp) => bp.product.name);
+    return noms.length > 0 ? `${t("boost_articlesCollection")} (${noms.length}) : ${noms.join(", ")}` : t("boost_cibleCollection");
+  }
+  if (b.cible === "SOCIAL_360") {
+    const canaux = (b.canauxJson ?? []) as BoostCanal[];
+    return canaux.length > 0
+      ? `${t("boost_canauxChoisis")} : ${canaux.map((c) => LIBELLE_CANAL[c] ?? c).join(", ")}`
+      : t("boost_cibleSocial360");
+  }
+  return t("boost_cibleBoutique");
+}
+
 /**
- * Boost payant (26 nov. 2026, demande propriétaire) — une boutique paie pour
- * mettre en avant toute sa boutique ou un article précis, pour une durée
- * choisie. Règlement hors ligne (virement/Mobile Money), même pattern en
- * deux temps que FacturationElegansSection
- * (apps/web/app/(gestion)/parametres/page.tsx) : upload-url signée, PUT
- * direct sur le stockage, puis confirmation — ici réutilisé tel quel sur la
- * facture liée au boost (BillingService ne distingue pas ses factures par
- * nature pour ce mécanisme).
+ * Boost payant (26 nov. 2026, demande propriétaire ; étendu le 27 nov. 2026 —
+ * refonte ELEGANZ BOOST à partir de la proposition de tarification fournie,
+ * adaptée à l'architecture réelle) — une boutique paie pour mettre en avant
+ * toute sa boutique, un article précis, PLUSIEURS articles choisis (famille
+ * COLLECTION, bornée par tarif.maxProduits) ou une campagne multicanale
+ * (famille SOCIAL_360, canaux limités à ceux inclus dans le palier choisi).
+ * Règlement hors ligne (virement/Mobile Money), même pattern en deux temps
+ * que FacturationElegansSection (apps/web/app/(gestion)/parametres/page.tsx) :
+ * upload-url signée, PUT direct sur le stockage, puis confirmation — ici
+ * réutilisé tel quel sur la facture liée au boost.
  *
  * L'achat engage la boutique financièrement : réservé à OWNER (même
  * restriction que le changement de bouquet Gestion), MANAGER peut
@@ -81,8 +131,10 @@ function BoostContent() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [cible, setCible] = useState<BoostCible>("BOUTIQUE");
+  const [cible, setCible] = useState<BoostCible>("PRODUIT");
   const [productId, setProductId] = useState("");
+  const [productIds, setProductIds] = useState<string[]>([]);
+  const [canaux, setCanaux] = useState<BoostCanal[]>([]);
   const [tarifId, setTarifId] = useState("");
   const [etapeReglement, setEtapeReglement] = useState(false);
   const [achatEnCours, setAchatEnCours] = useState(false);
@@ -111,6 +163,22 @@ function BoostContent() {
 
   const tarifsFiltres = (tarifs ?? []).filter((tf) => tf.cible === cible);
   const articlesPublies = (produits ?? []).filter((p) => p.isPublished);
+  const tarifChoisi = tarifsFiltres.find((tf) => tf.id === tarifId) ?? null;
+  const canauxDisponibles = tarifChoisi ? CANAUX.filter((c) => tarifChoisi.featuresJson?.[c] === true) : [];
+
+  function changerCible(nouvelleCible: BoostCible) {
+    setCible(nouvelleCible);
+    setProductId("");
+    setProductIds([]);
+    setCanaux([]);
+    setTarifId("");
+  }
+
+  function changerTarif(nouveauTarifId: string) {
+    setTarifId(nouveauTarifId);
+    setProductIds([]);
+    setCanaux([]);
+  }
 
   async function lancerAchat() {
     if (!currentShop || !tarifId) return;
@@ -121,13 +189,13 @@ function BoostContent() {
       await api.post<Boost>(`/shops/${currentShop.id}/boosts`, {
         cible,
         productId: cible === "PRODUIT" ? productId : undefined,
+        productIds: cible === "COLLECTION" ? productIds : undefined,
+        canaux: cible === "SOCIAL_360" ? canaux : undefined,
         tarifId,
       });
       setMessage(t("boost_confirmeAchat"));
       setEtapeReglement(false);
-      setCible("BOUTIQUE");
-      setProductId("");
-      setTarifId("");
+      changerCible("PRODUIT");
       recharger();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cmd_erreurGenerique"));
@@ -180,7 +248,11 @@ function BoostContent() {
     return <p className={styles.note}>{t("abonnement_chargement")}</p>;
   }
 
-  const tarifChoisi = tarifsFiltres.find((tf) => tf.id === tarifId) ?? null;
+  const continuerDesactive =
+    !tarifId ||
+    (cible === "PRODUIT" && !productId) ||
+    (cible === "COLLECTION" && productIds.length === 0) ||
+    (cible === "SOCIAL_360" && canaux.length === 0);
 
   return (
     <div>
@@ -197,16 +269,12 @@ function BoostContent() {
             <>
               <label className={styles.champ}>
                 <span>{t("boost_choisirCible")}</span>
-                <select
-                  value={cible}
-                  onChange={(e) => {
-                    setCible(e.target.value as BoostCible);
-                    setProductId("");
-                    setTarifId("");
-                  }}
-                >
-                  <option value="BOUTIQUE">{t("boost_cibleBoutique")}</option>
-                  <option value="PRODUIT">{t("boost_cibleArticle")}</option>
+                <select value={cible} onChange={(e) => changerCible(e.target.value as BoostCible)}>
+                  {FAMILLES.map((f) => (
+                    <option key={f} value={f}>
+                      {t(cleFamille(f))}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -235,25 +303,81 @@ function BoostContent() {
                 {tarifsFiltres.length === 0 ? (
                   <p className={styles.note}>{t("boost_aucunTarif")}</p>
                 ) : (
-                  <select value={tarifId} onChange={(e) => setTarifId(e.target.value)}>
+                  <select value={tarifId} onChange={(e) => changerTarif(e.target.value)}>
                     <option value="" disabled>
                       —
                     </option>
                     {tarifsFiltres.map((tf) => (
                       <option key={tf.id} value={tf.id}>
-                        {t("boost_optionTarif").replace("{{jours}}", String(tf.dureeJours)).replace("{{prix}}", formatMoney(Number(tf.prix)))}
+                        {t("boost_optionTarifNom")
+                          .replace("{{nom}}", tf.nom)
+                          .replace("{{jours}}", String(tf.dureeJours))
+                          .replace("{{prix}}", formatMoney(Number(tf.prixUSD)))}
                       </option>
                     ))}
                   </select>
                 )}
               </label>
 
-              <button
-                className={styles.bouton}
-                type="button"
-                disabled={!tarifId || (cible === "PRODUIT" && !productId)}
-                onClick={() => setEtapeReglement(true)}
-              >
+              {cible === "COLLECTION" && tarifChoisi && (
+                <div className={styles.champ}>
+                  <span>{t("boost_choisirArticles")}</span>
+                  {tarifChoisi.maxProduits != null && (
+                    <p className={styles.note}>{t("boost_limiteArticles").replace("{{max}}", String(tarifChoisi.maxProduits))}</p>
+                  )}
+                  {articlesPublies.length === 0 ? (
+                    <p className={styles.note}>{t("boost_aucunArticlePublie")}</p>
+                  ) : (
+                    <div className={styles.listeCoches}>
+                      {articlesPublies.map((p) => {
+                        const coche = productIds.includes(p.id);
+                        const limiteAtteinte = tarifChoisi.maxProduits != null && productIds.length >= tarifChoisi.maxProduits;
+                        return (
+                          <label key={p.id} className={styles.ligneCoche}>
+                            <input
+                              type="checkbox"
+                              checked={coche}
+                              disabled={!coche && limiteAtteinte}
+                              onChange={(e) =>
+                                setProductIds((prev) =>
+                                  e.target.checked ? [...prev, p.id] : prev.filter((id) => id !== p.id),
+                                )
+                              }
+                            />
+                            <span>{p.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {cible === "SOCIAL_360" && tarifChoisi && (
+                <div className={styles.champ}>
+                  <span>{t("boost_choisirCanaux")}</span>
+                  {canauxDisponibles.length === 0 ? (
+                    <p className={styles.note}>{t("boost_aucunCanalDisponible")}</p>
+                  ) : (
+                    <div className={styles.listeCoches}>
+                      {canauxDisponibles.map((c) => (
+                        <label key={c} className={styles.ligneCoche}>
+                          <input
+                            type="checkbox"
+                            checked={canaux.includes(c)}
+                            onChange={(e) =>
+                              setCanaux((prev) => (e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)))
+                            }
+                          />
+                          <span>{LIBELLE_CANAL[c]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button className={styles.bouton} type="button" disabled={continuerDesactive} onClick={() => setEtapeReglement(true)}>
                 {t("boost_continuer")}
               </button>
             </>
@@ -262,9 +386,10 @@ function BoostContent() {
               <h3 className={styles.sousTitre}>{t("boost_modeReglement")}</h3>
               {tarifChoisi && (
                 <p className={styles.note}>
-                  {t("boost_optionTarif")
+                  {t("boost_optionTarifNom")
+                    .replace("{{nom}}", tarifChoisi.nom)
                     .replace("{{jours}}", String(tarifChoisi.dureeJours))
-                    .replace("{{prix}}", formatMoney(Number(tarifChoisi.prix)))}
+                    .replace("{{prix}}", formatMoney(Number(tarifChoisi.prixUSD)))}
                 </p>
               )}
               <div className={styles.boutonsReglement}>
@@ -289,18 +414,27 @@ function BoostContent() {
       ) : (
         boosts.map((b) => {
           const enAttentePaiement = b.status === "EN_ATTENTE_PAIEMENT";
+          const prixCatalogue = Number(b.tarif?.prixUSD ?? b.montant);
           return (
             <div className={styles.ligneBoost} key={b.id}>
               <div className={styles.entete}>
-                <span>
-                  {b.cible === "PRODUIT" ? (b.product?.name ?? t("boost_cibleArticle")) : t("boost_cibleBoutique")}
-                </span>
+                <span>{libelleCible(b, t)}</span>
                 <StatusTag label={t(CLES_STATUT[b.status])} humeur={HUMEUR_STATUT[b.status]} />
               </div>
               <div className={styles.detailsBoost}>
                 <span>
                   {t("boost_colDuree")} : {b.dureeJours} j · {t("boost_colMontant")} : {formatMoney(Number(b.montant))}
                 </span>
+                {b.remiseAppliqueePct != null && Number(b.remiseAppliqueePct) > 0 && (
+                  <span>
+                    {t("boost_remiseAppliquee")} : {Number(b.remiseAppliqueePct).toFixed(1)}%
+                  </span>
+                )}
+                {prixCatalogue !== Number(b.montant) && (
+                  <span>
+                    {t("boost_prixCatalogue")} : {formatMoney(prixCatalogue)}
+                  </span>
+                )}
                 {b.startsAt && b.endsAt ? (
                   <span>
                     {formatDate(b.startsAt)} → {formatDate(b.endsAt)}

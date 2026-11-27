@@ -100,14 +100,22 @@ export class MarketplaceCatalogService {
   /**
    * Boost payant (26 nov. 2026, décision propriétaire : "remonte dans le tri
    * du catalogue/recherche", sans badge visuel) — remonte en tête tout
-   * produit dont l'id EST boosté, ou dont la boutique entière EST boostée,
-   * sans toucher au tri `createdAt desc` existant à l'intérieur de chaque
-   * groupe (Array.prototype.sort est stable en V8/Node).
+   * produit dont l'id EST boosté (famille PRODUIT, ou famille COLLECTION via
+   * BoostProduit — 27 nov. 2026, refonte ELEGANZ BOOST), ou dont la
+   * boutique entière EST boostée (famille BOUTIQUE), sans toucher au tri
+   * `createdAt desc` existant à l'intérieur de chaque groupe.
    *
    * Comparaison en direct sur `endsAt > now`, jamais sur `Boost.status` seul
    * (même principe "dérivé à la lecture" déjà appliqué à `Invoice.OVERDUE`) :
    * un boost qui vient d'expirer à l'instant ne doit jamais rester pris en
    * compte juste parce que le cron quotidien n'est pas encore repassé.
+   *
+   * Plafond (27 nov. 2026, section 11/12 de la proposition Boost — "limiter
+   * à environ 20% des résultats de recherche") : au plus
+   * `boostPlafondSponsoriseResultatsPct` % des résultats sont effectivement
+   * remontés en tête ; un produit boosté au-delà de ce plafond reste à sa
+   * place naturelle plutôt que de disparaître — jamais un badge "payé" pour
+   * autant, seul l'ORDRE change.
    */
   private async appliquerPrioriteBoost<T extends { id: string; shopId: string }>(
     produits: T[],
@@ -115,24 +123,43 @@ export class MarketplaceCatalogService {
     if (produits.length === 0) return produits;
 
     const maintenant = new Date();
-    const [produitsBoostes, boutiquesBoostees] = await Promise.all([
+    const [produitsBoostes, produitsBoostesCollection, boutiquesBoostees, settings] = await Promise.all([
       this.prisma.boost.findMany({
         where: { cible: BoostCible.PRODUIT, status: BoostStatus.ACTIF, endsAt: { gt: maintenant } },
         select: { productId: true },
       }),
       this.prisma.boost.findMany({
+        where: { cible: BoostCible.COLLECTION, status: BoostStatus.ACTIF, endsAt: { gt: maintenant } },
+        select: { boostProduits: { select: { productId: true } } },
+      }),
+      this.prisma.boost.findMany({
         where: { cible: BoostCible.BOUTIQUE, status: BoostStatus.ACTIF, endsAt: { gt: maintenant } },
         select: { shopId: true },
       }),
+      this.prisma.platformSettings.findUnique({
+        where: { id: "platform" },
+        select: { boostPlafondSponsoriseResultatsPct: true },
+      }),
     ]);
 
-    if (produitsBoostes.length === 0 && boutiquesBoostees.length === 0) return produits;
-
     const idsProduitsBoostes = new Set(produitsBoostes.map((b) => b.productId));
+    for (const collection of produitsBoostesCollection) {
+      for (const bp of collection.boostProduits) idsProduitsBoostes.add(bp.productId);
+    }
     const idsBoutiquesBoostees = new Set(boutiquesBoostees.map((b) => b.shopId));
-    const estBooste = (p: T) => idsProduitsBoostes.has(p.id) || idsBoutiquesBoostees.has(p.shopId);
+    if (idsProduitsBoostes.size === 0 && idsBoutiquesBoostees.size === 0) return produits;
 
-    return [...produits].sort((a, b) => Number(estBooste(b)) - Number(estBooste(a)));
+    const estBooste = (p: T) => idsProduitsBoostes.has(p.id) || idsBoutiquesBoostees.has(p.shopId);
+    const plafondPct = settings?.boostPlafondSponsoriseResultatsPct ?? 20;
+    const maxEnTete = Math.floor((produits.length * plafondPct) / 100);
+
+    const indexBoostes = produits.map((p, index) => ({ p, index })).filter(({ p }) => estBooste(p));
+    if (indexBoostes.length === 0) return produits;
+
+    const idsEnTete = new Set(indexBoostes.slice(0, maxEnTete).map(({ index }) => index));
+    const enTete = produits.filter((_, index) => idsEnTete.has(index));
+    const reste = produits.filter((_, index) => !idsEnTete.has(index));
+    return [...enTete, ...reste];
   }
 
   async findPublished(productId: string) {

@@ -1,5 +1,5 @@
-import { IsEnum, IsOptional, IsString } from "class-validator";
-import { BoostCible } from "@eleganz/database";
+import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsEnum, IsOptional, IsString } from "class-validator";
+import { BoostCanal, BoostCible } from "@eleganz/database";
 
 export class CreateBoostDto {
   @IsEnum(BoostCible)
@@ -11,6 +11,24 @@ export class CreateBoostDto {
   @IsOptional()
   @IsString()
   productId?: string;
+
+  // Famille COLLECTION (27 nov. 2026, refonte ELEGANZ BOOST) — plusieurs
+  // articles choisis pour une même campagne, bornés par `tarif.maxProduits`
+  // (validé dans BoostService, pas ici).
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  productIds?: string[];
+
+  // Famille SOCIAL_360 (27 nov. 2026) — canaux choisis PARMI ceux marqués
+  // disponibles dans `tarif.featuresJson` (validé dans BoostService).
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEnum(BoostCanal, { each: true })
+  canaux?: BoostCanal[];
 
   @IsString()
   tarifId!: string;

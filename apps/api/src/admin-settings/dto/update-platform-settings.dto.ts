@@ -84,6 +84,33 @@ export class UpdatePlatformSettingsDto {
   @IsBoolean()
   paiementEchelonneActivePlateforme?: boolean;
 
+  // --- ELEGANZ BOOST : paramètres plateforme (27 nov. 2026) — voir le
+  // commentaire sur ces mêmes champs dans schema.prisma.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  boostPlafondSponsoriseResultatsPct?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  boostCreditLancementNouvelleBoutiqueUSD?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  boostRemisePremierBoostPct?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  boostRemisePremierBoostPlafondUSD?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  boostTauxChargesDirectesPct?: number;
+
   // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
   // 100 % paramétrable depuis le Centre de pilotage, sans redéploiement.
   @IsOptional()

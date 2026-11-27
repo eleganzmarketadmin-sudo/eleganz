@@ -451,6 +451,27 @@ export class CatalogService implements OnModuleInit {
           "Indiquez le nombre de tranches et le taux d'intérêt avant d'activer le paiement échelonné sur cet article.",
         );
       }
+
+      // Réservé aux bouquets Gestion Pro et plus (27 nov. 2026, réponse à la
+      // question de cadrage "Q4" : "Oui, réserver à Pro et plus") — vérifié
+      // uniquement au moment de l'ACTIVATION (passage à true), jamais
+      // lorsque l'option reste désactivée ou qu'on ne fait que modifier le
+      // taux/les tranches d'un article déjà actif sur un bouquet qui l'a
+      // depuis perdu (voir ensureStockEtPaiementEchelonneSurBouquetsExistants
+      // dans subscription-plans.service.ts) — même pattern que
+      // "variantesProduits" ci-dessous dans addVariantsBulk.
+      if (dto.paiementEchelonneActif === true) {
+        const shop = await this.prisma.shop.findUnique({
+          where: { id: shopId },
+          select: { gestionBouquet: { select: { name: true, featuresJson: true } } },
+        });
+        const features = (shop?.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
+        if (features["paiementEchelonneBouquet"] !== true) {
+          throw new ForbiddenException(
+            `Le paiement échelonné n'est pas inclus dans le bouquet ${shop?.gestionBouquet?.name ?? "actuel"} de cette boutique. Passez à un bouquet supérieur depuis le Centre de pilotage pour y accéder.`,
+          );
+        }
+      }
     }
 
     return this.prisma.product.update({

@@ -28,6 +28,9 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.SUIVI_COMMANDES,
         MenuAdmin.TARIFS,
         MenuAdmin.LITIGES,
+        // ELEGANZ BOOST (27 nov. 2026) : Ventes est en première ligne de la
+        // vente de boosts aux boutiques, même esprit que TARIFS ci-dessus.
+        MenuAdmin.BOOST,
         MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_FINANCE:
@@ -37,6 +40,8 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
         MenuAdmin.FACTURES,
         MenuAdmin.TARIFS,
         MenuAdmin.RELEVES,
+        // ELEGANZ BOOST (27 nov. 2026) : rapport de rentabilité/revenu Boost.
+        MenuAdmin.BOOST,
         MenuAdmin.CENTRE_AIDE,
       ];
     case UserRole.ADMIN_OPS:
@@ -52,7 +57,15 @@ export function menuAdminParDefaut(role: UserRole): MenuAdmin[] {
     case UserRole.ADMIN_LOGISTICS:
       return [MenuAdmin.PILOTAGE, MenuAdmin.LIVREURS, MenuAdmin.SUIVI_COMMANDES, MenuAdmin.CENTRE_AIDE];
     case UserRole.ADMIN_MARKETING:
-      return [MenuAdmin.PILOTAGE, MenuAdmin.BOUTIQUES, MenuAdmin.MESSAGERIE, MenuAdmin.CENTRE_AIDE];
+      // ELEGANZ BOOST (27 nov. 2026) : tarification/promotions/canaux Boost
+      // relèvent directement du marketing.
+      return [
+        MenuAdmin.PILOTAGE,
+        MenuAdmin.BOUTIQUES,
+        MenuAdmin.MESSAGERIE,
+        MenuAdmin.BOOST,
+        MenuAdmin.CENTRE_AIDE,
+      ];
     case UserRole.ADMIN_SUPPORT:
       return [
         MenuAdmin.PILOTAGE,

@@ -124,6 +124,17 @@ export class ShopsService {
       });
     }
 
+    // ELEGANZ BOOST — crédit de lancement (27 nov. 2026, section 13 de la
+    // proposition de tarification, réponse Q2 : pas de portefeuille
+    // rechargeable, un simple montant ponctuel déduit automatiquement de la
+    // prochaine facture de boost — voir Shop.boostCreditLancementRestantUSD
+    // et BoostService.acheter). `0` si l'admin n'a rien configuré, jamais un
+    // montant inventé.
+    const platformSettings = await this.prisma.platformSettings.findUnique({
+      where: { id: "platform" },
+      select: { boostCreditLancementNouvelleBoutiqueUSD: true },
+    });
+
     // Décision #3 : période gratuite par défaut 3 mois, démarrée à la création
     // (« l'entrée en relation »), mais modifiable ensuite depuis l'admin.
     const shop = await this.prisma.shop.create({
@@ -138,6 +149,7 @@ export class ShopsService {
         openingFeeWaived: true,
         gestionBouquetId: bouquetDeDepart?.id,
         secteurActivite: dto.secteurActivite,
+        boostCreditLancementRestantUSD: platformSettings?.boostCreditLancementNouvelleBoutiqueUSD ?? 0,
         staff: {
           create: {
             userId: ownerId,

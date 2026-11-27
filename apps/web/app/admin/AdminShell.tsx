@@ -48,12 +48,12 @@ function estGroupe(e: LienSimple | GroupeNav): e is GroupeNav {
 // admin) fait foi. Équipe admin et Paramètres plateforme restent réservés
 // à ADMIN_SUPER par défaut.
 const MENUS_PAR_ROLE_ADMIN: Record<string, string[]> = {
-  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "AUDIT", "MODERATION", "CENTRE_AIDE"],
-  ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES", "CENTRE_AIDE"],
-  ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES", "CENTRE_AIDE"],
+  ADMIN_SUPER: ["PILOTAGE", "BOUTIQUES", "LIVREURS", "COMPTABLE", "FINANCE", "SUIVI_COMMANDES", "UTILISATEURS", "TARIFS", "BOOST", "FACTURES", "RELEVES", "LITIGES", "EXPERTS", "MESSAGERIE", "EQUIPE_ADMIN", "PARAMETRES_PLATEFORME", "AUDIT", "MODERATION", "CENTRE_AIDE"],
+  ADMIN_SALES: ["PILOTAGE", "BOUTIQUES", "SUIVI_COMMANDES", "TARIFS", "LITIGES", "BOOST", "CENTRE_AIDE"],
+  ADMIN_FINANCE: ["PILOTAGE", "FINANCE", "FACTURES", "TARIFS", "RELEVES", "BOOST", "CENTRE_AIDE"],
   ADMIN_OPS: ["PILOTAGE", "SUIVI_COMMANDES", "LITIGES", "RELEVES", "BOUTIQUES", "MODERATION", "CENTRE_AIDE"],
   ADMIN_LOGISTICS: ["PILOTAGE", "LIVREURS", "SUIVI_COMMANDES", "CENTRE_AIDE"],
-  ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE", "CENTRE_AIDE"],
+  ADMIN_MARKETING: ["PILOTAGE", "BOUTIQUES", "MESSAGERIE", "BOOST", "CENTRE_AIDE"],
   ADMIN_SUPPORT: ["PILOTAGE", "UTILISATEURS", "LITIGES", "MESSAGERIE", "SUIVI_COMMANDES", "EXPERTS", "MODERATION", "CENTRE_AIDE"],
   // AUDIT (journal d'audit interne, 18 nov. 2026) : ce rôle existe
   // précisément pour ce type de consultation — voir menu-admin.util.ts.
@@ -85,6 +85,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { href: "/admin/finance", label: t("nav_finance"), menu: "FINANCE" },
     { href: "/admin/factures", label: t("nav_factures"), menu: "FACTURES" },
     { href: "/admin/tarifs", label: t("nav_tarifs"), menu: "TARIFS" },
+    // ELEGANZ BOOST (27 nov. 2026) : tarification/promotions/canaux/rapport
+    // Boost, écran dédié (MenuAdmin.BOOST) distinct de TARIFS ci-dessus.
+    { href: "/admin/boost", label: t("nav_boost"), menu: "BOOST" },
     { href: "/admin/releves", label: t("nav_releves"), menu: "RELEVES" },
   ];
   const GROUPE_OPERATIONS: LienSimple[] = [

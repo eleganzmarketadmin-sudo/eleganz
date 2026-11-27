@@ -10,12 +10,14 @@ import type { AuthenticatedUser } from "../auth/jwt-auth.guard";
 import { requireAdminMenu } from "../admin-team/menu-admin.util";
 
 // Ce contrôleur générique sert à la fois l'écran Paramètres plateforme
-// (PARAMETRES_PLATEFORME) et les champs tarifaires exposés depuis l'écran
-// Tarifs (TARIFS, ex. taux de change) — voir audit du 18 oct. 2026 : un seul
-// des deux suffit, pour ne pas retirer à un admin Tarifs un accès qu'il a
-// déjà aujourd'hui via cet écran.
+// (PARAMETRES_PLATEFORME), les champs tarifaires exposés depuis l'écran
+// Tarifs (TARIFS, ex. taux de change) et, depuis le 27 nov. 2026, les
+// réglages Boost (emplacements/priorités, promotions de lancement, taux de
+// charges directes) exposés depuis le nouveau menu BOOST — voir audit du
+// 18 oct. 2026 : un seul des trois suffit, pour ne pas retirer à un admin
+// d'un menu un accès qu'il a déjà aujourd'hui via cet écran.
 function requireAdmin(user: AuthenticatedUser) {
-  requireAdminMenu(user, [MenuAdmin.PARAMETRES_PLATEFORME, MenuAdmin.TARIFS]);
+  requireAdminMenu(user, [MenuAdmin.PARAMETRES_PLATEFORME, MenuAdmin.TARIFS, MenuAdmin.BOOST]);
 }
 
 /**

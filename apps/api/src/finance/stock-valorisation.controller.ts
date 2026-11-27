@@ -6,16 +6,27 @@ import { renderStockPdf } from "./stock-pdf-renderer";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { ShopMembershipGuard } from "../shops/shop-membership.guard";
 import { ShopRoles } from "../shops/roles.decorator";
+import { RequiresGestionFeature } from "../shops/gestion-feature.decorator";
 import { StaffRole } from "@eleganz/database";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
  * Réceptions de stock valorisées (CUMP) — chantier SYSCOHADA phase 4.
  * Mêmes rôles que les autres écrans de gestion sensible (achats, charges).
+ *
+ * Réservé aux bouquets Gestion Pro et plus (27 nov. 2026, audit "tous les
+ * autres menus/fonctionnalités ajoutés depuis la mise en place des
+ * bouquets" — Stock & CMV n'avait jamais été rattaché à `featuresJson`,
+ * contrairement à variantesProduits/exportExcelPdf). Gardé en plus (pas à la
+ * place) de la vérification "exportExcelPdf" déjà existante sur la route
+ * d'export ci-dessous : ce sont deux fonctionnalités distinctes du bouquet
+ * (l'accès au module Stock & CMV, et la capacité d'exporter), même si les
+ * deux sont aujourd'hui vraies ensemble sur Pro/Premium/Ultime.
  */
 @Controller("shops/:shopId/stock")
 @UseGuards(JwtAuthGuard, ShopMembershipGuard)
 @ShopRoles(StaffRole.OWNER, StaffRole.MANAGER, StaffRole.ACCOUNTANT)
+@RequiresGestionFeature("stockCmv")
 export class StockValorisationController {
   constructor(
     private readonly stock: StockValorisationService,

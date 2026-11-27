@@ -75,6 +75,21 @@ export class AdminSettingsService {
         ...(dto.paiementEchelonneActivePlateforme !== undefined && {
           paiementEchelonneActivePlateforme: dto.paiementEchelonneActivePlateforme,
         }),
+        ...(dto.boostPlafondSponsoriseResultatsPct !== undefined && {
+          boostPlafondSponsoriseResultatsPct: dto.boostPlafondSponsoriseResultatsPct,
+        }),
+        ...(dto.boostCreditLancementNouvelleBoutiqueUSD !== undefined && {
+          boostCreditLancementNouvelleBoutiqueUSD: dto.boostCreditLancementNouvelleBoutiqueUSD,
+        }),
+        ...(dto.boostRemisePremierBoostPct !== undefined && {
+          boostRemisePremierBoostPct: dto.boostRemisePremierBoostPct,
+        }),
+        ...(dto.boostRemisePremierBoostPlafondUSD !== undefined && {
+          boostRemisePremierBoostPlafondUSD: dto.boostRemisePremierBoostPlafondUSD,
+        }),
+        ...(dto.boostTauxChargesDirectesPct !== undefined && {
+          boostTauxChargesDirectesPct: dto.boostTauxChargesDirectesPct,
+        }),
         ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
         ...(dto.driverMonthlyFee !== undefined && { driverMonthlyFee: dto.driverMonthlyFee }),
         ...(dto.driverFreeMonths !== undefined && { driverFreeMonths: dto.driverFreeMonths }),

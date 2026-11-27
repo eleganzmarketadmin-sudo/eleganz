@@ -255,6 +255,44 @@ model PlatformSettings {
   // relances de facturation (le reste de la plateforme reste in-app+push).
   notificationsWhatsappEnabled Boolean @default(false)
 
+  // --- ELEGANZ BOOST : paramètres plateforme (27 nov. 2026) ---
+  // Proposition de tarification Boost fournie par le propriétaire, adaptée
+  // à l'architecture réelle : décision Q1 (réponse à la question de
+  // cadrage) = tout construit en interne, options Facebook/Instagram/
+  // TikTok/Google/X Ads déjà PRÉVUES comme champs structurés/configurables
+  // (voir BoostCanalConfig plus bas), prêtes à être "connectées" plus tard
+  // (identifiants API à renseigner), mais aucun appel réel vers ces régies
+  // publicitaires n'est câblé à ce jour (aucun identifiant n'existe encore).
+  // Décision Q2 : PAS de portefeuille de crédits rechargeable — le système
+  // actuel (facture par boost) est conservé ; les "crédits de lancement"
+  // ci-dessous sont un montant ponctuel déduit automatiquement de la
+  // PROCHAINE facture de boost, jamais un solde rechargeable ni un moyen de
+  // paiement en soi.
+
+  // Emplacements/priorités (section 11/12 de la proposition) — plafond du
+  // pourcentage de résultats de recherche Marketplace pouvant être
+  // sponsorisés simultanément ; appliqué par MarketplaceCatalogService.
+  boostPlafondSponsoriseResultatsPct Int @default(20)
+
+  // Stratégie de lancement (section 13) — montant ponctuel crédité à toute
+  // nouvelle boutique (voir Shop.boostCreditLancementRestantUSD), déduit
+  // automatiquement de sa prochaine facture de boost, jusqu'à épuisement.
+  // `0` par défaut = désactivé, aucun montant inventé.
+  boostCreditLancementNouvelleBoutiqueUSD Decimal @default(0) @db.Decimal(10, 2)
+
+  // Remise sur le TOUT PREMIER boost d'une boutique (en plus du crédit de
+  // lancement ci-dessus), plafonnée en montant absolu — nullable = aucun
+  // plafond (remise appliquée en entier).
+  boostRemisePremierBoostPct        Int      @default(0)
+  boostRemisePremierBoostPlafondUSD Decimal? @db.Decimal(10, 2)
+
+  // Rentabilité (section 10/11) — taux de charges directes estimé, utilisé
+  // par le rapport Boost pour calculer une marge indicative à partir du
+  // revenu Boost encaissé et des coûts externes saisis manuellement (voir
+  // BoostCoutExterne) ; jamais une comptabilité réelle, un indicateur de
+  // pilotage seulement.
+  boostTauxChargesDirectesPct Int @default(20)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -397,6 +435,16 @@ enum MenuAdmin {
   // quotidien) et ADMIN_AUDITOR (rôle de contrôle/conformité) dans
   // menuAdminParDefaut.
   MODERATION
+  // 27 nov. 2026 — Centre de pilotage ELEGANZ BOOST (demande propriétaire :
+  // "créer un menu dans le centre de pilotage où tout pourra être
+  // modifié") : jusqu'ici le Boost (tarifs + suivi) vivait dans l'écran
+  // TARIFS, mélangé à la facturation des bouquets Gestion/Marketplace —
+  // désormais un écran dédié, regroupant tarification par famille/palier,
+  // emplacements/priorités, promotions de lancement, canaux Social 360°,
+  // coûts externes et rapport de rentabilité. Accordé par défaut à
+  // ADMIN_SALES/ADMIN_MARKETING/ADMIN_FINANCE dans menuAdminParDefaut (même
+  // esprit que TARIFS, dont ce menu reprend la partie Boost).
+  BOOST
 }
 
 model User {
@@ -751,6 +799,15 @@ model Shop {
   // Boost payant (26 nov. 2026) — voir le commentaire sur le modèle Boost
   // plus bas.
   boosts Boost[]
+
+  // ELEGANZ BOOST — crédit de lancement (27 nov. 2026, section 13 de la
+  // proposition de tarification Boost, réponse Q2 : pas de portefeuille
+  // rechargeable, un simple montant ponctuel). Crédité automatiquement à
+  // la création de la boutique (PlatformSettings.
+  // boostCreditLancementNouvelleBoutiqueUSD), puis déduit du montant de
+  // chaque facture de boost jusqu'à épuisement (BoostService.acheter) —
+  // jamais un solde qu'on recharge, jamais un moyen de paiement.
+  boostCreditLancementRestantUSD Decimal @default(0) @db.Decimal(10, 2)
 }
 
 model ShopStaff {
@@ -1048,6 +1105,12 @@ model Product {
   // Boost payant (26 nov. 2026) — voir le commentaire sur le modèle Boost
   // plus bas.
   boosts Boost[]
+  // Boost famille COLLECTION (27 nov. 2026) — un boost de cette famille met
+  // en avant PLUSIEURS articles choisis sous une même enveloppe/facture
+  // (voir le modèle BoostProduit plus bas) ; un article peut donc être lié
+  // à plusieurs lignes BoostProduit au fil du temps (un par campagne), d'où
+  // ce tableau plutôt qu'une relation 1-à-1.
+  boostProduits BoostProduit[]
 
   // Paiement échelonné (26 nov. 2026, demande propriétaire) — activation
   // PAR ARTICLE, avec ses propres conditions (une boutique peut proposer 3
@@ -1994,9 +2057,18 @@ model Invoice {
 // virement/Mobile Money hors ligne, confirmé par un admin qui marque la
 // facture payée (BillingService.markInvoicePaidAndReactivate, inchangé —
 // voir le hook d'activation dans BillingController).
+// Étendu le 27 nov. 2026 (refonte ELEGANZ BOOST, proposition de
+// tarification du propriétaire adaptée à l'architecture réelle) :
+// COLLECTION (plusieurs articles choisis sous une même campagne, voir
+// BoostProduit) et SOCIAL_360 (campagne boutique multicanale — interne +
+// réseaux sociaux — sans article ni article unique ciblé, voir
+// Boost.canauxJson) s'ajoutent aux deux familles d'origine. BOUTIQUE/PRODUIT
+// ne changent pas de sens.
 enum BoostCible {
   BOUTIQUE
   PRODUIT
+  COLLECTION
+  SOCIAL_360
 }
 
 enum BoostStatus {
@@ -2006,21 +2078,51 @@ enum BoostStatus {
   ANNULE // annulé avant paiement, par la boutique ou par un admin (modération)
 }
 
-// Catalogue de forfaits fixes par durée (26 nov. 2026, décision propriétaire
-// : "forfaits fixes par durée", pas un tarif unique au jour), configurable
-// par un admin — même esprit que SubscriptionPlan, jamais de suppression
-// dure (voir `actif`).
+// Canaux publicitaires externes de la famille SOCIAL_360 (27 nov. 2026,
+// réponse Q1 à la question de cadrage : "les options API déjà prévues et
+// qu'on va connecter seulement" — les champs/réglages existent dès
+// maintenant, structurés et modifiables, mais AUCUN appel réel n'est câblé
+// vers ces régies tant qu'aucun identifiant n'est configuré ET vérifié).
+enum BoostCanal {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  GOOGLE
+  X
+}
+
+// Catalogue de forfaits par famille et par palier (27 nov. 2026, refonte —
+// remplace le forfait plat par durée unique du 26 nov. 2026). `nom`/`ordre`
+// permettent d'afficher plusieurs paliers par famille (ex. "Flash"/"Gold"/
+// "Platinum" pour PRODUIT) ; `featuresJson` porte la matrice de
+// fonctionnalités comparée à l'achat (clé → booléen ou nombre, ex.
+// rechercheSponsorisee, visuelsIA, canauxInclus...), 100 % modifiable depuis
+// le nouveau menu Centre de pilotage "Boost" — jamais une liste figée dans
+// le code. `prixCDF` est facultatif : tant qu'il est vide, seul l'USD est
+// proposé à l'achat (même convention "nullable = non renseigné" que le
+// reste de la plateforme).
 model BoostTarif {
-  id         String     @id @default(uuid())
-  cible      BoostCible
-  dureeJours Int
-  prix       Decimal    @db.Decimal(12, 2)
-  actif      Boolean    @default(true)
-  createdAt  DateTime   @default(now())
+  id          String     @id @default(uuid())
+  cible       BoostCible
+  nom         String // ex. "Flash", "Starter", "Gold" — nom du palier affiché
+  ordre       Int        @default(0) // tri d'affichage au sein de la famille
+  dureeJours  Int
+  prixUSD     Decimal    @db.Decimal(12, 2)
+  prixCDF     Decimal?   @db.Decimal(14, 2)
+  // Nombre maximum d'articles inclus — pertinent pour COLLECTION (combien
+  // d'articles peuvent être choisis sous ce palier) et BOUTIQUE/SOCIAL_360
+  // (articles "en rotation" dans la proposition d'origine) ; `null` = sans
+  // limite ou non pertinent pour cette famille (ex. PRODUIT, un seul
+  // article par définition).
+  maxProduits Int?
+  featuresJson Json?
+  actif       Boolean    @default(true)
+  createdAt   DateTime   @default(now())
 
   boosts Boost[]
 
   @@index([cible, actif])
+  @@index([cible, ordre])
 }
 
 // `status` sert à l'affichage/historique (mis à jour une fois par jour par
@@ -2038,6 +2140,22 @@ model Boost {
   product   Product?   @relation(fields: [productId], references: [id])
   tarifId   String
   tarif     BoostTarif @relation(fields: [tarifId], references: [id])
+
+  // Famille COLLECTION (27 nov. 2026) — les articles choisis, au lieu de
+  // `productId` (réservé à PRODUIT) ; voir le modèle BoostProduit plus bas.
+  boostProduits BoostProduit[]
+
+  // Famille SOCIAL_360 (27 nov. 2026) — canaux choisis par la boutique à
+  // l'achat PARMI ceux marqués disponibles dans `tarif.featuresJson` (ex.
+  // {"FACEBOOK": true, "INSTAGRAM": true, "TIKTOK": false}) ; purement
+  // déclaratif tant qu'aucun canal n'est "connecté" (voir BoostCanalConfig)
+  // — n'entraîne aujourd'hui aucune publication réelle.
+  canauxJson Json?
+
+  // Remise totale appliquée à l'achat (bouquet Gestion + premier boost +
+  // crédit de lancement confondus), conservée pour traçabilité/reporting —
+  // jamais recalculée après coup si les réglages changent ensuite.
+  remiseAppliqueePct Decimal? @db.Decimal(5, 2)
 
   // Copiés du tarif au moment de l'achat : le tarif peut changer de prix ou
   // être désactivé après coup sans affecter un boost déjà en cours.
@@ -2058,6 +2176,58 @@ model Boost {
   @@index([shopId, status])
   @@index([productId, status])
   @@index([status, endsAt])
+}
+
+// Articles choisis pour un boost de famille COLLECTION (27 nov. 2026) — un
+// article peut apparaître dans plusieurs campagnes au fil du temps (une
+// ligne par campagne), d'où l'absence de contrainte d'unicité sur
+// `productId` seul.
+model BoostProduit {
+  id        String  @id @default(uuid())
+  boostId   String
+  boost     Boost   @relation(fields: [boostId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([boostId, productId])
+  @@index([productId])
+}
+
+// Configuration par canal publicitaire externe (27 nov. 2026, réponse Q1) —
+// un seul enregistrement par canal (singleton), modifiable depuis le Centre
+// de pilotage "Boost". `connecte` reste à `false` tant qu'aucun identifiant
+// n'a été vérifié : aucun code de ce chantier n'appelle réellement l'API
+// d'un canal, `connecte=true` est une simple annotation manuelle de l'admin
+// en attendant un chantier d'intégration dédié. Identifiants stockés tels
+// quels (pas de secret manager dans ce projet à ce jour) — même niveau de
+// confiance que les autres identifiants déjà en base (ex. EmailProviderConfig
+// si présent).
+model BoostCanalConfig {
+  id        String     @id @default(uuid())
+  canal     BoostCanal @unique
+  connecte  Boolean    @default(false)
+  apiKey    String?
+  apiSecret String?
+  accountId String?
+  notes     String?
+  updatedAt DateTime   @updatedAt
+}
+
+// Journal manuel des dépenses publicitaires externes (27 nov. 2026) —
+// saisie par un admin, période par période (ex. "2026-11"), faute de
+// connexion réelle aux régies (voir BoostCanalConfig) ; alimente le rapport
+// de rentabilité du Centre de pilotage "Boost".
+model BoostCoutExterne {
+  id              String     @id @default(uuid())
+  canal           BoostCanal
+  periode         String // "YYYY-MM"
+  montantUSD      Decimal    @db.Decimal(12, 2)
+  note            String?
+  createdByUserId String
+  createdAt       DateTime   @default(now())
+
+  @@index([periode])
+  @@index([canal, periode])
 }
 
 model DriverInvoice {

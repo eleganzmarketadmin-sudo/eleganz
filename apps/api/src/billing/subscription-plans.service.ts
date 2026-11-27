@@ -57,6 +57,22 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
     businessPlan: boolean;
     prets: boolean;
     rapportAnnuel: boolean;
+    // Ajoutées le 27 nov. 2026 (audit "tous les autres menus/fonctionnalités
+    // ajoutés depuis la mise en place des bouquets" — demande propriétaire,
+    // réponses Q3/Q4) : Stock & CMV (réceptions valorisées, CUMP) et le
+    // paiement échelonné par article n'avaient jamais été rattachés à un
+    // bouquet, alors que les deux existent depuis bien après le lancement
+    // des bouquets Gestion. Réservés à Pro et plus — voir
+    // ensureStockEtPaiementEchelonneSurBouquetsExistants() ci-dessous pour
+    // les bouquets déjà créés en production.
+    stockCmv: boolean;
+    paiementEchelonneBouquet: boolean;
+    // Remise (%) sur le prix catalogue de tout achat Boost (27 nov. 2026,
+    // refonte ELEGANZ BOOST, section 6 de la proposition adaptée à
+    // l'absence de portefeuille de crédits — voir BoostService.acheter) —
+    // appliquée automatiquement, en plus d'une éventuelle remise de
+    // lancement/premier boost. `0` = aucune remise.
+    remiseBoostPct: number;
     maxEquipe: number | null;
   };
 }> = [
@@ -78,6 +94,9 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       businessPlan: false,
       prets: false,
       rapportAnnuel: false,
+      stockCmv: false,
+      paiementEchelonneBouquet: false,
+      remiseBoostPct: 0,
       maxEquipe: 2,
     },
   },
@@ -99,6 +118,9 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       businessPlan: true,
       prets: true,
       rapportAnnuel: true,
+      stockCmv: true,
+      paiementEchelonneBouquet: true,
+      remiseBoostPct: 5,
       maxEquipe: 10,
     },
   },
@@ -123,6 +145,9 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       businessPlan: true,
       prets: true,
       rapportAnnuel: true,
+      stockCmv: true,
+      paiementEchelonneBouquet: true,
+      remiseBoostPct: 10,
       maxEquipe: null,
     },
   },
@@ -150,6 +175,9 @@ const BOUQUETS_GESTION_DE_DEPART: Array<{
       businessPlan: true,
       prets: true,
       rapportAnnuel: true,
+      stockCmv: true,
+      paiementEchelonneBouquet: true,
+      remiseBoostPct: 15,
       maxEquipe: null,
     },
   },
@@ -181,6 +209,7 @@ export class SubscriptionPlansService implements OnModuleInit {
       await this.rattacherBoutiquesSansBouquet();
       await this.ensureComptabiliteSyscohadaSurPremiumExistant();
       await this.ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants();
+      await this.ensureStockEtBoostSurBouquetsExistants();
     } catch (err) {
       this.logger.error("Échec du seed des bouquets Gestion au démarrage", err);
     }
@@ -290,6 +319,57 @@ export class SubscriptionPlansService implements OnModuleInit {
     if (nombreMisAJour > 0) {
       this.logger.log(
         `${nombreMisAJour} bouquet(s) Gestion mis à jour avec les clés détaillées dossierCredit/businessPlan/prets/rapportAnnuel.`,
+      );
+    }
+  }
+
+  /**
+   * Migration ciblée du 27 nov. 2026 (audit "tous les autres menus/
+   * fonctionnalités ajoutés depuis la mise en place des bouquets") — pour
+   * TOUT bouquet Gestion déjà en production (même modifié depuis
+   * /admin/tarifs, même créé avant ce chantier), ajoute les clés
+   * ABSENTES de son `featuresJson` : `stockCmv`/`paiementEchelonneBouquet`
+   * (réservés à Pro et plus — réponses Q3/Q4) et `remiseBoostPct` (0 par
+   * défaut, aucune remise inventée). Même principe de fusion ciblée que
+   * ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants ci-dessus :
+   * une clé déjà présente (donc déjà choisie par l'administrateur) n'est
+   * JAMAIS réécrite. Le bouquet "Starter" n'a droit à aucune des deux
+   * nouvelles fonctionnalités, quel que soit son featuresJson actuel — on
+   * se fie donc au NOM du bouquet (comme pour le seed de départ) plutôt
+   * qu'à une valeur héritée d'une autre clé (contrairement à
+   * `ensureFonctionnalitesFinanceDetailleesSurBouquetsExistants`, qui
+   * héritait de `financeAvancee` — ici aucune clé existante ne porte
+   * déjà cette distinction).
+   */
+  private async ensureStockEtBoostSurBouquetsExistants() {
+    const bouquets = await this.prisma.subscriptionPlan.findMany({
+      where: { category: PlanCategory.GESTION },
+    });
+    let nombreMisAJour = 0;
+    for (const bouquet of bouquets) {
+      const features = (bouquet.featuresJson ?? {}) as Record<string, unknown>;
+      const estStarter = bouquet.name === "Starter";
+      const ajouts: Record<string, boolean | number> = {};
+      if (features.stockCmv === undefined) {
+        ajouts.stockCmv = !estStarter;
+      }
+      if (features.paiementEchelonneBouquet === undefined) {
+        ajouts.paiementEchelonneBouquet = !estStarter;
+      }
+      if (features.remiseBoostPct === undefined) {
+        ajouts.remiseBoostPct = estStarter ? 0 : bouquet.name === "Pro" ? 5 : bouquet.name === "Premium" ? 10 : 10;
+      }
+      if (Object.keys(ajouts).length === 0) continue;
+
+      await this.prisma.subscriptionPlan.update({
+        where: { id: bouquet.id },
+        data: { featuresJson: { ...features, ...ajouts } as Prisma.InputJsonValue },
+      });
+      nombreMisAJour++;
+    }
+    if (nombreMisAJour > 0) {
+      this.logger.log(
+        `${nombreMisAJour} bouquet(s) Gestion mis à jour avec les clés stockCmv/paiementEchelonneBouquet/remiseBoostPct.`,
       );
     }
   }

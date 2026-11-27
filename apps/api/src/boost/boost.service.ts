@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateBoostDto } from "./dto/create-boost.dto";
-import { BoostCible, BoostStatus, NotificationType } from "@eleganz/database";
+import { BoostCible, BoostStatus, NotificationType, Prisma } from "@eleganz/database";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ROLES_ADMIN } from "../admin-team/dto/admin-team.dto";
 import { enregistrerAuditLog } from "../audit/audit-log.util";
@@ -12,17 +12,26 @@ import { enregistrerAuditLog } from "../audit/audit-log.util";
 // raison de laisser la boutique dans l'incertitude longtemps.
 const DELAI_REGLEMENT_BOOST_JOURS = 3;
 
+function arrondi2(montant: number): number {
+  return Math.round(montant * 100) / 100;
+}
+
 /**
- * Boost payant (26 nov. 2026, demande propriétaire) — une boutique paie
- * pour mettre en avant toute sa boutique OU un article précis, pour une
- * durée choisie (voir le modèle Boost dans schema.prisma pour le détail des
- * champs et la convention statut/dates).
+ * Boost payant (26 nov. 2026, demande propriétaire ; étendu le 27 nov. 2026
+ * — refonte ELEGANZ BOOST à partir de la proposition de tarification
+ * fournie, adaptée à l'architecture réelle) — une boutique paie pour mettre
+ * en avant toute sa boutique, un article précis, PLUSIEURS articles choisis
+ * (famille COLLECTION) ou une campagne multicanale (famille SOCIAL_360),
+ * pour une durée choisie (voir le modèle Boost dans schema.prisma).
  *
  * Réutilise le modèle Invoice existant (kind = "boost") : le règlement
  * reste virement/Mobile Money hors ligne, confirmé par un admin qui marque
  * la facture payée (BillingController.markPaid, voir le hook d'activation
  * ci-dessous) — aucune passerelle de paiement réelle n'existe ailleurs dans
- * l'app à ce jour.
+ * l'app à ce jour. Réponse Q2 (cadrage de la refonte) : pas de portefeuille
+ * de crédits rechargeable — seules des remises/un crédit de lancement
+ * PONCTUEL s'appliquent automatiquement à l'achat (voir calculerRemise
+ * ci-dessous), jamais un solde qu'on recharge.
  */
 @Injectable()
 export class BoostService {
@@ -49,27 +58,78 @@ export class BoostService {
     return [shop.ownerId, ...shop.staff.map((s) => s.userId)];
   }
 
+  private readonly inclusionBoost = {
+    tarif: true,
+    product: { select: { id: true, name: true, images: true } },
+    boostProduits: { include: { product: { select: { id: true, name: true, images: true } } } },
+    invoice: { select: { id: true, status: true, dueAt: true, paidAt: true } },
+  } as const;
+
   mesBoosts(shopId: string) {
     return this.prisma.boost.findMany({
       where: { shopId },
-      include: {
-        tarif: true,
-        product: { select: { id: true, name: true, images: true } },
-        invoice: { select: { id: true, status: true, dueAt: true, paidAt: true } },
-      },
+      include: this.inclusionBoost,
       orderBy: { createdAt: "desc" },
     });
   }
 
   /**
-   * Achat (26 nov. 2026) — crée dans une seule transaction la facture
-   * (kind="boost", PENDING) et le boost lui-même (EN_ATTENTE_PAIEMENT),
-   * exactement comme BillingService.changerBouquetGestion crée son
-   * complément d'abonnement. N'active RIEN immédiatement : contrairement au
-   * changement de bouquet Gestion, un boost n'a aucune urgence d'usage et
-   * accorder une mise en avant avant tout règlement irait à l'encontre du
-   * principe déjà appliqué partout ailleurs dans l'app ("limiter le risque"
-   * — inscription Livreur fermée, modération anti-blanchiment...).
+   * Remise totale applicable à l'achat (27 nov. 2026, refonte) : bouquet
+   * Gestion (featuresJson.remiseBoostPct) + remise "premier boost"
+   * (PlatformSettings, plafonnée en montant absolu) — purement additives,
+   * jamais composées. N'inclut PAS le crédit de lancement (déduit à part,
+   * voir acheter() ci-dessous : une remise en %, un crédit en montant fixe,
+   * deux mécaniques différentes).
+   */
+  private async calculerRemisePourcentage(
+    shopId: string,
+    montantCatalogue: number,
+  ): Promise<{ pctTotal: number; montantRemise: number }> {
+    const [shop, premierBoostDejaUtilise, settings] = await Promise.all([
+      this.prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { gestionBouquet: { select: { featuresJson: true } } },
+      }),
+      this.prisma.boost.count({ where: { shopId, status: { not: BoostStatus.ANNULE } } }),
+      this.prisma.platformSettings.findUnique({
+        where: { id: "platform" },
+        select: { boostRemisePremierBoostPct: true, boostRemisePremierBoostPlafondUSD: true },
+      }),
+    ]);
+
+    const featuresBouquet = (shop?.gestionBouquet?.featuresJson as unknown as Record<string, unknown> | undefined) ?? {};
+    const remiseBouquetPct = typeof featuresBouquet.remiseBoostPct === "number" ? featuresBouquet.remiseBoostPct : 0;
+    const montantRemiseBouquet = arrondi2((montantCatalogue * remiseBouquetPct) / 100);
+
+    let remisePremierBoostPct = 0;
+    let montantRemisePremierBoost = 0;
+    if (premierBoostDejaUtilise === 0 && settings && settings.boostRemisePremierBoostPct > 0) {
+      remisePremierBoostPct = settings.boostRemisePremierBoostPct;
+      montantRemisePremierBoost = arrondi2((montantCatalogue * remisePremierBoostPct) / 100);
+      const plafond = settings.boostRemisePremierBoostPlafondUSD;
+      if (plafond != null && montantRemisePremierBoost > Number(plafond)) {
+        montantRemisePremierBoost = Number(plafond);
+      }
+    }
+
+    const montantRemise = Math.min(montantCatalogue, arrondi2(montantRemiseBouquet + montantRemisePremierBoost));
+    // Pourcentage "équivalent" affiché pour transparence (reporting/historique)
+    // — recalculé à partir du montant réel plutôt qu'une simple somme des
+    // deux taux, pour rester exact même quand le plafond du premier boost a
+    // tronqué la remise.
+    const pctTotal = montantCatalogue > 0 ? Math.round((montantRemise / montantCatalogue) * 10000) / 100 : 0;
+    return { pctTotal, montantRemise };
+  }
+
+  /**
+   * Achat (26 nov. 2026 ; étendu le 27 nov. 2026 pour les 4 familles) — crée
+   * dans une seule transaction la facture (kind="boost", PENDING) et le
+   * boost lui-même (EN_ATTENTE_PAIEMENT), exactement comme
+   * BillingService.changerBouquetGestion crée son complément d'abonnement.
+   * N'active RIEN immédiatement : contrairement au changement de bouquet
+   * Gestion, un boost n'a aucune urgence d'usage et accorder une mise en
+   * avant avant tout règlement irait à l'encontre du principe déjà appliqué
+   * partout ailleurs dans l'app ("limiter le risque").
    */
   async acheter(shopId: string, userId: string, dto: CreateBoostDto) {
     const tarif = await this.prisma.boostTarif.findUniqueOrThrow({ where: { id: dto.tarifId } });
@@ -77,8 +137,11 @@ export class BoostService {
       throw new BadRequestException("Ce forfait n'est plus proposé à l'achat.");
     }
     if (tarif.cible !== dto.cible) {
-      throw new BadRequestException("Ce forfait ne correspond pas à la cible choisie.");
+      throw new BadRequestException("Ce forfait ne correspond pas à la famille de boost choisie.");
     }
+
+    let productIdUnique: string | undefined;
+    let productIdsCollection: string[] = [];
 
     if (dto.cible === BoostCible.PRODUIT) {
       if (!dto.productId) {
@@ -94,39 +157,98 @@ export class BoostService {
       if (!produit.isPublished) {
         throw new BadRequestException("Seul un article publié sur ELEGANZ peut être boosté.");
       }
+      productIdUnique = dto.productId;
     }
+
+    if (dto.cible === BoostCible.COLLECTION) {
+      const ids = Array.from(new Set(dto.productIds ?? []));
+      if (ids.length === 0) {
+        throw new BadRequestException("Choisissez au moins un article pour cette campagne.");
+      }
+      if (tarif.maxProduits != null && ids.length > tarif.maxProduits) {
+        throw new BadRequestException(`Ce palier accepte au maximum ${tarif.maxProduits} article(s).`);
+      }
+      const produits = await this.prisma.product.findMany({
+        where: { id: { in: ids }, shopId, isPublished: true },
+        select: { id: true },
+      });
+      if (produits.length !== ids.length) {
+        throw new BadRequestException(
+          "Un ou plusieurs articles choisis n'appartiennent pas à cette boutique ou ne sont pas publiés sur ELEGANZ.",
+        );
+      }
+      productIdsCollection = ids;
+    }
+
+    let canauxChoisis: string[] = [];
+    if (dto.cible === BoostCible.SOCIAL_360) {
+      const canaux = Array.from(new Set(dto.canaux ?? []));
+      if (canaux.length === 0) {
+        throw new BadRequestException("Choisissez au moins un canal pour cette campagne.");
+      }
+      const features = (tarif.featuresJson as unknown as Record<string, unknown> | null) ?? {};
+      const canauxDisponibles = canaux.filter((c) => features[c] === true);
+      if (canauxDisponibles.length !== canaux.length) {
+        throw new BadRequestException("Un ou plusieurs canaux choisis ne sont pas inclus dans ce palier.");
+      }
+      canauxChoisis = canaux;
+    }
+
+    const montantCatalogue = Number(tarif.prixUSD);
+    const { pctTotal, montantRemise } = await this.calculerRemisePourcentage(shopId, montantCatalogue);
+    const montantApresRemise = Math.max(0, arrondi2(montantCatalogue - montantRemise));
+
+    // Crédit de lancement (27 nov. 2026, réponse Q2 : pas de portefeuille,
+    // un montant ponctuel consommé jusqu'à épuisement — voir
+    // Shop.boostCreditLancementRestantUSD) — déduit APRÈS les remises en %,
+    // jamais négatif, jamais au-delà du solde restant de la boutique.
+    const shopPourCredit = await this.prisma.shop.findUniqueOrThrow({
+      where: { id: shopId },
+      select: { boostCreditLancementRestantUSD: true },
+    });
+    const creditDisponible = Number(shopPourCredit.boostCreditLancementRestantUSD);
+    const creditConsomme = Math.min(creditDisponible, montantApresRemise);
+    const montantFacture = arrondi2(montantApresRemise - creditConsomme);
 
     const maintenant = new Date();
     const dueAt = new Date(maintenant.getTime() + DELAI_REGLEMENT_BOOST_JOURS * 24 * 60 * 60 * 1000);
 
     const invoice = await this.prisma.invoice.create({
-      data: { shopId, amount: tarif.prix, dueAt, status: "PENDING", kind: "boost" },
+      data: { shopId, amount: montantFacture, dueAt, status: "PENDING", kind: "boost" },
     });
 
     const boost = await this.prisma.boost.create({
       data: {
         shopId,
         cible: dto.cible,
-        productId: dto.cible === BoostCible.PRODUIT ? dto.productId : null,
+        productId: productIdUnique ?? null,
         tarifId: tarif.id,
         dureeJours: tarif.dureeJours,
-        montant: tarif.prix,
+        montant: montantFacture,
+        remiseAppliqueePct: pctTotal > 0 ? pctTotal : null,
+        canauxJson: canauxChoisis.length > 0 ? (canauxChoisis as unknown as Prisma.InputJsonValue) : undefined,
         status: BoostStatus.EN_ATTENTE_PAIEMENT,
         invoiceId: invoice.id,
         requestedByUserId: userId,
+        ...(productIdsCollection.length > 0
+          ? { boostProduits: { create: productIdsCollection.map((productId) => ({ productId })) } }
+          : {}),
       },
-      include: {
-        tarif: true,
-        product: { select: { id: true, name: true, images: true } },
-        invoice: true,
-      },
+      include: this.inclusionBoost,
     });
+
+    if (creditConsomme > 0) {
+      await this.prisma.shop.update({
+        where: { id: shopId },
+        data: { boostCreditLancementRestantUSD: arrondi2(creditDisponible - creditConsomme) },
+      });
+    }
 
     await this.notifications
       .notifierMulticanal(await this.idsAdmins(), {
         type: NotificationType.BOOST_ACHETE,
         title: "Nouveau boost en attente de règlement",
-        body: `Une boutique a démarré un boost de ${Number(tarif.prix).toFixed(2)} (${tarif.dureeJours} j) — facture en attente de paiement.`,
+        body: `Une boutique a démarré un boost ${tarif.nom} (${dto.cible}, ${tarif.dureeJours} j) — facture de ${montantFacture.toFixed(2)} $ en attente de paiement.`,
         link: "/admin/factures?kind=boost",
       })
       .catch((err) => this.logger.error("Échec de la notification admin BOOST_ACHETE", err));
@@ -135,7 +257,16 @@ export class BoostService {
       actorId: userId,
       shopId,
       action: "BOOST_ACHETE",
-      details: { boostId: boost.id, cible: dto.cible, productId: dto.productId ?? null, montant: Number(tarif.prix) },
+      details: {
+        boostId: boost.id,
+        cible: dto.cible,
+        productId: productIdUnique ?? null,
+        productIds: productIdsCollection,
+        canaux: canauxChoisis,
+        montantCatalogue,
+        montantFacture,
+        creditConsomme,
+      },
     });
 
     return boost;
@@ -222,6 +353,7 @@ export class BoostService {
       include: {
         shop: { select: { id: true, name: true } },
         product: { select: { id: true, name: true } },
+        boostProduits: { include: { product: { select: { id: true, name: true } } } },
         tarif: true,
       },
       orderBy: { createdAt: "desc" },
