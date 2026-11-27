@@ -293,6 +293,18 @@ model PlatformSettings {
   // pilotage seulement.
   boostTauxChargesDirectesPct Int @default(20)
 
+  // --- ELEGANZ BOOST 360° : intégration réelle aux régies publicitaires
+  // externes (27 nov. 2026, demande propriétaire après présentation d'une
+  // maquette d'interface) — décision de cadrage : CHAQUE BOUTIQUE connecte
+  // et paie directement SON PROPRE compte publicitaire (OAuth) sur chaque
+  // réseau ; ELEGANZ ne gère ni ne paie jamais le budget publicitaire, et
+  // facture uniquement des frais de service (voir modèle
+  // BoostCampagneExterneGroupe plus bas pour l'architecture complète).
+  boostExterneActif               Boolean @default(false) // interrupteur global : tant que false, le parcours Boost 360° reste masqué/désactivé côté boutique
+  boostExterneFraisPct            Int     @default(15)
+  boostExterneFraisMinimumUSD     Decimal @default(1) @db.Decimal(10, 2)
+  boostExterneAudienceGeoParDefaut String @default("CD") // code pays ISO 3166-1 alpha-2 (RDC par défaut), configurable à l'achat
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -800,6 +812,12 @@ model Shop {
   // plus bas.
   boosts Boost[]
 
+  // ELEGANZ BOOST 360° (27 nov. 2026) — comptes publicitaires externes
+  // connectés par cette boutique et campagnes réelles lancées depuis eux ;
+  // voir ShopAdAccountConnexion/BoostCampagneExterneGroupe plus bas.
+  adAccountConnexions         ShopAdAccountConnexion[]
+  boostCampagneExterneGroupes BoostCampagneExterneGroupe[]
+
   // ELEGANZ BOOST — crédit de lancement (27 nov. 2026, section 13 de la
   // proposition de tarification Boost, réponse Q2 : pas de portefeuille
   // rechargeable, un simple montant ponctuel). Crédité automatiquement à
@@ -1111,6 +1129,12 @@ model Product {
   // à plusieurs lignes BoostProduit au fil du temps (un par campagne), d'où
   // ce tableau plutôt qu'une relation 1-à-1.
   boostProduits BoostProduit[]
+
+  // ELEGANZ BOOST 360° (27 nov. 2026) — mêmes relations que ci-dessus, pour
+  // les campagnes réelles lancées sur les réseaux publicitaires externes ;
+  // voir BoostCampagneExterneGroupe/BoostExterneProduit plus bas.
+  boostCampagneExterneGroupes BoostCampagneExterneGroupe[]
+  boostExterneProduits        BoostExterneProduit[]
 
   // Paiement échelonné (26 nov. 2026, demande propriétaire) — activation
   // PAR ARTICLE, avec ses propres conditions (une boutique peut proposer 3
@@ -2044,6 +2068,12 @@ model Invoice {
   // voir le commentaire détaillé sur le modèle Boost plus bas. Optionnelle :
   // la grande majorité des factures ne sont pas des boosts.
   boost Boost?
+
+  // ELEGANZ BOOST 360° (27 nov. 2026) — présent seulement quand kind =
+  // "boost_externe" (frais de service ELEGANZ, jamais le budget publicitaire
+  // lui-même, payé directement par la boutique au réseau externe). Voir le
+  // modèle BoostCampagneExterneGroupe plus bas.
+  boostCampagneExterneGroupe BoostCampagneExterneGroupe?
 }
 
 // Boost payant (26 nov. 2026, demande propriétaire) — une boutique paie
@@ -2193,24 +2223,193 @@ model BoostProduit {
   @@index([productId])
 }
 
-// Configuration par canal publicitaire externe (27 nov. 2026, réponse Q1) —
-// un seul enregistrement par canal (singleton), modifiable depuis le Centre
-// de pilotage "Boost". `connecte` reste à `false` tant qu'aucun identifiant
-// n'a été vérifié : aucun code de ce chantier n'appelle réellement l'API
-// d'un canal, `connecte=true` est une simple annotation manuelle de l'admin
-// en attendant un chantier d'intégration dédié. Identifiants stockés tels
-// quels (pas de secret manager dans ce projet à ce jour) — même niveau de
-// confiance que les autres identifiants déjà en base (ex. EmailProviderConfig
-// si présent).
+// Configuration par canal publicitaire externe — RÉVISÉ le 27 nov. 2026
+// (ELEGANZ BOOST 360°, intégration réelle) : porte désormais la
+// configuration de L'APPLICATION OAUTH D'ELEGANZ elle-même, enregistrée UNE
+// FOIS par l'admin auprès de chaque régie en tant que "partenaire
+// technique" (Meta Tech Provider, TikTok for Business Partner, Google Ads
+// Manager Account, X Ads développeur) — JAMAIS le compte publicitaire d'une
+// boutique en particulier (voir ShopAdAccountConnexion plus bas pour ça).
+// `apiKey`/`apiSecret` portent donc le Client ID/Client Secret de l'app
+// ELEGANZ ; `accountId` un identifiant d'organisation partenaire optionnel
+// (ex. Business Manager ID Meta) utile à certains réseaux. `connecte` reste
+// une case cochée par l'admin une fois l'app réellement approuvée par le
+// réseau — tant qu'elle est à `false`, le bouton "Connecter mon compte"
+// reste masqué côté boutique pour ce canal (seul vrai effet : empêche de
+// lancer un flux OAuth qui échouerait de toute façon faute d'app valide).
+// Identifiants stockés tels quels (pas de secret manager dans ce projet à
+// ce jour) — même niveau de confiance que les autres identifiants déjà en
+// base (ex. EmailProviderConfig si présent).
 model BoostCanalConfig {
   id        String     @id @default(uuid())
   canal     BoostCanal @unique
   connecte  Boolean    @default(false)
-  apiKey    String?
-  apiSecret String?
-  accountId String?
+  apiKey    String? // Client ID / App ID de l'app ELEGANZ pour ce réseau
+  apiSecret String? // Client Secret / App Secret de l'app ELEGANZ pour ce réseau
+  accountId String? // identifiant d'organisation partenaire ELEGANZ (optionnel, ex. Business Manager ID)
   notes     String?
+
+  // Ajoutés le 27 nov. 2026 (Boost 360°) — nécessaires au flux OAuth réel.
+  redirectUriOverride String? // à défaut, l'API construit l'URI depuis API_PUBLIC_BASE_URL + /boost-externe/oauth/callback/:canal
+  scopesConfigures    String? // scopes OAuth demandés à la boutique à la connexion, séparés par des espaces
+  webhookSecret       String? // secret de vérification des webhooks du réseau (quand il en propose), sinon synchronisation uniquement par sondage (cron)
+
   updatedAt DateTime   @updatedAt
+}
+
+// Statut de la connexion OAuth d'UNE BOUTIQUE à SON PROPRE compte
+// publicitaire sur un réseau externe (27 nov. 2026, Boost 360°).
+enum StatutConnexionAdAccount {
+  NON_CONNECTE
+  CONNECTE
+  EXPIRE // jeton expiré, pas encore rafraîchi (ou rafraîchissement impossible)
+  REVOQUE // boutique ou réseau a révoqué l'accès
+  ERREUR
+}
+
+// Statut d'une campagne RÉELLE transmise à un réseau publicitaire externe
+// (27 nov. 2026, Boost 360°) — distinct de BoostStatus (Boost interne).
+// Dérivation en direct comme ailleurs dans ce projet : seul `statut` est
+// stocké, jamais une comparaison de dates mise en cache ; synchronisé
+// périodiquement depuis le statut réel renvoyé par le réseau (voir
+// `externalStatusRaw`, la valeur brute conservée pour diagnostic).
+enum StatutApprobationCampagneExterne {
+  BROUILLON
+  EN_ATTENTE_CONNEXION // la boutique n'a pas (ou plus) de compte connecté sur ce canal
+  EN_ATTENTE_ENVOI // frais ELEGANZ payés, campagne pas encore transmise au réseau (ou à retransmettre après erreur)
+  EN_ATTENTE_APPROBATION
+  APPROUVEE
+  REJETEE
+  DIFFUSION_EN_COURS
+  EN_PAUSE
+  TERMINEE
+  ERREUR
+}
+
+// Connexion OAuth d'une boutique à son propre compte publicitaire sur un
+// réseau externe (27 nov. 2026, ELEGANZ BOOST 360°, demande propriétaire :
+// "permettre au commerçant de lancer une publicité sans nécessairement
+// quitter ELEGANZ, ni maîtriser Facebook Ads Manager ou TikTok Ads
+// Manager"). Jetons DE LA BOUTIQUE (jamais ceux d'ELEGANZ, voir
+// BoostCanalConfig ci-dessus) — stockés tels quels, même convention que le
+// reste du projet (pas de secret manager à ce jour).
+model ShopAdAccountConnexion {
+  id     String                   @id @default(uuid())
+  shopId String
+  shop   Shop                     @relation(fields: [shopId], references: [id])
+  canal  BoostCanal
+  statut StatutConnexionAdAccount @default(NON_CONNECTE)
+
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+
+  compteExterneId  String? // ex. "act_1234567890" (Meta), advertiser_id (TikTok), customer_id (Google), account_id (X)
+  compteExterneNom String?
+  scopesAccordes   String? // scopes effectivement accordés par la boutique, séparés par des espaces
+
+  connectedAt    DateTime?
+  lastSyncAt     DateTime?
+  derniereErreur String?
+
+  campagnes BoostCampagneExterne[]
+
+  @@unique([shopId, canal])
+  @@index([canal, statut])
+}
+
+// Un "groupe" = une soumission de l'assistant "ELEGANZ BOOST 360°" côté
+// boutique (objet à promouvoir, durée, budget, audience) — peut donner lieu
+// à PLUSIEURS campagnes réelles, une par réseau choisi (voir
+// BoostCampagneExterne plus bas), chacune avec son propre statut
+// d'approbation et ses propres statistiques. Les frais ELEGANZ (facture
+// kind="boost_externe") sont PAR GROUPE, jamais par campagne individuelle —
+// un seul geste de paiement pour toute la campagne multicanale.
+// IMPORTANT : `budgetTotalUSD` est le budget publicitaire annoncé par la
+// boutique à titre indicatif/de répartition entre canaux — ce montant n'est
+// JAMAIS prélevé par ELEGANZ ni transmis à un réseau : chaque réseau
+// facture directement la boutique sur le compte publicitaire qu'elle a
+// connecté (voir ShopAdAccountConnexion), selon son propre cycle de
+// facturation. Seuls `fraisEleganzUSD` (service ELEGANZ) transitent par la
+// facture/Invoice ELEGANZ ci-dessous.
+model BoostCampagneExterneGroupe {
+  id        String     @id @default(uuid())
+  shopId    String
+  shop      Shop       @relation(fields: [shopId], references: [id])
+  cible     BoostCible // BOUTIQUE / PRODUIT / COLLECTION — SOCIAL_360 n'a pas de sens ici (c'est la famille Boost interne équivalente)
+  productId String? // renseigné seulement si cible = PRODUIT
+  product   Product?   @relation(fields: [productId], references: [id])
+
+  boostExterneProduits BoostExterneProduit[] // renseigné seulement si cible = COLLECTION
+
+  dateDebut      DateTime
+  dateFin        DateTime
+  budgetTotalUSD Decimal  @db.Decimal(12, 2)
+  audienceGeo    String // code pays ISO 3166-1 alpha-2, copié du réglage plateforme ou choisi par la boutique
+
+  // Copiés du réglage plateforme à la création (jamais recalculés après
+  // coup si le réglage change ensuite) — même convention que Boost.montant.
+  fraisEleganzPct Decimal @db.Decimal(5, 2)
+  fraisEleganzUSD Decimal @db.Decimal(12, 2)
+
+  invoiceId String  @unique
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+
+  requestedByUserId String
+  createdAt         DateTime @default(now())
+
+  campagnes BoostCampagneExterne[]
+
+  @@index([shopId, createdAt])
+}
+
+// Articles choisis pour un groupe de famille COLLECTION (27 nov. 2026) —
+// même principe que BoostProduit pour le Boost interne.
+model BoostExterneProduit {
+  id        String                     @id @default(uuid())
+  groupeId  String
+  groupe    BoostCampagneExterneGroupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product                    @relation(fields: [productId], references: [id])
+
+  @@unique([groupeId, productId])
+  @@index([productId])
+}
+
+// Une campagne réelle sur UN réseau, au sein d'un groupe (27 nov. 2026).
+// `budgetAlloueUSD` = part du budget total du groupe pour ce canal (réparti
+// également entre les canaux choisis par défaut). `externalCampaignId`/
+// `externalAdSetId` = identifiants renvoyés par le réseau une fois la
+// campagne transmise (voir apps/api/src/boost-externe/reseaux/*.adapter.ts)
+// — `null` tant qu'elle n'a pas encore été transmise avec succès.
+model BoostCampagneExterne {
+  id       String                     @id @default(uuid())
+  groupeId String
+  groupe   BoostCampagneExterneGroupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+
+  canal       BoostCanal
+  connexionId String?
+  connexion   ShopAdAccountConnexion?  @relation(fields: [connexionId], references: [id])
+
+  budgetAlloueUSD Decimal @db.Decimal(12, 2)
+
+  statut             StatutApprobationCampagneExterne @default(EN_ATTENTE_CONNEXION)
+  externalCampaignId String?
+  externalAdSetId    String?
+  externalStatusRaw  String? // statut brut renvoyé par le réseau, conservé tel quel pour diagnostic
+  derniereErreur     String?
+
+  statsImpressions Int?      @default(0)
+  statsClics       Int?      @default(0)
+  statsPortee      Int?      @default(0)
+  statsDepenseUSD  Decimal?  @db.Decimal(12, 2) // dépense réelle rapportée PAR LE RÉSEAU — jamais prélevée par ELEGANZ, voir commentaire sur BoostCampagneExterneGroupe
+  lastSyncAt       DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([groupeId])
+  @@index([canal, statut])
+  @@index([statut, lastSyncAt])
 }
 
 // Journal manuel des dépenses publicitaires externes (27 nov. 2026) —
@@ -3918,6 +4117,11 @@ enum NotificationType {
   // Boost payant (26 nov. 2026) — voir le commentaire sur le modèle Boost.
   BOOST_ACHETE // admins notifiés : une boutique a démarré un boost, facture en attente de règlement
   BOOST_ACTIVE // la boutique est notifiée que son boost est actif (facture marquée payée)
+  BOOST_EXTERNE_FRAIS_PAYES // admins notifiés : frais de service Boost 360° en attente de règlement
+  BOOST_EXTERNE_CAMPAGNE_TRANSMISE // boutique notifiée : campagne(s) transmise(s) au(x) réseau(x) après paiement des frais
+  BOOST_EXTERNE_CAMPAGNE_APPROUVEE // boutique notifiée : une campagne externe a été approuvée par le réseau et diffuse
+  BOOST_EXTERNE_CAMPAGNE_REJETEE // boutique notifiée : une campagne externe a été rejetée par le réseau
+  BOOST_EXTERNE_CONNEXION_EXPIREE // boutique notifiée : la connexion à son compte publicitaire a expiré, à reconnecter
 
   AUTRE
 }

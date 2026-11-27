@@ -6,6 +6,7 @@ import { ComptableBillingService } from "../comptable/comptable-billing.service"
 import { EcheancierService } from "../echeancier/echeancier.service";
 import { RisqueCreditService } from "../institutions/risque-credit.service";
 import { BoostService } from "../boost/boost.service";
+import { BoostExterneService } from "../boost-externe/boost-externe.service";
 
 /**
  * Automatisation du cycle de facturation (18 oct. 2026, point 6 de l'audit
@@ -50,6 +51,7 @@ export class CronJobsService {
     private readonly echeancier: EcheancierService,
     private readonly risqueCredit: RisqueCreditService,
     private readonly boost: BoostService,
+    private readonly boostExterne: BoostExterneService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: "cycle-facturation-quotidien" })
@@ -116,6 +118,26 @@ export class CronJobsService {
       this.logger.log(`CRON_RISQUE_CREDIT_FIN ${JSON.stringify(resultat)}`);
     } catch (err) {
       this.logger.error("CRON_RISQUE_CREDIT_ECHEC le reclassement quotidien du risque de crédit a échoué", err);
+    }
+  }
+
+  /**
+   * Synchronisation ELEGANZ BOOST 360° (27 nov. 2026) — statut d'approbation
+   * et statistiques des campagnes réellement transmises aux réseaux
+   * publicitaires externes, plus détection des connexions OAuth expirées.
+   * Toutes les 2h (pas quotidien comme le reste du cycle) : une campagne
+   * publicitaire peut passer en revue puis démarrer à diffuser en quelques
+   * heures seulement, contrairement aux cycles de facturation qui n'ont
+   * aucune urgence à l'échelle de la journée.
+   */
+  @Cron(CronExpression.EVERY_2_HOURS, { name: "boost-externe-synchronisation" })
+  async executerSynchronisationBoostExterne() {
+    this.logger.log("CRON_BOOST_EXTERNE_DEBUT démarrage de la synchronisation Boost 360°");
+    try {
+      const resultat = await this.boostExterne.synchroniserStatutsEtStatistiques();
+      this.logger.log(`CRON_BOOST_EXTERNE_FIN ${JSON.stringify(resultat)}`);
+    } catch (err) {
+      this.logger.error("CRON_BOOST_EXTERNE_ECHEC la synchronisation Boost 360° a échoué", err);
     }
   }
 }

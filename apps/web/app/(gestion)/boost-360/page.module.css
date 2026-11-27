@@ -1,0 +1,190 @@
+.titre {
+  margin-bottom: var(--espace-2);
+}
+
+.intro {
+  color: var(--color-texte-muted);
+  margin-bottom: var(--espace-5);
+  max-width: 60ch;
+}
+
+.carte {
+  border: 2px solid var(--color-ink);
+  padding: var(--espace-4);
+  margin-bottom: var(--espace-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  align-items: flex-start;
+}
+
+.sousTitre {
+  margin-bottom: var(--espace-1);
+}
+
+.note {
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  width: 100%;
+  max-width: 420px;
+}
+
+.champ select,
+.champ input {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  font: inherit;
+}
+
+.bouton {
+  background: var(--color-cobalt);
+  color: #fff;
+  border: none;
+  padding: var(--espace-3) var(--espace-5);
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonSecondaire {
+  background: var(--color-surface);
+  color: var(--color-cobalt-texte);
+  border: 2px solid var(--color-cobalt-texte);
+  padding: var(--espace-2) var(--espace-4);
+  min-height: 40px;
+  cursor: pointer;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.boutonSecondaire:hover {
+  background: var(--color-cobalt);
+  color: #fff;
+}
+
+.boutonSecondaire:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boutonsReglement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  align-items: center;
+}
+
+.erreur {
+  background: var(--color-flamme);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.confirmation {
+  background: var(--color-vert-paiement);
+  color: #fff;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-4);
+}
+
+.messageVide {
+  padding: var(--espace-5);
+  text-align: center;
+  color: var(--color-texte-muted);
+}
+
+.ligneBoost {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--espace-3);
+  margin-bottom: var(--espace-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.entete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
+  align-items: center;
+}
+
+.detailsBoost {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espace-1) var(--espace-3);
+  color: var(--color-texte-muted);
+  font-size: 0.875rem;
+}
+
+.listeCoches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  padding: var(--espace-2) var(--espace-3);
+  width: 100%;
+  max-width: 420px;
+}
+
+.ligneCoche {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: 0.875rem;
+}
+
+/* Connexions aux réseaux publicitaires (ELEGANZ BOOST 360°, 27 nov. 2026) */
+.grilleConnexions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-3);
+  width: 100%;
+}
+
+.carteConnexion {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--espace-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.carteConnexionEntete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espace-2);
+  font-weight: 600;
+}
+
+.campagneUnitaire {
+  border-top: 1px dashed var(--color-border);
+  padding-top: var(--espace-2);
+  margin-top: var(--espace-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  font-size: 0.875rem;
+}

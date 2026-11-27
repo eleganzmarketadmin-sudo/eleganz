@@ -55,6 +55,9 @@ export class BoostAdminService implements OnModuleInit {
         apiSecret: dto.apiSecret,
         accountId: dto.accountId,
         notes: dto.notes,
+        redirectUriOverride: dto.redirectUriOverride,
+        scopesConfigures: dto.scopesConfigures,
+        webhookSecret: dto.webhookSecret,
       },
       create: {
         canal,
@@ -63,6 +66,9 @@ export class BoostAdminService implements OnModuleInit {
         apiSecret: dto.apiSecret,
         accountId: dto.accountId,
         notes: dto.notes,
+        redirectUriOverride: dto.redirectUriOverride,
+        scopesConfigures: dto.scopesConfigures,
+        webhookSecret: dto.webhookSecret,
       },
     });
   }

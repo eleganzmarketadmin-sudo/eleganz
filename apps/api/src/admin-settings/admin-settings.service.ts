@@ -90,6 +90,14 @@ export class AdminSettingsService {
         ...(dto.boostTauxChargesDirectesPct !== undefined && {
           boostTauxChargesDirectesPct: dto.boostTauxChargesDirectesPct,
         }),
+        ...(dto.boostExterneActif !== undefined && { boostExterneActif: dto.boostExterneActif }),
+        ...(dto.boostExterneFraisPct !== undefined && { boostExterneFraisPct: dto.boostExterneFraisPct }),
+        ...(dto.boostExterneFraisMinimumUSD !== undefined && {
+          boostExterneFraisMinimumUSD: dto.boostExterneFraisMinimumUSD,
+        }),
+        ...(dto.boostExterneAudienceGeoParDefaut !== undefined && {
+          boostExterneAudienceGeoParDefaut: dto.boostExterneAudienceGeoParDefaut.toUpperCase(),
+        }),
         ...(dto.driverOpeningFee !== undefined && { driverOpeningFee: dto.driverOpeningFee }),
         ...(dto.driverMonthlyFee !== undefined && { driverMonthlyFee: dto.driverMonthlyFee }),
         ...(dto.driverFreeMonths !== undefined && { driverFreeMonths: dto.driverFreeMonths }),
@@ -190,6 +198,13 @@ export class AdminSettingsService {
       // l'option peut être proposée même quand l'article concerné l'a
       // activée côté boutique (voir Product.paiementEchelonneActif).
       paiementEchelonneActivePlateforme: settings.paiementEchelonneActivePlateforme,
+      // ELEGANZ BOOST 360° (27 nov. 2026) — même principe : l'assistant
+      // côté Gestion a besoin de savoir si la fonctionnalité est activée
+      // sans avoir à être lui-même un écran admin.
+      boostExterneActif: settings.boostExterneActif,
+      boostExterneFraisPct: settings.boostExterneFraisPct,
+      boostExterneFraisMinimumUSD: settings.boostExterneFraisMinimumUSD,
+      boostExterneAudienceGeoParDefaut: settings.boostExterneAudienceGeoParDefaut,
     };
   }
 

@@ -111,6 +111,28 @@ export class UpdatePlatformSettingsDto {
   @Min(0)
   boostTauxChargesDirectesPct?: number;
 
+  // ELEGANZ BOOST 360° (27 nov. 2026) — intégration réelle aux régies
+  // publicitaires externes, chaque boutique payant directement son propre
+  // compte publicitaire ; voir boost-externe.service.ts.
+  @IsOptional()
+  @IsBoolean()
+  boostExterneActif?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  boostExterneFraisPct?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  boostExterneFraisMinimumUSD?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  boostExterneAudienceGeoParDefaut?: string;
+
   // Tarification de l'espace livreur (prompt du 13 oct. 2026, point 1) —
   // 100 % paramétrable depuis le Centre de pilotage, sans redéploiement.
   @IsOptional()

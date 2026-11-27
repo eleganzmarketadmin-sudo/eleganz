@@ -12,6 +12,7 @@ import { BulkRemindDto } from "./dto/bulk-remind.dto";
 import { CreerUploadPreuvePaiementDto, SoumettrePreuvePaiementDto } from "./dto/payment-proof.dto";
 import { ReactivationDecisionDto } from "./dto/reactivation-decision.dto";
 import { BoostService } from "../boost/boost.service";
+import { BoostExterneService } from "../boost-externe/boost-externe.service";
 
 // Granularité par route (audit du 18 oct. 2026) : la liste et le paiement
 // des factures sont gérés depuis l'écran Factures (FACTURES), les
@@ -26,6 +27,7 @@ export class BillingController {
     private readonly billingService: BillingService,
     private readonly loansService: LoansService,
     private readonly boostService: BoostService,
+    private readonly boostExterneService: BoostExterneService,
   ) {}
 
   @Get("shops/:shopId/invoices")
@@ -93,6 +95,13 @@ export class BillingController {
     // de facture (opening_fee/subscription/commission/...).
     if (resultat.kind === "boost") {
       await this.boostService.activerDepuisFacture(invoiceId);
+    }
+    // ELEGANZ BOOST 360° (27 nov. 2026) — même hook additif, pour les
+    // factures kind="boost_externe" (frais de service ELEGANZ) : déclenche
+    // la transmission réelle de chaque campagne du groupe aux réseaux
+    // publicitaires choisis par la boutique.
+    if (resultat.kind === "boost_externe") {
+      await this.boostExterneService.activerDepuisFacture(invoiceId);
     }
     return resultat;
   }

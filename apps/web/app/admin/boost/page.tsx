@@ -102,6 +102,12 @@ interface PlatformSettingsBoost {
   boostRemisePremierBoostPct: number;
   boostRemisePremierBoostPlafondUSD: string | number | null;
   boostTauxChargesDirectesPct: number;
+  // ELEGANZ BOOST 360° (27 nov. 2026) — interrupteur global + conditions par
+  // défaut, lus/écrits par le même endpoint /admin/platform-settings.
+  boostExterneActif: boolean;
+  boostExterneFraisPct: number;
+  boostExterneFraisMinimumUSD: string | number;
+  boostExterneAudienceGeoParDefaut: string;
 }
 
 interface BoostCanalConfigAdmin {
@@ -112,6 +118,36 @@ interface BoostCanalConfigAdmin {
   apiSecret: string | null;
   accountId: string | null;
   notes: string | null;
+  // ELEGANZ BOOST 360° — configuration de l'app OAuth ELEGANZ pour ce canal
+  // (voir le commentaire détaillé sur BoostCanalConfig dans schema.prisma).
+  redirectUriOverride: string | null;
+  scopesConfigures: string | null;
+  webhookSecret: string | null;
+}
+
+interface BoostExterneCampagneAdmin {
+  id: string;
+  canal: BoostCanal;
+  statut: string;
+  budgetAlloueUSD: string;
+  statsImpressions: number | null;
+  statsClics: number | null;
+  statsPortee: number | null;
+  statsDepenseUSD: string | null;
+  derniereErreur: string | null;
+}
+
+interface BoostExterneGroupeAdmin {
+  id: string;
+  cible: BoostCible;
+  createdAt: string;
+  budgetTotalUSD: string;
+  fraisEleganzUSD: string;
+  audienceGeo: string;
+  shop: { id: string; name: string };
+  product: { id: string; name: string } | null;
+  invoice: { id: string; status: string; dueAt: string; paidAt: string | null };
+  campagnes: BoostExterneCampagneAdmin[];
 }
 
 interface BoostCoutExterneAdmin {
@@ -553,6 +589,92 @@ function ReglagesBoostSection() {
 }
 
 /**
+ * Réglages ELEGANZ BOOST 360° (27 nov. 2026) — interrupteur global +
+ * conditions par défaut (frais/minimum/audience), même endpoint générique
+ * /admin/platform-settings que ReglagesBoostSection ci-dessus, section
+ * séparée pour ne pas mélanger le Boost interne (catalogue de tarifs) avec
+ * l'intégration publicitaire externe (compte de chaque boutique).
+ */
+function ReglagesBoost360Section() {
+  const { t } = useLocale();
+  const [valeurs, setValeurs] = useState<PlatformSettingsBoost | null>(null);
+  const [actif, setActif] = useState(false);
+  const [fraisPct, setFraisPct] = useState("");
+  const [fraisMinimum, setFraisMinimum] = useState("");
+  const [audienceDefaut, setAudienceDefaut] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  function recharger() {
+    api
+      .get<PlatformSettingsBoost>("/admin/platform-settings")
+      .then((data) => {
+        setValeurs(data);
+        setActif(data.boostExterneActif);
+        setFraisPct(String(data.boostExterneFraisPct));
+        setFraisMinimum(String(data.boostExterneFraisMinimumUSD));
+        setAudienceDefaut(data.boostExterneAudienceGeoParDefaut);
+      })
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")));
+  }
+
+  useEffect(recharger, []);
+
+  async function enregistrer() {
+    setEnCours(true);
+    setErreur(null);
+    setConfirmation(null);
+    try {
+      await api.patch("/admin/platform-settings", {
+        boostExterneActif: actif,
+        boostExterneFraisPct: Number(fraisPct),
+        boostExterneFraisMinimumUSD: Number(fraisMinimum),
+        boostExterneAudienceGeoParDefaut: audienceDefaut.toUpperCase(),
+      });
+      setConfirmation(t("admboost_boost360ReglagesEnregistres"));
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  if (!valeurs) return <p>{t("admtarifs_chargementTarifs")}</p>;
+
+  return (
+    <div className={styles.plan}>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {confirmation && <p className={styles.messageVide}>{confirmation}</p>}
+      <div className={styles.planChamps}>
+        <label className={styles.ligneCoche}>
+          <input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
+          <span>{t("admboost_boost360Active")}</span>
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_boost360FraisPct")}</span>
+          <input value={fraisPct} onChange={(e) => setFraisPct(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_boost360FraisMinimum")}</span>
+          <input value={fraisMinimum} onChange={(e) => setFraisMinimum(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_boost360AudienceDefaut")}</span>
+          <input value={audienceDefaut} onChange={(e) => setAudienceDefaut(e.target.value)} maxLength={2} />
+        </label>
+      </div>
+      <div className={styles.planActions}>
+        <button className={styles.boutonEnregistrer} disabled={enCours} onClick={enregistrer}>
+          {t("action_enregistrer")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Canaux publicitaires externes (27 nov. 2026, réponse Q1 du cadrage :
  * "Option 1 avec les options API déjà prévues... qu'on va connecter
  * seulement") — champs structurés prêts à être branchés à une vraie régie
@@ -566,6 +688,9 @@ function LigneCanal({ canal, config, onChange }: { canal: BoostCanal; config: Bo
   const [apiSecret, setApiSecret] = useState(config.apiSecret ?? "");
   const [accountId, setAccountId] = useState(config.accountId ?? "");
   const [notes, setNotes] = useState(config.notes ?? "");
+  const [redirectUriOverride, setRedirectUriOverride] = useState(config.redirectUriOverride ?? "");
+  const [scopesConfigures, setScopesConfigures] = useState(config.scopesConfigures ?? "");
+  const [webhookSecret, setWebhookSecret] = useState(config.webhookSecret ?? "");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -573,7 +698,16 @@ function LigneCanal({ canal, config, onChange }: { canal: BoostCanal; config: Bo
     setEnCours(true);
     setErreur(null);
     try {
-      await api.patch(`/admin/boost/canaux/${canal}`, { connecte, apiKey, apiSecret, accountId, notes });
+      await api.patch(`/admin/boost/canaux/${canal}`, {
+        connecte,
+        apiKey,
+        apiSecret,
+        accountId,
+        notes,
+        redirectUriOverride,
+        scopesConfigures,
+        webhookSecret,
+      });
       onChange();
     } catch (err) {
       setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
@@ -589,11 +723,11 @@ function LigneCanal({ canal, config, onChange }: { canal: BoostCanal; config: Bo
         <span className={styles.planStatut}>{connecte ? t("eq_statutActif") : t("eq_statutDesactive")}</span>
       </div>
       {erreur && <p className={styles.erreur}>{erreur}</p>}
-      <p className={styles.note}>{t("admboost_avisConnexion")}</p>
+      <p className={styles.note}>{t("admboost_avisAppReseau")}</p>
       <div className={styles.planChamps}>
         <label className={styles.ligneCoche}>
           <input type="checkbox" checked={connecte} onChange={(e) => setConnecte(e.target.checked)} />
-          <span>{t("admboost_canalConnecte")}</span>
+          <span>{t("admboost_appActivee")}</span>
         </label>
         <label className={styles.champ}>
           <span>{t("admboost_apiKey")}</span>
@@ -606,6 +740,18 @@ function LigneCanal({ canal, config, onChange }: { canal: BoostCanal; config: Bo
         <label className={styles.champ}>
           <span>{t("admboost_accountId")}</span>
           <input value={accountId} onChange={(e) => setAccountId(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_redirectUriOverride")}</span>
+          <input value={redirectUriOverride} onChange={(e) => setRedirectUriOverride(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_scopesConfigures")}</span>
+          <input value={scopesConfigures} onChange={(e) => setScopesConfigures(e.target.value)} />
+        </label>
+        <label className={styles.champ}>
+          <span>{t("admboost_webhookSecret")}</span>
+          <input value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} type="password" />
         </label>
         <label className={styles.champLarge}>
           <span>{t("admboost_notes")}</span>
@@ -647,6 +793,108 @@ function CanauxSection() {
         if (!config) return null;
         return <LigneCanal key={canal} canal={canal} config={config} onChange={recharger} />;
       })}
+    </div>
+  );
+}
+
+const CLE_STATUT_CAMPAGNE_EXTERNE: Record<string, string> = {
+  BROUILLON: "boost360_statutCampagne_BROUILLON",
+  EN_ATTENTE_CONNEXION: "boost360_statutCampagne_EN_ATTENTE_CONNEXION",
+  EN_ATTENTE_ENVOI: "boost360_statutCampagne_EN_ATTENTE_ENVOI",
+  EN_ATTENTE_APPROBATION: "boost360_statutCampagne_EN_ATTENTE_APPROBATION",
+  APPROUVEE: "boost360_statutCampagne_APPROUVEE",
+  REJETEE: "boost360_statutCampagne_REJETEE",
+  DIFFUSION_EN_COURS: "boost360_statutCampagne_DIFFUSION_EN_COURS",
+  EN_PAUSE: "boost360_statutCampagne_EN_PAUSE",
+  TERMINEE: "boost360_statutCampagne_TERMINEE",
+  ERREUR: "boost360_statutCampagne_ERREUR",
+};
+
+/**
+ * Supervision transversale ELEGANZ BOOST 360° (27 nov. 2026) — vue admin en
+ * lecture seule de toutes les campagnes de toutes les boutiques
+ * (BoostExterneService.listerToutesLesCampagnes), avec un bouton de
+ * synchronisation manuelle (même convention que les étapes de cycle
+ * admin/billing/run-*) en attendant le prochain passage du cron.
+ */
+function SupervisionBoost360Section() {
+  const { t } = useLocale();
+  const [groupes, setGroupes] = useState<BoostExterneGroupeAdmin[] | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [synchroEnCours, setSynchroEnCours] = useState(false);
+
+  function recharger() {
+    api
+      .get<BoostExterneGroupeAdmin[]>("/admin/boost-externe/campagnes")
+      .then(setGroupes)
+      .catch((err) => setErreur(err instanceof ApiError ? err.message : t("cpt_erreur")));
+  }
+
+  useEffect(recharger, []);
+
+  async function synchroniser() {
+    setSynchroEnCours(true);
+    setErreur(null);
+    setMessage(null);
+    try {
+      const resultat = await api.post<{ synchronisees: number }>("/admin/boost-externe/synchroniser-maintenant");
+      setMessage(t("admboost_synchronisationLancee").replace("{{n}}", String(resultat.synchronisees)));
+      recharger();
+    } catch (err) {
+      setErreur(err instanceof ApiError ? err.message : t("cha_enregistrementImpossible"));
+    } finally {
+      setSynchroEnCours(false);
+    }
+  }
+
+  return (
+    <div>
+      {erreur && <p className={styles.erreur}>{erreur}</p>}
+      {message && <p className={styles.messageVide}>{message}</p>}
+      <div className={styles.planActions} style={{ marginBottom: "var(--espace-3)" }}>
+        <button className={styles.boutonEnregistrer} disabled={synchroEnCours} onClick={synchroniser}>
+          {t("admboost_boutonSynchroniser")}
+        </button>
+      </div>
+      {groupes === null ? (
+        <p>{t("admtarifs_chargementTarifs")}</p>
+      ) : groupes.length === 0 ? (
+        <p className={styles.messageVide}>{t("admboost_supervisionAucuneCampagne")}</p>
+      ) : (
+        groupes.map((g) => (
+          <div className={styles.plan} key={g.id}>
+            <div className={styles.planEntete}>
+              <span className={styles.planNom}>
+                {g.shop.name} — {t(cleFamille(g.cible))}
+                {g.product ? ` (${g.product.name})` : ""}
+              </span>
+              <span className={styles.planStatut}>{formatDate(g.createdAt)}</span>
+            </div>
+            <div className={styles.planChamps}>
+              <span>
+                {t("boost360_budget")} : {formatMoney(Number(g.budgetTotalUSD))} · {t("admboost_colFactureFrais")} :{" "}
+                {formatMoney(Number(g.fraisEleganzUSD))} ({g.invoice.status})
+              </span>
+              {g.campagnes.map((c) => (
+                <div key={c.id} className={styles.note}>
+                  {LIBELLE_CANAL[c.canal]} — {t(CLE_STATUT_CAMPAGNE_EXTERNE[c.statut] ?? c.statut)}
+                  {" · "}
+                  {t("boost360_colBudgetAlloue")} : {formatMoney(Number(c.budgetAlloueUSD))}
+                  {c.statsImpressions != null && (
+                    <>
+                      {" · "}
+                      {c.statsImpressions} imp. · {c.statsClics ?? 0} clics · {c.statsPortee ?? 0} portée ·{" "}
+                      {formatMoney(Number(c.statsDepenseUSD ?? 0))}
+                    </>
+                  )}
+                  {c.derniereErreur && <span className={styles.erreur}> — {c.derniereErreur}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -849,6 +1097,12 @@ function BoostContent() {
 
       <h2 className={styles.sectionTitre}>{t("admboost_sectionCanaux")}</h2>
       <CanauxSection />
+
+      <h2 className={styles.sectionTitre}>{t("admboost_sectionBoost360")}</h2>
+      <ReglagesBoost360Section />
+
+      <h2 className={styles.sectionTitre}>{t("admboost_sectionSupervisionBoost360")}</h2>
+      <SupervisionBoost360Section />
 
       <h2 className={styles.sectionTitre}>{t("admboost_sectionCoutsExternes")}</h2>
       <CoutsExternesSection />

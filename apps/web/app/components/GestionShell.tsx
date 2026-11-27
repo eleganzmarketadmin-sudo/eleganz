@@ -71,6 +71,11 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
     { href: "/tableau-de-bord", label: t("nav_tableauDeBord"), menu: "TABLEAU_DE_BORD" },
     { href: "/catalogue", label: t("nav_catalogue"), menu: "CATALOGUE" },
     { href: "/boost", label: t("nav_boost"), menu: "BOOST" },
+    // ELEGANZ BOOST 360° (27 nov. 2026) — même écran de menu BOOST que le
+    // Boost interne ci-dessus (même gate OWNER/MANAGER par défaut, même
+    // engagement financier), lien distinct vers l'assistant de publicité
+    // externe (apps/web/app/(gestion)/boost-360/page.tsx).
+    { href: "/boost-360", label: t("nav_boost360"), menu: "BOOST" },
     { href: "/commandes", label: t("nav_commandes"), menu: "COMMANDES" },
     // Classement des meilleures ventes (27 nov. 2026, demande : "Dans
     // gestion sur Ajouter un classement des produits de la boutique les
