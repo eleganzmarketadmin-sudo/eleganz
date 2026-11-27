@@ -3,17 +3,14 @@
   background: var(--color-surface);
 }
 
-/* Héros éditorial (25 nov. 2026, retour propriétaire — voir le commentaire
-   détaillé dans page.tsx) — remplace l'ancien bandeau plat compact (titre +
-   phrase sur un aplat magenta uni, 12 nov. 2026) par le héros en deux blocs
-   inégaux déjà documenté dans docs/DESIGN_SYSTEM.md ("Marketplace — bloc de
-   couleur éditorial") mais jamais construit jusqu'ici. Toujours pas de
-   centrage systématique (principe du système) : alignement sobre à gauche à
-   l'intérieur du bloc de couleur. Empilé en colonne (photo au-dessus,
-   hauteur plafonnée pour ne pas répéter l'erreur déjà signalée ailleurs —
-   "l'en-tête occupe une grande partie de l'écran" — sur un héros, pas une
-   barre de navigation, mais le risque de proportion est le même) ; redevient
-   la rangée à deux blocs inégaux voulue par le système à partir de 720px. */
+/* Héros réduit à une seule ligne (27 nov. 2026, retour propriétaire — voir
+   le commentaire détaillé dans page.tsx) — remplace le héros en deux blocs
+   inégaux du 25 nov. 2026 (photo à 42% + aplat Magenta à 58%, empilés en
+   rangée à partir de 720px : exactement la "moitié d'écran" que ce retour
+   demande de supprimer). Toujours empilé en colonne, mais maintenant à
+   TOUTES les largeurs d'écran — plus de bascule en rangée à 720px, puisqu'il
+   n'y a plus de bloc de texte assez large pour justifier une rangée à deux
+   blocs (voir .herosBloc plus bas). */
 .heros {
   display: flex;
   flex-direction: column;
@@ -95,26 +92,21 @@
   }
 }
 
+/* 27 nov. 2026, retour propriétaire — "réduire la taille de 'Porter la
+   couleur' et son contenu qui peut être supprimé, qui divise l'écran de
+   moitié ; à défaut en faire une ligne sans ce contenu juste après la bande
+   défilante". Titre (.herosTitre) et phrase d'accroche (.herosSousTitre, qui
+   existaient juste au-dessus avant ce correctif) supprimés — contenu
+   explicitement signalé comme superflu. Ce bloc n'est plus qu'une bande
+   fine d'une seule ligne (hauteur du bouton + un peu de respiration, jamais
+   plus) sous la bande défilante, plus un bloc de texte à côté d'elle : la
+   bascule en rangée @media (720px) qui existait ici est donc supprimée,
+   devenue sans objet. */
 .herosBloc {
   background: var(--color-magenta);
-  color: #fff;
-  padding: var(--espace-5);
-}
-
-.herosTitre {
-  font-family: var(--font-display), serif;
-  font-weight: 600;
-  font-style: italic;
-  font-size: clamp(1.75rem, 6vw, 2.75rem);
-  line-height: 1.05;
-  margin-bottom: var(--espace-3);
-}
-
-.herosSousTitre {
-  max-width: 48ch;
-  font-size: 0.9375rem;
-  opacity: 0.9;
-  margin-bottom: var(--espace-4);
+  display: flex;
+  align-items: center;
+  padding: var(--espace-3) var(--espace-5);
 }
 
 /* Bouton plein (pas un lien souligné) — reprend la même logique d'aplat que
@@ -140,48 +132,6 @@
      retourné (#1c1e24 en mode sombre) reste assorti à --color-ink dans les
      deux thèmes, comme partout ailleurs dans l'appli. */
   background: var(--color-surface);
-}
-
-@media (min-width: 720px) {
-  .heros {
-    flex-direction: row;
-    align-items: stretch;
-  }
-
-  .herosPhoto {
-    flex: 0 0 42%;
-    min-height: 360px;
-  }
-
-  .herosBloc {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: var(--espace-6);
-    /* "Titre serif qui chevauche légèrement le bloc" (docs/DESIGN_SYSTEM.md)
-       — l'aplat Magenta déborde légèrement sur la photo plutôt qu'un calage
-       strict bord à bord, pour que les deux blocs se lisent comme un seul
-       ensemble plutôt que deux rectangles juxtaposés. Le texte lui-même ne
-       bouge pas (padding inchangé) : il reste entièrement sur l'aplat
-       Magenta, jamais sur la photo. */
-    margin-left: calc(-1 * var(--espace-6));
-  }
-
-  /* Arabe (seule locale RTL du site, voir LocaleContext) : `dir="rtl"`
-     inverse l'ordre visuel de la rangée flex (photo à droite, bloc de
-     couleur à gauche) mais `margin-left` reste un côté PHYSIQUE, jamais
-     logique — sans ce correctif, le débord ci-dessus tirerait le bloc vers
-     la gauche, donc à l'opposé de la photo (maintenant à droite) au lieu de
-     la chevaucher. */
-  [dir="rtl"] .herosBloc {
-    margin-left: 0;
-    margin-right: calc(-1 * var(--espace-6));
-  }
-
-  .herosTitre {
-    font-size: clamp(2.25rem, 4vw, 3.25rem);
-  }
 }
 
 /* 27 nov. 2026, retour propriétaire — "la page d'accueil sur grand écran,

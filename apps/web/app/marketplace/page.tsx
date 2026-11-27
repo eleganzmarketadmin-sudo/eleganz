@@ -198,18 +198,19 @@ function MarketplaceContenu() {
     setPrixMaxActif("");
   }
 
-  // Héros éditorial (25 nov. 2026, retour propriétaire — "quelles variations
-  // de couleurs dégradées granulées... bref pas une programmation robotique,
-  // inspirez-vous d'autres plateformes" ; référence citée :
-  // fcbarcelona.fr/fr) — remplace l'ancien bandeau plat (titre + phrase,
-  // aplat magenta uni) par le héros en deux blocs inégaux déjà PRÉVU dans
-  // docs/DESIGN_SYSTEM.md ("Marketplace — bloc de couleur éditorial") mais
-  // jamais construit : photo pleine hauteur + aplat Magenta Sape, dans
-  // l'esprit d'une veste et d'un pantalon de couleurs contrastées. Aucun
-  // dégradé nulle part dans ce bloc (principe du système : "la hiérarchie
-  // vient des aplats de couleur, pas des ombres") — le titre reste toujours
-  // entièrement posé sur l'aplat de couleur, jamais sur la photo, donc même
-  // un dégradé de lisibilité n'est pas nécessaire ici.
+  // Héros réduit à une seule ligne (27 nov. 2026, retour propriétaire —
+  // "réduire la taille de 'Porter la couleur' et son contenu qui peut être
+  // supprimé, qui divise l'écran de moitié ; à défaut en faire une ligne
+  // sans ce contenu juste après la bande défilante des produits") — ce
+  // retour remplace le héros en deux blocs inégaux du 25 nov. 2026 (photo à
+  // 42% + aplat Magenta à 58%, empilés en rangée à partir de 720px, jusqu'à
+  // 360-400px de hauteur : exactement la "moitié d'écran" visée par ce
+  // retour). Titre ("Porter la couleur") et phrase d'accroche supprimés —
+  // contenu explicitement signalé comme superflu par le propriétaire ; seul
+  // le lien "Découvrir les boutiques" subsiste, dans une bande fine d'une
+  // seule ligne empilée SOUS la bande défilante (jamais à côté) : plus de
+  // rangée à deux blocs, donc plus de répartition 42/58 à aucune largeur
+  // d'écran (voir le commentaire détaillé dans page.module.css, .herosBloc).
   //
   // 25 nov. 2026, retour propriétaire : "affiche une photo... sans être un
   // menu défilant des différents produits" — une seule photo statique ne
@@ -250,8 +251,6 @@ function MarketplaceContenu() {
           )}
         </div>
         <div className={styles.herosBloc}>
-          <h1 className={styles.herosTitre}>{t("market_herosTitre")}</h1>
-          <p className={styles.herosSousTitre}>{t("market_sousTitre")}</p>
           <Link href="/marketplace/boutiques" className={styles.herosCta}>
             {t("market_herosCta")}
           </Link>
