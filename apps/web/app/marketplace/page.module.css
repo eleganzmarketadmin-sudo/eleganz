@@ -157,22 +157,52 @@
    (.barreRechercheBoutiques) qui faisait partie de ce panneau a depuis été
    supprimé (doublon du lien "Découvrir les boutiques" du héros, qui mène
    déjà à /marketplace/boutiques et à sa propre recherche) : le panneau ne
-   contient donc plus que 2 blocs, recherche produits puis filtres. */
+   contient donc plus que 2 blocs, recherche produits puis filtres.
+   27 nov. 2026, troisième retour le même jour — "faites en sorte que ça ne
+   tienne que sur une zone ne pouvant dépasser une ligne sur écran" : les 2
+   blocs ci-dessous (recherche produits, filtres) étaient chacun empilés
+   verticalement (un sous l'autre) et chacun en `flex-wrap:wrap`, d'où les 3
+   lignes visibles à l'écran (recherche, puis pays/ville retombés à la ligne
+   faute de place, puis filtres). Le panneau devient une unique rangée flex
+   en `nowrap` (les 2 blocs côte à côte, jamais l'un sous l'autre) et chaque
+   bloc passe lui aussi en `nowrap` (ses propres champs ne retombent plus à
+   la ligne) : plus aucun retour à la ligne nulle part dans ce panneau, à
+   aucune largeur d'écran. Quand le contenu est plus large que l'écran
+   (beaucoup de champs sur un petit écran), `overflow-x:auto` fait défiler
+   horizontalement plutôt que de revenir à la ligne — la seule façon de
+   garantir "une ligne" à la lettre, y compris sur mobile. */
 .panneauRecherche {
-  max-width: 1440px;
+  /* `width:fit-content` (et non plus `max-width:1440px`) : le panneau épouse
+     maintenant la largeur naturelle de son contenu plutôt qu'une largeur de
+     confort fixe — sur un grand écran, où le contenu tient largement dans
+     1440px, un `max-width` fixe aurait laissé un vide à droite du panneau
+     (le texte ne s'étire plus pour le combler, voir commentaire ci-dessus) ;
+     `fit-content` referme le panneau exactement sur ses champs. `max-width:
+     100%` prend le relais sur un écran plus étroit que cette largeur
+     naturelle : le panneau est alors borné par l'écran et défile
+     horizontalement (voir overflow-x ci-dessous) plutôt que de déborder. */
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
   border: 2px solid var(--color-ink);
   background: var(--color-surface);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  overflow-x: auto;
 }
 
 .barreRecherche {
   padding: var(--espace-4) var(--espace-5);
-  /* Diviseur interne léger avant .barreFiltres, plus discret que la bordure
-     d'ensemble ci-dessus (qui, elle, referme le module). */
-  border-bottom: 1px solid var(--color-border);
+  /* Diviseur interne léger avant .barreFiltres — vertical maintenant que les
+     2 blocs sont côte à côte (voir .panneauRecherche ci-dessus) et non plus
+     l'un sous l'autre. */
+  border-right: 1px solid var(--color-border);
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: var(--espace-3);
+  flex-shrink: 0;
 }
 
 .barreRecherche input {
@@ -214,12 +244,14 @@
 
 .barreFiltres {
   padding: var(--espace-3) var(--espace-5);
-  /* Dernière rangée du panneau : plus besoin de bordure propre, la bordure
-     d'ensemble de .panneauRecherche referme déjà le module de ce côté. */
+  /* Dernier bloc du panneau (à droite, voir .panneauRecherche ci-dessus) :
+     plus besoin de bordure propre, la bordure d'ensemble de
+     .panneauRecherche referme déjà le module de ce côté. */
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--espace-3);
   align-items: center;
+  flex-shrink: 0;
 }
 
 .barreFiltres select,
