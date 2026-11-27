@@ -56,10 +56,28 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
   // `currentShop.menuItems` (ci-dessous) ; un groupe sans aucun enfant
   // visible disparaît, un groupe réduit à un seul enfant visible se replie en
   // lien simple (voir le rendu de <nav> plus bas).
+  // Statistiques rejoint le groupe Finance (27 nov. 2026, retour
+  // propriétaire : "la barre de menu ... déborde ... le menu statistiques
+  // des ventes mettez ça dans finances avec les rapports d'activités") —
+  // même clé de permission STATISTIQUES qu'avant, seul son emplacement dans
+  // la barre change (repli automatique en lien simple si c'est le seul
+  // écran Finance/Statistiques accordé à ce rôle, voir le rendu plus bas).
   const GROUPE_FINANCE: LienSimple[] = [
+    { href: "/statistiques", label: t("nav_statistiques"), menu: "STATISTIQUES" },
     { href: "/factures", label: t("nav_mesFactures"), menu: "FACTURES" },
     { href: "/releves", label: t("nav_releves"), menu: "RELEVES" },
     { href: "/finance", label: t("nav_finance"), menu: "FINANCE" },
+  ];
+  // Boost + Boost 360° fusionnés en un seul menu déroulant (27 nov. 2026,
+  // même retour propriétaire que ci-dessus : "les 2 menus boost les
+  // regrouper en un seul (avec les deux sous menus : boost eleganz et boost
+  // 360)") — les deux restent sur le même écran de permission BOOST, donc
+  // toujours visibles/masqués ensemble (jamais un seul des deux visible,
+  // voir le filtre par `menu` plus bas), le repli en lien simple ne peut
+  // donc jamais se produire ici en pratique.
+  const GROUPE_BOOST: LienSimple[] = [
+    { href: "/boost", label: t("nav_boostEleganz"), menu: "BOOST" },
+    { href: "/boost-360", label: t("nav_boost360"), menu: "BOOST" },
   ];
   const GROUPE_COMPTE: LienSimple[] = [
     { href: "/equipe", label: t("nav_equipe"), menu: "EQUIPE" },
@@ -70,21 +88,8 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
     { href: "/caisse", label: t("nav_caisse"), menu: "CAISSE" },
     { href: "/tableau-de-bord", label: t("nav_tableauDeBord"), menu: "TABLEAU_DE_BORD" },
     { href: "/catalogue", label: t("nav_catalogue"), menu: "CATALOGUE" },
-    { href: "/boost", label: t("nav_boost"), menu: "BOOST" },
-    // ELEGANZ BOOST 360° (27 nov. 2026) — même écran de menu BOOST que le
-    // Boost interne ci-dessus (même gate OWNER/MANAGER par défaut, même
-    // engagement financier), lien distinct vers l'assistant de publicité
-    // externe (apps/web/app/(gestion)/boost-360/page.tsx).
-    { href: "/boost-360", label: t("nav_boost360"), menu: "BOOST" },
+    { groupeLabel: t("nav_boost"), liens: GROUPE_BOOST },
     { href: "/commandes", label: t("nav_commandes"), menu: "COMMANDES" },
-    // Classement des meilleures ventes (27 nov. 2026, demande : "Dans
-    // gestion sur Ajouter un classement des produits de la boutique les
-    // plus vendus quantité et valeur" — réponse du propriétaire : nouvelle
-    // page « Statistiques » dédiée, pas intégrée à Catalogue/Tableau de
-    // bord). Nouvelle clé de menu STATISTIQUES (schema.prisma) — accordée
-    // par défaut à OWNER/MANAGER uniquement (menuGestionParDefaut,
-    // shops.service.ts), comme BOOST.
-    { href: "/statistiques", label: t("nav_statistiques"), menu: "STATISTIQUES" },
     { groupeLabel: t("nav_finance"), liens: GROUPE_FINANCE },
     { href: "/livreurs", label: t("nav_livreurs"), menu: "LIVREURS" },
     { href: "/litiges", label: t("nav_litiges"), menu: "LITIGES" },
@@ -318,9 +323,10 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   href={entree.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  title={entree.label}
                   onClick={() => setNavOuvert(false)}
                 >
-                  {entree.label}
+                  <span className={styles.libelleNav}>{entree.label}</span>
                 </Link>
               );
             }
@@ -336,9 +342,10 @@ export function GestionShell({ children }: { children: React.ReactNode }) {
                   href={seul.href}
                   className={`${styles.navLien} ${actif ? styles.navLienActif : ""}`}
                   data-nav-actif={actif ? "true" : undefined}
+                  title={seul.label}
                   onClick={() => setNavOuvert(false)}
                 >
-                  {seul.label}
+                  <span className={styles.libelleNav}>{seul.label}</span>
                 </Link>
               );
             }

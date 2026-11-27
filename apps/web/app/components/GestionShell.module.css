@@ -133,11 +133,24 @@
      DropdownNavGroup qui dépasse sous la ligne d'onglets — le menu s'ouvrait
      bien (aria-expanded bascule) mais le panneau restait invisible, caché
      par le contenu de la page (voir AdminShell.module.css, même correctif,
-     même cause). Les 12 onglets sont désormais regroupés en 7 entrées max,
-     donc le débordement d'origine ne se produit plus dans la pratique ;
-     `flex-wrap` prend le relais pour les cas résiduels sans jamais créer de
-     boîte `overflow` qui romprait les panneaux déroulants. */
-  flex-wrap: wrap;
+     même cause).
+     27 nov. 2026 (retour propriétaire : "la barre de menu ne se réajuste
+     pas mais déborde avec l'ajout de menu au lieu de réduire à défaut la
+     taille de chaque menu") — passé de `wrap` à `nowrap` : avec `wrap`, le
+     navigateur décide des retours à la ligne AVANT tout rétrécissement, sur
+     la base de la largeur PLEINE (non rétrécie) de chaque onglet — un
+     onglet ne "rétrécit" donc jamais vraiment, il bascule entièrement à la
+     ligne suivante (d'où "Messagerie" livré seul sur une 2ᵉ ligne plutôt
+     qu'un simple rétrécissement de tous les onglets, et "Litiges" coupé au
+     bord de la fenêtre). Avec `nowrap`, tous les onglets restent forcés sur
+     UNE seule ligne et c'est alors `flex-shrink`/`min-width: 0` (voir
+     .navLien ci-dessous) qui absorbe tout trop-plein en rétrécissant
+     chaque onglet proportionnellement à son contenu (jamais à parts
+     strictement égales — un onglet déjà court comme "Caisse" rétrécit donc
+     moins, en valeur absolue, qu'un long comme "Finance & Comptabilité"),
+     jusqu'à troncature du texte en "…" au besoin — plus aucun débordement
+     possible, à aucune largeur, testé de 1600px à 600px. */
+  flex-wrap: nowrap;
 }
 
 .navLien {
@@ -149,14 +162,37 @@
   min-height: var(--touche-min);
   display: flex;
   align-items: center;
+  gap: 4px;
   /* 21 nov. 2026, retour propriétaire — "la barre de menu ... laisse des
      champs vides" (voir le commentaire détaillé dans AdminShell.module.css,
-     même mécanisme à l'identique). Remplace l'ancien `flex-shrink: 0` (qui
-     n'empêchait que le rétrécissement, jamais la croissance — ce n'était
-     donc pas lui qui causait l'espace vide, simplement l'absence de
-     `flex-grow`) : `flex: 1 1 auto` couvre les deux. */
+     même mécanisme à l'identique) : `flex-grow` pour que les onglets se
+     partagent tout l'espace plutôt que de laisser du vide à droite.
+     27 nov. 2026, retour propriétaire : "la barre de menu ... déborde
+     ... au lieu de réduire à défaut la taille de chaque menu" — ajout de
+     `min-width: 0` (sans lui, `min-width: auto` par défaut sur un enfant
+     flex revient à un plancher de largeur égal à son contenu en `nowrap`,
+     empêchant tout rétrécissement réel, voir le commentaire sur .nav
+     ci-dessus). `flex: 1 1 auto` est inchangé : la base reste la largeur
+     naturelle du texte (chaque onglet garde sa taille normale tant qu'il y
+     a de la place, voir .libelleNav ci-dessous pour la troncature
+     gracieuse quand ce n'est plus le cas). */
   flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
+}
+
+/* Libellé dans son propre span (et non directement dans .navLien, qui est
+   `display: flex`) : `text-overflow: ellipsis` ne s'applique de façon
+   fiable qu'à un conteneur dont le contenu est un seul bloc de texte en
+   `nowrap` — sur un conteneur flex avec plusieurs enfants, certains
+   navigateurs rognent sèchement le texte sans jamais afficher "…". Même
+   motif déjà en place sur .boutonNavMobileLabel plus bas dans ce fichier
+   (bouton replié mobile), appliqué ici aux onglets eux-mêmes. */
+.libelleNav {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .navLien:hover {
@@ -374,6 +410,11 @@
   .navLien {
     padding: var(--espace-2) var(--espace-3);
     font-size: 0.9rem;
+    /* Annule le `flex: 1 1 auto` desktop (voir plus haut) : repliés en
+       colonne pleine largeur ci-dessous (.navOuvert), les onglets doivent
+       garder leur hauteur naturelle plutôt que de grandir/rétrécir sur
+       l'axe vertical comme sur la rangée horizontale. */
+    flex: none;
   }
 
   /* Repli de la barre d'onglets (voir .boutonNavMobile ci-dessus) — <nav>

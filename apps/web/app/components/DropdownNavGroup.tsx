@@ -71,9 +71,10 @@ export function DropdownNavGroup({
         data-nav-actif={actif ? "true" : undefined}
         aria-haspopup="true"
         aria-expanded={ouvert}
+        title={label}
         onClick={() => setOuvert((v) => !v)}
       >
-        {label}
+        <span className={styles.libelle}>{label}</span>
         <span className={styles.chevron} aria-hidden="true">
           ▾
         </span>

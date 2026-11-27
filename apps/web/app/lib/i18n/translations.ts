@@ -2816,6 +2816,13 @@ const fr: Dictionnaire = {
   admboost_colStatsCampagne: "Statistiques",
   admboost_colFactureFrais: "Frais ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Lancez une vraie publicité sur Facebook, Instagram, TikTok, Google ou X sans quitter ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° n'est pas encore activé sur la plateforme — contactez l'équipe ELEGANZ.",
@@ -5628,6 +5635,13 @@ const en: Dictionnaire = {
   admboost_colStatsCampagne: "Statistics",
   admboost_colFactureFrais: "ELEGANZ fee",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Launch a real ad on Facebook, Instagram, TikTok, Google or X without leaving ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° is not yet enabled on the platform — contact the ELEGANZ team.",
@@ -8390,6 +8404,13 @@ const es: Dictionnaire = {
   admboost_colStatsCampagne: "Estadísticas",
   admboost_colFactureFrais: "Comisión de ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Lanza un anuncio real en Facebook, Instagram, TikTok, Google o X sin salir de ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° aún no está activado en la plataforma — contacte al equipo de ELEGANZ.",
@@ -11149,6 +11170,13 @@ const ar: Dictionnaire = {
   admboost_colStatsCampagne: "الإحصاءات",
   admboost_colFactureFrais: "رسوم ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "أطلق إعلانًا حقيقيًا على فيسبوك أو إنستغرام أو تيك توك أو جوجل أو X دون مغادرة ELEGANZ.",
   boost360_indisponible: "لم يتم تفعيل ELEGANZ BOOST 360° بعد على المنصة — تواصل مع فريق ELEGANZ.",
@@ -13911,6 +13939,13 @@ const pt: Dictionnaire = {
   admboost_colStatsCampagne: "Estatísticas",
   admboost_colFactureFrais: "Taxa ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Lance um anúncio real no Facebook, Instagram, TikTok, Google ou X sem sair do ELEGANZ.",
   boost360_indisponible: "O ELEGANZ BOOST 360° ainda não está ativado na plataforma — contacte a equipa ELEGANZ.",
@@ -16672,6 +16707,13 @@ const sw: Dictionnaire = {
   admboost_colStatsCampagne: "Takwimu",
   admboost_colFactureFrais: "Ada ya ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Zindua tangazo halisi kwenye Facebook, Instagram, TikTok, Google au X bila kuondoka ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° bado haijawashwa kwenye jukwaa — wasiliana na timu ya ELEGANZ.",
@@ -19430,6 +19472,13 @@ const ln: Dictionnaire = {
   admboost_colStatsCampagne: "Ba statistique",
   admboost_colFactureFrais: "Mbongo ya ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Banda publicité ya solo na Facebook, Instagram, TikTok, Google to X kozanga kobima na ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° epesami nanu nguya te na plateforme — benga equipe ya ELEGANZ.",
@@ -22183,6 +22232,13 @@ const kg: Dictionnaire = {
   admboost_colStatsCampagne: "Ba statistique",
   admboost_colFactureFrais: "Mbongo ya ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Yantika publicité ya kieleka na Facebook, Instagram, TikTok, Google to X kukatuka ve na ELEGANZ.",
   boost360_indisponible: "ELEGANZ BOOST 360° kiyindukidi ve tei na plateforme — solula ye equipe ya ELEGANZ.",
@@ -24936,6 +24992,13 @@ const lu: Dictionnaire = {
   admboost_colStatsCampagne: "Ba statistique",
   admboost_colFactureFrais: "Mushaala wa ELEGANZ",
   nav_boost360: "Boost 360°",
+  // Regroupement des menus Boost/Boost 360° en un seul menu déroulant (27
+  // nov. 2026, retour propriétaire : "la barre de menu déborde ... les 2
+  // menus boost les regrouper en un seul") — libellé du sous-élément
+  // "Boost ELEGANZ" (le système interne), à côté de nav_boost360 ci-dessus
+  // dans le même panneau. Gardé littéral dans toutes les langues, comme
+  // nav_boost360 lui-même : nom de produit, pas un mot à traduire.
+  nav_boostEleganz: "Boost ELEGANZ",
   boost360_titre: "ELEGANZ BOOST 360°",
   boost360_intro: "Tuadija tshijadiki tshilelela pa Facebook, Instagram, TikTok, Google anyi X kaudi mumuenu ELEGANZ to.",
   boost360_indisponible: "ELEGANZ BOOST 360° kaidi mujima to mu plateforme — yukila ne mulongolodi wa ELEGANZ.",

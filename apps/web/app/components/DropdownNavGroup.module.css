@@ -5,9 +5,21 @@
      champs vides" (voir le commentaire détaillé dans AdminShell.module.css).
      `.racine` est l'élément flex réel de `.nav` (le déclencheur ci-dessous
      n'en est qu'un enfant interne) — c'est donc ICI, pas sur `.declencheur`,
-     que doit porter `flex: 1 1 auto` pour que ce groupe déroulant grandisse
-     exactement comme ses voisins `.navLien` simples. */
+     que doit porter `flex`/`min-width`, pour que ce groupe déroulant
+     rétrécisse (et tronque) exactement comme ses voisins `.navLien`
+     simples.
+     27 nov. 2026, même retour propriétaire que ci-dessus (cette fois :
+     "la barre ... déborde ... au lieu de réduire à défaut la taille de
+     chaque menu") — ajout de `min-width: 0`, à l'identique et pour la même
+     raison que .navLien dans GestionShell.module.css : sans lui,
+     `min-width: auto` par défaut imposait un plancher de taille (= largeur
+     du bouton/texte en `nowrap`) que `flex-shrink` ne pouvait jamais
+     franchir. `flex: 1 1 auto` reste inchangé — voir aussi .nav dans
+     GestionShell.module.css, passé de `flex-wrap: wrap` à `nowrap` le même
+     jour : c'est ce `nowrap`, pas une base à `0%`, qui force le
+     rétrécissement réel plutôt qu'un retour à la ligne. */
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .declencheur {
@@ -23,13 +35,28 @@
   /* Remplit `.racine` (voir ci-dessus) pour que le libellé se centre dans
      toute la largeur gagnée, comme un `.navLien` voisin. */
   width: 100%;
+  min-width: 0;
   min-height: var(--touche-min);
+}
+
+/* Même motif que .libelleNav dans GestionShell.module.css : le libellé
+   dans son propre span pour que la troncature en "…" s'applique de façon
+   fiable (un conteneur flex avec plusieurs enfants — ici libellé + chevron
+   — ne garantit pas `text-overflow: ellipsis` sur un enfant texte isolé). */
+.libelle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .chevron {
   font-size: 0.65em;
   opacity: 0.75;
   transform: translateY(1px);
+  /* Ne doit jamais être lui-même rogné : seul .libelle ci-dessus absorbe le
+     rétrécissement. */
+  flex-shrink: 0;
 }
 
 .panneau {
