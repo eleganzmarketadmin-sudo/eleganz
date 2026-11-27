@@ -283,8 +283,33 @@
   width: 100%;
 }
 
-@media (max-width: 560px) {
-  /* 25 nov. 2026 (retour propriétaire : "le menu se trouve à gauche... en y
+@media (max-width: 560px), (orientation: landscape) and (max-height: 500px) {
+  /* 27 nov. 2026 (retour propriétaire : "en mode paysage sur le téléphone
+     certains écrans sont pénibles à manipuler, les entêtes couvrent presque
+     tout l'écran", capture à l'appui, demande vérifiée sur toute la
+     plateforme) — mesure (sweep Playwright hors-ligne, les 9 locales, chaînes
+     les plus longues incluses) : le contenu de `.entete`/`.liens` a besoin
+     d'environ 1100-1120px de large pour tenir sur une seule ligne, alors que
+     le repli vers la vue compacte (bouton "⋮", volet popover, nav hamburger)
+     ne se déclenchait jusqu'ici qu'en-dessous de 560px — une "zone morte" de
+     560 à ~1120px où l'en-tête se replie sur 2 à 3 lignes au lieu d'une
+     seule. Un téléphone en mode paysage (largeur courante ~700-950px,
+     hauteur ~320-430px) tombe en plein dans cette zone morte : largeur
+     suffisante pour éviter l'ancien seuil de 560px, mais bien trop étroite
+     pour les ~1120px requis — d'où l'en-tête qui occupe la moitié de l'écran
+     dans la capture. Même classe de bug, même correctif déjà posé et
+     déployé le 25 nov. 2026 sur GestionShell/AdminShell/ComptableShell/
+     InstitutionShell/LivreurShell (voir leur commentaire détaillé) : on
+     ajoute une seconde condition, combinée par une virgule CSS (= OU
+     logique), orientation paysage ET hauteur <= 500px — choisie pour
+     couvrir les hauteurs usuelles d'un téléphone en paysage sans se
+     déclencher sur tablette (~768px+) ni sur desktop. Le seuil de 560px
+     reste inchangé (portrait étroit/fenêtre desktop réduite) ; la vue
+     compacte qu'il déclenche (bouton "⋮", popover, nav hamburger) est déjà
+     pensée pour tenir sur une seule ligne à n'importe quelle largeur de
+     téléphone, donc aucun ajustement supplémentaire n'est nécessaire ici.
+
+     25 nov. 2026 (retour propriétaire : "le menu se trouve à gauche... en y
      cliquant on ne sait pas voir les options", capture à l'appui) — cause
      trouvée et reproduite : `.liens` contient ici panier + bouton "⋮" (la
      nav principale et le volet options disparaissent/se replient en-dessous
