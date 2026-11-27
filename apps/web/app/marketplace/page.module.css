@@ -136,24 +136,28 @@
 
 /* 27 nov. 2026, retour propriétaire — "la page d'accueil sur grand écran,
    aucune harmonie ni gestion cohérente". Diagnostic (vérifié hors-ligne à la
-   Playwright, à 1920px et 1440px, avant/après) : aucun des 3 blocs
+   Playwright, à 1920px et 1440px, avant/après) : aucun des blocs
    recherche/filtres n'avait de largeur bornée, et `.barreRecherche input`
    portait `flex:1` sans `max-width` — sur un écran large, ce champ seul
-   s'étirait à plus de 1100px (et le champ "Chercher une boutique…" à plus de
-   1700px), un rectangle vide démesuré à côté d'un bouton/select restés à
-   taille normale. Les 3 blocs étaient en plus 3 bandes indépendantes, bord à
-   bord sur toute la largeur de la fenêtre, chacune avec sa propre bordure
-   (épaisseur/couleur différentes) : avec l'arrivée de la recherche boutiques
-   (12 nov.) puis des filtres (16 oct.), ils se lisaient comme 3 composants
-   recollés plutôt qu'un seul module de recherche. Double correctif : (1) le
-   panneau ci-dessous (.panneauRecherche, même esprit que .panneau dans
+   s'étirait à plus de 1100px, un rectangle vide démesuré à côté d'un
+   bouton/select restés à taille normale. Les blocs étaient en plus des
+   bandes indépendantes, bord à bord sur toute la largeur de la fenêtre,
+   chacune avec sa propre bordure (épaisseur/couleur différentes) : ils se
+   lisaient comme des composants recollés plutôt qu'un seul module de
+   recherche. Double correctif : (1) le panneau ci-dessous
+   (.panneauRecherche, même esprit que .panneau dans
    DropdownNavGroup.module.css — une bordure complète qui referme un seul
-   module) regroupe les 3 blocs et borne leur largeur ; (2) chaque champ
+   module) regroupe les blocs et borne leur largeur ; (2) chaque champ
    texte reçoit maintenant une largeur cible (`flex-basis`) au lieu de
    `flex:1`, pour ne plus absorber tout l'espace libre. Le héros au-dessus
    reste bord à bord (bloc de couleur éditorial, voir docs/DESIGN_SYSTEM.md)
    — ce n'était pas lui le problème (vérifié par le même rendu hors-ligne) ;
-   seule la zone fonctionnelle en dessous gagne une largeur de confort. */
+   seule la zone fonctionnelle en dessous gagne une largeur de confort.
+   27 nov. 2026, second retour le même jour — le bloc "recherche boutiques"
+   (.barreRechercheBoutiques) qui faisait partie de ce panneau a depuis été
+   supprimé (doublon du lien "Découvrir les boutiques" du héros, qui mène
+   déjà à /marketplace/boutiques et à sa propre recherche) : le panneau ne
+   contient donc plus que 2 blocs, recherche produits puis filtres. */
 .panneauRecherche {
   max-width: 1440px;
   margin: 0 auto;
@@ -163,8 +167,8 @@
 
 .barreRecherche {
   padding: var(--espace-4) var(--espace-5);
-  /* Diviseur interne léger entre les 3 blocs du panneau, plus discret que la
-     bordure d'ensemble ci-dessus (qui, elle, referme le module). */
+  /* Diviseur interne léger avant .barreFiltres, plus discret que la bordure
+     d'ensemble ci-dessus (qui, elle, referme le module). */
   border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-wrap: wrap;
@@ -206,35 +210,6 @@
   font-weight: 600;
   min-height: var(--touche-min);
   cursor: pointer;
-}
-
-.barreRechercheBoutiques {
-  padding: var(--espace-3) var(--espace-5);
-  /* Même diviseur interne léger que .barreRecherche ci-dessus (auparavant
-     2px, une épaisseur différente de celle de .barreRecherche alors que les
-     deux jouaient déjà le même rôle de séparation — incohérence visuelle
-     mineure mais réelle, corrigée au passage). */
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espace-3);
-}
-
-.barreRechercheBoutiques label {
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.barreRechercheBoutiques input {
-  /* Même correctif que .barreRecherche input ci-dessus : ce champ à lui
-     seul s'étirait à plus de 1700px sur un écran large (`flex:1` sans
-     max-width, et c'était la seule rangée de cette bande). */
-  flex: 0 1 360px;
-  min-width: 180px;
-  padding: var(--espace-2) var(--espace-3);
-  border: 1px solid var(--color-border);
-  min-height: var(--touche-min);
 }
 
 .barreFiltres {

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { Temoignages } from "./Temoignages";
 import { BoutonBientotDisponible } from "../components/BoutonBientotDisponible";
@@ -92,17 +92,9 @@ export default function MarketplacePage() {
 
 function MarketplaceContenu() {
   const { t } = useLocale();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [recherche, setRecherche] = useState(() => searchParams.get("q") ?? "");
   const [requeteActive, setRequeteActive] = useState(() => searchParams.get("q") ?? "");
-  // Recherche de boutiques (demande du 12 nov. 2026 : "prévoir également un
-  // champ de recherche pour les boutiques") — la recherche par nom de
-  // boutique existe déjà et fonctionne sur /marketplace/boutiques, mais
-  // n'était accessible qu'en s'y rendant d'abord sans pouvoir chercher
-  // directement. Ce champ redirige vers cette page avec la requête déjà
-  // appliquée (voir ?q= géré là-bas, même mécanisme que pour les produits).
-  const [rechercheBoutique, setRechercheBoutique] = useState("");
   const [produits, setProduits] = useState<Produit[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -258,12 +250,21 @@ function MarketplaceContenu() {
       </div>
 
       {/* 27 nov. 2026, retour propriétaire ("page d'accueil sur grand écran,
-          aucune harmonie ni gestion cohérente") — les 3 blocs ci-dessous
-          étaient 3 <form>/<div> bord à bord, chacun sa propre bordure pleine
-          largeur ; regroupés maintenant dans un seul panneau borné en
+          aucune harmonie ni gestion cohérente") — les blocs ci-dessous
+          étaient des <form>/<div> bord à bord, chacun sa propre bordure
+          pleine largeur ; regroupés maintenant dans un seul panneau borné en
           largeur et refermé par une bordure complète (voir le commentaire
-          détaillé dans page.module.css, .panneauRecherche). Structure et
-          comportement de chaque bloc inchangés — seul l'emballage change. */}
+          détaillé dans page.module.css, .panneauRecherche).
+          27 nov. 2026, second retour le même jour — "tant que le bouton
+          Découvrir les boutiques renvoie aux options de recherche dédiées
+          aux boutiques, le champ de recherche des boutiques est un doublon
+          qui peut disparaître" : le bloc <form className={styles.
+          barreRechercheBoutiques}> (label "Boutiques" + champ + bouton, qui
+          se trouvait ici) est supprimé — /marketplace/boutiques (déjà
+          atteignable par le lien "Découvrir les boutiques" du héros)
+          propose sa propre recherche par nom de boutique, ce champ-ci ne
+          faisait que la dupliquer. Le panneau ne contient donc plus que 2
+          blocs (recherche produits, filtres). */}
       <div className={styles.panneauRecherche}>
         <form
           className={styles.barreRecherche}
@@ -306,26 +307,6 @@ function MarketplaceContenu() {
               </option>
             ))}
           </select>
-        </form>
-
-        <form
-          className={styles.barreRechercheBoutiques}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const q = rechercheBoutique.trim();
-            router.push(q ? `/marketplace/boutiques?q=${encodeURIComponent(q)}` : "/marketplace/boutiques");
-          }}
-        >
-          <label htmlFor="rechercheBoutique">{t("market_boutiques")}</label>
-          <input
-            id="rechercheBoutique"
-            placeholder={t("boutiques_rechercherPlaceholder")}
-            value={rechercheBoutique}
-            onChange={(e) => setRechercheBoutique(e.target.value)}
-          />
-          <button type="submit" className={styles.boutonRecherche}>
-            {t("accueil_rechercheProduitBouton")}
-          </button>
         </form>
 
         <div className={styles.barreFiltres}>
