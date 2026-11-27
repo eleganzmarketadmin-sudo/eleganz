@@ -19,7 +19,7 @@ import { BoostCanal, BoostCible } from "@eleganz/database";
 // une campagne publicitaire externe réelle.
 export class CreateCampagneExterneDto {
   @IsEnum(BoostCible)
-  cible!: BoostCible.BOUTIQUE | BoostCible.PRODUIT | BoostCible.COLLECTION;
+  cible!: "BOUTIQUE" | "PRODUIT" | "COLLECTION";
 
   @IsOptional()
   @IsString()
