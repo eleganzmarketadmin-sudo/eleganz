@@ -258,116 +258,125 @@ function MarketplaceContenu() {
         </div>
       </div>
 
-      <form
-        className={styles.barreRecherche}
-        onSubmit={(e) => {
-          e.preventDefault();
-          setRequeteActive(recherche);
-        }}
-      >
-        <input
-          placeholder={t("market_rechercherPlaceholder")}
-          value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-        />
-        <button type="submit" className={styles.boutonRecherche}>
-          {t("accueil_rechercheProduitBouton")}
-        </button>
-        <BoutonBientotDisponible icone="📷" label={t("market_rechercherParPhoto")} />
-        <select
-          aria-label={t("zonesLivraison_pays")}
-          value={paysChoisiId}
-          onChange={(e) => setPaysChoisiId(e.target.value)}
-        >
-          <option value="">{t("zonesLivraison_choisirPays")}</option>
-          {pays.map((p) => (
-            <option key={p.id} value={p.id}>
-              {nomPays(t, p)}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t("zonesLivraison_ville")}
-          value={villeChoisieId}
-          onChange={(e) => setVilleChoisieId(e.target.value)}
-          disabled={!paysChoisiId}
-        >
-          <option value="">{t("zonesLivraison_choisirVille")}</option>
-          {villesDuPaysChoisi.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-      </form>
-
-      <form
-        className={styles.barreRechercheBoutiques}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const q = rechercheBoutique.trim();
-          router.push(q ? `/marketplace/boutiques?q=${encodeURIComponent(q)}` : "/marketplace/boutiques");
-        }}
-      >
-        <label htmlFor="rechercheBoutique">{t("market_boutiques")}</label>
-        <input
-          id="rechercheBoutique"
-          placeholder={t("boutiques_rechercherPlaceholder")}
-          value={rechercheBoutique}
-          onChange={(e) => setRechercheBoutique(e.target.value)}
-        />
-        <button type="submit" className={styles.boutonRecherche}>
-          {t("accueil_rechercheProduitBouton")}
-        </button>
-      </form>
-
-      <div className={styles.barreFiltres}>
-        <select
-          aria-label={t("market_filtreCategorie")}
-          value={categorieChoisie}
-          onChange={(e) => setCategorieChoisie(e.target.value)}
-        >
-          <option value="">{t("market_toutesCategories")}</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.name}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          min={0}
-          inputMode="decimal"
-          aria-label={t("market_prixMin")}
-          placeholder={t("market_prixMin")}
-          value={prixMinSaisi}
-          onChange={(e) => setPrixMinSaisi(e.target.value)}
-        />
-        <input
-          type="number"
-          min={0}
-          inputMode="decimal"
-          aria-label={t("market_prixMax")}
-          placeholder={t("market_prixMax")}
-          value={prixMaxSaisi}
-          onChange={(e) => setPrixMaxSaisi(e.target.value)}
-        />
-        <button
-          type="button"
-          className={styles.boutonFiltre}
-          disabled={!filtresPrixModifies}
-          onClick={() => {
-            setPrixMinActif(prixMinSaisi);
-            setPrixMaxActif(prixMaxSaisi);
+      {/* 27 nov. 2026, retour propriétaire ("page d'accueil sur grand écran,
+          aucune harmonie ni gestion cohérente") — les 3 blocs ci-dessous
+          étaient 3 <form>/<div> bord à bord, chacun sa propre bordure pleine
+          largeur ; regroupés maintenant dans un seul panneau borné en
+          largeur et refermé par une bordure complète (voir le commentaire
+          détaillé dans page.module.css, .panneauRecherche). Structure et
+          comportement de chaque bloc inchangés — seul l'emballage change. */}
+      <div className={styles.panneauRecherche}>
+        <form
+          className={styles.barreRecherche}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setRequeteActive(recherche);
           }}
         >
-          {t("market_appliquerPrix")}
-        </button>
-        {filtresActifs && (
-          <button type="button" className={styles.boutonFiltreTexte} onClick={reinitialiserFiltres}>
-            {t("market_reinitialiserFiltres")}
+          <input
+            placeholder={t("market_rechercherPlaceholder")}
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+          />
+          <button type="submit" className={styles.boutonRecherche}>
+            {t("accueil_rechercheProduitBouton")}
           </button>
-        )}
+          <BoutonBientotDisponible icone="📷" label={t("market_rechercherParPhoto")} />
+          <select
+            aria-label={t("zonesLivraison_pays")}
+            value={paysChoisiId}
+            onChange={(e) => setPaysChoisiId(e.target.value)}
+          >
+            <option value="">{t("zonesLivraison_choisirPays")}</option>
+            {pays.map((p) => (
+              <option key={p.id} value={p.id}>
+                {nomPays(t, p)}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={t("zonesLivraison_ville")}
+            value={villeChoisieId}
+            onChange={(e) => setVilleChoisieId(e.target.value)}
+            disabled={!paysChoisiId}
+          >
+            <option value="">{t("zonesLivraison_choisirVille")}</option>
+            {villesDuPaysChoisi.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </form>
+
+        <form
+          className={styles.barreRechercheBoutiques}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const q = rechercheBoutique.trim();
+            router.push(q ? `/marketplace/boutiques?q=${encodeURIComponent(q)}` : "/marketplace/boutiques");
+          }}
+        >
+          <label htmlFor="rechercheBoutique">{t("market_boutiques")}</label>
+          <input
+            id="rechercheBoutique"
+            placeholder={t("boutiques_rechercherPlaceholder")}
+            value={rechercheBoutique}
+            onChange={(e) => setRechercheBoutique(e.target.value)}
+          />
+          <button type="submit" className={styles.boutonRecherche}>
+            {t("accueil_rechercheProduitBouton")}
+          </button>
+        </form>
+
+        <div className={styles.barreFiltres}>
+          <select
+            aria-label={t("market_filtreCategorie")}
+            value={categorieChoisie}
+            onChange={(e) => setCategorieChoisie(e.target.value)}
+          >
+            <option value="">{t("market_toutesCategories")}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min={0}
+            inputMode="decimal"
+            aria-label={t("market_prixMin")}
+            placeholder={t("market_prixMin")}
+            value={prixMinSaisi}
+            onChange={(e) => setPrixMinSaisi(e.target.value)}
+          />
+          <input
+            type="number"
+            min={0}
+            inputMode="decimal"
+            aria-label={t("market_prixMax")}
+            placeholder={t("market_prixMax")}
+            value={prixMaxSaisi}
+            onChange={(e) => setPrixMaxSaisi(e.target.value)}
+          />
+          <button
+            type="button"
+            className={styles.boutonFiltre}
+            disabled={!filtresPrixModifies}
+            onClick={() => {
+              setPrixMinActif(prixMinSaisi);
+              setPrixMaxActif(prixMaxSaisi);
+            }}
+          >
+            {t("market_appliquerPrix")}
+          </button>
+          {filtresActifs && (
+            <button type="button" className={styles.boutonFiltreTexte} onClick={reinitialiserFiltres}>
+              {t("market_reinitialiserFiltres")}
+            </button>
+          )}
+        </div>
       </div>
 
       {chargement ? (
