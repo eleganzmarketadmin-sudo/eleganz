@@ -56,6 +56,12 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # Incident du 25 nov. 2026 (run #23) : la CLI AWS a pris la région
+          # par défaut du runner GitHub (us-west-2), que R2 rejette
+          # (InvalidRegionName — R2 n'accepte que auto/wnam/enam/weur/eeur/
+          # apac/oc). Le dump avait réussi (357 Ko), seul l'envoi a échoué.
+          # Fixé explicitement pour ne plus dépendre du défaut de l'image.
+          AWS_DEFAULT_REGION: "auto"
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
@@ -68,6 +74,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: "auto" # même correctif que l'étape d'envoi ci-dessus
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |

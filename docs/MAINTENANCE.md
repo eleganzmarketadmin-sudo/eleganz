@@ -276,3 +276,42 @@ applicative plutôt que par la base de données). Et, plus généralement :
 après tout push touchant `apps/api`, vérifier `gh api
 repos/<owner>/<repo>/commits/<sha>/status` avant de supposer qu'un 404 sur
 une route neuve est juste un déploiement encore en cours.
+
+## Sauvegarde hors-site de la base (`.github/workflows/backup-db.yml`)
+
+Workflow GitHub Actions planifié (quotidien, 03h00 UTC), en place et
+fonctionnel depuis le 10 nov. 2026 (secrets `BACKUP_DATABASE_URL` et
+`R2_*` ajoutés par le propriétaire ce jour-là — avant, les runs du 4 au 9
+nov. échouaient faute de secrets). Fait un `pg_dump -Fc` de la prod,
+l'envoie vers Cloudflare R2 (bucket séparé des images produits, préfixe
+`backups/postgres/`), purge au-delà de 30 jours. C'est la seule couche de
+sauvegarde qui survit à une suppression du projet/compte Railway — à
+distinguer des sauvegardes de volume et du PITR natifs Railway (tableau de
+bord Railway → service Postgres → onglet *Backups*), qui restent à activer
+manuellement par le propriétaire (hors d'atteinte de ce bac à sable, aucun
+accès au tableau de bord Railway ici).
+
+**Incident du 25 nov. 2026 (run #23, `eleganz-db-2026-11-25T12-17-58Z.dump`,
+357 Ko — le dump a réussi, seul l'envoi a échoué)** : `InvalidRegionName`
+— la CLI AWS a résolu une région par défaut du runner (`us-west-2`) que
+Cloudflare R2 n'accepte pas (R2 n'a que `auto`/`wnam`/`enam`/`weur`/`eeur`/
+`apac`/`oc`, jamais les régions AWS classiques). Récupéré seul le
+lendemain (run #24, région par défaut différente selon le runner), donc
+latent et pas garanti de se reproduire à l'identique — mais pas fiable en
+l'état. **Corrigé le 27 nov. 2026** : `AWS_DEFAULT_REGION: "auto"` ajouté
+explicitement aux deux étapes qui appellent `aws s3`/`aws s3api`, pour ne
+plus dépendre du défaut (variable ou version) de l'image `ubuntu-latest`
+GitHub-hébergée.
+
+**Vérifier que ça tourne toujours** : `gh api
+repos/<owner>/<repo>/actions/workflows/<id>/runs -q
+'.workflow_runs[].conclusion'` (id du workflow via `gh api
+repos/<owner>/<repo>/actions/workflows`). Un run peut être relancé à la
+main depuis l'onglet Actions du dépôt (`workflow_dispatch` déjà activé
+dans ce fichier) sans attendre le prochain horaire.
+
+**Restauration** : `pg_restore` à partir du `.dump` téléchargé (format
+custom `-Fc`, donc restaurable table par table si besoin) — jamais testé
+en conditions réelles dans ce chantier ; un essai de restauration
+périodique (sur une base de test, jamais sur la prod) est recommandé par
+la documentation Railway elle-même et reste à planifier.
